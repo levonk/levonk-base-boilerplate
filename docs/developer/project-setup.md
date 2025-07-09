@@ -1,0 +1,1 @@
+- Install claude-task-master: https://github.com/eyaltoledano/claude-task-master/blob/main/docs/tutorial.md
