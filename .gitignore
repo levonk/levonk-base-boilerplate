@@ -1,5 +1,22 @@
-# Ansible .gitignore for shared deployment
+# .gitignore for shared deployment
 # This file should be committed to version control
+
+# Credentials Protection
+
+## Cloud Files
+.aws/credentials
+.azure/credentials
+google-services.json
+
+## SSH Files
+.ssh
+id_rsa
+id_rsa.pub
+known_hosts
+
+## Keystore Files
+*.jks
+*.keystore
 
 # Environment setup
 .env
@@ -16,9 +33,14 @@
 
 ## TypeScript
 *.tsbuildinfo
+*.d.ts
+*.spec.ts
+*.test.ts
 
 ## Node 
 node_modules/
+*.spec.js
+*.test.js
 
 ### Local testing artifacts
 coverage/
@@ -64,6 +86,14 @@ wheels/
 *.sublime-*
 *.code-workspace
 *.swp
+*~
+
+# Temporary files
+.bak
+.tmp
+.temp
+*.swp
+*.swo
 
 # Transient files
 *.tmp
@@ -74,6 +104,9 @@ wheels/
 *.iml
 *.iws
 *.ipr
+misc.xml
+deploymentTargetDropDown.xml
+render.experimental.xml
 
 # Virtual Environment
 .env
@@ -99,6 +132,7 @@ $RECYCLE.BIN/
 
 # Logs
 *.log
+logs
 
 # Ansible specific
 *.retry
@@ -151,6 +185,17 @@ project/plugins/project/
 .metals/
 .scala-build/
 
+# Android Studio
+.externalNativeBuild
+.cxx
+*.aab
+*.apk
+output-metadata.json
+captures/
+
+## Android Profiling
+*.hprof
+
 # Java
 
 ## Java Build output
@@ -194,3 +239,4 @@ obj/
 *.snupkg
 .nuget/
 packages/
+

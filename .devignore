@@ -1,0 +1,56 @@
+# .devignore used to combine with .gitignore for packaging tools like .npmignore
+# This file should be committed to version control
+
+# Credentials Protection
+.aws/credentials
+.azure/credentials
+.ssh
+id_rsa
+id_rsa.pub
+known_hosts
+
+# Development files
+
+## Git files
+.git
+.github
+
+## IDE Files
+.vscode
+.windsurf
+.idea
+
+## Ignore Files
+.gitignore
+.codeiumignore
+.cursorignore
+.windsurf
+.cursor
+.claude
+.github
+.taskmaster
+
+## Docs
+CONTRIBUTING.md
+
+# Source files not needed in the package
+src
+test
+tests
+docs
+examples
+.editorconfig
+.eslintrc
+.prettierrc
+.travis.yml
+.gitlab-ci.yml
+tsconfig.json
+jest.config.js
+
+# Original project files
+tasks.json
+tasks/
+prd.txt
+scripts/prd.txt
+.env 
+
