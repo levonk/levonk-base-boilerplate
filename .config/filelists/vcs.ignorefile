@@ -3,6 +3,10 @@
 
 !.env.example
 
+## Vault by Hashicorp
+audit.log
+vault.log
+
 # 3rd party repos
 3rdparty/ignore/*
 
@@ -59,11 +63,18 @@ wheels/
 .installed.cfg
 *.egg
 
-# Editor files
+# Editor files and IDEs
 *.sublime-*
 *.code-workspace
 *.swp
 *~
+.idea/
+*.iml
+*.iws
+*.ipr
+misc.xml
+deploymentTargetDropDown.xml
+render.experimental.xml
 
 # Temporary files
 .bak
@@ -78,15 +89,6 @@ wheels/
 # Transient files
 *.tmp
 *.~
-
-# IntelliJ
-.idea/
-*.iml
-*.iws
-*.ipr
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
 
 # Virtual Environment
 .env
@@ -108,13 +110,16 @@ ENV/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+$RECOCYCLER/
 $RECYCLE.BIN/
 
 # Logs
 *.log
-logs
+logs/
 
-# Ansible specific
+# Operations Tools
+
+## Ansible specific
 *.retry
 *.log
 *.tmp
@@ -122,24 +127,32 @@ logs
 *.swo
 *~
 
-## Ansible Vault
-!vault.yml
-!vault.yaml
-!vault/
-
-## Ansible Local overrides
-local.yml
-local.yaml
-host_vars/localhost.yml
-host_vars/localhost.yaml
-group_vars/local.yml
-group_vars/local.yaml
-
-## Ansible Galaxy
+### Ansible Galaxy
 downloads/
 *.tar.gz
 roles/external/
 collections/ansible_collections/*
+*.retry
+.ansible/
+
+## Pulumi
+
+Pulumi.dev.yaml
+.pulumi/
+
+# Packer
+.pkrvars.hcl
+*.auto.pkvars.hcl
+packer.log
+output/
+build/
+
+## Vagrant
+.vagrant/
+*.box
+
+# Serverless
+.serverless/
 
 # Scala
 ## Scala Build artifacts
@@ -198,30 +211,41 @@ build/
 ## Java IDEs
 *.iml
 *.ipr
-*.iws
 
-# C#
-## .NET Build artifacts
-bin/
-obj/
-*.dll
-*.exe
-*.pdb
-
-## .NET User-specific files
-*.user
+## IDE State Files
 *.suo
-*.userosscache
+*.user
 *.sln.docstates
 
-## .NET NuGet
-*.nupkg
-*.snupkg
-.nuget/
-packages/
+## Backups
+*.bak
+*.old
+*.tmp
+*.backup
+*.bak2
+*.old2
+*.tmp2
+*.backup2
 
-## Docker
-docker-compose.override
+## VCS Related
+.git/
+.git/config
 
-## k8s
-.
+## IDE State Files
+*.suo
+*.user
+*.sln.docstates
+
+## Ansible specific
+*.retry
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+## Ansible Galaxy
+downloads/
+*.tar.gz
+roles/external/
+collections/ansible_collections/*

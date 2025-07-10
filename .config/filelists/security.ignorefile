@@ -4,12 +4,31 @@
 
 ## Cloud Files
 .aws/credentials
+.aws-sam/
 .gcloud/credentials
 .azure/credentials
 .kube/config
 .digitalocean/access.yaml
 .vercel/
 google-services.json
+
+## Helm
+values.yaml
+secrets.yaml
+
+## k8s
+secrets.yaml
+kubeconfig
+
+## Chef
+client.rb
+validation.pem
+
+## SaltStack
+*.key
+
+## Vault / SOPS
+.vault/
 
 ## Server files
 *.p12
@@ -36,9 +55,6 @@ known_hosts
 ## Environment setup
 !.env.example
 .env
-env/
-ENV/
-Env/
 config.json
 appsettings.json
 credentials.json
@@ -46,39 +62,11 @@ api_keys.txt
 *.key
 *.pfx
 
-## IDE State Files
-*.suo
-*.user
-*.sln.docstates
-
-## Backups
-*.bak
-*.old
-*.tmp
-*.backup
-*.bak2
-*.old2
-*.tmp2
-*.backup2
-
-
-
-## VCS Related
-.git
-.git/config
-
-## Log Files
-*.log
-logs
-
-## Windows
-Thumbs.db
-ehthumbs.db
-
-## Ansible Vault
-!vault.yml
-!vault.yaml
-!vault/
+## Vault by Hashicorp
+.vault/
+vault.db
+vault.sqlite
+vault.env
 
 ## Terraform state file
 *.tfstate
@@ -97,33 +85,11 @@ override.tf.json
 terraform.tfplan
 *.tfplan
 
-# Local development
-.local/
-.cache/
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-
-# Logs
-*.log
-logs
-
-# Ansible specific
-*.retry
-*.log
-*.tmp
-*.swp
-*.swo
-*~
-
+## Ansible Vault
+!vault.yml
+!vault.yaml
+!vault/
+.vault_pass.tx
 
 ## Ansible Local overrides
 local.yml
@@ -132,89 +98,3 @@ host_vars/localhost.yml
 host_vars/localhost.yaml
 group_vars/local.yml
 group_vars/local.yaml
-
-## Ansible Galaxy
-downloads/
-*.tar.gz
-roles/external/
-collections/ansible_collections/*
-
-# Scala
-## Scala Build artifacts
-target/
-project/target/
-*.class
-
-## Scala SBT-specific
-.cache/
-.history/
-lib_managed/
-src_managed/
-project/boot/
-project/plugins/project/
-
-## Scala IDEs
-*.iml
-*.iws
-.scala_dependencies
-.worksheet
-.ensime_cache
-.bloop/
-.metals/
-.scala-build/
-
-# Android Studio
-.externalNativeBuild
-.cxx
-*.aab
-*.apk
-output-metadata.json
-captures/
-
-## Android Profiling
-*.hprof
-
-# Java
-
-## Java Build output
-target/
-bin/
-*.class
-
-## Java Maven
-.mvn/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-release.properties
-
-## Java Gradle
-.gradle/
-build/
-!gradle-wrapper.jar
-
-## Java IDEs
-*.iml
-*.ipr
-*.iws
-
-# C#
-## .NET Build artifacts
-bin/
-obj/
-*.dll
-*.exe
-*.pdb
-
-## .NET User-specific files
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-
-## .NET NuGet
-*.nupkg
-*.snupkg
-.nuget/
-packages/
-
