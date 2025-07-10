@@ -1,6 +1,6 @@
 # Packaging Ignore Patterns
 
-This document outlines patterns for files that should be excluded from packaged output (e.g., npm packages) but may be kept in version control. These patterns are used to ensure only necessary files are included in published packages.
+This document outlines patterns for files that should be excluded from packaged output (e.g., .npmpackages) but may be kept in version control. These patterns are used to ensure only necessary files are included in published packages.
 
 ## Purpose
 
