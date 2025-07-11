@@ -2,6 +2,7 @@
 # This file should be committed to version control
 
 !.env.example
+!Cargo.lock
 
 ## Vault by Hashicorp
 audit.log
@@ -135,6 +136,14 @@ collections/ansible_collections/*
 *.retry
 .ansible/
 
+### Ansible localhost
+local.yml
+local.yaml
+host_vars/localhost.yml
+host_vars/localhost.yaml
+group_vars/local.yml
+group_vars/local.yaml
+
 ## Pulumi
 
 Pulumi.dev.yaml
@@ -179,6 +188,7 @@ project/plugins/project/
 .scala-build/
 
 # Android Studio
+local.properties
 .externalNativeBuild
 .cxx
 *.aab
@@ -249,3 +259,9 @@ downloads/
 *.tar.gz
 roles/external/
 collections/ansible_collections/*
+
+## Subversion
+.svn/*
+
+# SQLite DBMS
+db.lock
