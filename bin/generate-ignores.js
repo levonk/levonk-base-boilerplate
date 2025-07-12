@@ -62,7 +62,11 @@ const CONFIG = {
     include: ['packaging', 'vcs', 'security'],
     exclude: ['ai']
   },
-  // AI Ignore Files (.codeiumignore, .cursorignore)
+  // AI Ignore Files (Gemini, .codeiumignore, .cursorignore)
+  '.aiexclude': {
+    include: ['ai', 'vcs', 'security'],
+    exclude: ['packaging']
+  },
   '.codeiumignore': {
     include: ['ai', 'vcs', 'security'],
     exclude: ['packaging']

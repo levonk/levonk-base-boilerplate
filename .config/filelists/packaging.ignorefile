@@ -278,6 +278,8 @@ node_modules/
 .cursor
 .claude
 .taskmaster
+.cline-rules
+cline_docs/
 CONTRIBUTING.md
 
 # Source files not needed in the package

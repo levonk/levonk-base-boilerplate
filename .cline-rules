@@ -1,0 +1,18 @@
+{
+  "mcpRules": {
+    "codeAssist": {
+      "servers": ["claude-code"],
+      "triggers": ["refactor", "analyze code", "generate tests", "optimize function", "debug"],
+      "description": "Claude Code tools for file editing, shell commands, and code planning"
+    },
+    "workflowOps": {
+      "servers": ["n8n-workflow-builder"],
+      "triggers": ["create workflow", "list workflows", "activate workflow", "schedule task"],
+      "description": "MCP server for managing n8n workflows via natural language"
+    }
+  },
+  "defaultBehavior": {
+    "priorityOrder": ["codeAssist", "workflowOps"],
+    "fallbackBehavior": "Ask user which tool to use"
+  }
+}
