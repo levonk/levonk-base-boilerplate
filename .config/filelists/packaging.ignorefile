@@ -97,9 +97,38 @@ wheels/
 
 # Editor files
 *.sublime-*
-*.code-workspace
 *.swp
+.taskmaster
+
+## JetBrains Idea
+.idea
+
+
+## Claude Code
+.claude
+
+## Cline
+.cline/
+.cline-rules
+cline_docs/
+
+## vi droppings
 *~
+
+## vscode
+.vscode
+*.code-workspace
+*global_rules.md
+.vscode/settings.json
+
+### Windsurf
+.windsurf
+.windsurfrules
+.codeiumignore
+
+### Cursor
+.cursor
+.cursorignore
 
 # Temporary files
 .bak
@@ -269,18 +298,6 @@ node_modules/
 
 
 # Development files
-.vscode
-.idea
-.DS_Store
-.codeiumignore
-.cursorignore
-.windsurf
-.cursor
-.claude
-.taskmaster
-.cline/
-.cline-rules
-cline_docs/
 CONTRIBUTING.md
 
 # Source files not needed in the package
