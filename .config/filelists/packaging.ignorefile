@@ -278,6 +278,7 @@ node_modules/
 .cursor
 .claude
 .taskmaster
+.cline/
 .cline-rules
 cline_docs/
 CONTRIBUTING.md
