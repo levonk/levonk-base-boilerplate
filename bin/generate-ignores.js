@@ -41,6 +41,10 @@ const CONFIG = {
     include: ['vcs', 'security'],
     exclude: ['ai', 'packaging']
   },
+  '.eslintignore': {
+    include: ['vcs', 'security'],
+    exclude: ['ai', 'packaging']
+  },
   '.terraformignore': {
     include: ['vcs', 'security'],
     exclude: ['ai', 'packaging']
