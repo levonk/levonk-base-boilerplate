@@ -1,0 +1,16 @@
+{
+    "name": "chezmoi-dev",
+    "image": "alpine:latest",
+    "features": {
+      "ghcr.io/devcontainers/features/chezmoi": "latest"
+    },
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "twpayne.chezmoi",
+          "streetsidesoftware.code-spell-checker"
+        ]
+      }
+    },
+    "postCreateCommand": "chezmoi init --apply"
+  }

@@ -1,5 +1,5 @@
 ---
-description: Perform routing tasks on the project
+description: Perform routine tasks on the project
 ---
 
 1. run formatter, linter, unit tests, security scans, and any other scans. If any fails, notify the user you can't proceed and the reason why

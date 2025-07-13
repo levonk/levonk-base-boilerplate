@@ -1,0 +1,15 @@
+{
+    "name": "ansible-dev",
+    "image": "ghcr.io/devcontainers/images/ubuntu:22.04",
+    "features": {
+      "ansible": "latest"
+    },
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "redhat.ansible",
+          "ms-python.python"
+        ]
+      }
+    }
+  }

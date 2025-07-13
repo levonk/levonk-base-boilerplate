@@ -1,0 +1,13 @@
+{
+    "name": "obsidian-dev",
+    "image": "node:20",
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "streetsidesoftware.code-spell-checker",
+          "bierner.markdown-mermaid"
+        ]
+      }
+    },
+    "postCreateCommand": "npm install"
+  }

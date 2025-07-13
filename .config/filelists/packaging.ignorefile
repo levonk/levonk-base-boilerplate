@@ -15,12 +15,13 @@ known_hosts
 # Environment setup
 .env
 !.env.example
+.devcontainer/
 
 # 3rd party repos
-3rdparty/ignore/*
+3rdparty/ignore/
 
 # Taskmaster
-.taskmaster/*
+.taskmaster/
 
 # Original project files
 tasks.json
