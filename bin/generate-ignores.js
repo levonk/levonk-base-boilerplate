@@ -81,7 +81,11 @@ const CONFIG = {
   }
 };
 
-const IGNORE_DIR = path.join(__dirname, '..', 'filelists');
+// Get the absolute path to the .config/filelists directory in the repository
+const REPO_ROOT = path.resolve(__dirname, '..');
+const IGNORE_DIR = path.join(REPO_ROOT, '.config', 'filelists');
+console.log(`Repository root: ${REPO_ROOT}`);
+console.log(`Using ignore directory: ${IGNORE_DIR}`);
 
 /**
  * Reads a file and returns its content with a header
@@ -91,14 +95,35 @@ function readIgnoreFile(baseName, isMarkdown = false) {
   const filePath = path.join(IGNORE_DIR, `${baseName}${ext}`);
   
   try {
-    const content = fs.readFileSync(filePath, 'utf8').trim();
-    if (!content) return '';
+    console.log(`Reading file: ${filePath}`);
     
-    // Skip header for markdown files as they have their own template
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.warn(`File not found: ${filePath}`);
+      return '';
+    }
+    
+    // Get file stats
+    const stats = fs.statSync(filePath);
+    console.log(`File stats: ${JSON.stringify({
+      size: stats.size,
+      modified: stats.mtime
+    })}`);
+    
+    // Always read the file, even if it's empty
+    const content = fs.readFileSync(filePath, 'utf8');
+    console.log(`Read ${content.length} characters from ${filePath}`);
+    
+    // For markdown files, return the content as-is
     if (isMarkdown) return content;
     
+    // For regular ignore files, add a header
     const header = `# ===== ${baseName.toUpperCase()} RULES =====\n`;
-    return `\n${header}${content}\n`;
+    const trimmedContent = content.trim();
+    const result = `\n${header}${trimmedContent ? trimmedContent + '\n' : ''}`;
+    
+    console.log(`Processed content for ${baseName}:`, result);
+    return result;
   } catch (err) {
     if (err.code !== 'ENOENT') {
       console.warn(`Warning: Error reading ${filePath}:`, err.message);
@@ -115,8 +140,8 @@ function generateCombinedContent(files) {
   const timestamp = now.toISOString();
   
   // Special handling for markdown files
-  if (files.includes('ai') && files.length === 1) {
-    let content = readIgnoreFile('ai', true);
+  if (files.length === 1 && files[0].endsWith('.md')) {
+    let content = readIgnoreFile(files[0].replace('.md', ''), true);
     return content.replace('{{GENERATED_TIMESTAMP}}', timestamp);
   }
   
@@ -126,7 +151,15 @@ function generateCombinedContent(files) {
 
   // Add content from each file
   for (const file of files) {
-    content += readIgnoreFile(file);
+    // Skip any empty or undefined files
+    if (!file) continue;
+    
+    const fileContent = readIgnoreFile(file);
+    if (fileContent && fileContent.trim()) {
+      content += fileContent;
+    } else {
+      console.warn(`Warning: No content found for ${file}.ignorefile`);
+    }
   }
 
   // Add final warning
@@ -163,10 +196,28 @@ function writeIfChanged(filePath, content) {
 function main() {
   console.log('Generating ignore files...');
   
+  // Verify IGNORE_DIR exists
+  if (!fs.existsSync(IGNORE_DIR)) {
+    console.error(`Error: Directory not found: ${IGNORE_DIR}`);
+    process.exit(1);
+  }
+  
+  // List available ignore files
+  console.log('Available ignore files:');
+  const files = fs.readdirSync(IGNORE_DIR);
+  files.forEach(file => {
+    if (file.endsWith('.ignorefile')) {
+      const fullPath = path.join(IGNORE_DIR, file);
+      const stats = fs.statSync(fullPath);
+      console.log(`- ${file} (${stats.size} bytes)`);
+    }
+  });
+  
   let anyChanges = false;
   
   // Process each output file configuration
   for (const [outputFile, config] of Object.entries(CONFIG)) {
+    console.log(`\nProcessing ${outputFile}...`);
     const content = generateCombinedContent(config.include);
     const outputPath = path.join(process.cwd(), outputFile);
     anyChanges = writeIfChanged(outputPath, content) || anyChanges;
