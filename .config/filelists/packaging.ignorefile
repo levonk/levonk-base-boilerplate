@@ -302,11 +302,12 @@ node_modules/
 CONTRIBUTING.md
 
 # Source files not needed in the package
-src
-test
-tests
-docs
-examples
+src/
+test/
+tests/
+docs/
+internal-docs/
+examples/
 .editorconfig
 .travis.yml
 .gitlab-ci.yml
