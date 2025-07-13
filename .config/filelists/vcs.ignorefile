@@ -242,6 +242,9 @@ build/
 *.old2
 *.tmp2
 *.backup2
+.trash/
+bak/
+tmp/
 
 ## VCS Related
 .git/
