@@ -209,7 +209,6 @@ captures/
 
 ## Java Build output
 target/
-bin/
 *.class
 
 ## Java Maven
