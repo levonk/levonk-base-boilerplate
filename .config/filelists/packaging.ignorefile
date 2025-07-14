@@ -268,3 +268,36 @@ prd.txt
 scripts/prd.txt
 .env 
 
+# To Create
+.shellcheckrc
+.checkov.yaml
+.clang-format
+.stylelintrc.json
+.hadolint.yaml
+.editorconfig-checker.json
+.gitleaks.toml
+.golangci.yml
+eslint.config.mjs
+sun_checks.xml
+.jscpd.json
+.GitHub
+.markdown-lint.yml
+.textlintrc
+.powershell-psscriptanalyzer.psd1
+php.ini
+phpcs.xml
+.protolintrc.yml
+.python-black
+.flake8
+.isort.cfg
+.mypy.ini
+.python-lint
+.ruff.toml
+.ruby-lint.yml
+.scalafmt.conf
+.snakefmt.toml
+/.sqlfluff
+terrascan.toml
+.tflint.hcl
+eslint.config.mjs
+.yaml-lint.yml
