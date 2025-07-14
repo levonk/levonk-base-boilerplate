@@ -274,3 +274,7 @@ collections/ansible_collections/*
 
 # SQLite DBMS
 db.lock
+
+# Linter Drops
+super-linter-output/
+super-linter-summary.md
