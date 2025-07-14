@@ -314,7 +314,14 @@ examples/
 tsconfig.json
 jest.config.js
 
+
 # To Create
+
+## asdf package manager
+.asdf
+.tool-versions
+
+## linters
 .shellcheckrc
 .checkov.yaml
 .clang-format

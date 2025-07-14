@@ -122,7 +122,7 @@ function readIgnoreFile(baseName, isMarkdown = false) {
     const trimmedContent = content.trim();
     const result = `\n${header}${trimmedContent ? trimmedContent + '\n' : ''}`;
     
-    console.log(`Processed content for ${baseName}:`, result);
+    //console.log(`Processed content for ${baseName}:`, result);
     return result;
   } catch (err) {
     if (err.code !== 'ENOENT') {
