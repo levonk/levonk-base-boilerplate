@@ -1,16 +1,12 @@
+# ===== VCS RULES =====
 # .gitignore for shared deployment
 # This file should be committed to version control
 
 !.env.example
 !Cargo.lock
 
-## Vault by Hashicorp
-audit.log
-vault.log
-
 # 3rd party repos
 3rdparty/ignore/*
-.local/
 
 # AI
 
@@ -23,10 +19,8 @@ settings.local.json
 ## TypeScript
 *.tsbuildinfo
 *.d.ts
-*.spec.ts
-*.test.ts
 
-## Node 
+## Node
 node_modules/
 *.spec.js
 *.test.js
@@ -106,7 +100,6 @@ venv/
 ENV/
 
 # Local development
-.local/
 .cache/
 
 # macOS
@@ -129,11 +122,6 @@ logs/
 
 ## Ansible specific
 *.retry
-*.log
-*.tmp
-*.swp
-*.swo
-*~
 
 ### Ansible Galaxy
 downloads/
@@ -228,11 +216,6 @@ build/
 *.iml
 *.ipr
 
-## IDE State Files
-*.suo
-*.user
-*.sln.docstates
-
 ## Backups
 *.bak
 *.old
@@ -249,25 +232,6 @@ tmp/
 ## VCS Related
 .git/
 .git/config
-
-## IDE State Files
-*.suo
-*.user
-*.sln.docstates
-
-## Ansible specific
-*.retry
-*.log
-*.tmp
-*.swp
-*.swo
-*~
-
-## Ansible Galaxy
-downloads/
-*.tar.gz
-roles/external/
-collections/ansible_collections/*
 
 ## Subversion
 .svn/*
