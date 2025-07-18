@@ -75,7 +75,7 @@ const CONFIG = {
     include: ['ai', 'vcs', 'security'],
     exclude: ['packaging']
   },
-  '.chezmoiignore': {
+  '.chezmoiignore-addedum': {
     include: ['vcs', 'security'],
     exclude: ['ai', 'packaging']
   }
