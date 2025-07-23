@@ -1,0 +1,67 @@
+name: Gitleaks
+
+on:
+  # Run on pushes to main and next branches
+  push:
+    branches:
+      - main
+      - next
+  # Run on pull requests targeting main and next branches
+  pull_request:
+    branches:
+      - main
+      - next
+  # Allow manual triggering of the workflow
+  workflow_dispatch:
+
+# Set the permissions required for the job
+permissions:
+  contents: read  # for actions/checkout to fetch code
+  security-events: write  # for gitleaks-actions to upload results to code scanning
+
+jobs:
+  gitleaks:
+    name: Gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history for all branches and tags
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          # Optional: Path to Gitleaks config file (relative to repository root)
+          # config-path: .gitleaks.toml
+          
+          # Optional: Set to true to fail the job if leaks are found
+          fail-on-error: true
+          
+          # Optional: Set to true to see more detailed output
+          verbose: true
+          
+          # Optional: Set the log level (debug, info, warn, error, fatal, panic)
+          log-level: "info"
+          
+          # Optional: Set to true to treat Gitleaks findings as GitHub code scanning alerts
+          upload-sarif: true
+          
+          # Optional: Set to true to check staged changes only
+          # staged-only: false
+          
+          # Optional: Set to true to check only the diff from the base branch
+          # only-files-in-head: false
+          
+          # Optional: Path to the repository to scan (defaults to current directory)
+          # path: .
+          
+          # Optional: Additional arguments to pass to Gitleaks
+          # extra-args: "--redact"
+        env:
+          # Required: GitHub token for uploading results to code scanning
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Optional: Set to true to enable debugging output
+          # ACTIONS_STEP_DEBUG: true

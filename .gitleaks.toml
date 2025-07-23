@@ -1,0 +1,96 @@
+# Gitleaks configuration file
+# Reference: https://github.com/gitleaks/gitleaks#configuration
+
+# Title of the configuration file
+title = "LevonK Base Boilerplate Gitleaks Configuration"
+
+# Version of the Gitleaks configuration format
+version = "9.5.0"
+
+# Additional help text or description
+# This is a base configuration that can be extended or modified as needed
+
+# Default configuration that will be applied to all rules unless overridden
+[extend]
+# Paths to include in the scan (relative to the repository root)
+path = [
+    "**/*",
+]
+
+# Paths to exclude from the scan (relative to the repository root)
+# Add any test files, dependencies, or other files that may contain test secrets
+exclude = '''
+**/*_test.go
+**/*.md
+**/*.json
+**/*.yaml
+**/*.yml
+**/*.txt
+**/*.log
+**/node_modules/**
+**/dist/**
+**/build/**
+**/vendor/**
+**/coverage/**
+**/.git/**
+**/.github/**
+**/.vscode/**
+**/.idea/**
+**/.gitignore
+**/.gitmodules
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+'''
+
+# Default severity level for findings
+severity = "error"
+
+# Rules for detecting secrets and sensitive information
+[[rules]]
+# This is a catch-all rule that will flag any potential secret-looking strings
+# You can add more specific rules below this one
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(?:key|api[_-]?key|apikey|secret|token|password|pwd|auth|credential)[\s:=]+([a-z0-9_\-\+=\/]{12,})(?:\s|,|;|$|\r|\n|'|\")'''
+keywords = [
+    "key",
+    "api",
+    "apikey",
+    "secret",
+    "token",
+    "password",
+    "pwd",
+    "auth",
+    "credential",
+]
+
+# Ignore common false positives
+[allowlist]
+# Ignore common test and example keys
+regexes = [
+    "(?:test|example|sample|dummy|mock)[_-]?(?:key|secret|token|password|pwd|auth|credential)",
+    "(?:key|secret|token|password|pwd|auth|credential)[_-]?(?:test|example|sample|dummy|mock)",
+    "00000000-0000-0000-0000-000000000000", # Example UUID
+    "[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}", # UUID format
+]
+
+# Ignore specific files or directories
+paths = [
+    "**/testdata/**",
+    "**/fixtures/**",
+    "**/examples/**",
+    "**/samples/**",
+]
+
+# Ignore specific commits (by hash)
+commits = [
+    "0000000000000000000000000000000000000000", # Example commit hash
+]
+
+# Ignore specific lines in files
+# Format: "filename:line_number:line_content"
+lines = [
+    "config.example.json:5:    \"api_key\": \"YOUR_API_KEY_HERE\"",
+    "README.md:10:   export API_KEY=\"YOUR_API_KEY_HERE\"",
+]
