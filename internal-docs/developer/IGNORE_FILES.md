@@ -2,16 +2,72 @@
 
 This document explains the structure and purpose of the ignore files in this project, designed to be AI-friendly and help with maintenance and understanding of the ignore patterns.
 
+## Modular Ignore File System
+
+This repository uses a modular system for managing ignore patterns. Instead of maintaining separate, duplicated ignore files for each tool or environment, we keep small, focused `*.ignorefile` building blocks in `.config/filelists/`, and use the script `bin/generate-ignores.js` to combine them into the actual output ignore files (e.g. `.gitignore`, `.npmignore`, `.codeiumignore`).
+
+### How It Works
+- **Source files**: `.config/filelists/*.ignorefile` contain patterns for a single category (e.g. security, packaging, AI, VCS, binaries).
+- **Documentation**: `.config/filelists/*.ignorefile.md` files describe the purpose and contents of each ignore category.
+- **Generation**: `bin/generate-ignores.js` uses its `CONFIG` object to specify which categories are included/excluded for each output file. It then combines the relevant patterns to produce the final output ignore files.
+- **No duplication**: Patterns are only present in their most specific category. For example, credentials/secrets only appear in `security.ignorefile`, not in `packaging.ignorefile`, `vcs.ignorefile`, or `ai.ignorefile`.
+
+### Best Practices
+- **Edit only the modular source files** in `.config/filelists/`. Never edit the generated output ignore files directly.
+- **Add new patterns to the most specific category** (e.g., secrets to `security.ignorefile`, build outputs to `packaging.ignorefile`).
+- **Do not duplicate patterns** across categories.
+- **Regenerate output files** after any change using `node bin/generate-ignores.js`.
+
 ## File Types and Their Purposes
 
-### 1. `.ignorefile` Files
-These are the primary files containing the actual ignore patterns that will be used by various tools. They follow standard `.gitignore` format and are organized by category.
+### `ai.ignorefile` & `ai.ignorefile.md`
+- **Purpose**: Patterns for AI-generated files and directories (e.g., `/generated-code/`).
+- **Used by**: AI tools like Codeium, Cursor, etc.
+- **Should NOT include**: Credentials, secrets, or sensitive info.
 
-### 2. `.ignorefile.md` Files
-These are documentation files that describe the purpose and contents of the corresponding `.ignorefile`. They include:
-- Purpose of the ignore patterns
-- Source files included
-- Last generated timestamp
+### `binary.ignorefile` & `binary.ignorefile.md`
+- **Purpose**: Patterns for binary/non-text files (e.g., images, audio, video, compiled code, archives).
+- **Used by**: To help tools ignore non-text files.
+
+### `packaging.ignorefile` & `packaging.ignorefile.md`
+- **Purpose**: Patterns for files to exclude from published packages (e.g., build artifacts, logs, editor files).
+- **Should NOT include**: Credentials, secrets, or sensitive info (these are included automatically from `security.ignorefile`).
+
+### `security.ignorefile` & `security.ignorefile.md`
+- **Purpose**: Patterns for secrets, credentials, and sensitive files (e.g., `.env`, keys, cloud credentials).
+- **Used by**: Any ignore output that needs to block secrets/credentials.
+- **Should ONLY include**: Credentials/secrets. Not duplicated elsewhere.
+
+### `vcs.ignorefile` & `vcs.ignorefile.md`
+- **Purpose**: Patterns for files to ignore in version control (e.g., build outputs, test artifacts, editor files).
+- **Should NOT include**: Credentials, secrets, or sensitive info (these are included automatically from `security.ignorefile`).
+
+## Output Ignore Files and Category Mapping
+
+The following table (from `generate-ignores.js` CONFIG) shows which categories are included in each generated output:
+
+| Output File         | Includes                   | Excludes         |
+|---------------------|----------------------------|------------------|
+| .gitignore          | vcs, security              | ai, packaging    |
+| .hgignore           | vcs, security              | ai, packaging    |
+| .terraformignore    | vcs, security              | ai, packaging    |
+| .npmignore          | packaging, vcs, security   | ai               |
+| .pnpmignore         | packaging, vcs, security   | ai               |
+| .yarnignore         | packaging, vcs, security   | ai               |
+| .codeiumignore      | ai, vcs, security          | packaging        |
+| .cursorignore       | ai, vcs, security          | packaging        |
+
+- **security** is always included where credential/secrets protection is needed, but never duplicated in other categories.
+- **ai, packaging, vcs** are combined as needed per output.
+
+## Regenerating Output Files
+After editing any `.ignorefile`, run:
+
+```sh
+node bin/generate-ignores.js
+```
+
+This will regenerate all output ignore files with the latest patterns from the modular sources.
 - Any special considerations
 
 ## Core Ignore Files
@@ -20,6 +76,12 @@ These are documentation files that describe the purpose and contents of the corr
 - **Purpose**: Patterns for AI-generated files and directories
 - **Example**: `/generated-code/`
 - **Used by**: AI tools like Codeium, Cursor, etc.
+
+### `binary.ignorefile` & `binary.ignorefile.md`
+- **Purpose**: Patterns for AI-generated files and directories
+- **Example**: `/generated-code/`
+- **Used by**: AI tools like Codeium, Cursor, etc.
+
 
 ### `packaging.ignorefile` & `packaging.ignorefile.md`
 - **Purpose**: Files that should be excluded from published packages but kept in version control

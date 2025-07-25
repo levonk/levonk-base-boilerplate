@@ -4,14 +4,6 @@
 # If this file doesn't exist .gitignore is used. If it does, .gitignore is ignored
 # This file should be committed to version control
 
-# Credentials Protection
-.aws/credentials
-.azure/credentials
-.ssh
-id_rsa
-id_rsa.pub
-known_hosts
-
 # Environment setup
 .env
 !.env.example
