@@ -5,6 +5,9 @@
 !.env.example
 !Cargo.lock
 
+# Git Worktrees in case its ai agents are working on it.
+.tree
+
 # 3rd party repos
 3rdparty/ignore/*
 chezmoi/*
@@ -125,6 +128,7 @@ logs/
 # Operations Tools
 
 ## Ansible specific
+.ansible/collections/*
 *.retry
 
 ### Ansible Galaxy
