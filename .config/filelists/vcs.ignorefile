@@ -130,6 +130,7 @@ logs/
 ## Ansible specific
 .ansible/collections/*
 *.retry
+*.info/
 
 ### Ansible Galaxy
 downloads/
@@ -138,6 +139,7 @@ roles/external/
 collections/ansible_collections/*
 *.retry
 .ansible/
+.markers
 
 ### Ansible localhost
 local.yml
