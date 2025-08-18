@@ -124,6 +124,8 @@ render.experimental.xml
 
 # Local development
 
+.dev-setup-complete
+
 ## Virtual Environment
 .venv
 env/
