@@ -10,7 +10,10 @@ vault.log
 # 3rd party repos
 3rdparty/ignore/*
 
-# NextJS
+# Node
+
+## NextJS
+next-env.d.ts
 
 ## TypeScript
 *.tsbuildinfo
@@ -20,9 +23,27 @@ vault.log
 
 ## Ecmascript
 
+## 🧪 Cypress
+/cypress/screenshots/
+/cypress/videos/
+/cypress/downloads/
+/cypress/results/
+/cypress.env.json
 
-## Node 
-node_modules/
+## 🧪 Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+## Node Dependencies
+/node_modules/
+/.pnp
+/.pnp.js
+
+## Node Perf Testing
+/coverage/
+/performance-results/
+
 *.spec.js
 *.test.js
 
@@ -33,13 +54,16 @@ coverage/
 *.d.ts
 
 ## Next.js build output
-.next/
-out/
-dist/
-build/
+/.next/
+/out/
+/dist/
+/build/
 *.min.js
 
-## Next.js build output
+## SWC compiler
+.swc/
+
+## Next.js Debug output
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -97,23 +121,34 @@ render.experimental.xml
 *.tmp
 *.~
 
-# Virtual Environment
-.env
+
+# Local development
+
+## Virtual Environment
 .venv
 env/
 venv/
 ENV/
 
-# Local development
+## Local Cache Artifacts
 .local/
 .cache/
 
-# macOS
+## Local Environment Files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS specific
+
+## macOS
 .DS_Store
 .AppleDouble
 .LSOverride
 
-# Windows
+## Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
@@ -141,6 +176,9 @@ roles/external/
 collections/ansible_collections/*
 *.retry
 .ansible/
+
+## Cloud Deployment
+.vercel/
 
 ## Pulumi
 
