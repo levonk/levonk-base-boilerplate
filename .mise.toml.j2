@@ -1,0 +1,10 @@
+{% if mise_languages and mise_languages | length > 0 %}
+[tools]
+{% for entry in mise_languages %}
+# Format: "lang version" e.g., "python 3.11"
+{% set parts = entry.split(" ") %}
+{% if parts | length >= 2 %}
+{{ parts[0] }} = "{{ parts[1] }}"
+{% endif %}
+{% endfor %}
+{% endif %}
