@@ -1,0 +1,202 @@
+# Copier template metadata for Ansible Layered Development Template
+# See: https://copier.readthedocs.io/
+
+_min_copier_version: "8.0.0"
+_answers_file: .copier-answers.yml
+_subdirectory: .
+
+# Core questions (derived from internal-docs/boilerplate/base-boilerplate.md)
+project_name:
+  type: str
+  default: my-agentic-project
+  help: Name of the generated project directory and workspace.
+
+gh_namespace:
+  type: str
+  default: my-gh-namespace
+  help: GitHub namespace (user or org). Used for image/repo names.
+
+base_image:
+  type: str
+  default: ubuntu:latest
+  help: Base Docker image to use for containers.
+
+number_of_worktrees:
+  type: int
+  default: 2
+  help: Number of Git worktrees (agents) to scaffold/manage.
+
+worktree_prefix:
+  type: str
+  default: dev
+  help: Prefix for worktree folders under .local/worktrees/.
+
+container_user:
+  type: str
+  default: devuser
+  help: Username inside the container.
+
+container_group:
+  type: str
+  default: devgroup
+  help: Group name inside the container.
+
+container_user_id:
+  type: int
+  default: 1000
+  help: UID for the container user.
+
+container_group_id:
+  type: int
+  default: 1000
+  help: GID for the container group.
+
+project_type:
+  type: str
+  choices:
+    - python
+    - nodejs
+    - ansible
+    - dotfiles
+    - other
+  default: python
+  help: Primary project language/tooling.
+
+project_dependencies:
+  type: yaml
+  multiline: true
+  default: []
+  help: List of project-specific deps to install (pip/npm/etc). One per line.
+
+container_setup_ansible_roles:
+  type: yaml
+  multiline: true
+  default: []
+  help: Galaxy roles applied during container setup (pre-dev). One per line.
+
+development_runtime_ansible_roles:
+  type: yaml
+  multiline: true
+  default: []
+  help: Galaxy roles applied when dev env starts. One per line.
+
+dotfiles_repository:
+  type: str
+  default: ""
+  help: Dotfiles repo URL (used when project_type == dotfiles).
+
+dotfiles_destination:
+  type: str
+  default: "/home/{{ container_user }}/.dotfiles"
+  help: Destination inside the container to place dotfiles.
+
+expose_ports:
+  type: str
+  default: ""
+  help: Optional explicit port mappings, e.g. "8000:8000,3000:3000".
+
+use_devcontainer:
+  type: bool
+  default: true
+  help: Include .devcontainer setup for VS Code Remote Containers.
+
+create_feature_branches:
+  type: bool
+  default: true
+  help: Create a feature branch for each worktree.
+
+initial_commit:
+  type: bool
+  default: true
+  help: Make an initial commit after generation.
+
+zellij_layout:
+  type: str
+  default: ""
+  help: Zellij layout KDL content. If empty, a default can be provided.
+
+mise_languages:
+  type: yaml
+  multiline: true
+  default: []
+  help: Languages for mise (e.g. "python 3.11", "nodejs 18"). One per line.
+
+nx_preset:
+  type: str
+  choices:
+    - npm
+    - yarn
+    - pnpm
+  default: npm
+  help: Nx package manager preset.
+
+nx_integrated_vscode:
+  type: bool
+  default: true
+  help: Integrate Nx Console for VS Code (recommend extensions, settings, etc.).
+
+nx_default_base:
+  type: str
+  default: main
+  help: Default base branch for Nx.
+
+agent_os_repository:
+  type: str
+  default: ghcr.io/your-org/agent-os
+  help: Repository/name for the base agent OS image.
+
+agent_os_tag:
+  type: str
+  default: latest
+  help: Tag or version of the agent OS image to use.
+
+build_time_ansible_roles:
+  type: yaml
+  multiline: true
+  default: []
+  help: Galaxy roles to apply at image build-time.
+
+runtime_ansible_roles:
+  type: yaml
+  multiline: true
+  default: []
+  help: Galaxy roles to apply at container runtime.
+
+separate_test_container:
+  type: bool
+  default: false
+  help: Create a separate container for running tests.
+
+ide_support:
+  type: str
+  choices:
+    - none
+    - vscode
+    - intellij
+  default: vscode
+  help: IDE support to include.
+
+base_ide_port:
+  type: int
+  default: 9229
+  help: Base port for IDE debug connections; agents increment from here.
+
+agent_ide_port_increment:
+  type: int
+  default: 1
+  help: Port increment per agent for IDE ports.
+
+num_ide_ports:
+  type: int
+  default: 1
+  help: Number of IDE ports per agent to expose.
+
+container_share_package_cache:
+  type: bool
+  default: true
+  help: Bind-mount host package caches into containers to speed up builds.
+
+nx_cli_extension:
+  type: bool
+  default: true
+  help: Generate Nx CLI extension(s) for agent management.

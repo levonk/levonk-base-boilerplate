@@ -1,0 +1,37 @@
+{% if use_devcontainer %}
+{
+  "name": "{{ project_name }}",
+  "build": {
+    "dockerfile": "Dockerfile.run",
+    "context": ".."
+  },
+  "remoteUser": "{{ container_user }}",
+  "workspaceFolder": "/workspace",
+  "features": {},
+  "customizations": {
+    {% if ide_support == 'vscode' %}
+    "vscode": {
+      "extensions": [
+        "nrwl.angular-console",
+        "ms-azuretools.vscode-docker",
+        "redhat.ansible",
+        "redhat.vscode-yaml",
+        "davidanson.vscode-markdownlint"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+    {% endif %}
+  },
+  "mounts": [
+    {% if container_share_package_cache %}
+    "source=${localEnv:HOME}/.cache,target=/home/{{ container_user }}/.cache,type=bind,consistency=cached",
+    {% endif %}
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ],
+  "runArgs": [
+    "--user", "{{ container_user_id }}:{{ container_group_id }}"
+  ]
+}
+{% endif %}

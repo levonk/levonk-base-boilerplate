@@ -1,0 +1,6 @@
+FROM alpine:3.19
+
+# This file is a placeholder. The real content is rendered from
+# .devcontainer/Dockerfile.base.j2 by Copier. Do not edit directly.
+
+CMD ["sh", "-c", "echo 'Rendered from template by Copier; replace after generation.' && sleep 1"]

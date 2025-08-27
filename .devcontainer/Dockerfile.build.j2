@@ -1,0 +1,29 @@
+{% if use_devcontainer %}
+# Build-time provisioning image
+FROM {{ agent_os_repository }}:{{ agent_os_tag }} as build
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       python3 python3-pip ansible git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tmp
+# Copy Ansible build-time requirements if present
+# RUN ansible-galaxy install -r ansible/requirements.yml
+# RUN ansible-playbook ansible/build_time.yml -i localhost,
+
+# Final stage keeps environment and user
+FROM {{ agent_os_repository }}:{{ agent_os_tag }} as base
+
+ARG USER={{ container_user }}
+ARG GROUP={{ container_group }}
+ARG UID={{ container_user_id }}
+ARG GID={{ container_group_id }}
+
+RUN groupadd -g ${GID} ${GROUP} \
+    && useradd -m -s /bin/bash -u ${UID} -g ${GID} ${USER}
+
+USER ${USER}
+WORKDIR /home/${USER}
+{% endif %}

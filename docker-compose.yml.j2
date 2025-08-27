@@ -1,0 +1,57 @@
+version: '3.9'
+
+services:
+  # Controller service (optional placeholder)
+  controller:
+    image: {{ base_image }}
+    container_name: {{ project_name }}-controller
+    user: "{{ container_user_id }}:{{ container_group_id }}"
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    {% if container_share_package_cache %}
+      - ${HOME}/.cache:/home/{{ container_user }}/.cache
+    {% endif %}
+    environment:
+      - TZ=UTC
+    {% if ide_support != 'none' %}
+    ports:
+      # Base IDE ports for controller if any are used
+      {% for p in range(0, num_ide_ports) %}
+      - "{{ base_ide_port + p }}:{{ base_ide_port + p }}"
+      {% endfor %}
+    {% endif %}
+
+  # Agent services generated from number_of_worktrees
+  {% for i in range(1, number_of_worktrees + 1) %}
+  agent{{ i }}:
+    image: {{ base_image }}
+    container_name: {{ project_name }}-agent{{ i }}
+    user: "{{ container_user_id }}:{{ container_group_id }}"
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - ./.local/worktrees/{{ worktree_prefix }}-{{ i }}:/workspace/.local/worktrees/{{ worktree_prefix }}-{{ i }}
+      {% if container_share_package_cache %}
+      - ${HOME}/.cache:/home/{{ container_user }}/.cache
+      {% endif %}
+    env_file:
+      - ./.envs/agent{{ i }}/.env
+    {% if ide_support != 'none' and num_ide_ports > 0 %}
+    ports:
+      {% for p in range(0, num_ide_ports) %}
+      - "{{ base_ide_port + (i * agent_ide_port_increment) + p }}:{{ base_ide_port + (i * agent_ide_port_increment) + p }}"
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+
+  {% if separate_test_container %}
+  tests:
+    image: {{ base_image }}
+    container_name: {{ project_name }}-tests
+    user: "{{ container_user_id }}:{{ container_group_id }}"
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    command: ["bash", "-lc", "echo 'Override me with your test runner'"]
+  {% endif %}
