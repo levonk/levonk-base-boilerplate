@@ -55,6 +55,7 @@ known_hosts
 ## Environment setup
 !.env.example
 .env
+.envs/
 config.json
 appsettings.json
 credentials.json

@@ -69,7 +69,8 @@ const CONFIG = {
   }
 };
 
-const IGNORE_DIR = path.join(__dirname, '..', 'filelists');
+// Source ignore rules live under .config/filelists/
+const IGNORE_DIR = path.join(process.cwd(), '.config', 'filelists');
 
 /**
  * Reads a file and returns its content with a header
