@@ -32,6 +32,15 @@
   ],
   "runArgs": [
     "--user", "{{ container_user_id }}:{{ container_group_id }}"
-  ]
+  ],
+  {% if ide_support != 'none' and num_ide_ports > 0 %}
+  "forwardPorts": [
+    {% for p in range(0, num_ide_ports) %}
+    {{ base_ide_port + p }}{{ "," if not loop.last else "" }}
+    {% endfor %}
+  ],
+  {% endif %}
+  "postCreateCommand": "bash -lc './scripts/setup_container.sh'",
+  "postStartCommand": "bash -lc './scripts/setup_development.sh'"
 }
 {% endif %}
