@@ -20,7 +20,14 @@ services:
       {% for p in range(0, num_ide_ports) %}
       - "{{ base_ide_port + p }}:{{ base_ide_port + p }}"
       {% endfor %}
+      # Example app port mapping (uncomment if AGENT_PORT is defined in env)
+      # - "${AGENT_PORT}:${AGENT_PORT}"
     {% endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "echo controller ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # Agent services generated from number_of_worktrees
   {% for i in range(1, number_of_worktrees + 1) %}
@@ -42,7 +49,14 @@ services:
       {% for p in range(0, num_ide_ports) %}
       - "{{ base_ide_port + (i * agent_ide_port_increment) + p }}:{{ base_ide_port + (i * agent_ide_port_increment) + p }}"
       {% endfor %}
+      # Example app port mapping (uncomment if AGENT_PORT is defined in env)
+      # - "${AGENT_PORT}:${AGENT_PORT}"
     {% endif %}
+    healthcheck:
+      test: ["CMD-SHELL", "echo agent {{ i }} ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
   {% endfor %}
 
   {% if separate_test_container %}
@@ -54,4 +68,9 @@ services:
     volumes:
       - ./:/workspace
     command: ["bash", "-lc", "echo 'Override me with your test runner'"]
+    healthcheck:
+      test: ["CMD-SHELL", "echo tests ok"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
   {% endif %}
