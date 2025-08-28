@@ -38,7 +38,6 @@ services:
     working_dir: /workspace
     volumes:
       - ./:/workspace
-      - ./.local/worktrees/{{ worktree_prefix }}-{{ i }}:/workspace/.local/worktrees/{{ worktree_prefix }}-{{ i }}
       {% if container_share_package_cache %}
       - ${HOME}/.cache:/home/{{ container_user }}/.cache
       {% endif %}
