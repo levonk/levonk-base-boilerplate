@@ -1,29 +1,81 @@
 #!/usr/bin/env bash
 # Template: scripts/setup_container.sh.j2
 # Purpose: Build-time setup inside devcontainer (runs via postCreateCommand)
-# Notes: Guards ensure safe rendering across different template answers.
+# Notes: Idempotent, guarded, prefers mise for tool installation when available.
 
 set -euo pipefail
 
-# --- Mise installation (optional) ---
-{% if 'mise_languages' in _copier_conf.answers and mise_languages|length > 0 %}
+export PATH="$HOME/.local/bin:$PATH"
+
+# --- Install mise (always, if missing) ---
 if ! command -v mise >/dev/null 2>&1; then
+  echo "[setup_container] installing mise"
   curl -fsSL https://mise.jdx.dev/install.sh | bash -s -- -y
   export PATH="$HOME/.local/bin:$PATH"
+else
+  echo "[setup_container] mise already installed"
 fi
+
 # Install tools defined by .mise.toml if present
 if [ -f ".mise.toml" ]; then
+  echo "[setup_container] mise install from .mise.toml"
   mise install || true
 fi
-{% endif %}
 
-# --- Project dependencies (optional) ---
+# --- Install Bun (via mise when possible) ---
+if ! command -v bun >/dev/null 2>&1; then
+  if mise where bun >/dev/null 2>&1 || grep -qi 'bun' .mise.toml 2>/dev/null; then
+    echo "[setup_container] installing bun via mise"
+    mise install bun || true
+  else
+    echo "[setup_container] installing bun via official installer"
+    curl -fsSL https://bun.sh/install | bash
+    export BUN_INSTALL="$HOME/.bun"
+    export PATH="$BUN_INSTALL/bin:$PATH"
+  fi
+else
+  echo "[setup_container] bun already installed"
+fi
+
+# --- Install uv (Astral) for Python (via mise when possible) ---
+if ! command -v uv >/dev/null 2>&1; then
+  if mise where uv >/dev/null 2>&1 || grep -qi 'uv' .mise.toml 2>/dev/null; then
+    echo "[setup_container] installing uv via mise"
+    mise install uv || true
+  else
+    echo "[setup_container] installing uv via official installer"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.local/bin:$PATH"
+  fi
+else
+  echo "[setup_container] uv already installed"
+fi
+
+# --- JS/TS dependencies with Bun ---
+if [ -f "package.json" ]; then
+  echo "[setup_container] installing JS/TS deps with bun"
+  bun install || true
+fi
+
+# --- Python dependencies with uv ---
+if [ -f "pyproject.toml" ]; then
+  echo "[setup_container] syncing Python deps with uv"
+  uv sync || true
+else
+  # Support classic requirements files
+  if ls requirements*.txt >/dev/null 2>&1; then
+    echo "[setup_container] installing Python deps from requirements*.txt with uv pip"
+    for f in requirements*.txt; do
+      [ -f "$f" ] || continue
+      uv pip install -r "$f" || true
+    done
+  fi
+fi
+
+# --- Project dependencies declared via template answers (best-effort) ---
 {% if project_dependencies and project_dependencies|length > 0 %}
-# Project dependencies declared by template answers
 for dep in {% for d in project_dependencies %}"{{ d }}" {% endfor %}; do
-  echo "[setup_container] ensure dependency: ${dep} (implement installer as needed)"
-  # TODO: implement per dependency manager (pip/npm/apt/etc) based on `project_type`.
-  # Placeholder only to avoid failing generation.
+  echo "[setup_container] ensure template-declared dependency: ${dep} (no-op placeholder)"
 done
 {% endif %}
 
@@ -31,7 +83,6 @@ done
 {% if container_setup_ansible_roles and container_setup_ansible_roles|length > 0 %}
 if command -v ansible-playbook >/dev/null 2>&1; then
   echo "[setup_container] applying container_setup_ansible_roles via playbook"
-  # Create a transient playbook invoking roles
   tmp_playbook=$(mktemp)
   cat >"${tmp_playbook}" <<'YAML'
 - hosts: localhost
