@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Template: scripts/worktrees.sh.j2
+# Purpose: Create peer worktrees (sibling directories) and optional feature branches per worktree
+# Notes: Idempotent; safe to re-run. Requires running inside a git repo.
+
+set -euo pipefail
+
+ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "${ROOT_DIR}"
+
+# Determine repo name and parent directory for peer worktrees
+REPO_NAME=$(basename "${ROOT_DIR}")
+PARENT_DIR=$(dirname "${ROOT_DIR}")
+
+# Configuration from template
+WT_PREFIX="{{ worktree_prefix | default('agent') }}"
+WT_COUNT={{ number_of_worktrees | default(1) }}
+CREATE_BRANCHES={{ 'true' if create_feature_branches else 'false' }}
+BASE_BRANCH="{{ default_branch | default('main') }}"
+
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "[worktrees] not a git repository; skipping" >&2
+  exit 0
+fi
+
+# Ensure base branch exists locally
+if ! git show-ref --verify --quiet "refs/heads/${BASE_BRANCH}"; then
+  echo "[worktrees] creating base branch ${BASE_BRANCH} if missing"
+  git checkout -B "${BASE_BRANCH}" || true
+fi
+
+for i in $(seq 1 "${WT_COUNT}"); do
+  name="${WT_PREFIX}-${i}"
+  pad=$(printf "%02d" "${i}")
+  peer_dir_name="${REPO_NAME}-${pad}"
+  path="${PARENT_DIR}/${peer_dir_name}"
+  branch="${name}"
+
+  mkdir -p "${path}"
+
+  # Resolve absolute path of target
+  abs_path="${path}"
+
+  if git worktree list | awk '{print $1}' | grep -qx "${abs_path}"; then
+    echo "[worktrees] worktree already exists: ${abs_path}"
+    continue
+  fi
+
+  if [ "${CREATE_BRANCHES}" = "true" ]; then
+    if git show-ref --verify --quiet "refs/heads/${branch}"; then
+      echo "[worktrees] reusing existing branch ${branch}"
+    else
+      echo "[worktrees] creating branch ${branch} from ${BASE_BRANCH}"
+      git branch "${branch}" "${BASE_BRANCH}"
+    fi
+    echo "[worktrees] adding worktree ${abs_path} for ${branch}"
+    git worktree add -B "${branch}" "${abs_path}" "${branch}"
+  else
+    echo "[worktrees] adding worktree ${abs_path} tracking ${BASE_BRANCH}"
+    git worktree add "${abs_path}" "${BASE_BRANCH}"
+  fi
+
+done
+
+echo "[worktrees] complete"

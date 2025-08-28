@@ -29,7 +29,7 @@ number_of_worktrees:
 worktree_prefix:
   type: str
   default: dev
-  help: Prefix for worktree folders under .local/worktrees/.
+  help: "Prefix for worktree branch names (dirs created as peers: <repo>-NN)."
 
 container_user:
   type: str
@@ -220,17 +220,21 @@ _tasks:
     command: |
       bash -lc '
         set -euo pipefail
-        mkdir -p .local/worktrees
+        ROOT_DIR=$(pwd)
+        REPO_NAME=$(basename "${ROOT_DIR}")
+        PARENT_DIR=$(dirname "${ROOT_DIR}")
         for i in $(seq 1 {{ number_of_worktrees }}); do
           name="{{ worktree_prefix }}-${i}"
-          path=".local/worktrees/${name}"
+          pad=$(printf "%02d" "${i}")
+          peer_dir_name="${REPO_NAME}-${pad}"
+          path="${PARENT_DIR}/${peer_dir_name}"
           mkdir -p "${path}"
           # Create branch if missing
           if ! git rev-parse --verify "${name}" >/dev/null 2>&1; then
             git branch "${name}" || true
           fi
           # Add worktree pointing to branch if not already present
-          if ! git worktree list | grep -q " ${path} "; then
+          if ! git worktree list | awk '{print $1}' | grep -qx "${path}"; then
             git worktree add -B "${name}" "${path}" "${name}" || true
           fi
         done
