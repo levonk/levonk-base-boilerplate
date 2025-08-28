@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Template: scripts/launch.sh.j2
+# Purpose: Generate/update envs per agent, start docker-compose stack, launch Zellij layout
+# Notes: Idempotent; guards for optional features and tools. Intended to run on host/devcontainer.
+
+set -euo pipefail
+
+ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "${ROOT_DIR}"
+
+export PATH="$HOME/.local/bin:$PATH"
+
+# --- Ensure envs exist (redundant-safe with setup_development.sh) ---
+mkdir -p .envs
+
+{% set agent_count = number_of_worktrees if number_of_worktrees is defined else 1 %}
+{% for idx in range(1, (agent_count + 1)) %}
+mkdir -p ".envs/agent{{ idx }}"
+ENV_FILE=".envs/agent{{ idx }}/.env"
+if [ ! -f "${ENV_FILE}" ]; then
+  echo "# Agent {{ idx }} environment" > "${ENV_FILE}"
+  echo "# AGENT_PORT=<set-if-your-app-exposes-a-port>" >> "${ENV_FILE}"
+  echo "# Add app-specific variables below" >> "${ENV_FILE}"
+fi
+{% endfor %}
+
+# --- Compose up ---
+COMPOSE_CMD=(docker compose)
+if ! command -v docker >/dev/null 2>&1; then
+  echo "[launch] docker not found; skipping compose bring-up" >&2
+else
+  echo "[launch] bringing up services"
+  "${COMPOSE_CMD[@]}" up -d --remove-orphans
+fi
+
+# --- Zellij layout (optional) ---
+ZELLIJ_LAYOUT="{% if zellij_layout is defined and zellij_layout %}{{ zellij_layout }}{% else %}default{% endif %}"
+if command -v zellij >/dev/null 2>&1; then
+  echo "[launch] launching zellij layout: ${ZELLIJ_LAYOUT}"
+  # If a path is provided, use it; else attempt by name
+  if [ -f "${ZELLIJ_LAYOUT}" ]; then
+    zellij --layout "${ZELLIJ_LAYOUT}"
+  else
+    zellij --layout "${ZELLIJ_LAYOUT}" || zellij
+  fi
+else
+  echo "[launch] zellij not installed; skipping"
+fi
