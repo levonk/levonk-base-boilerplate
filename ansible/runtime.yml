@@ -1,0 +1,9 @@
+---
+# Placeholder runtime playbook
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Runtime no-op
+      debug:
+        msg: "Runtime provisioning placeholder"
