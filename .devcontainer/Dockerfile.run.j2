@@ -1,7 +1,22 @@
 {% if use_devcontainer %}
-# Runtime image
-# Note: Ideally this would be FROM a build image produced by Dockerfile.build; using base as placeholder.
-FROM {{ agent_os_repository }}:{{ agent_os_tag }}
+# Build stage: install tools and run build-time provisioning
+FROM {{ agent_os_repository }}:{{ agent_os_tag }} AS build
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       python3 python3-pip ansible git curl ca-certificates bash \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+# Copy Ansible assets if present (in generated project)
+COPY ansible/ ./ansible/
+# Best-effort installs; safe if files are missing due to set -e disabled for these lines
+RUN bash -lc 'if [ -f ansible/requirements.yml ]; then ansible-galaxy install -r ansible/requirements.yml; fi'
+RUN bash -lc 'if [ -f ansible/build_time.yml ]; then ansible-playbook ansible/build_time.yml -i localhost, --connection=local; fi'
+
+# Final runtime stage
+FROM {{ agent_os_repository }}:{{ agent_os_tag }} AS runtime
 
 ARG USER={{ container_user }}
 ARG GROUP={{ container_group }}
@@ -17,6 +32,9 @@ WORKDIR /home/${USER}/app
 # Environment for mise (if used)
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
 
-# Placeholder command; generated project may override
+# Placeholder: copy any artifacts produced at build-time if applicable
+# COPY --from=build /workspace/.artifacts/ /home/${USER}/app/.artifacts/
+
+# Default command sets up dev environment
 CMD ["/bin/bash", "/home/${USER}/app/scripts/setup_development.sh"]
 {% endif %}

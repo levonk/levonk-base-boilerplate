@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Template: scripts/setup_container.sh.j2
+# Purpose: Build-time setup inside devcontainer (runs via postCreateCommand)
+# Notes: Guards ensure safe rendering across different template answers.
+
+set -euo pipefail
+
+# --- Mise installation (optional) ---
+{% if 'mise_languages' in _copier_conf.answers and mise_languages|length > 0 %}
+if ! command -v mise >/dev/null 2>&1; then
+  curl -fsSL https://mise.jdx.dev/install.sh | bash -s -- -y
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+# Install tools defined by .mise.toml if present
+if [ -f ".mise.toml" ]; then
+  mise install || true
+fi
+{% endif %}
+
+# --- Project dependencies (optional) ---
+{% if project_dependencies and project_dependencies|length > 0 %}
+# Project dependencies declared by template answers
+for dep in {% for d in project_dependencies %}"{{ d }}" {% endfor %}; do
+  echo "[setup_container] ensure dependency: ${dep} (implement installer as needed)"
+  # TODO: implement per dependency manager (pip/npm/apt/etc) based on `project_type`.
+  # Placeholder only to avoid failing generation.
+done
+{% endif %}
+
+# --- Ansible roles for container setup (optional) ---
+{% if container_setup_ansible_roles and container_setup_ansible_roles|length > 0 %}
+if command -v ansible-playbook >/dev/null 2>&1; then
+  echo "[setup_container] applying container_setup_ansible_roles via playbook"
+  # Create a transient playbook invoking roles
+  tmp_playbook=$(mktemp)
+  cat >"${tmp_playbook}" <<'YAML'
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+{% for role in container_setup_ansible_roles %}
+    - {{ role }}
+{% endfor %}
+YAML
+  ansible-playbook "${tmp_playbook}" -i localhost,
+  rm -f "${tmp_playbook}"
+else
+  echo "[setup_container] ansible not installed; skipping roles"
+fi
+{% endif %}
+
+echo "[setup_container] complete"
