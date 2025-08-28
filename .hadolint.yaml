@@ -1,0 +1,3 @@
+ignored:
+  - DL3008  # Pin versions in apt-get install (not always feasible in devcontainers)
+  - DL3007  # Using latest tag (templated via Jinja variables)

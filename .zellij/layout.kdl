@@ -1,0 +1,33 @@
+layout {
+    default_tab_template {
+        pane size=1 borderless=true {
+            command "bash" { args ["-lc", "printf '%s\n' 'Use launch.sh to start services. This is the status bar pane.' && sleep 1d"] }
+        }
+        children
+    }
+
+    tab name="Controller" {
+        pane split_direction="vertical" {
+            pane {
+                command "bash" { args ["-lc", "echo '[controller] attach logs with: docker compose logs -f controller' && exec bash"] }
+            }
+            pane {
+                command "bash" { args ["-lc", "exec bash"] }
+            }
+        }
+    }
+
+    {% set agent_count = number_of_worktrees if number_of_worktrees is defined else 1 %}
+    {% for idx in range(1, (agent_count + 1)) %}
+    tab name="Agent {{ idx }}" {
+        pane split_direction="vertical" {
+            pane {
+                command "bash" { args ["-lc", "echo '[agent{{ idx }}] attach logs with: docker compose logs -f agent{{ idx }}' && exec bash"] }
+            }
+            pane {
+                command "bash" { args ["-lc", "exec bash"] }
+            }
+        }
+    }
+    {% endfor %}
+}

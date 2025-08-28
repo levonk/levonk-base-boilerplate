@@ -1,0 +1,54 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, next ]
+  pull_request:
+    branches: [ main, next ]
+
+permissions:
+  contents: read
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install markdownlint-cli
+        run: npm i -g markdownlint-cli@0.39.0
+      - name: Run markdownlint
+        run: markdownlint '**/*.md' -i node_modules
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Run shellcheck
+        run: |
+          shopt -s globstar || true
+          shellcheck -x scripts/**/*.sh || true
+
+  hadolint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install hadolint
+        run: |
+          wget -qO /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+          chmod +x /usr/local/bin/hadolint
+      - name: Run hadolint
+        env:
+          HADOLINT_CONFIG: .hadolint.yaml
+        run: |
+          # Lint Dockerfiles (templated .j2 will fail; only lint real Dockerfiles if present)
+          if ls **/Dockerfile 1> /dev/null 2>&1; then
+            hadolint **/Dockerfile || true
+          else
+            echo "No non-templated Dockerfiles to lint"
+          fi
