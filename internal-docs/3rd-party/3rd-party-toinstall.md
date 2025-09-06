@@ -1,0 +1,20 @@
+- Search Console: https://google.com/search-console/
+- Tag Manager: https://tagmanager.google.com/
+	- Behavior: https://clarity.microsoft.com/
+	- Analytics: https://www.google.com/analytics/
+	- Analytics: https://segment.com/pricing/
+	- Maybe
+		- Behavior: https://www.hotjar.com/pricing/
+		- Behavior: https://www.smartlook.com/pricing/
+- Review & Badge: https://business.trustpilot.com/signup
+- Manual
+	- Credit: https://www.dnb.com/business-directory.html
+	- Review: https://www.sitejabber.com/business/pricing
+	- Review: https://learn.resellerratings.com/en/knowledge/free-tier-vs-paid
+	- Review: https://www.yotpo.com/pricing/
+	- Review: https://judge.me/pricing
+	- ETL https://jitsu.com/pricing
+	- CDP https://www.rudderstack.com/blog/start-building-a-better-cdp-for-free-with-rudderstack-cloud-free/
+- Self-hosted
+	- Tag Manager and Analytics https://umami.is/pricing
+	- Behavior Analytics https://matomo.org/faq/new-to-piwik/faq_145/
