@@ -18,7 +18,6 @@ The template should leverage the following core technologies:
 
 *   **Copier:** For project templating and initialization.
 *   **mise (rtx):** For managing tool versions (Python, Node.js, Flutter, etc.).
-*   **Nx:** For build orchestration, code generation, and monorepo management.
 *   **Docker:** For containerization and environment isolation.
 *   **Ansible:** For build-time and runtime provisioning.
 *   **Zellij:** For terminal multiplexing and managing multiple agent containers.
@@ -51,9 +50,6 @@ The following variables should be configurable via Copier questions:
 *   `initial_commit` (boolean): Whether to perform an initial commit after setup. Default: True
 *   `zellij_layout` (string): Content of the zellij layout.
 *   `mise_languages` (string, multiline): A list of languages and versions to manage with `mise` (e.g., `python 3.11`, `nodejs 18`, `flutter 3.0`). One per line. If this is defined, it should generate the .mise.toml file.
-*   `nx_preset` (choice): The Nx preset to use (e.g., "npm", "yarn", "pnpm"). Default: "npm"
-*   `nx_integrated_vscode` (boolean): Whether to integrate Nx console into vscode. Default: True.
-*   `nx_default_base` (string): The default base for the Nx monorepo. Default: main.
 *   `agent_os_repository` (string): URL of the Git repository containing the base "agent-os" configuration (e.g., a minimal Ubuntu image with common tools).
 *   `agent_os_tag` (string): The tag or branch to use from the `agent_os_repository`. Default: "latest".
 *   `build_time_ansible_roles` (string, multiline): Ansible Galaxy roles to apply during the *build* phase (image creation). One per line.
@@ -64,7 +60,6 @@ The following variables should be configurable via Copier questions:
 *   `agent_ide_port_increment` (integer): The amount to increment the IDE port for each new agent. Default: `1`.
 *   `num_ide_ports` (integer): The number of ports per agent to open. This may vary based on the IDE. Default `1`.
 *   `container_share_package_cache` (boolean): Whether to share package manager cache directories between the host and container. Default: `true`
-    `nx_cli_extension` (boolean): Whether to generate Nx CLI extensions for agent management. Default: `true`.
 
 ## IV. Template Structure (Generated Output)
 
@@ -81,40 +76,25 @@ The template should generate the following directory structure and files:
 │   ├── <repo>-01
 │   ├── <repo>-02
 │   └── ...                (up to number_of_worktrees)
-├── apps/                      (Nx projects - controller, agents)
+├── apps/                      (Controller and agents)
 │   ├── controller/
 │   │   ├── src/
 │   │   │   ├── main.py
 │   │   │   └── ...
-│   │   ├── project.json   (Nx project configuration)
 │   │   └── ...
 │   ├── agent1/
 │   │   ├── src/
 │   │   │   ├── agent.py
 │   │   │   └── ...
-│   │   ├── project.json   (Nx project configuration)
 │   │   └── ...
 │   └── ...                (More agent projects based on number_of_worktrees)
 ├── libs/                      (Shared libraries)
-│   ├── utils/              (Example shared library)
-│   │   ├── src/
-│   │   │   ├── index.ts (or index.py)
-│   │   │   └── ...
-│   │   ├── project.json   (Nx project configuration)
+│   ├── src/
+│   │   ├── index.ts (or index.py)
 │   │   └── ...
-├── tools/                     (Nx-related tools)
-│   ├── generators/        (Nx generators)
-│   │   ├── agent/          (Nx generator for creating new agents)
-│   │   │   ├── generator.ts
-│   │   │   ├── schema.json
-│   │   │   ├── files/
-│   │   │   │   └── ... (Template files for new agents)
-│   │   │   └── ...
-│   └── executors/        (Optional: Nx executors, for managing containers, etc.)
-│       └── container/
-│           ├── executor.ts
-│           ├── schema.json
-│           └── ...
+│   └── ...
+├── tools/                     (Tools)
+│   └── ...
 ├── scripts/
 │   ├── launch.sh
 │   ├── setup_container.sh
@@ -128,8 +108,6 @@ The template should generate the following directory structure and files:
 ├── .gitignore
 ├── README.md
 ├── .mise.toml         (Conditional: if mise_languages)
-├── nx.json                (Nx workspace configuration)
-├── package.json          (or yarn.lock, pnpm-lock.yaml)
 └── .envs/               (Environment Variables)
 │    ├── agent1/.env      (Agent Specific Environment)
 │    └── agent2/.env
@@ -182,30 +160,11 @@ The following requirements apply to the content of specific files:
     *   `.local/`
 *   **`.mise.toml`:**
     *   Specifies the tool versions managed by `mise`, based on the user-provided `mise_languages`.
-*   **`nx.json`:**
-    *   Configures the Nx workspace.
-    *   Defines task dependencies, caching settings, and code generation options.
 
-## VI. Nx CLI Extensions
-
-*   If `nx_cli_extension` is true, the template should generate an Nx generator for creating new agents.
-*   The generator should:
-    *   Take arguments for the agent name, type, and other relevant configuration options.
-    *   Generate the necessary files for the new agent (source code, Nx project configuration, etc.).
-    *   Update the `docker-compose.yml` file to include the new agent.
-    *   Create a new Git worktree for the agent (if worktrees are enabled).
-    *   Potentially install the new agent's dependencies.
-
-## VII. Workflow
+## VI. Workflow
 
 1.  **Generate Project:** Use the Copier template to generate the project.
-2.  **Create New Agent (Using Nx CLI):**
-
-    ```bash
-    nx generate @my-scope/my-template:agent --name=my-new-agent --type=python
-    ```
-
-3.  **Install Project Dependencies:**
+2.  **Install Project Dependencies:**
       Run the `setup_container.sh` script to install all the project dependencies:
 
     ```bash

@@ -1,10 +1,9 @@
-# Ansible Layered Development Template (mise + Nx + Docker)
+# Ansible Layered Development Template (mise + Docker)
 
 This template provides a highly configurable and optimized development environment for building complex, agent-based systems. It leverages:
 
 * **Copier:** For project templating and initialization.
 * **mise (rtx):** For managing tool versions (Python, Node.js, Flutter, etc.).
-* **Nx:** For build orchestration, code generation, and monorepo management.
 * **Docker:** For containerization and environment isolation.
 * **Ansible:** For build-time and runtime provisioning, ensuring consistent environments.
 * **Zellij:** For terminal multiplexing and managing multiple agent containers in a single window.
@@ -16,10 +15,9 @@ This template provides a highly configurable and optimized development environme
 This template aims to solve the challenges of developing complex multi-agent systems by providing:
 
 * **Reproducible Environments:** Docker and Ansible ensure consistent environments across different machines and developers.
-* **Scalable Architecture:** Nx provides a scalable architecture for managing a monorepo with multiple agents, controllers, and shared libraries.
 * **Efficient Development Workflow:** Git worktrees, code hot reloading, and remote debugging streamline the development process.
 * **Automated Provisioning:** Ansible automates the setup of the containers, ensuring that all dependencies are installed and configured correctly.
-* **Simplified Management:** Nx CLI extensions provide a convenient way to manage agents and other project components.
+* **Simplified Management:**
 
 ## Minimum Tooling Requirements
 
@@ -28,7 +26,6 @@ Before you can use this template, you need to install the following tools:
 * **Copier:** `pip install copier` (or `pip3 install copier`) - Used to generate new projects from this template.
 * **Docker:** [https://docs.docker.com/get-docker/](https://docs.docker.com/get-docker/) - Used to containerize the development environment.
 * **mise (rtx):** [https://mise.jdx.gg/](https://mise.jdx.gg/) - Used to manage tool versions (Python, Node.js, etc.).
-* **Nx Console (VS Code Extension):** (Optional but highly recommended) - Provides a graphical interface for interacting with the Nx CLI and visualizing the project structure.
 * **Zellij:** [https://zellij.dev/](https://zellij.dev/) - Used to create a multiplexed terminal.
 
 ## Getting Started
