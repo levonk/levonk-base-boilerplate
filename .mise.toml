@@ -2,3 +2,6 @@
 # Do not edit directly.
 
 [tools]
+
+# Bazel build tool
+bazel = "latest"

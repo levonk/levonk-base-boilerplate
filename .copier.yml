@@ -121,24 +121,6 @@ mise_languages:
   default: []
   help: Languages for mise (e.g. "python 3.11", "nodejs 18"). One per line.
 
-nx_preset:
-  type: str
-  choices:
-    - npm
-    - yarn
-    - pnpm
-  default: npm
-  help: Nx package manager preset.
-
-nx_integrated_vscode:
-  type: bool
-  default: true
-  help: Integrate Nx Console for VS Code (recommend extensions, settings, etc.).
-
-nx_default_base:
-  type: str
-  default: main
-  help: Default base branch for Nx.
 
 agent_os_repository:
   type: str
@@ -196,10 +178,6 @@ container_share_package_cache:
   default: true
   help: Bind-mount host package caches into containers to speed up builds.
 
-nx_cli_extension:
-  type: bool
-  default: true
-  help: Generate Nx CLI extension(s) for agent management.
 
 _tasks:
   # Initialize git if not already a repository
