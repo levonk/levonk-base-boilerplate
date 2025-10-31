@@ -1,4 +1,4 @@
-version: '3.9'
+---
 
 # This file is a placeholder to satisfy linters.
 # The real docker-compose content is rendered from docker-compose.yml.j2 by Copier.
