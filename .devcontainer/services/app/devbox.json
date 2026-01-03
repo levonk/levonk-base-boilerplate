@@ -1,0 +1,16 @@
+{
+  "packages": [
+    "direnv",
+    "git",
+    "jq",
+    "nodejs",
+    "pnpm",
+    "zellij",
+    "zsh"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo 'Welcome to the Devbox development shell!'"
+    ]
+  }
+}

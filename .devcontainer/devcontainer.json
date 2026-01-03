@@ -1,0 +1,33 @@
+{
+  "name": "Compose-Powered Devbox Container",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/home/developer/project",
+  "remoteUser": "developer",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "zsh",
+            "icon": "terminal"
+          },
+          "devbox": {
+            "path": "/home/developer/.local/bin/devbox",
+            "args": [
+              "shell"
+            ],
+            "icon": "terminal"
+          }
+        }
+      },
+      "extensions": [
+        "google.gemini-cli",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        "saoudrizwan.claude-dev"
+      ]
+    }
+  }
+}

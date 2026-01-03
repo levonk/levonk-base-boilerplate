@@ -1,0 +1,13 @@
+{
+  "packages": [
+    "zellij",
+    "jq",
+    "nodejs",
+    "pnpm",
+    "git",
+    "direnv"
+  ],
+  "shell": {
+    "init_hook": []
+  }
+}

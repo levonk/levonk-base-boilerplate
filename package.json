@@ -1,0 +1,21 @@
+{
+  "name": "project",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "openskills": "latest",
+    "vibe-kanban": "latest",
+    "ceviz": "latest",
+    "@beads/bd": "latest",
+    "opencode-ai": "latest",
+    "oh-my-opencode": "latest",
+    "@musistudio/claude-code-router": "latest",
+    "@anthropic/claude-code": "latest"
+  },
+  "scripts": {
+    "build": "pnpm build",
+    "lint": "pnpm lint",
+    "test": "pnpm test"
+  }
+}
