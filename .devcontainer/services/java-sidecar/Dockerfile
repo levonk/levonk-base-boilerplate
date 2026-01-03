@@ -1,12 +1,12 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.jdk
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.jdk
 
 RUN mkdir -p /usr/local/bin/healthcheck
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh
 RUN chmod +x /usr/local/bin/healthcheck.sh
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD ["/usr/local/bin/healthcheck.sh"]
 
 ENTRYPOINT ["/usr/bin/env"]

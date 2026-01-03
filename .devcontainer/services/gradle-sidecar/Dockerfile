@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.gradle
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.gradle
 
 RUN mkdir -p /home/developer/.gradle /usr/local/bin/healthcheck
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh

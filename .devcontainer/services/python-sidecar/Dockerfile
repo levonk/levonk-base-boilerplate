@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.python312 nixpkgs.gcc
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.python312 nixpkgs.gcc
 
 RUN mkdir -p /usr/local/bin/healthcheck
 

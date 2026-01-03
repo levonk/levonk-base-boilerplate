@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.poetry nixpkgs.python312
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.poetry nixpkgs.python312
 
 RUN mkdir -p /usr/local/bin/healthcheck
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh

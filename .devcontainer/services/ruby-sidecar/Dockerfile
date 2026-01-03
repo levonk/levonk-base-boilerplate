@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.ruby \
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.ruby \
   && mkdir -p /home/developer/.gem
 
 RUN mkdir -p /usr/local/bin/healthcheck

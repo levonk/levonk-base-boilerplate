@@ -1,5 +1,37 @@
 ---
 services:
+  # Dev-Base service - provides essential development tools and Nix environment
+  dev-base:
+    build:
+      context: ./services/dev-base
+      dockerfile: Dockerfile
+    container_name: dev-dev-base
+    restart: unless-stopped
+    # Mount the shared named volumes.
+    volumes:
+      - nix_store:/nix
+      - nix_config:/etc/nix
+      - vscode_cache:/root/.vscode-server
+      - pnpm_store:/home/developer/.pnpm-store
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    # Ensure sidecars are started and healthy.
+    depends_on:
+      nix:
+        condition: service_healthy
+      pnpm:
+        condition: service_healthy
+      vscode:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+
   app:
     build:
       context: ./services/app
@@ -19,6 +51,8 @@ services:
 
     # Ensure sidecars are started and healthy.
     depends_on:
+      dev-base:
+        condition: service_healthy
       nix:
         condition: service_healthy
       pnpm:
@@ -45,6 +79,7 @@ services:
     restart: unless-stopped
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
     environment:
       - PUID=1000
       - PGID=1000
@@ -69,6 +104,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - rust_cargo_cache:/home/developer/.cargo
       - rust_rustup_cache:/home/developer/.rustup
     environment:
@@ -99,6 +135,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - php_cache:/home/developer/.composer
     environment:
       - TZ=UTC
@@ -128,6 +165,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - haskell_cabal_cache:/home/developer/.cabal
       - haskell_stack_cache:/home/developer/.stack
     environment:
@@ -158,6 +196,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - go_cache:/home/developer/go
     environment:
       - TZ=UTC
@@ -187,6 +226,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - java_m2_cache:/home/developer/.m2/repository
     environment:
       - TZ=UTC
@@ -197,7 +237,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 60s
     cap_drop:
       - ALL
     security_opt:
@@ -216,6 +256,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - python_cache:/home/developer/.cache/pip
     environment:
       - TZ=UTC
@@ -245,6 +286,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - dart_cache:/home/developer/.pub-cache
     environment:
       - TZ=UTC
@@ -274,6 +316,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - dotnet_cache:/home/developer/.nuget/packages
     environment:
       - TZ=UTC
@@ -284,7 +327,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 60s
     cap_drop:
       - ALL
     security_opt:
@@ -313,7 +356,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 30s
     command: sleep infinity
 
   elixir:
@@ -327,6 +370,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - elixir_cache:/home/developer/.mix
     environment:
       - TZ=UTC
@@ -355,6 +399,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - ruby_cache:/home/developer/.gem
     environment:
       - TZ=UTC
@@ -383,6 +428,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - conda_cache:/root/.conda
     environment:
       - TZ=UTC
@@ -411,6 +457,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - poetry_cache:/home/developer/.cache/pypoetry
     environment:
       - TZ=UTC
@@ -439,6 +486,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - sdkman_cache:/root/.sdkman
     environment:
       - TZ=UTC
@@ -467,6 +515,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - nvm_cache:/root/.nvm
     environment:
       - TZ=UTC
@@ -495,6 +544,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - pyenv_cache:/root/.pyenv
     environment:
       - TZ=UTC
@@ -523,6 +573,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - bazel_cache:/root/.cache/bazel
     environment:
       - TZ=UTC
@@ -551,6 +602,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - gradle_cache:/home/developer/.gradle
     environment:
       - TZ=UTC
@@ -581,6 +633,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - pnpm_store:/home/developer/.pnpm-store
       - turbo_cache:/home/developer/.turbo/cache
     environment:
@@ -610,6 +663,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - asdf_cache:/root/.asdf
     environment:
       - TZ=UTC
@@ -638,6 +692,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - mise_cache:/root/.local/share/mise
       - mise_cache:/root/.cache/mise
     environment:
@@ -667,6 +722,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - vscode_cache:/root/.vscode-server
     environment:
       - TZ=UTC
@@ -695,6 +751,7 @@ services:
         condition: service_healthy
     volumes:
       - nix_store:/nix
+      - nix_config:/etc/nix
       - unity_cache:/home/developer/.cache/unity
     environment:
       - TZ=UTC
@@ -766,3 +823,5 @@ volumes:
     name: shared-unity-cache
   vscode_cache:
     name: shared-vscode-cache
+  nix_config:
+    name: shared-nix-config

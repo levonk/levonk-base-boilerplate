@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.micromamba
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.micromamba
 RUN mkdir -p /root/.conda /usr/local/bin/healthcheck
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh
 RUN chmod +x /usr/local/bin/healthcheck.sh

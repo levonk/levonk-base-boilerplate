@@ -7,7 +7,7 @@ ENV PGID=1000
 RUN nix-channel --add https://nixos.org/channels/nixpkgs-unstable nixpkgs && nix-channel --update
 
 # Base tools for downstream sidecars: bash, shadow for useradd/groupadd.
-RUN nix-env -iA nixpkgs.bash nixpkgs.shadow
+RUN nix-env -iA nixpkgs.bash nixpkgs.shadow nixpkgs.nix
 
 RUN mkdir -p /usr/local/bin/healthcheck
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh

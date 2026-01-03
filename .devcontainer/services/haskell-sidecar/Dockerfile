@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.ghc nixpkgs.cabal-install nixpkgs.stack
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.ghc nixpkgs.cabal-install nixpkgs.stack
 
 RUN mkdir -p /usr/local/bin/healthcheck
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh

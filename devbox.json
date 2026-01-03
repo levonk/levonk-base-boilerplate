@@ -5,7 +5,13 @@
     "nodejs",
     "pnpm",
     "git",
-    "direnv"
+    "direnv",
+    "file",
+    "findutils",
+    "xz",
+    "procps",
+    "curl",
+    "devbox"
   ],
   "shell": {
     "init_hook": []

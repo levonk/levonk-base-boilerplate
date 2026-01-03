@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.rustc nixpkgs.cargo
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.rustc nixpkgs.cargo
 
 RUN mkdir -p /usr/local/bin/healthcheck
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh

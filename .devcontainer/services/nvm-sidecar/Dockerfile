@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.nodejs \
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.nodejs \
   && mkdir -p /root/.nvm /usr/local/bin/healthcheck /home/developer/.nvm
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh
 RUN chmod +x /usr/local/bin/healthcheck.sh

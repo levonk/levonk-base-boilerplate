@@ -8,13 +8,14 @@ if [[ ! -f "${HOME}/.cache/.container_initialized" ]]; then
     exit 1
 fi
 
-# Use devbox run to verify tool responsiveness and project status
-if ! devbox run -- pnpm store status &> /dev/null; then
+# Use pnpm directly since devbox is not available in PATH
+if ! pnpm store status &> /dev/null; then
     echo "PNPM store integrity check failed"
     exit 1
 fi
 
-if ! devbox run -- nix-store --verify &> /dev/null; then
+# Check nix store directly since devbox is not available in PATH
+if ! nix-store --verify &> /dev/null; then
     echo "Nix store verification failed"
     exit 1
 fi

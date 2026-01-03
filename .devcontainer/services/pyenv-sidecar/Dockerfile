@@ -1,6 +1,6 @@
 FROM devcontainer-base-sidecar:latest
 
-RUN nix-env -iA nixpkgs.pyenv \
+RUN nix-env -p /nix/var/nix/profiles/default -iA nixpkgs.pyenv \
   && mkdir -p /root/.pyenv /usr/local/bin/healthcheck /home/developer/.pyenv
 COPY healthcheck/healthcheck.sh /usr/local/bin/healthcheck.sh
 RUN chmod +x /usr/local/bin/healthcheck.sh
