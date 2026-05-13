@@ -1,0 +1,49 @@
+{
+  "name": "{{ module_name }}",
+  "version": "0.1.0",
+  "description": "{{ description }}",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint . --ext .ts,.mts",
+    "lint:fix": "eslint . --ext .ts,.mts --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    {% if keywords %}"{{ keywords }}"{% endif %}
+  ],
+  "author": {
+    "name": "{{ author_name }}",
+    "email": "{{ author_email }}"
+  },
+  "license": "{{ license }}",
+  "repository": {
+    "type": "git",
+    "url": "{{ repository_url }}"
+  },
+  "engines": {
+    "node": ">={{ node_version }}"
+  },
+  "packageManager": "pnpm@*",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "{{ typescript_version }}.0",
+    "vitest": "^2.0.0"
+  }
+}

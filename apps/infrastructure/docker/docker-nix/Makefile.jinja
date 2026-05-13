@@ -1,0 +1,41 @@
+# Makefile for {{ _service_name }}
+# Handles building Nix images and managing Docker services
+
+.PHONY: help bootstrap doctor build build-prod build-debug up deploy debug down logs health-check clean clean-all test lint lint-yaml lint-md lint-docker lint-iac shell docker-scout trivy dockle runtime-scan audit ensure-tools
+.DEFAULT_GOAL := help
+
+{% include "_partials/makefile/common-vars.jinja" %}
+NIX_RESULT ?= result
+
+{% include "_partials/makefile/lint-vars.jinja" %}
+
+{% include "_partials/makefile/help.jinja" %}
+
+build: build-prod build-debug ## Build both minimal + debug images
+
+build-prod: ## Build production image via Nix
+	@echo "$(BLUE)Building Production Image ({{ _service_name_slug }})...$(NC)"
+	nix build .#docker-prod
+	@echo "$(BLUE)Loading image into Docker...$(NC)"
+	docker load < $(NIX_RESULT)
+
+build-debug: ## Build debug image via Nix
+	@echo "$(BLUE)Building Debug Image ({{ _service_name_slug }}-debug)...$(NC)"
+	nix build .#docker-debug
+	@echo "$(BLUE)Loading image into Docker...$(NC)"
+	docker load < $(NIX_RESULT)
+
+{% include "_partials/makefile/lifecycle.jinja" %}
+
+{% include "_partials/makefile/lint-standard.jinja" %}
+
+{% include "_partials/makefile/lint-docker-nix.jinja" %}
+
+{% include "_partials/makefile/security-scans.jinja" %}
+
+clean: ## Remove Nix result + compose stack
+	@rm -f $(NIX_RESULT)
+	@$(DOCKER_COMPOSE) down --remove-orphans
+
+clean-all: clean ## Remove volumes as well
+	@$(DOCKER_COMPOSE) down -v --remove-orphans

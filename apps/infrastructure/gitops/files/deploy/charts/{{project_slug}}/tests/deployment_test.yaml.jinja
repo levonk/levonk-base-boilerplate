@@ -1,0 +1,292 @@
+suite: deployment test
+templates:
+  - deployment.yaml
+tests:
+  - it: should create deployment
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.replicas
+          value: 1
+      - isNotEmpty:
+          path: spec.template.spec.containers[0].image
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: {{ chart_name }}
+      - equal:
+          path: spec.template.spec.containers[0].ports[0].containerPort
+          value: {{ app_port }}
+      - isNotEmpty:
+          path: spec.template.spec.containers[0].livenessProbe
+      - isNotEmpty:
+          path: spec.template.spec.containers[0].readinessProbe
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: 250m
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.memory
+          value: 128Mi
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+          value: 500m
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 256Mi
+  - it: should have proper labels
+    asserts:
+      - equal:
+          path: metadata.labels.app.kubernetes.io/name
+          value: {{ chart_name }}
+      - equal:
+          path: metadata.labels.app.kubernetes.io/instance
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.selector.matchLabels.app.kubernetes.io/name
+          value: {{ chart_name }}
+      - equal:
+          path: spec.template.metadata.labels.app.kubernetes.io/name
+          value: {{ chart_name }}
+      - equal:
+          path: spec.template.metadata.labels.app.kubernetes.io/instance
+          value: {{ chart_name }}-test
+  - it: should have proper annotations
+    asserts:
+      - isNotEmpty:
+          path: metadata.annotations
+      - isNotEmpty:
+          path: spec.template.metadata.annotations
+      - equal:
+          path: spec.template.metadata.annotations.checksum/config
+          value: "{{ include \"{{ chart_name }}-configmap\" . | sha256sum }}"
+      - equal:
+          path: spec.template.metadata.annotations.checksum/secret
+          value: "{{ include \"{{ chart_name }}-secret\" . | sha256sum }}"
+  - it: should have security context when enabled
+    set:
+      path: $[{{ if enable_security_context }}].spec.template.spec.securityContext.runAsNonRoot
+      value: true
+    asserts:
+      - equal:
+          path: $[{{ if enable_security_context }}].spec.template.spec.securityContext.runAsNonRoot
+          value: true
+      - equal:
+          path: $[{{ if enable_security_context }}].spec.template.spec.securityContext.runAsUser
+          value: 1000
+      - equal:
+          path: $[{{ if enable_security_context }}].spec.template.spec.securityContext.fsGroup
+          value: 1000
+  - it: should have pod anti-affinity when enabled
+    set:
+      path: $[{{ if enable_pod_anti_affinity }}].spec.template.spec.affinity.podAntiAffinity
+      value:
+        preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - {{ chart_name }}
+            topologyKey: kubernetes.io/hostname
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_pod_anti_affinity }}].spec.template.spec.affinity.podAntiAffinity
+  - it: should have node affinity when enabled
+    set:
+      path: $[{{ if enable_node_affinity }}].spec.template.spec.affinity.nodeAffinity
+      value:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+          - matchExpressions:
+            - key: kubernetes.io/arch
+              operator: In
+              values:
+              - amd64
+              - arm64
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_node_affinity }}].spec.template.spec.affinity.nodeAffinity
+  - it: should have tolerations when specified
+    set:
+      path: $[{{ if enable_tolerations }}].spec.template.spec.tolerations
+      value:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_tolerations }}].spec.template.spec.tolerations
+  - it: should have node selector when specified
+    set:
+      path: $[{{ if enable_node_selector }}].spec.template.spec.nodeSelector
+      value:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_node_selector }}].spec.template.spec.nodeSelector
+  - it: should have priority class when specified
+    set:
+      path: $[{{ if enable_priority_class }}].spec.priorityClassName
+      value: "high-priority"
+    asserts:
+      - equal:
+          path: $[{{ if enable_priority_class }}].spec.priorityClassName
+          value: "high-priority"
+  - it: should have init containers when specified
+    set:
+      path: $[{{ if enable_init_containers }}].spec.template.spec.initContainers
+      value:
+        - name: init-container
+          image: "busybox:1.35"
+          command: ["sh", "-c", "echo 'Init container completed'"]
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_init_containers }}].spec.template.spec.initContainers
+      - equal:
+          path: $[{{ if enable_init_containers }}].spec.template.spec.initContainers[0].name
+          value: "init-container"
+  - it: should have sidecar containers when specified
+    set:
+      path: $[{{ if enable_sidecars }}].spec.template.spec.containers[1]
+      value:
+        - name: sidecar
+          image: "nginx:1.21"
+          ports:
+            - containerPort: 80
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_sidecars }}].spec.template.spec.containers[1]
+      - equal:
+          path: $[{{ if enable_sidecars }}].spec.template.spec.containers[1].name
+          value: "sidecar"
+  - it: should have volumes when specified
+    set:
+      path: $[{{ if enable_volumes }}].spec.template.spec.volumes
+      value:
+        - name: config-volume
+          configMap:
+            name: {{ chart_name }}-config
+        - name: secret-volume
+          secret:
+            secretName: {{ chart_name }}-secrets
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_volumes }}].spec.template.spec.volumes
+      - equal:
+          path: $[{{ if enable_volumes }}].spec.template.spec.volumes[0].name
+          value: "config-volume"
+      - equal:
+          path: $[{{ if enable_volumes }}].spec.template.spec.volumes[1].name
+          value: "secret-volume"
+  - it: should have volume mounts when specified
+    set:
+      path: $[{{ if enable_volume_mounts }}].spec.template.spec.containers[0].volumeMounts
+      value:
+        - name: config-volume
+          mountPath: /etc/config
+        - name: secret-volume
+          mountPath: /etc/secrets
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_volume_mounts }}].spec.template.spec.containers[0].volumeMounts
+      - equal:
+          path: $[{{ if enable_volume_mounts }}].spec.template.spec.containers[0].volumeMounts[0].name
+          value: "config-volume"
+      - equal:
+          path: $[{{ if enable_volume_mounts }}].spec.template.spec.containers[0].volumeMounts[1].name
+          value: "secret-volume"
+  - it: should have persistent volumes when specified
+    set:
+      path: $[{{ if enable_persistent_volumes }}].spec.template.spec.volumes
+      value:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: {{ chart_name }}-data
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_persistent_volumes }}].spec.template.spec.volumes
+      - equal:
+          path: $[{{ if enable_persistent_volumes }}].spec.template.spec.volumes[0].name
+          value: "data-volume"
+  - it: should have extra labels when specified
+    set:
+      path: $[{{ if enable_extra_labels }}].metadata.labels
+      value:
+        extra-label: "extra-value"
+        team: "platform"
+    asserts:
+      - equal:
+          path: $[{{ if enable_extra_labels }}].metadata.labels.extra-label
+          value: "extra-value"
+      - equal:
+          path: $[{{ if enable_extra_labels }}].metadata.labels.team
+          value: "platform"
+  - it: should have extra annotations when specified
+    set:
+      path: $[{{ if enable_extra_annotations }}].metadata.annotations
+      value:
+        extra-annotation: "extra-value"
+        deployment.kubernetes.io/revision: "1"
+    asserts:
+      - equal:
+          path: $[{{ if enable_extra_annotations }}].metadata.annotations.extra-annotation
+          value: "extra-value"
+      - equal:
+          path: $[{{ if enable_extra_annotations }}].metadata.annotations.deployment.kubernetes.io/revision
+          value: "1"
+  - it: should have pod annotations when specified
+    set:
+      path: $[{{ if enable_pod_annotations }}].spec.template.metadata.annotations
+      value:
+        pod-annotation: "pod-extra-value"
+        prometheus.io/scrape: "true"
+    asserts:
+      - equal:
+          path: $[{{ if enable_pod_annotations }}].spec.template.metadata.annotations.pod-annotation
+          value: "pod-extra-value"
+      - equal:
+          path: $[{{ if enable_pod_annotations }}].spec.template.metadata.annotations.prometheus.io/scrape
+          value: "true"
+  - it: should have pod labels when specified
+    set:
+      path: $[{{ if enable_pod_labels }}].spec.template.metadata.labels
+      value:
+        pod-label: "pod-extra-value"
+        version: "v1.0.0"
+    asserts:
+      - equal:
+          path: $[{{ if enable_pod_labels }}].spec.template.metadata.labels.pod-label
+          value: "pod-extra-value"
+      - equal:
+          path: $[{{ if enable_pod_labels }}].spec.template.metadata.labels.version
+          value: "v1.0.0"
+  - it: should have strategy configuration
+    asserts:
+      - equal:
+          path: spec.strategy.type
+          value: RollingUpdate
+      - equal:
+          path: spec.strategy.rollingUpdate.maxUnavailable
+          value: 25%
+      - equal:
+          path: spec.strategy.rollingUpdate.maxSurge
+          value: 25%
+  - it: should have proper revision history limit
+    asserts:
+      - equal:
+          path: spec.revisionHistoryLimit
+          value: 10
+  - it: should have proper progress deadline seconds
+    asserts:
+      - equal:
+          path: spec.progressDeadlineSeconds
+          value: 600

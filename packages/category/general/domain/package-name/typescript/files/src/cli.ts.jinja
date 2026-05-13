@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+
+/**
+ * CLI for {{ package_name }}
+ * {{ description }}
+ *
+ * @author {{ author_name }} <{{ author_email }}>
+ * @license {{ license }}
+ */
+
+{% if include_cli %}
+import { Command } from 'commander';
+import { {{ package_slug | capitalize | replace('-', '') }}, hello, name, version } from './index.js';
+
+const program = new Command();
+
+program
+  .name('{{ package_slug }}')
+  .description('{{ description }}')
+  .version('{{ now.year }}.{{ now.month }}.{{ now.day }}');
+
+program
+  .command('hello')
+  .description('Print a greeting message')
+  .action(() => {
+    console.log(hello());
+  });
+
+program
+  .command('info')
+  .description('Show library information')
+  .action(() => {
+    console.log(`Name: ${name()}`);
+    console.log(`Version: ${version()}`);
+  });
+
+// Parse command line arguments
+program.parse();
+{% else %}
+// CLI support is not enabled for this template.
+// To enable CLI support, set include_cli: true in copier.yaml
+import { hello } from './index.js';
+
+console.log(hello());
+{% endif %}

@@ -1,0 +1,237 @@
+#!/bin/bash
+# {{ _service_name | title }} Security Scan Script
+# Runs comprehensive security scans on the service
+
+set -euo pipefail
+
+# Configuration
+SERVICE_NAME="{{ _service_name }}"
+SCAN_DIR="./security-scans"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+SCAN_NAME="${SERVICE_NAME}_security_scan_${TIMESTAMP}"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Check if tools are available
+check_tools() {
+    log_info "Checking for security scanning tools..."
+
+    local tools=("docker" "trivy" "hadolint")
+    local missing_tools=()
+
+    for tool in "${tools[@]}"; do
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            missing_tools+=("$tool")
+        fi
+    done
+
+    if [[ {{ '${#' }}missing_tools[@]} -gt 0 ]]; then
+        log_warn "Missing tools: ${missing_tools[*]}"
+        log_warn "Install missing tools for comprehensive scanning"
+    fi
+}
+
+# Scan Dockerfile for security issues
+scan_dockerfile() {
+    log_info "Scanning Dockerfile for security issues..."
+
+    if [[ -f "Dockerfile" ]]; then
+        if command -v hadolint >/dev/null 2>&1; then
+            log_info "Running Hadolint..."
+            hadolint Dockerfile > "${SCAN_DIR}/${SCAN_NAME}_hadolint.txt" 2>&1 || true
+            log_success "Hadolint scan completed"
+        else
+            log_warn "Hadolint not available, skipping Dockerfile linting"
+        fi
+    else
+        log_warn "No Dockerfile found"
+    fi
+}
+
+# Scan Docker image for vulnerabilities
+scan_image() {
+    log_info "Scanning Docker image for vulnerabilities..."
+
+    if docker images --format "table {{ '{{' }}.Repository{{ '}}' }}:{{ '{{' }}.Tag{{ '}}' }}" | grep -q "^${SERVICE_NAME}:"; then
+        local image_name
+        image_name=$(docker images --format "table {{ '{{' }}.Repository{{ '}}' }}:{{ '{{' }}.Tag{{ '}}' }}" | grep "^${SERVICE_NAME}:" | head -n1 | awk '{print $1}')
+
+        if command -v trivy >/dev/null 2>&1; then
+            log_info "Running Trivy vulnerability scan..."
+            trivy image --format json --output "${SCAN_DIR}/${SCAN_NAME}_trivy.json" "$image_name" || true
+            trivy image --format table "$image_name" > "${SCAN_DIR}/${SCAN_NAME}_trivy.txt" 2>&1 || true
+            log_success "Trivy scan completed"
+        else
+            log_warn "Trivy not available, skipping vulnerability scanning"
+        fi
+
+        if command -v dockle >/dev/null 2>&1; then
+            log_info "Running Dockle security scan..."
+            dockle --format json --output "${SCAN_DIR}/${SCAN_NAME}_dockle.json" "$image_name" || true
+            dockle --format list "$image_name" > "${SCAN_DIR}/${SCAN_NAME}_dockle.txt" 2>&1 || true
+            log_success "Dockle scan completed"
+        elif command -v docker >/dev/null 2>&1; then
+            log_info "Running Dockle security scan (via Docker)..."
+            # Use pinned version from justfile
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd):/workspace" -w /workspace --security-opt=no-new-privileges docker.io/goodwithtech/dockle:v0.4.14 --format json --output "${SCAN_DIR}/${SCAN_NAME}_dockle.json" "$image_name" || true
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(pwd):/workspace" -w /workspace --security-opt=no-new-privileges docker.io/goodwithtech/dockle:v0.4.14 --format list "$image_name" > "${SCAN_DIR}/${SCAN_NAME}_dockle.txt" 2>&1 || true
+            log_success "Dockle scan completed"
+        else
+            log_warn "Dockle not available, skipping container security scanning"
+        fi
+    else
+        log_warn "No Docker image found for ${SERVICE_NAME}"
+    fi
+}
+
+# Scan dependencies for vulnerabilities
+scan_dependencies() {
+    log_info "Scanning dependencies for vulnerabilities..."
+
+    if [[ -f "package.json" ]]; then
+        if command -v npm >/dev/null 2>&1; then
+            log_info "Running npm audit..."
+            npm audit --json > "${SCAN_DIR}/${SCAN_NAME}_npm_audit.json" 2>&1 || true
+            npm audit > "${SCAN_DIR}/${SCAN_NAME}_npm_audit.txt" 2>&1 || true
+            log_success "NPM audit completed"
+        else
+            log_warn "npm not available, skipping dependency scanning"
+        fi
+    else
+        log_warn "No package.json found"
+    fi
+}
+
+# Scan configuration files for secrets
+scan_secrets() {
+    log_info "Scanning for potential secrets in configuration..."
+
+    local secret_patterns=(
+        "password"
+        "secret"
+        "key"
+        "token"
+        "credential"
+        "private"
+    )
+
+    local findings=()
+
+    while IFS= read -r -d '' file; do
+        for pattern in "${secret_patterns[@]}"; do
+            if grep -i -l "$pattern" "$file" >/dev/null 2>&1; then
+                findings+=("$file")
+                break
+            fi
+        done
+    done < <(find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.json" -o -name "*.env*" -o -name "*.config" \) -print0)
+
+    if [[ {{ '${#' }}findings[@]} -gt 0 ]]; then
+        log_warn "Potential secrets found in configuration files:"
+        printf '  %s\n' "${findings[@]}"
+        echo "Please review these files manually and ensure no sensitive data is committed"
+    else
+        log_success "No obvious secrets found in configuration files"
+    fi
+}
+
+# Generate security report
+generate_report() {
+    log_info "Generating security scan report..."
+
+    local report_file="${SCAN_DIR}/${SCAN_NAME}_report.md"
+
+    cat > "$report_file" << EOF
+# Security Scan Report - ${SERVICE_NAME}
+**Date:** $(date)
+**Scan ID:** ${SCAN_NAME}
+
+## Scan Summary
+
+This report contains the results of automated security scans performed on the ${SERVICE_NAME} service.
+
+## Findings
+
+### Tools Used
+- **Hadolint**: Dockerfile security and best practices
+- **Trivy**: Container vulnerability scanning
+- **Dockle**: Container image security checks
+- **NPM Audit**: Dependency vulnerability scanning
+
+### Files Generated
+EOF
+
+    for file in "${SCAN_DIR}/${SCAN_NAME}"*; do
+        if [[ -f "$file" ]]; then
+            echo "- $(basename "$file")" >> "$report_file"
+        fi
+    done
+
+    cat >> "$report_file" << EOF
+
+## Recommendations
+
+1. **Review all CRITICAL and HIGH severity vulnerabilities**
+2. **Address Dockerfile security issues from Hadolint**
+3. **Fix container security misconfigurations from Dockle**
+4. **Update vulnerable dependencies identified by NPM audit**
+5. **Ensure no secrets are committed to version control**
+
+## Next Steps
+
+- Address critical findings immediately
+- Schedule regular security scans
+- Implement automated security gates in CI/CD
+- Consider additional security tools (SAST, DAST, etc.)
+
+---
+*Generated by security scan script*
+EOF
+
+    log_success "Security report generated: $report_file"
+}
+
+# Main scan function
+main() {
+    log_info "Starting security scan for ${SERVICE_NAME}..."
+    log_info "Scan timestamp: $TIMESTAMP"
+
+    # Create scan directory
+    mkdir -p "$SCAN_DIR"
+    chmod 700 "$SCAN_DIR"
+
+    check_tools
+    scan_dockerfile
+    scan_image
+    scan_dependencies
+    scan_secrets
+    generate_report
+
+    log_success "Security scan completed!"
+    log_info "Results saved in: $SCAN_DIR"
+    log_info "Review the generated report for findings and recommendations"
+}
+
+# Run main function
+main "$@"

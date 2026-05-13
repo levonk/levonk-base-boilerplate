@@ -1,0 +1,67 @@
+//! # {{ crate_name }}
+//!
+//! {{ description }}
+//!
+//! ## Features
+//!
+//! - Feature 1
+//! - Feature 2
+//! - Feature 3
+//!
+//! ## Example
+//!
+//! ```rust
+//! use {{ crate_name }}::*;
+//!
+//! fn main() {
+//!     // Your code here
+//! }
+//! ```
+
+#![warn(missing_docs)]
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
+
+{% if include_async %}
+#[cfg(feature = "async")]
+pub mod {{ module_name }};
+{% else %}
+pub mod {{ module_name }};
+{% endif %}
+
+{% if include_cli %}
+#[cfg(feature = "cli")]
+pub mod cli;
+{% endif %}
+
+// Re-export main types for convenience
+{% if include_async %}
+#[cfg(feature = "async")]
+pub use {{ module_name }}::*;
+{% else %}
+pub use {{ module_name }}::*;
+{% endif %}
+
+{% if include_cli %}
+#[cfg(feature = "cli")]
+pub use cli::*;
+{% endif %}
+
+/// Library version
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_library_version() {
+        assert!(!VERSION.is_empty());
+    }
+
+    #[test]
+    fn test_basic_functionality() {
+        // Add basic functionality tests here
+    }
+}

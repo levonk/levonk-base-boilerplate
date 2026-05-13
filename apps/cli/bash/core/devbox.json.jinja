@@ -1,0 +1,73 @@
+{
+  "name": "{{ project_name | default('bash-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ project_description | default('A Bash CLI application') }}",
+  "shell": {
+    "init": [
+      "echo '🐚 Setting up {{ project_name | default('bash-cli-app') }} development environment...'"
+    ],
+    "scripts": {
+      "build": "shellcheck *.sh",
+      "build-release": "shellcheck -S error *.sh",
+      "test": "bats tests/",
+      "test-coverage": "bats --formatter junit tests/",
+      "lint": "shellcheck *.sh && shfmt -d *.sh",
+      "format": "shfmt -w *.sh",
+      "format-check": "shfmt -d *.sh",
+      "run": "./bin/{{ project_slug | default(project_name | lower | replace(' ', '-')) }}",
+      "dev": "shellcheck -i *.sh && ./bin/{{ project_slug | default(project_name | lower | replace(' ', '-')) }}",
+      "clean": "rm -f coverage.xml",
+      "install": "install -m 755 bin/{{ project_slug | default(project_name | lower | replace(' ', '-')) }} ~/.local/bin/",
+      "uninstall": "rm -f ~/.local/bin/{{ project_slug | default(project_name | lower | replace(' ', '-')) }}",
+      "check": "shellcheck -S error *.sh && shfmt -d *.sh"
+    }
+  },
+  "packages": {
+    "nixpkgs#bash": "",
+    "nixpkgs#shellcheck": "",
+    "nixpkgs#shfmt": "",
+    "nixpkgs#bats": "",
+    {% if include_jq %}
+    "nixpkgs#jq": "",
+    {% endif %}
+    {% if include_yq %}
+    "nixpkgs#yq": "",
+    {% endif %}
+    {% if include_curl %}
+    "nixpkgs#curl": "",
+    {% endif %}
+    {% if include_wget %}
+    "nixpkgs#wget": "",
+    {% endif %}
+    {% if include_gnu_coreutils %}
+    "nixpkgs#coreutils": "",
+    {% endif %}
+    {% if include_findutils %}
+    "nixpkgs#findutils": "",
+    {% endif %}
+    {% if include_grep %}
+    "nixpkgs#gnugrep": "",
+    {% endif %}
+    {% if include_sed %}
+    "nixpkgs#gnused": "",
+    {% endif %}
+    {% if include_awk %}
+    "nixpkgs#gawk": "",
+    {% endif %}
+  },
+  "env": {
+    "SHELL": "{{ shell_path | default('/bin/bash') }}",
+    "BASH_ENV": "{{ bash_env | default('./config.env') }}",
+    {% if include_development %}
+    "DEBUG": "{{ debug | default('1') }}",
+    "VERBOSE": "{{ verbose | default('1') }}",
+    {% endif %}
+    {% if include_config %}
+    "CONFIG_FILE": "{{ config_file | default('./config.yaml') }}",
+    {% endif %}
+    {% if include_colors %}
+    "NO_COLOR": "{{ no_color | default('') }}",
+    "FORCE_COLOR": "{{ force_color | default('1') }}",
+    {% endif %}
+  }
+}

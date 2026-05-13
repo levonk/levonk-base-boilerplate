@@ -1,0 +1,31 @@
+{
+  "_bug_note": "DEVBOX SCRIPT GENERATION BUG: devbox run <script> may fail with 'command not found' error. This is a known devbox regression in v0.14.x+. See issues: https://github.com/jetify-com/devbox/issues/2517, https://github.com/jetify-com/devbox/issues/2108, https://github.com/jetify-com/devbox/issues/2607. Use 'just <command>' or 'devbox shell' then 'just <command>-internal' instead. See ADR-20260131001 for details.",
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": [
+    "docker",
+    "docker-compose",
+    "just",
+    "nodejs",
+    "pnpm"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo '🐳 Docker Compose environment initialized'",
+      "echo '📦 NX Monorepo Docker Compose: {{ _service_name }}'",
+      "echo '🚀 Running bootstrap to ensure NX is installed...'",
+      "just bootstrap-internal"
+    ]
+  },
+  "scripts": {
+    "bootstrap": "just bootstrap-internal",
+    "build": "just build-internal",
+    "up": "just up-internal",
+    "down": "just down-internal",
+    "nx-build": "just nx-build-internal",
+    "nx-up": "just nx-up-internal",
+    "test": "just test-internal",
+    "lint": "just lint-internal",
+    "clean": "just clean-internal",
+    "doctor": "just doctor-internal"
+  }
+}

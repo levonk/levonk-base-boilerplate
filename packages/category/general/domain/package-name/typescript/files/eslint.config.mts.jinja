@@ -1,0 +1,47 @@
+/**
+ * ESLint Configuration for {{module_name}}
+ *
+{% if include_workspace_deps %}
+ * Uses @job-aide/tools-lint-eslint-config
+{% else %}
+ * Uses standalone TypeScript ESLint configuration
+{% endif %}
+ */
+{% if include_workspace_deps %}
+export { default } from "@job-aide/tools-lint-eslint-config/eslint.config.mts";
+{% else %}
+import js from "@eslint/js";
+import tseslint from "@typescript-eslint/eslint-plugin";
+import tsparser from "@typescript-eslint/parser";
+
+export default [
+  js.configs.recommended,
+  {
+    files: ["**/*.mts", "**/*.ts"],
+    ignores: ["dist/**", "node_modules/**", "coverage/**"],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        global: "readonly",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tseslint,
+    },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+      "@typescript-eslint/no-unused-vars": "error",
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+];
+{% endif %}

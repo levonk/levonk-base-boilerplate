@@ -1,0 +1,91 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: {{ project_name }}-dev-cluster
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+namespace: {{ project_name }}-dev
+
+resources:
+  # Add cluster-specific resources
+  # - namespace.yaml
+  # - network-policies.yaml
+  # - resource-quotas.yaml
+
+# Common labels for development cluster
+commonLabels:
+  environment: dev
+  cluster: dev
+  app.kubernetes.io/environment: dev
+
+# Common annotations for development cluster
+commonAnnotations:
+  config.kubernetes.io/environment: "development"
+  config.kubernetes.io/cluster: "dev"
+
+# Cluster-specific configurations
+patchesStrategicMerge:
+  # Add cluster-specific patches
+  # - resource-quotas-patch.yaml
+  # - network-policies-patch.yaml
+
+# JSON 6902 patches for cluster-specific changes
+patchesJson6902:
+  # Add cluster-specific JSON patches
+  # - patch-with-json6902.yaml
+
+# Generators for cluster-specific resources
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    environment: dev
+    cluster: dev
+
+# ConfigMaps for cluster configuration
+configMapGenerator:
+  - name: {{ project_name }}-dev-cluster-config
+    literals:
+      - CLUSTER_NAME=dev
+      - CLUSTER_TYPE=development
+      - CLUSTER_REGION=local
+      - CLUSTER_VERSION=1.28.0
+      - CLUSTER_PROVIDER=docker-desktop
+
+# Secrets for cluster configuration
+secretGenerator:
+  - name: {{ project_name }}-dev-cluster-secrets
+    literals:
+      - CLUSTER_SECRET_KEY=dev-cluster-secret-change-me
+
+# Namespace configuration
+namespace: {{ project_name }}-dev
+
+# Resources for development cluster
+resources:
+  # Add cluster-specific resources here
+  # - namespace.yaml
+  # - resource-quotas.yaml
+  # - network-policies.yaml
+
+# Patches for cluster-specific configurations
+patches:
+  # Add cluster-specific patches here
+  # - patch-resource-quotas.yaml
+  # - patch-network-policies.yaml
+
+# Replacement configurations
+replacements:
+  # Add cluster-specific replacements here
+  # - replace-cluster-name.yaml
+
+# Helm charts for cluster configuration
+helmCharts:
+  # Add cluster-specific Helm charts here
+  # - name: cluster-config
+  #   releaseName: {{ project_name }}-dev-cluster
+  #   namespace: {{ project_name }}-dev
+  #   values:
+  #     clusterName: dev
+  #     clusterType: development

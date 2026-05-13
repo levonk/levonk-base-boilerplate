@@ -1,0 +1,12 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ project_slug }}
+spec:
+  source:
+    repoURL: https://github.com/levonk/{{ project_slug }}
+    path: apps/{{ project_slug }}/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ project_slug }}

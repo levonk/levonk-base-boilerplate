@@ -1,0 +1,20 @@
+# Template B - Also uses shared partials
+
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  default: template-b-project
+  help: Name of the project
+
+environment:
+  type: str
+  default: production
+  help: Environment type
+
+template_type:
+  type: str
+  default: api-service
+  help: Type of template being generated

@@ -1,0 +1,189 @@
+# {{ crate_name }}
+
+> {{ description }}
+
+## ✨ Features
+
+- Feature 1
+- Feature 2
+- Feature 3
+
+## 🚀 Getting Started
+
+### Installation
+
+```bash
+cargo add {{ package_slug }}
+```
+
+### Quick Start
+
+```rust
+use {{ package_slug }}::*;
+
+fn main() {
+    // Example usage
+}
+```
+
+## 📖 Documentation
+
+- [API Documentation](https://docs.rs/{{ package_slug }})
+- [Examples](docs/examples/)
+- [Architecture](docs/architecture.md)
+
+## 🧪 Testing
+
+```bash
+cargo test
+```
+
+## 📊 Benchmarks
+
+```bash
+cargo bench
+```
+
+## 🛠️ Development
+
+### Prerequisites
+
+- Rust 1.70 or higher
+{% if include_nix %}- Nix (optional, for reproducible builds){% endif %}
+
+### Setup
+
+```bash
+# Clone the repository
+git clone {{ repository_url }}.git
+cd {{ package_slug }}
+
+{% if include_nix %}# Enter development shell (optional)
+nix develop
+{% endif %}
+
+# Build the project
+cargo build
+
+# Run tests
+cargo test
+```
+
+### Makefile Commands
+
+```bash
+make build          # Build the package
+make build-release  # Build the package in release mode
+make test           # Run tests
+make test-release   # Run tests in release mode
+make lint           # Run clippy lints
+make fmt            # Format code with rustfmt
+make fmt-check      # Check if code is formatted
+make audit          # Audit dependencies for security vulnerabilities
+make doc            # Generate documentation
+make doc-open       # Generate and open documentation
+make clean          # Clean build artifacts
+make bench          # Run benchmarks
+{% if include_docker %}
+make docker-build   # Build Docker image
+make docker-run      # Run via Docker
+{% endif %}
+{% if include_nix %}
+make nix-build      # Build with Nix
+make nix-shell      # Enter Nix development shell
+{% endif %}
+```
+
+## 🔧 Configuration
+
+{% if include_cli %}
+### CLI Options
+
+```bash
+{{ package_slug }} --help
+```
+
+{% endif %}
+{% if include_async %}
+### Async Runtime
+
+This crate uses Tokio for async operations. Ensure you have a Tokio runtime in your application:
+
+```rust
+#[tokio::main]
+async fn main() {
+    // Your async code here
+}
+```
+
+{% endif %}
+{% if include_serde %}
+### Serialization
+
+The crate supports serialization via Serde:
+
+```rust
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+struct MyStruct {
+    // Your fields here
+}
+```
+
+{% endif %}
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md).
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`cargo test`)
+5. Run lints (`make lint`)
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
+
+### Code Style
+
+- Use `cargo fmt` for formatting
+- Use `cargo clippy` for linting
+- Write tests for new functionality
+- Document public APIs with rustdoc
+
+## 📄 License
+
+This project is licensed under the {{ license }} License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Rust](https://www.rust-lang.org/) - The programming language
+- [Cargo](https://doc.rust-lang.org/cargo/) - The package manager
+{% if include_async %}- [Tokio](https://tokio.rs/) - Async runtime{% endif %}
+{% if include_serde %}- [Serde](https://serde.rs/) - Serialization framework{% endif %}
+{% if include_cli %}- [Clap](https://clap.rs/) - Command line argument parser{% endif %}
+
+## 📈 Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes and version history.
+
+## 🔗 Related Projects
+
+- [Project 1](https://github.com/example/project1)
+- [Project 2](https://github.com/example/project2)
+
+## 📞 Support
+
+If you have any questions or need help, please:
+
+- Open an [issue]({{ repository_url }}/issues)
+- Start a [discussion]({{ repository_url }}/discussions)
+- Check the [documentation](https://docs.rs/{{ package_slug }})
+
+---
+
+*Made with ❤️ by [{{ author_name }}]({{ repository_url }})*

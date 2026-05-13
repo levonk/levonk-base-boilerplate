@@ -1,0 +1,79 @@
+// swift-tools-version: {{ swift_version | default('5.9') }}
+// The swift-tools-version declares the minimum version of Swift required to build this package.
+
+import PackageDescription
+
+let package = Package(
+    name: "{{ package_slug | default('swift-package') }}",
+    platforms: [
+        {% for platform in platforms.split(',') %}
+        .{{ platform.strip() }}(.{{ swift_version | default('5.9') }}),
+        {% endfor %}
+    ],
+    products: [
+        // Products define the executables and libraries a package produces, making them visible to other packages.
+        .library(
+            name: "{{ module_name | default('SwiftPackage') }}",
+            targets: ["{{ module_name | default('SwiftPackage') }}"]
+        ),
+        {% if use_swift_argument_parser %}
+        .executable(
+            name: "{{ package_slug | default('swift-package') }}-cli",
+            targets: ["{{ package_slug | default('swift-package') }}-CLI"]
+        ),
+        {% endif %}
+    ],
+    dependencies: [
+        // Dependencies declare other packages that this package depends on.
+        {% if use_swift_log %}
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
+        {% endif %}
+        {% if use_swift_argument_parser %}
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.0.0"),
+        {% endif %}
+        {% if use_async %}
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
+        {% endif %}
+    ],
+    targets: [
+        // Targets are the basic building blocks of a package, defining a module or a test suite.
+        // Targets can depend on other targets in this package and products from dependencies.
+        .target(
+            name: "{{ module_name | default('SwiftPackage') }}",
+            dependencies: [
+                {% if use_swift_log %}
+                .product(name: "Logging", package: "swift-log"),
+                {% endif %}
+                {% if use_async %}
+                .product(name: "NIO", package: "swift-nio"),
+                {% endif %}
+            ],
+            path: "Sources/{{ module_name | default('SwiftPackage') }}"
+        ),
+        {% if use_swift_argument_parser %}
+        .executableTarget(
+            name: "{{ package_slug | default('swift-package') }}-CLI",
+            dependencies: [
+                .target(name: "{{ module_name | default('SwiftPackage') }}"),
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                {% if use_swift_log %}
+                .product(name: "Logging", package: "swift-log"),
+                {% endif %}
+            ],
+            path: "Sources/{{ package_slug | default('swift-package') }}-CLI"
+        ),
+        {% endif %}
+        {% if include_tests %}
+        .testTarget(
+            name: "{{ module_name | default('SwiftPackage') }}Tests",
+            dependencies: [
+                "{{ module_name | default('SwiftPackage') }}",
+                {% if use_swift_log %}
+                .product(name: "Logging", package: "swift-log"),
+                {% endif %}
+            ],
+            path: "Tests/{{ module_name | default('SwiftPackage') }}Tests"
+        ),
+        {% endif %}
+    ]
+)

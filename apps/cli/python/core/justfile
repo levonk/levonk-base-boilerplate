@@ -1,0 +1,107 @@
+# Python CLI Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    uv sync
+    echo "Python CLI bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check Python CLI environment
+    @echo "🐍 Python version:"
+    @python --version
+    @echo ""
+    @echo "📦 Dependencies:"
+    @uv list
+    @echo ""
+    @echo "🔧 Development tools:"
+    @command -v ruff || echo "ruff not found"
+    @command -v pytest || echo "pytest not found"
+    @command -v mypy || echo "mypy not found"
+    @echo ""
+    @echo "✅ Python CLI environment is ready!"
+
+# Development mode
+run-dev:
+    {% if include_development %}
+    export PYTHONPATH="{{ pythonpath_dev }}"
+    {% endif %}
+    uv run python -m {{ project_slug }}
+
+# Install dependencies
+install:
+    uv sync
+
+# Run tests
+test-cli:
+    pytest
+
+# Run tests with coverage
+test-coverage:
+    uv run pytest --cov={{ project_slug }} --cov-report=html
+
+# Lint code
+lint-cli:
+    uv run ruff check .
+    uv run ruff format --check .
+
+# Format code
+format:
+    uv run ruff format .
+
+# Type checking
+typecheck-cli:
+    uv run mypy .
+
+# Build for distribution
+build-cli:
+    uv build
+
+# Clean up
+clean-cli:
+    rm -rf .pytest_cache .coverage htmlcov dist build
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ Python CLI development environment ready!"
+
+    {% endif %}
+    uv run python -m {{ project_slug }}
+
+# Package for distribution
+package:
+    @just build
+    @just clean
+    mkdir -p dist
+    cp -r build/* dist/
+
+# Health check
+health:
+    echo "✅ Python CLI environment is ready"

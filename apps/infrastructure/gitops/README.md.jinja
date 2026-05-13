@@ -1,0 +1,832 @@
+# Helm + Kustomize OCI Boilerplate
+
+A comprehensive GitOps boilerplate for deploying applications using Helm charts and Kustomize overlays with support for multiple environments and OCI registry publishing.
+
+## Overview
+
+This boilerplate provides a complete GitOps solution with:
+
+- **Helm Charts**: Production-ready Helm charts with best practices
+- **Kustomize Overlays**: Environment-specific configurations
+- **Multi-Environment Support**: Development, staging, and production
+- **OCI Registry**: Support for publishing Helm charts to OCI registries
+- **GitOps Integration**: ArgoCD and Flux support
+- **Development Environment**: Devbox, justfile, and direnv configuration
+- **Security**: Security contexts, network policies, and secrets management
+- **Monitoring**: Prometheus metrics and health checks
+- **Validation**: Comprehensive validation and testing
+
+## Features
+
+### 🚀 Quick Start
+- One-command environment setup
+- Pre-configured development tools
+- Automated validation and testing
+- Multi-environment deployment
+
+### 📦 Helm Charts
+- Production-ready Helm charts
+- Comprehensive configuration options
+- Environment-specific values
+- Health checks and monitoring
+
+### 🔧 Kustomize
+- Environment-specific overlays
+- Resource customization
+- Configuration management
+- Patch management
+
+### 🌐 Multi-Environment
+- Development (dev)
+- Staging (staging)
+- Production (prod)
+- Environment-specific configurations
+
+### 🚢 GitOps
+- ArgoCD integration
+- Flux support
+- Automated deployments
+- Rollback capabilities
+
+### 🔒 Security
+- Security contexts
+- Network policies
+- Secrets management
+- Non-root containers
+
+### 📊 Monitoring
+- Prometheus metrics
+- Health checks
+- Logging configuration
+- Service monitors
+
+## Architecture
+
+```
+├── deploy/
+│   ├── charts/                    # Helm charts
+│   │   └── {{ project_slug }}/    # Main application chart
+│   ├── apps/                      # Application configurations
+│   │   └── {{ project_slug }}/    # Application-specific configs
+│   │       ├── base/             # Base Kustomize configuration
+│   │       └── overlays/         # Environment-specific overlays
+│   │           ├── dev/           # Development environment
+│   │           ├── staging/       # Staging environment
+│   │           └── prod/          # Production environment
+│   ├── argocd/                    # ArgoCD application manifests
+│   │   └── {{ project_slug }}/    # ArgoCD applications
+│   └── clusters/                  # Cluster configurations
+│       ├── dev/                  # Development cluster
+│       ├── staging/              # Staging cluster
+│       └── prod/                 # Production cluster
+├── devbox/                        # Development environment
+├── .envrc                         # Environment variables
+├── justfile                       # Command runner
+├── .gitignore                     # Git ignore rules
+└── README.md                      # This file
+```
+
+## Prerequisites
+
+- Kubernetes cluster (local or remote)
+- Helm 3.14.0+
+- kubectl 1.28.0+
+- kustomize 5.4.0+
+- Devbox (for development environment)
+- Just (for command runner)
+- Direnv (for environment variables)
+
+## Quick Start
+
+### 1. Generate Project
+
+```bash
+# Generate new project
+copier copy ./boilerplate/apps/infrastructure/gitops ./my-gitops-project
+
+# Navigate to project directory
+cd ./my-gitops-project
+
+# Answer the prompts
+```
+
+### 2. Set up Development Environment
+
+```bash
+# Set up development environment
+devbox install
+devbox shell
+
+# Or use justfile
+just setup
+```
+
+### 3. Deploy to Development
+
+```bash
+# Deploy to development
+just deploy-dev
+
+# Check status
+just status
+
+# Port forward service
+just port-forward
+```
+
+## Usage
+
+### Development Commands
+
+```bash
+# Set up environment
+just setup
+
+# Validate configurations
+just validate
+
+# Run tests
+just test
+
+# Clean up resources
+just clean
+```
+
+### Deployment Commands
+
+```bash
+# Deploy to environments
+just deploy-dev
+just deploy-staging
+just deploy-prod
+
+# Check status
+just status
+
+# View logs
+just logs
+
+# Port forward service
+just port-forward
+```
+
+### Helm Commands
+
+```bash
+# Lint Helm chart
+just helm-lint
+
+# Template Helm chart
+just helm-template
+
+# Package Helm chart
+just helm-package
+
+# Install/upgrade Helm chart
+just helm-install
+just helm-upgrade
+```
+
+### Kustomize Commands
+
+```bash
+# Build Kustomize overlays
+just kustomize-build
+
+# Apply Kustomize overlays
+just kustomize-apply
+
+# Diff Kustomize overlays
+just kustomize-diff
+```
+
+### GitOps Commands
+
+```bash
+# Generate ArgoCD manifests
+just argocd-generate
+
+# Sync ArgoCD applications
+just argocd-sync
+
+# Check ArgoCD status
+just argocd-status
+
+# Port forward ArgoCD UI
+just argocd-port-forward
+```
+
+## Configuration
+
+### Project Variables
+
+When generating a project, you'll be prompted for:
+
+- **Project Information**: Name, description, author details
+- **Application Information**: Image, version, port
+- **Helm Configuration**: Chart name, version
+- **Environment Configuration**: Target environments
+- **OCI Configuration**: Registry settings
+- **GitOps Configuration**: Tool selection
+- **Security Configuration**: Security settings
+- **Advanced Configuration**: Monitoring, logging, etc.
+
+### Environment Variables
+
+The following environment variables are automatically configured:
+
+- `PROJECT_NAME`: Project name
+- `PROJECT_SLUG`: Project slug
+- `APP_NAME`: Application name
+- `APP_IMAGE`: Container image
+- `APP_VERSION`: Application version
+- `APP_PORT`: Application port
+- `CHART_NAME`: Helm chart name
+- `CHART_VERSION`: Helm chart version
+- `INGRESS_DOMAIN`: Ingress domain
+- `OCI_REGISTRY`: OCI registry
+- `GITOPS_TOOL`: GitOps tool
+- `KUBECONFIG_NAMESPACE`: Kubernetes namespace
+- `ENVIRONMENT`: Environment (dev/staging/prod)
+
+### Local Overrides
+
+Create local override files for development:
+
+```bash
+# Local values override
+touch values.local.yaml
+
+# Local environment override
+touch .env.local
+
+# Local direnv override
+touch .envrc.local
+```
+
+## Environments
+
+### Development
+
+- **Namespace**: `{project_name}-dev`
+- **Replicas**: 1
+- **Resources**: Limited (CPU: 200m, Memory: 256Mi)
+- **Logging**: Debug level
+- **Features**: All development features enabled
+
+### Staging
+
+- **Namespace**: `{project_name}-staging`
+- **Replicas**: 2
+- **Resources**: Moderate (CPU: 1000m, Memory: 1Gi)
+- **Logging**: Info level
+- **Features**: Staging features enabled
+
+### Production
+
+- **Namespace**: `{project_name}-prod`
+- **Replicas**: 3
+- **Resources**: Production (CPU: 2000m, Memory: 2Gi)
+- **Logging**: Warn level
+- **Features**: Production features only
+- **Security**: Full security context enabled
+
+## Helm Charts
+
+### Chart Structure
+
+```
+deploy/charts/{{ project_slug }}/
+├── Chart.yaml              # Chart metadata
+├── values.yaml            # Default values
+├── templates/              # Template files
+│   ├── deployment.yaml    # Deployment configuration
+│   ├── service.yaml       # Service configuration
+│   ├── ingress.yaml       # Ingress configuration
+│   ├── configmap.yaml     # ConfigMap configuration
+│   ├── secret.yaml        # Secret configuration
+│   ├── hpa.yaml           # HPA configuration
+│   ├── serviceaccount.yaml # Service account
+│   └── _helpers.tpl        # Template helpers
+└── README.md              # Chart documentation
+```
+
+### Chart Values
+
+See `deploy/charts/{{ project_slug }}/values.yaml` for all available configuration options.
+
+### Environment-Specific Values
+
+Each environment has its own values overlay:
+- `deploy/apps/{{ project_slug }}/overlays/dev/kustomization.yaml`
+- `deploy/apps/{{ project_slug }}/overlays/staging/kustomization.yaml`
+- `deploy/apps/{{ project_slug }}/overlays/prod/kustomization.yaml`
+
+## Kustomize
+
+### Base Configuration
+
+The base configuration is in `deploy/apps/{{ project_slug }}/base/kustomization.yaml` and includes:
+
+- Common labels and annotations
+- Namespace configuration
+- Resource limits
+- Environment variables
+- Secrets configuration
+
+### Environment Overlays
+
+Each environment has its own overlay with specific configurations:
+
+- **Development**: Development-specific settings
+- **Staging**: Staging-specific settings
+- **Production**: Production-specific settings
+
+## GitOps Integration
+
+### ArgoCD
+
+ArgoCD applications are defined in `deploy/argocd/{{ project_slug }}/`:
+
+```bash
+# Apply ArgoCD applications
+kubectl apply -f deploy/argocd/{{ project_slug }}/
+
+# Sync applications
+argocd app sync {{ project_name }}
+argocd app sync {{ project_name }}-staging
+argocd app sync {{ project_name }}-prod
+```
+
+### Flux
+
+Flux can be used for GitOps automation:
+
+```bash
+# Generate Flux manifests
+flux generate kustomization {{ project_name }} \
+    --source=GitRepository/{{ project_name }} \
+    --path="./deploy/apps/{{ project_slug }}/overlays/dev"
+
+# Sync Flux resources
+flux reconcile kustomization {{ project_name }}
+```
+
+## OCI Registry
+
+### Publishing Charts
+
+Helm charts can be published to OCI registry:
+
+```bash
+# Package chart
+helm package deploy/charts/{{ project_slug }}/
+
+# Push to OCI registry
+helm push {{ project_name }}-{{ chart_version }}.tgz oci://{{ oci_registry }}/{{ project_name }}
+
+# Install from OCI registry
+helm install {{ project_name }} oci://{{ oci_registry }}/{{ project_name }} \
+    --version {{ chart_version }}
+```
+
+### OCI Registry Configuration
+
+Configure OCI registry in values:
+
+```yaml
+oci:
+  registry: "ghcr.io/myorg"
+  enabled: true
+  chart:
+    repository: "{{ oci_registry }}/{{ project_name }}"
+```
+
+## Security
+
+### Security Context
+
+Production deployments include:
+- Non-root user (UID 1000)
+- Read-only filesystem
+- Dropped capabilities
+- Network policies (if enabled)
+
+### Secrets Management
+
+Secrets are managed using:
+- **Development**: Local secrets in `.env.local`
+- **Staging**: Encrypted secrets with SOPS
+- **Production**: External secrets operator
+
+### Network Policies
+
+Network policies can be enabled for production:
+- Default deny policy
+- Required traffic rules
+- Egress restrictions
+
+## Monitoring
+
+### Metrics
+
+Metrics are exposed for Prometheus when monitoring is enabled:
+
+```yaml
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+```
+
+### Logging
+
+Structured logging in JSON format:
+
+```yaml
+logging:
+  enabled: true
+  level: info
+  format: json
+```
+
+### Health Checks
+
+Health checks are configured for:
+- **Liveness**: `/health` endpoint
+- **Readiness**: `/ready` endpoint
+
+## Development
+
+### Development Environment
+
+The development environment includes:
+
+- **Devbox**: Package management and environment setup
+- **Justfile**: Command runner with common tasks
+- **Direnv**: Environment variables and aliases
+- **Pre-commit**: Git hooks for validation
+
+### Development Tools
+
+The following tools are included:
+- Kubernetes CLI tools
+- Helm and Kustomize
+- ArgoCD and Flux CLI
+- Validation tools (kubeval, kubeconform, kube-score)
+- Security scanning tools
+
+### Development Workflow
+
+1. Make changes to Helm charts or Kustomize configurations
+2. Validate changes with `just validate`
+3. Test changes with `just test`
+4. Deploy to development with `just deploy-dev`
+5. Verify deployment with `just status`
+6. Port forward for testing with `just port-forward`
+
+## Validation
+
+### Validation Commands
+
+```bash
+# Validate all configurations
+just validate
+
+# Validate Helm chart
+just helm-lint
+
+# Validate Kubernetes manifests
+just kubeval
+just kubeconform
+just kube-score
+
+# Run tests
+just test
+```
+
+### Pre-commit Hooks
+
+Pre-commit hooks are configured to run:
+- Shell script linting
+- YAML validation
+- JSON validation
+- Helm chart linting
+- Kustomize validation
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Pod not starting**: Check logs and events
+2. **Service not accessible**: Check service and ingress
+3. **Helm chart issues**: Validate chart
+4. **Kustomize issues**: Validate manifests
+
+### Debug Commands
+
+```bash
+# Debug deployment
+kubectl get events -n {{ project_name }}-dev --sort-by='.lastTimestamp'
+
+# Debug pods
+kubectl get pods -n {{ project_name }}-dev -o wide
+
+# Debug services
+kubectl get svc -n {{ project_name }}-dev -o yaml
+
+# Debug ingress
+kubectl get ingress -n {{ project_name }}-dev -o yaml
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Validate your changes
+5. Submit a pull request
+
+### Pre-commit Hooks
+
+Install hooks with:
+
+```bash
+just pre-commit-install
+```
+
+## License
+
+{{ license }}
+
+## Support
+
+For support and questions:
+- Create an issue in the repository
+- Check the documentation
+- Contact the maintainer
+
+---
+
+*This boilerplate is part of the job-aide project infrastructure templates.*
+
+## Testing
+
+### Helm Unit Testing
+
+The boilerplate includes comprehensive Helm unit testing using the `helm-unittest` plugin. Tests are located in `deploy/charts/{{ project_slug }}/tests/` and cover all major chart components.
+
+#### Test Structure
+
+```
+deploy/charts/{{ project_slug }}/tests/
+├── deployment_test.yaml      # Deployment resource tests
+├── service_test.yaml         # Service resource tests
+├── ingress_test.yaml         # Ingress resource tests
+├── configmap_test.yaml       # ConfigMap resource tests
+├── secret_test.yaml          # Secret resource tests
+├── hpa_test.yaml             # HPA resource tests
+├── serviceaccount_test.yaml  # ServiceAccount resource tests
+└── _helpers_test.yaml        # Template helper tests
+```
+
+#### Running Tests
+
+```bash
+# Run all Helm unit tests
+just helm-unittest
+
+# Run tests with verbose output
+just helm-unittest-verbose
+
+# Run tests in watch mode
+just helm-unittest-watch
+
+# Run specific test suite
+just helm-unittest-deployment
+just helm-unittest-service
+just helm-unittest-ingress
+just helm-unittest-configmap
+just helm-unittest-secret
+just helm-unittest-hpa
+just helm-unittest-serviceaccount
+just helm-unittest-helpers
+
+# Run tests with coverage
+just helm-unittest-coverage
+
+# Update test snapshots
+just helm-unittest-update
+
+# Debug tests
+just debug-tests
+```
+
+#### Test Development
+
+```bash
+# Run tests in development mode
+just test-dev
+
+# Run tests with watch mode
+just test-watch
+
+# Run specific test file
+just helm-unittest-specific
+
+# Debug specific test
+just debug-specific-test
+```
+
+#### Test Coverage
+
+```bash
+# Generate coverage report
+just test-coverage
+
+# Generate HTML coverage report
+just test-coverage-html
+```
+
+#### Test Reports
+
+```bash
+# Generate test reports
+just test-report
+
+# Generate HTML test report
+just test-report-html
+
+# Generate JUnit XML report
+just test-report-junit
+```
+
+#### Test Validation
+
+```bash
+# Validate test structure
+just validate-test-structure
+
+# Validate tests without running
+just validate-tests
+```
+
+#### Test Performance
+
+```bash
+# Run performance tests
+just test-performance
+
+# Run performance tests with verbose output
+just test-performance-verbose
+```
+
+#### Test Integration
+
+```bash
+# Run integration tests
+just test-integration
+
+# Run integration tests with verbose output
+just test-integration-verbose
+```
+
+#### Test Environment Variables
+
+The following environment variables control test behavior:
+
+- `HELM_UNITTEST_LOG_LEVEL`: Log level for helm-unittest (default: info)
+- `HELM_UNITTEST_TIMEOUT`: Test timeout in seconds (default: 30)
+- `HELM_UNITTEST_PARALLEL`: Number of parallel tests (default: 4)
+- `PYTEST_ADDOPTS`: Additional pytest options
+- `PYTEST_COVERAGE`: Coverage options for pytest
+- `PYTHONPATH`: Python path for test modules
+
+#### Test Configuration
+
+Tests are configured in the test files using the helm-unittest syntax:
+
+```yaml
+suite: deployment test
+templates:
+  - deployment.yaml
+tests:
+  - it: should create deployment
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+```
+
+#### Test Assertions
+
+Common assertions used in tests:
+
+- `isKind`: Check resource kind
+- `equal`: Check exact value match
+- `isNotEmpty`: Check value is not empty
+- `contains`: Check value contains substring
+- `matchRegex`: Check value matches regex pattern
+- `notContains`: Check value does not contain substring
+- `notEqual`: Check value does not match
+
+#### Test Data
+
+Tests use various test data and scenarios:
+
+- **Default Values**: Tests with default chart values
+- **Custom Values**: Tests with custom value overrides
+- **Edge Cases**: Tests with edge case scenarios
+- **Error Cases**: Tests for error handling
+- **Feature Flags**: Tests for optional features
+
+#### Test Best Practices
+
+1. **Test Naming**: Use descriptive test names
+2. **Test Organization**: Group related tests in suites
+3. **Test Coverage**: Test all chart resources and features
+4. **Test Data**: Use realistic test data
+5. **Test Assertions**: Use appropriate assertions
+6. **Test Maintenance**: Keep tests up to date with chart changes
+
+#### Test Troubleshooting
+
+Common test issues and solutions:
+
+1. **Test Failures**: Check test assertions and expected values
+2. **Template Errors**: Check template syntax and helper functions
+3. **Value Errors**: Check value overrides and defaults
+4. **Path Errors**: Check resource paths and field names
+5. **Assertion Errors**: Check assertion syntax and parameters
+
+#### Test Examples
+
+Example test for deployment resource:
+
+```yaml
+suite: deployment test
+templates:
+  - deployment.yaml
+tests:
+  - it: should create deployment
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.replicas
+          value: 1
+```
+
+Example test for service resource:
+
+```yaml
+suite: service test
+templates:
+  - service.yaml
+tests:
+  - it: should create service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.type
+          value: ClusterIP
+```
+
+#### Test Integration with CI/CD
+
+Tests can be integrated into CI/CD pipelines:
+
+```yaml
+# GitHub Actions example
+- name: Run Helm Unit Tests
+  run: |
+    just helm-unittest
+    just test-coverage
+
+# GitLab CI example
+test:
+  script:
+    - just helm-unittest
+    - just test-coverage
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+```
+
+#### Test Documentation
+
+Test documentation should include:
+
+- Test purpose and scope
+- Test scenarios and cases
+- Test data and fixtures
+- Test assertions and expectations
+- Test maintenance guidelines
+

@@ -1,0 +1,96 @@
+# Go CLI Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    echo "Go CLI bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check Go CLI environment
+    @echo "🐹 Go version:"
+    @go version
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v gofmt || echo "gofmt not found"
+    @command -v go vet || echo "go vet not found"
+    @echo ""
+    @echo "✅ Go CLI environment is ready!"
+
+# Development mode
+dev:
+    go run main.go
+
+# Install dependencies
+install:
+    go mod download
+
+# Run tests
+test:
+    go test ./...
+
+# Run tests with coverage
+test-coverage:
+    go test -cover ./...
+
+# Lint code
+lint:
+    go vet ./...
+
+# Format code
+format:
+    go fmt ./...
+
+# Type checking
+typecheck:
+    go vet ./...
+
+# Build for release
+build:
+    go build -o {{ project_slug }} main.go
+
+# Clean up
+clean:
+    go clean
+    rm -f {{ project_slug }}
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ Go CLI development environment ready!"
+
+# Package for distribution
+package:
+    @just build
+    @just clean
+    mkdir -p dist
+    cp {{ project_slug }} dist/
+
+# Health check
+health:
+    echo "✅ Go CLI environment is ready"

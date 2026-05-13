@@ -1,0 +1,72 @@
+_min_copier_version: "9.0.0"
+_templates_suffix: ".jinja"
+
+_defaults:
+  package_name: "browser-extension-sample"
+  display_name: "Browser Extension Sample"
+  description: "A universal browser extension scaffold."
+  author_name: "Your Name"
+  author_email: "your.email@example.com"
+  repository_url: "https://github.com/your-org/your-repo"
+  extension_version: "0.1.0"
+  target_browsers: "chrome,firefox,edge"
+  include_options_page: true
+  include_popup: true
+  include_content_script: false
+
+package_name:
+  type: str
+  help: "Package name (kebab-case, used in package.json)."
+  validator: "{% if not package_name %}Package name is required{% endif %}"
+
+display_name:
+  type: str
+  help: "Human-friendly extension name (shown in browser extension UI)."
+
+description:
+  type: str
+  help: "Short description for manifest and README."
+
+author_name:
+  type: str
+  help: "Author name."
+
+author_email:
+  type: str
+  help: "Author email."
+
+repository_url:
+  type: str
+  help: "Repository URL for this extension."
+
+extension_version:
+  type: str
+  help: "Initial extension version (semver)."
+  default: "0.1.0"
+
+target_browsers:
+  type: str
+  help: "Target browsers (comma-separated: chrome,firefox,edge)."
+  default: "chrome,firefox,edge"
+
+include_options_page:
+  type: bool
+  help: "Include an options page for configuration?"
+  default: true
+
+include_popup:
+  type: bool
+  help: "Include a toolbar button with popup UI?"
+  default: true
+
+include_content_script:
+  type: bool
+  help: "Include a starter content script hook?"
+  default: false
+
+_ignore:
+  - "node_modules"
+  - "dist"
+  - "out"
+  - ".git"
+  - ".turbo"

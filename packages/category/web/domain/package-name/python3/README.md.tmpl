@@ -1,0 +1,150 @@
+---
+modeline: "vim: set ft=markdown:"
+title: "{Proper Cased Title}"
+package_name: "{package_name}"
+adr-id: "{adrYYYYMMDD###}"
+slug: "{adr-id-lowercased-hyphenated-short-slug}"
+url: "{url to this document in GitHub (reference origin) or elsewhere}"
+synopsis: "{Synopsis}"
+author: {default to https://github.com/levonk}
+date-created: "{YYYY-MM-DD}"
+date-updated: "{YYYY-MM-DD updated on change}"
+version: "{0.0.0 incremented on change}"
+status: "development|testing|production|deprecated|replaced"
+aliases: []
+tags: ["doc/architecture/adr"]
+supersedes: ["{slugs list}"]
+superseded-by: ["{slugs list}"]
+related-to: ["{slugs list}"]
+external_integration: false
+completeness:
+  # Add language/platform and its completeness score (0-100)
+  # e.g., "python": 100,
+  # e.g., "typescript": 50
+type: "" # concrete, interface, facade, or other
+{be creative with extensive context specific additional front-matter}
+---
+
+# {{category}}-{{domain}}-{{package_name}}
+
+> {{package_description}}
+
+## ✨ Features
+
+- Feature 1
+- Feature 2
+- Feature 3
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Python {{python_version}} or higher
+- pip or your preferred package manager
+
+### Installation
+
+```bash
+pip install {{category}}-{{domain}}-{{package_name}}
+```
+
+## Usage
+
+```python
+from {{category}}_{{domain}}_{{package_name}} import example
+
+# Your usage example here
+```
+
+## Development
+
+### Setup Development Environment
+
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install development dependencies
+pip install -e ".[dev]"
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov
+
+# Run specific test markers
+pytest -m unit
+pytest -m integration
+```
+
+### Code Quality
+
+```bash
+# Format code
+black src tests
+isort src tests
+
+# Lint code
+ruff check src tests
+mypy src
+
+# Type checking
+mypy src
+```
+
+### Building
+
+```bash
+# Build package
+python -m build
+
+# Install locally
+pip install -e .
+```
+
+## Project Structure
+
+```
+{{package_name}}/
+├── src/
+│   └── {{category}}_{{domain}}_{{package_name}}/
+│       ├── __init__.py
+│       └── py.typed
+├── tests/
+│   ├── __init__.py
+│   └── test_example.py
+├── pyproject.toml
+├── README.md
+└── .python-version
+```
+
+## Security
+
+This package follows security best practices:
+
+- **No hardcoded secrets**: All sensitive data via environment variables
+- **Input validation**: All inputs validated and sanitized
+- **Dependency scanning**: Regular security audits
+- **Type safety**: Strict type checking with mypy
+- **Secure defaults**: HTTPS-only, modern crypto algorithms
+
+See `.windsurf/rules/codeguard-*.md` for detailed security guidelines.
+
+## References
+
+- [Package Documentation]()
+- [Related ADRs]()
+- [Security Guidelines](/.windsurf/rules/)
+
+## License
+
+Copyright (c) 2025 the person whose account is https://github.com/levonk.  
+Licensed under the GNU AGPL-3.0 License. See LICENSE file in the project root for full license information.
+
+<!-- vim: set ft=markdown: -->

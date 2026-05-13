@@ -1,0 +1,52 @@
+package {{package_slug}}
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNew(t *testing.T) {
+	lib := New()
+	
+	assert.NotNil(t, lib)
+	assert.Equal(t, "{{package_name}}", lib.Name())
+	assert.Equal(t, "1.0.0", lib.Version())
+}
+
+func TestLibrary_Hello(t *testing.T) {
+	lib := New()
+	
+	expected := "Hello from {{package_name}} v1.0.0"
+	actual := lib.Hello()
+	
+	assert.Equal(t, expected, actual)
+}
+
+func TestLibrary_Name(t *testing.T) {
+	lib := New()
+	
+	expected := "{{package_name}}"
+	actual := lib.Name()
+	
+	assert.Equal(t, expected, actual)
+}
+
+func TestLibrary_Version(t *testing.T) {
+	lib := New()
+	
+	expected := "1.0.0"
+	actual := lib.Version()
+	
+	assert.Equal(t, expected, actual)
+}
+
+// Benchmark tests
+func BenchmarkLibrary_Hello(b *testing.B) {
+	lib := New()
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = lib.Hello()
+	}
+}

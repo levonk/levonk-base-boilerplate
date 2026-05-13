@@ -1,0 +1,306 @@
+suite: configmap test
+templates:
+  - configmap.yaml
+tests:
+  - it: should create configmap
+    asserts:
+      - isKind:
+          of: ConfigMap
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test-config
+      - equal:
+          path: metadata.labels.app.kubernetes.io/name
+          value: {{ chart_name }}
+      - equal:
+          path: metadata.labels.app.kubernetes.io/instance
+          value: {{ chart_name }}-test
+      - isNotEmpty:
+          path: data
+      - equal:
+          path: data.app_name
+          value: {{ chart_name }}
+      - equal:
+          path: data.app_version
+          value: "{{ app_version }}"
+      - equal:
+          path: data.chart_version
+          value: "{{ chart_version }}"
+      - equal:
+          path: $[{{ if .Values.logging.enabled }}].data.log_level
+          value: "{{ .Values.logging.level }}"
+      - equal:
+          path: $[{{ if .Values.logging.enabled }}].data.log_format
+          value: "{{ .Values.logging.format }}"
+      - equal:
+          path: $[{{ if .Values.tracing.enabled }}].data.tracing_enabled
+          value: "true"
+      - equal:
+          path: $[{{ if .Values.tracing.enabled }}].data.jaeger_service
+          value: "{{ .Values.tracing.jaeger.service }}"
+      - equal:
+          path: $[{{ if .Values.database.enabled }}].data.database_type
+          value: "{{ .Values.database.type }}"
+      - equal:
+          path: $[{{ if .Values.database.enabled }}].data.database_host
+          value: "{{ .Values.database.host }}"
+      - equal:
+          path: $[{{ if .Values.database.enabled }}].data.database_port
+          value: "{{ .Values.database.port }}"
+      - equal:
+          path: $[{{ if .Values.database.enabled }}].data.database_name
+          value: "{{ .Values.database.name }}"
+      - equal:
+          path: $[{{ if .Values.database.enabled }}].data.database_ssl_mode
+          value: "{{ .Values.database.sslMode }}"
+  - it: should have proper annotations when specified
+    set:
+      path: $[{{ if enable_configmap_annotations }}].metadata.annotations
+      value:
+        config.kubernetes.io/origin: "{{ repo_url }}"
+        config.kubernetes.io/managed-by: "kustomize"
+    asserts:
+      - equal:
+          path: $[{{ if enable_configmap_annotations }}].metadata.annotations.config.kubernetes.io/origin
+          value: "{{ repo_url }}"
+      - equal:
+          path: $[{{ if enable_configmap_annotations }}].metadata.annotations.config.kubernetes.io/managed-by
+          value: kustomize
+  - it: should have binary data when specified
+    set:
+      path: $[{{ if enable_binary_data }}].data
+      value:
+        binary_file: |
+          {{ "binary_data_placeholder" }}
+        another_binary: |
+          {{ "another_binary_placeholder" }}
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_binary_data }}].data.binary_file
+      - isNotEmpty:
+          path: $[{{ if enable_binary_data }}].data.another_binary
+  -it: should have immutable annotation when specified
+    set:
+      path: $[{{ if enable_immutable }}].metadata.annotations
+      value:
+        config.kubernetes.io/immutable: "true"
+    asserts:
+      - equal:
+          path: $[{{ if enable_immutable }}].metadata.annotations.config.kubernetes.io/immutable
+          value: "true"
+  - it: should have extra labels when specified
+    set:
+      path: $[{{ if enable_extra_labels }}].metadata.labels
+      value:
+        extra-label: "extra-value"
+        team: "platform"
+    asserts:
+      - equal:
+          path: $[{{ if enable_extra_labels }}].metadata.labels.extra-label
+          value: "extra-value"
+      - equal:
+          path: $[{{ if enable_extra_labels }}].metadata.labels.team
+          value: "platform"
+  - it: should have extra annotations when specified
+    set:
+      path: $[{{ if enable_extra_annotations }}].metadata.annotations
+      value:
+        extra-annotation: "extra-value"
+        config.kubernetes.io/last-applied: "2023-01-01T00:00:00Z"
+    asserts:
+      - equal:
+          path: $[{{ if enable_extra_annotations }}].metadata.annotations.extra-annotation
+          value: "extra-value"
+      - equal:
+          path: $[{{ if enable_extra_annotations }}].metadata.annotations.config.kubernetes.io/last-applied
+          value: "2023-01-01T00:00:00Z"
+  - it: should have owner references when specified
+    set:
+      path: $[{{ if enable_owner_references }}].metadata.annotations
+      value:
+        config.kubernetes.io/owner: "platform-team"
+        config.kubernetes.io/managed-by: "argocd"
+    asserts:
+      - equal:
+          path: $[{{ if enable_owner_references }}].metadata.annotations.config.kubernetes.io/owner
+          value: "platform-team"
+      - equal:
+          path: $[{{ if enable_owner_references }}].metadata.annotations.config.kubernetes.io/managed-by
+          value: "argocd"
+  - it: should have custom namespace when specified
+    set:
+      path: $[{{ if enable_custom_namespace }}].metadata.namespace
+      value: custom-namespace
+    asserts:
+      - equal:
+          path: $[{{ if enable_custom_namespace }}].metadata.namespace
+          value: custom-namespace
+  - it: should have custom labels when specified
+    set:
+      path: $[{{ if enable_custom_labels }}].metadata.labels
+      value:
+        custom-label: "custom-value"
+        environment: "production"
+    asserts:
+      - equal:
+          path: $[{{ if enable_custom_labels }}].metadata.labels.custom-label
+          value: "custom-value"
+      - equal:
+          path: $[{{ if enable_custom_labels }}].metadata.labels.environment
+          value: "production"
+  - it: should have custom annotations when specified
+    set:
+      path: $[{{ if enable_custom_annotations }}].metadata.annotations
+      value:
+        custom-annotation: "custom-value"
+        deployment: "production"
+    asserts:
+      - equal:
+          path: $[{{ if enable_custom_annotations }}].metadata.annotations.custom-annotation
+          value: "custom-value"
+      - equal:
+          path: $[{{ if enable_custom_annotations }}].metadata.annotations.deployment
+          value: "production"
+  - it: should have environment-specific data when specified
+    set:
+      path: $[{{ if enable_environment_data }}].data
+      value:
+        environment: "production"
+        region: "us-west-2"
+        zone: "us-west-2a"
+        cluster: "production-cluster"
+    asserts:
+      - equal:
+          path: $[{{ if enable_environment_data }}].data.environment
+          value: "production"
+      - equal:
+          path: $[{{ if enable_environment_data }}].data.region
+          value: "us-west-2"
+      - equal:
+          path: $[{{ if enable_environment_data }}].data.zone
+          value: "us-west-2a"
+      - equal:
+          path: $[{{ if enable_environment_data }}].data.cluster
+          value: "production-cluster"
+  - it: should have feature flags when specified
+    set:
+      path: $[{{ if enable_feature_flags }}].data
+      value:
+        feature_flags: "production-features"
+        monitoring_enabled: "true"
+        security_enabled: "true"
+        debugging_enabled: "false"
+    asserts:
+      - equal:
+          path: $[{{ if enable_feature_flags }}].data.feature_flags
+          value: "production-features"
+      - equal:
+          path: $[{{ if enable_feature_flags }}].data.monitoring_enabled
+          value: "true"
+      - equal:
+          path: $[{{ if enable_feature_flags }}].data.security_enabled
+          value: "true"
+      - equal:
+          path: $[{{ if enable_feature_flags }}].data.debugging_enabled
+          value: "false"
+  - it: should have application configuration when specified
+    set:
+      path: $[{{ if enable_app_config }}].data
+      value:
+        config.yaml: |
+          server:
+            port: {{ app_port }}
+            host: "0.0.0.0"
+          database:
+            host: "{{ .Values.database.host }}"
+            port: {{ .Values.database.port }}
+            name: "{{ .Values.database.name }}"
+          logging:
+            level: "{{ .Values.logging.level }}"
+            format: "{{ .Values.logging.format }}"
+          monitoring:
+            enabled: "{{ .Values.monitoring.enabled }}"
+            metrics_port: 9090
+          security:
+            enabled: "{{ .Values.security.enabled }}"
+            tls_enabled: "{{ .Values.tls.enabled }}"
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_app_config }}].data.config.yaml
+      - contains:
+          path: $[{{ if enable_app_config }}].data.config.yaml
+          content: "server:"
+      - contains:
+          path: $[{{ if enable_app_config }}].data.config.yaml
+          content: "port: {{ app_port }}"
+      - contains:
+          path: $[{{ if enable_app_config }}].data.config.yaml
+          content: "database:"
+      - contains:
+          path: $[{{ if enable_app_config }}].data.config.yaml
+          content: "logging:"
+      - contains:
+          path: $[{{ if enable_app_config }}].data.config.yaml
+          content: "monitoring:"
+      - contains:
+          path: $[{{ if enable_app_config }}].data.config.yaml
+          content: "security:"
+  - it: should have JSON configuration when specified
+    set:
+      path: $[{{ if enable_json_config }}].data
+      value:
+        config.json: |
+          {
+            "server": {
+              "port": {{ app_port }},
+              "host": "0.0.0.0"
+            },
+            "database": {
+              "host": "{{ .Values.database.host }}",
+              "port": {{ .Values.database.port }},
+              "name": "{{ .Values.database.name }}"
+            },
+            "logging": {
+              "level": "{{ .Values.logging.level }}",
+              "format": "{{ .Values.logging.format }}"
+            }
+          }
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_json_config }}].data.config.json
+      - contains:
+          path: $[{{ if enable_json_config }}].data.config.json
+          content: "\"port\": {{ app_port }}"
+      - contains:
+          path: $[{{ if enable_json_config }}].data.config.json
+          content: "\"database\":"
+      - contains:
+          path: $[{{ if enable_json_config }}].data.config.json
+          content: "\"logging\":"
+  - it: should have YAML configuration when specified
+    set:
+      path: $[{{ if enable_yaml_config }}].data
+      value:
+        config.yml: |
+          server:
+            port: {{ app_port }}
+            host: "0.0.0.0"
+          database:
+            host: "{{ .Values.database.host }}"
+            port: {{ .Values.database.port }}
+            name: "{{ .Values.database.name }}"
+          logging:
+            level: "{{ .Values.logging.level }}"
+            format: "{{ .Values.logging.format }}"
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_yaml_config }}].data.config.yml
+      - contains:
+          path: $[{{ if enable_yaml_config }}].data.config.yml
+          content: "port: {{ app_port }}"
+      - contains:
+          path: $[{{ if enable_yaml_config }}].data.config.yml
+          content: "database:"
+      - contains:
+          path: ${{ if enable_yaml_config }}.data.config.yml
+          content: "logging:"

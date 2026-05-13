@@ -1,0 +1,30 @@
+{% include "partials.bak/docker-header.jinja" %}
+
+# Simple Service Dockerfile
+FROM {{ docker_image }}
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy application files
+COPY --chown=app:app . .
+
+# Expose port
+EXPOSE {{ port }}
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:\{\{ port }}/health || exit 1
+
+# Run as non-root user
+USER app
+
+# Start the application
+CMD ["./start.sh"]
+
+{% include "partials.bak/docker-footer.jinja" %}

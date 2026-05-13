@@ -1,0 +1,56 @@
+# Justfile for {{ project_name | default('ts-cli-app') }}
+# NX-friendly configuration for monorepo integration
+
+# Detect NX binary
+NX_BIN := `command -v nx || echo ""`
+NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
+
+# Bootstrap - install pnpm and NX globally
+bootstrap-internal:
+    @echo "📦 Installing pnpm and NX..."
+    @npm install -g pnpm@latest
+    @if [ "{{ NX_AVAILABLE }}" = "false" ]; then pnpm add -g nx@latest; fi
+    @pnpm install
+    @echo "✓ Bootstrap complete"
+
+# NX Commands
+nx-build:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx build; else pnpm run build; fi
+
+nx-test:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx test; else pnpm run test; fi
+
+nx-lint:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx lint; else pnpm run lint; fi
+
+nx-typecheck:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx typecheck; else pnpm run typecheck; fi
+
+nx-affected:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx affected; else echo "NX not available"; fi
+
+nx-graph:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx graph; else echo "NX not available"; fi
+
+nx-clear-cache:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx reset; else echo "NX not available"; fi
+
+# Legacy commands (for non-NX usage)
+build:
+    @pnpm run build
+
+test:
+    @pnpm run test
+
+lint:
+    @pnpm run lint
+
+dev:
+    @pnpm run dev
+
+# Doctor - check environment
+doctor:
+    @echo "🔍 Environment check:"
+    @echo "  Node: $(node --version)"
+    @echo "  pnpm: $(pnpm --version)"
+    @echo "  NX: {% if NX_AVAILABLE %}$(nx --version){% else %}not installed{% endif %}"

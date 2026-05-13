@@ -1,0 +1,13 @@
+FROM mcr.microsoft.com/powershell:7.4-alpine
+
+WORKDIR /app
+
+RUN adduser -D appuser
+
+COPY {{ project_slug }}.ps1 /app/
+RUN chmod +x /app/{{ project_slug }}.ps1
+
+USER appuser
+
+ENTRYPOINT ["/usr/bin/pwsh", "/app/{{ project_slug }}.ps1"]
+CMD ["--help"]

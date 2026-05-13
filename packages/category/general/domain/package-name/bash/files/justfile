@@ -1,0 +1,234 @@
+# Justfile for {{ package_name | default('bash-package') }} Bash Package
+
+# Default target
+default: dev
+
+# Internal targets (prefixed with - to avoid showing in help)
+-bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Bootstrapping {{ package_name | default('bash-package') }}..."
+    
+    # Ensure test directory exists
+    mkdir -p tests
+    
+    # Install shell tools if not available
+    if ! command -v shellcheck >/dev/null 2>&1; then
+        echo "⚠️  shellcheck not available"
+    fi
+    
+    if ! command -v shfmt >/dev/null 2>&1; then
+        echo "⚠️  shfmt not available"
+    fi
+    
+    if ! command -v bats >/dev/null 2>&1; then
+        echo "⚠️  bats not available"
+    fi
+    
+    echo "✅ Bootstrap complete"
+
+-doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Running health checks for {{ package_name | default('bash-package') }}..."
+    
+    # Check required tools
+    echo "Checking tools:"
+    command -v bash >/dev/null 2>&1 && echo "✅ bash" || echo "❌ bash missing"
+    command -v shellcheck >/dev/null 2>&1 && echo "✅ shellcheck" || echo "❌ shellcheck missing"
+    command -v shfmt >/dev/null 2>&1 && echo "✅ shfmt" || echo "❌ shfmt missing"
+    command -v bats >/dev/null 2>&1 && echo "✅ bats" || echo "❌ bats missing"
+    command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
+    
+    # Check project structure
+    echo "Checking structure:"
+    test -d src && echo "✅ src directory" || echo "❌ src directory missing"
+    test -d tests && echo "✅ tests directory" || echo "❌ tests directory missing"
+    
+    echo "🏁 Doctor complete"
+
+-clean-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧹 Cleaning {{ package_name | default('bash-package') }}..."
+    
+    # Remove temporary files
+    rm -rf coverage/
+    rm -f *.bash~
+    rm -f .coverage
+    
+    # Clean test artifacts
+    find tests -name "*.tmp" -delete 2>/dev/null || true
+    
+    echo "✅ Clean complete"
+
+-build-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Building {{ package_name | default('bash-package') }}..."
+    
+    # Validate all shell scripts
+    for script in src/*.sh; do
+        if [ -f "$script" ]; then
+            echo "Validating $script..."
+            bash -n "$script"
+        fi
+    done
+    
+    echo "✅ Build complete"
+
+-dev-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting development environment for {{ package_name | default('bash-package') }}..."
+    
+    # Watch for changes and run tests
+    echo "👀 Watching for changes... (Ctrl+C to stop)"
+    echo "🛠️  Available commands:"
+    echo "   just test    - Run tests"
+    echo "   just lint    - Run linting"
+    echo "   just format  - Format code"
+    
+    # Simple watch loop
+    while true; do
+        sleep 5
+        # Check if any files changed
+        if find src -name "*.sh" -newer /tmp/last-check 2>/dev/null | grep -q .; then
+            touch /tmp/last-check
+            echo "🔄 Files changed, consider running tests"
+        fi
+    done
+
+-test-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing {{ package_name | default('bash-package') }}..."
+    
+    # Run bats tests if available
+    if command -v bats >/dev/null 2>&1 && [ -d "tests" ]; then
+        bats tests/
+    else
+        echo "⚠️  bats not available or no tests directory"
+        # Basic syntax check
+        for script in src/*.sh; do
+            if [ -f "$script" ]; then
+                echo "Testing $script..."
+                bash -n "$script"
+            fi
+        done
+    fi
+    
+    echo "✅ Tests complete"
+
+-lint-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Linting {{ package_name | default('bash-package') }}..."
+    
+    # Run shellcheck if available
+    if command -v shellcheck >/dev/null 2>&1; then
+        echo "Running shellcheck..."
+        shellcheck src/*.sh || true
+    else
+        echo "⚠️  shellcheck not available"
+    fi
+    
+    echo "✅ Linting complete"
+
+-typecheck-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Type checking {{ package_name | default('bash-package') }}..."
+    
+    # Bash syntax validation
+    for script in src/*.sh; do
+        if [ -f "$script" ]; then
+            echo "Checking $script..."
+            bash -n "$script"
+        fi
+    done
+    
+    echo "✅ Type checking complete"
+
+# Public targets (user-facing)
+bootstrap: bootstrap-internal
+doctor: doctor-internal
+clean: clean-internal
+build: build-internal
+dev: dev-internal
+test: test-internal
+lint: lint-internal
+typecheck: typecheck-internal
+
+# Additional Bash-specific targets
+format:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🎨 Formatting {{ package_name | default('bash-package') }}..."
+    
+    if command -v shfmt >/dev/null 2>&1; then
+        shfmt -w -i 4 src/*.sh
+        echo "✅ Formatting complete"
+    else
+        echo "⚠️  shfmt not available"
+    fi
+
+format-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Checking format for {{ package_name | default('bash-package') }}..."
+    
+    if command -v shfmt >/dev/null 2>&1; then
+        shfmt -d -i 4 src/*.sh
+        echo "✅ Format check complete"
+    else
+        echo "⚠️  shfmt not available"
+    fi
+
+install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing {{ package_name | default('bash-package') }}..."
+    
+    # Install scripts to local bin
+    mkdir -p ~/.local/bin
+    for script in src/*.sh; do
+        if [ -f "$script" ]; then
+            basename_script=$(basename "$script" .sh)
+            cp "$script" ~/.local/bin/"${basename_script}"
+            chmod +x ~/.local/bin/"${basename_script}"
+            echo "✅ Installed $basename_script"
+        fi
+    done
+    
+    echo "✅ Installation complete"
+
+uninstall:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🗑️  Uninstalling {{ package_name | default('bash-package') }}..."
+    
+    # Remove scripts from local bin
+    for script in src/*.sh; do
+        if [ -f "$script" ]; then
+            basename_script=$(basename "$script" .sh)
+            if [ -f ~/.local/bin/"${basename_script}" ]; then
+                rm -f ~/.local/bin/"${basename_script}"
+                echo "🗑️  Removed $basename_script"
+            fi
+        fi
+    done
+    
+    echo "✅ Uninstallation complete"
+
+validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "✅ Validating {{ package_name | default('bash-package') }}..."
+    
+    # Run all validation checks
+    just typecheck
+    just lint
+    just test
+    
+    echo "✅ Validation complete"

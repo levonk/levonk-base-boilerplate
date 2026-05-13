@@ -1,0 +1,90 @@
+{
+  "name": "{{ project_name | default('java-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ project_description | default('A Java CLI application') }}",
+  "shell": {
+    "init": [
+      "echo '☕ Setting up {{ project_name | default('java-cli-app') }} development environment...'"
+    ],
+    "scripts": {
+      "build": "mvn compile",
+      "build-release": "mvn clean package -DskipTests",
+      "test": "mvn test",
+      "test-coverage": "mvn jacoco:report",
+      "lint": "mvn checkstyle:check",
+      "format": "mvn google-java-format:format",
+      "format-check": "mvn google-java-format:verify",
+      "run": "mvn exec:java -Dexec.mainClass=\"{{ main_class | default('com.example.App') }}\"",
+      "dev": "mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-Dspring.profiles.active=dev\"",
+      "clean": "mvn clean",
+      "install": "mvn install",
+      "package": "mvn package",
+      "check": "mvn compile test checkstyle:check"
+    }
+  },
+  "packages": {
+    "nixpkgs#jdk17": "",
+    "nixpkgs#maven": "",
+    "nixpkgs#gradle": "",
+    {% if include_spring %}
+    "nixpkgs#spring-boot-cli": "",
+    {% endif %}
+    {% if include_picocli %}
+    "nixpkgs#picocli": "",
+    {% endif %}
+    {% if include_jackson %}
+    "nixpkgs#jackson": "",
+    {% endif %}
+    {% if include_slf4j %}
+    "nixpkgs#slf4j": "",
+    {% endif %}
+    {% if include_logback %}
+    "nixpkgs#logback": "",
+    {% endif %}
+    {% if include_junit %}
+    "nixpkgs#junit": "",
+    {% endif %}
+    {% if include_mockito %}
+    "nixpkgs#mockito": "",
+    {% endif %}
+    {% if include_jacoco %}
+    "nixpkgs#jacoco": "",
+    {% endif %}
+    {% if include_checkstyle %}
+    "nixpkgs#checkstyle": "",
+    {% endif %}
+    {% if include_postgresql %}
+    "nixpkgs#postgresql": "",
+    "nixpkgs#jdbc_driver_postgresql": "",
+    {% endif %}
+    {% if include_mysql %}
+    "nixpkgs#mysql": "",
+    "nixpkgs#jdbc_driver_mysql": "",
+    {% endif %}
+    {% if include_h2 %}
+    "nixpkgs#h2database": "",
+    {% endif %}
+  },
+  "env": {
+    "JAVA_HOME": "{{ java_home | default('/nix/store/java') }}",
+    "MAVEN_OPTS": "{{ maven_opts | default('-Xmx512m') }}",
+    "SPRING_PROFILES_ACTIVE": "{{ spring_profile | default('dev') }}",
+    {% if include_postgresql %}
+    "DATABASE_URL": "jdbc:postgresql://localhost/{{ project_name | default('java-cli-app') }}",
+    "DATABASE_USERNAME": "{{ db_username | default('postgres') }}",
+    "DATABASE_PASSWORD": "{{ db_password | default('password') }}",
+    {% endif %}
+    {% if include_mysql %}
+    "DATABASE_URL": "jdbc:mysql://localhost/{{ project_name | default('java-cli-app') }}",
+    "DATABASE_USERNAME": "{{ db_username | default('root') }}",
+    "DATABASE_PASSWORD": "{{ db_password | default('password') }}",
+    {% endif %}
+    {% if include_h2 %}
+    "DATABASE_URL": "jdbc:h2:mem:{{ project_name | default('java-cli-app') }};DB_CLOSE_DELAY=-1",
+    {% endif %}
+    {% if include_development %}
+    "LOG_LEVEL": "{{ log_level | default('INFO') }}",
+    "DEBUG": "{{ debug | default('false') }}",
+    {% endif %}
+  }
+}

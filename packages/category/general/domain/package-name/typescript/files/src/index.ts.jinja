@@ -1,0 +1,50 @@
+/**
+ * {{ package_name }}
+ * {{ description }}
+ *
+ * @author {{ author_name }} <{{ author_email }}>
+ * @version {{ now.year }}.{{ now.month }}.{{ now.day }}
+ * @license {{ license }}
+ */
+
+export class {{ package_slug | capitalize | replace('-', '') }} {
+  private readonly name: string;
+  private readonly version: string;
+
+  constructor() {
+    this.name = "{{ package_name }}";
+    this.version = "1.0.0";
+  }
+
+  /**
+   * Returns a greeting message
+   * @returns {string} Greeting message
+   */
+  hello(): string {
+    return `Hello from ${this.name}!`;
+  }
+
+  /**
+   * Returns the library name
+   * @returns {string} Library name
+   */
+  getName(): string {
+    return this.name;
+  }
+
+  /**
+   * Returns the library version
+   * @returns {string} Library version
+   */
+  getVersion(): string {
+    return this.version;
+  }
+}
+
+// Export a default instance for convenience
+export const {{ package_slug | capitalize | replace('-', '') }}Instance = new {{ package_slug | capitalize | replace('-', '') }}();
+
+// Re-export commonly used functions
+export const hello = () => {{ package_slug | capitalize | replace('-', '') }}Instance.hello();
+export const name = () => {{ package_slug | capitalize | replace('-', '') }}Instance.getName();
+export const version = () => {{ package_slug | capitalize | replace('-', '') }}Instance.getVersion();

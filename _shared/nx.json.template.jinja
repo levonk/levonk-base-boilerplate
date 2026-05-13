@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "cli": {
+    "packageManager": "pnpm"
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/.eslintrc.json",
+      "!{projectRoot}/eslint.config.mjs"
+    ]
+  },
+  "targetDefaults": {
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "lint": {
+      "cache": true
+    }{% if include_docker %},
+    {% include "partials.bak/partials/nx-partials/nx-targets-docker.jinja" %}{% endif %}
+  },
+  {% if project_type == "nodejs" %}{% include "partials.bak/partials/nx-partials/nx-plugins-nodejs.jinja" %}{% elif project_type == "docker" %}{% include "partials.bak/partials/nx-partials/nx-plugins-docker.jinja" %}{% elif project_type == "python" %}{% include "partials.bak/partials/nx-partials/nx-plugins-python.jinja" %}{% else %}"plugins": []{% endif %},
+  "parallel": 4,
+  "cacheDirectory": ".nx/cache",
+  "useDaemonProcess": true,
+  "defaultBase": "main"
+}

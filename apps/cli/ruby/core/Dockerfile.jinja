@@ -1,0 +1,15 @@
+FROM ruby:3.3-alpine
+
+WORKDIR /app
+
+RUN adduser -D appuser
+
+COPY Gemfile* /app/
+RUN bundle install --jobs=4 --retry=3
+
+COPY {{ project_slug }}.rb /app/{{ project_slug }}.rb
+
+USER appuser
+
+ENTRYPOINT ["ruby", "/app/{{ project_slug }}.rb"]
+CMD ["--help"]

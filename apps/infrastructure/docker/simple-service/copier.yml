@@ -1,0 +1,26 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: Project name
+  default: "simple-service"
+
+docker_image:
+  type: str
+  help: Base Docker image
+  default: "alpine:latest"
+
+environment:
+  type: str
+  help: Environment (development/staging/production)
+  default: "development"
+
+port:
+  type: int
+  help: Service port
+  default: 8080
+
+_templates:
+  - tsconfig.json.jinja

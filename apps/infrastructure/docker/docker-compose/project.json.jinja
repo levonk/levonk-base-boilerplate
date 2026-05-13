@@ -1,0 +1,16 @@
+{
+  "name": "{{ project_name | default('docker-compose-stack') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-docker-compose.jinja" %}
+    "docker:logs": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose logs -f",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

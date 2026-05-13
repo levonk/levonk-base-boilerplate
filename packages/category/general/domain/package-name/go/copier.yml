@@ -1,0 +1,41 @@
+_subdirectory: "{{category}}/general/domain/{{package_name}}/go/"
+package_name:
+  type: str
+  help: Name of the package (kebab-case)
+package_description:
+  type: str
+  help: Short description of the package
+category:
+  type: str
+  help: "Package category (features|services|core|ui)"
+domain:
+  type: str
+  help: "Business domain or technical capability (e.g. auth, commerce)"
+author_name:
+  type: str
+  help: Author name
+  default: "levonk"
+author_email:
+  type: str
+  help: Author email
+  default: "levonk@example.com"
+license:
+  type: str
+  help: License for the package
+  default: "MIT"
+go_version:
+  type: str
+  help: Go version
+  default: "1.21"
+module_path:
+  type: str
+  help: Go module path (e.g., github.com/user/repo)
+  default: "github.com/{{author_name}}/{{package_name}}"
+include_tests:
+  type: bool
+  help: Include test framework setup?
+  default: true
+include_ci:
+  type: bool
+  help: Include CI/CD configuration?
+  default: true

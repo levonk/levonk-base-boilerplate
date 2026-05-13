@@ -1,0 +1,122 @@
+{% include "partials.bak/.envrc.jinja" %}
+
+# Git repository specific implementations
+bootstrap-internal:
+    #!/usr/bin/env bash
+    # Internal bootstrap logic called by devbox init_hook
+    if ! command -v nix >/dev/null 2>&1; then
+      echo "[bootstrap] Installing Nix..."
+      curl -L https://nixos.org/nix/install | sh -s -- --daemon --yes
+      echo "[bootstrap] Nix installed. Please restart your shell and run 'just bootstrap' again."
+      exit 0
+    fi
+    if ! command -v direnv >/dev/null 2>&1; then
+      echo "[bootstrap] Installing direnv via Nix..."
+      nix profile add nixpkgs#direnv --extra-experimental-features "nix-command flakes"
+      echo "[bootstrap] direnv installed."
+    fi
+    if ! command -v devbox >/dev/null 2>&1; then
+      echo "[bootstrap] Installing devbox via Nix..."
+      nix profile add nixpkgs#devbox --extra-experimental-features "nix-command flakes"
+      echo "[bootstrap] devbox installed."
+    fi
+    if ! command -v just >/dev/null 2>&1; then
+      echo "[bootstrap] Installing just via Nix..."
+      nix profile add nixpkgs#just --extra-experimental-features "nix-command flakes"
+      echo "[bootstrap] just installed."
+    fi
+    if [ -f "{{REPO_ROOT}}/.envrc" ]; then
+      direnv allow "{{REPO_ROOT}}"
+    fi
+    echo "[bootstrap] Project bootstrap complete!"
+
+build-internal:
+    echo "TODO: implement build target for {{ project_type }}"
+
+test-internal:
+    echo "TODO: implement test target for {{ project_type }}"
+
+lint-internal:
+    echo "TODO: implement lint target for {{ project_type }}"
+
+typecheck-internal:
+    echo "TODO: implement typecheck target for {{ project_type }}"
+
+dev-internal:
+    echo "TODO: implement dev target for {{ project_type }}"
+
+doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    MISSING=0
+    for tool in nix direnv devbox git just; do
+      if command -v $tool >/dev/null 2>&1; then
+        printf "[doctor] %-8s OK\n" "$tool"
+      else
+        echo "[doctor] MISSING: $tool"
+        MISSING=$((MISSING+1))
+      fi
+    done
+    if [ "$MISSING" -ne 0 ]; then
+      echo "[doctor] Missing $MISSING required tool(s). Run 'just bootstrap' to install."
+      exit 1
+    fi
+    echo "[doctor] Environment looks good."
+
+# Development setup (OPTIONAL)
+setup:
+    # Project-specific setup
+    echo "Development environment ready!"
+
+# Clean up (OPTIONAL)
+clean-internal:
+    # Language-specific cleanup
+    rm -rf build dist node_modules/.cache
+    echo "Build artifacts removed"
+
+# Deep clean (OPTIONAL)
+clean-all-internal:
+    rm -rf build dist node_modules .cache
+    echo "All build artifacts and dependencies removed"
+
+# Git repository specific targets
+init-repo:
+    @echo "🔧 Initializing git repository..."
+    git init
+    @echo "✅ Git repository initialized"
+
+setup-remote:
+    @echo "🔧 Setting up remote repository..."
+    @echo "TODO: Add remote setup logic for {{ project_name }}"
+    
+create-gh-pages:
+    @echo "📄 Creating gh-pages branch..."
+    @if ! git rev-parse --verify gh-pages >/dev/null 2>&1; then
+        @git checkout --orphan gh-pages
+        @git rm -rf . 2>/dev/null || true
+        @echo "# {{ project_name }} Documentation" > README.md
+        @git add README.md
+        @git commit -m "Initial gh-pages commit"
+        @git checkout main 2>/dev/null || git checkout -b main
+        @echo "✅ gh-pages branch created"
+    else
+        @echo "ℹ️  gh-pages branch already exists"
+    fi
+
+check-git-hooks:
+    @echo "🔍 Checking git hooks..."
+    @if [ -d .git/hooks ]; then
+        @find .git/hooks -name "*" -type f -exec echo "  - {}" \;
+        @echo "✅ Git hooks found"
+    else
+        @echo "⚠️  No git hooks found"
+    fi
+
+check-gitignore:
+    @echo "🔍 Checking .gitignore..."
+    @if [ -f .gitignore ]; then
+        @echo "✅ .gitignore found"
+        @wc -l .gitignore
+    else
+        @echo "⚠️  No .gitignore found"
+    fi

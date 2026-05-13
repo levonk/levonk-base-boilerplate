@@ -1,0 +1,38 @@
+# Copier template: Airflow Node Boilerplate
+# Purpose: build a lightweight image for Airflow task pods (KubernetesExecutor)
+# Render with: copier copy ./boilerplate/apps/infrastructure/airflow-node <dest>
+
+_min_copier_version: '9.0.0'
+
+project_name:
+  type: str
+  help: 'Airflow node image project name'
+  default: 'airflow-node'
+
+base_image:
+  type: str
+  help: 'Base image to use (prefer organization base-debian; fallback debian:12-slim)'
+  default: 'base-debian:latest'
+
+python_version:
+  type: str
+  help: 'Python version to install'
+  default: '3.11'
+
+image_name:
+  type: str
+  help: 'Final image name (repo/name)'
+  default: 'local/airflow-node'
+
+image_tag:
+  type: str
+  help: 'Final image tag'
+  default: 'latest'
+
+_subdirectory: files
+_templates_suffix: ".jinja"
+
+_templates:
+  - justfile
+  - package.json.jinja
+  - tsconfig.json.jinja

@@ -1,0 +1,88 @@
+# {{ display_name }}
+
+{{ description }}
+
+## Getting Started
+
+```bash
+pnpm install
+pnpm run build
+```
+
+This compiles the TypeScript sources into the `dist/` directory.
+
+## Loading in Chrome / Edge
+
+1. Run `pnpm run build`.
+2. Open `chrome://extensions` (or `edge://extensions`).
+3. Enable **Developer mode**.
+4. Click **Load unpacked** and select the project folder.
+
+## Loading in Firefox (temporary)
+
+1. Run `pnpm run build`.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on...**.
+4. Select `manifest.json` in the project root.
+
+For publishing to AMO or the Chrome Web Store, you will typically package the `manifest.json`, `dist/`, and any static assets into a zip file and upload it through the vendor portal.
+
+## Project Structure
+
+```text
+.
+├─ manifest.json        # Browser extension manifest (MV3-oriented)
+├─ src/
+│  ├─ background.mts    # Background service worker entry
+│  ├─ popup/
+│  │  ├─ index.html     # Toolbar popup UI
+│  │  └─ main.mts       # Popup script
+│  └─ options/
+│     ├─ index.html     # Configuration UI
+│     └─ main.mts       # Options page script
+└─ __tests__/
+   └─ background.test.mts
+```
+
+## Scripts
+
+- `pnpm run build` – Compile TypeScript to `dist/`.
+- `pnpm run dev` – Watch-mode TypeScript compilation.
+- `pnpm test` – Run unit tests with Vitest.
+- `pnpm test:e2e` – Run end-to-end tests with Playwright (requires build).
+- `pnpm run dev:chrome` – Launch Chrome with the extension loaded (dev mode).
+- `pnpm run dev:firefox` – Launch Firefox with the extension loaded (using `web-ext`).
+- `pnpm run lint` – Lint source files.
+
+## Testing
+
+### Unit Tests
+Run fast, isolated unit tests with Vitest:
+```bash
+pnpm test
+```
+
+### E2E Tests (Playwright)
+Run integration tests in headless browsers:
+```bash
+pnpm test:e2e
+```
+This builds the extension and runs Playwright tests defined in `__tests__/e2e`.
+
+### Dockerized Testing (Recommended)
+To ensure a clean environment and test against multiple browsers without local setup issues:
+
+```bash
+docker-compose up --build
+```
+This will:
+1. Build a fresh Docker container.
+2. Install dependencies and build the extension inside the container.
+3. Run Playwright tests against Chromium and Firefox.
+4. Exit with success/failure code.
+
+### AI-Driven Testing (Stagehand)
+This project includes a placeholder for [Stagehand](https://github.com/browserbasehq/stagehand), an AI-powered testing library.
+1. Set your `STAGEHAND_API_KEY` in `.env` or environment.
+2. Enable the placeholder test in `__tests__/e2e/usecases/stagehand-placeholder.test.mts`.
+

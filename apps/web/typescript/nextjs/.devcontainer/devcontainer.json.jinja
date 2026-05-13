@@ -1,0 +1,81 @@
+{
+  "name": "{{ package_name }} - Next.js TypeScript",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": false,
+      "upgradePackages": true,
+      "username": "cuser",
+      "userUid": "automatic",
+      "userGid": "automatic"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "ppa": true,
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts",
+      "nodeGypDependencies": true,
+      "installYarnUsingApt": false
+    },
+    "ghcr.io/eitsupi/devcontainer-features/jq-likes:2": {
+      "jqVersion": "latest"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash"
+          },
+          "zsh": {
+            "path": "/bin/zsh"
+          }
+        },
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-playwright.playwright",
+        "vitest.explorer",
+        "usernamehw.errorlens",
+        "streetsidesoftware.code-spell-checker",
+        "eamodio.gitlens",
+        "ms-vscode.vscode-typescript-next"
+      ]
+    }
+  },
+
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js Dev Server",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": "corepack enable && pnpm install",
+
+  "remoteUser": "cuser",
+  "workspaceFolder": "/home/cuser/project",
+  "shutdownAction": "stopContainer",
+
+  "containerEnv": {
+    "SHELL": "/bin/zsh",
+    "TERM": "xterm-256color",
+    "COLORTERM": "truecolor"
+  }
+}

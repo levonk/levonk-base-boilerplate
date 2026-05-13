@@ -1,0 +1,154 @@
+# Docker Nix Development Commands
+
+# Detect NX binary
+NX_BIN := `command -v nx || echo ""`
+NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    @echo "📦 Installing pnpm and NX..."
+    @npm install -g pnpm@latest
+    @if [ "{{ NX_AVAILABLE }}" = "false" ]; then pnpm add -g nx@latest; fi
+    @pnpm install
+    @echo "✓ Bootstrap complete"
+
+# NX Commands
+nx-build:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx build; else docker compose build; fi
+
+nx-up:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx up; else docker compose up; fi
+
+nx-down:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx down; else docker compose down; fi
+
+nx-affected:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx affected; else echo "NX not available"; fi
+
+nx-graph:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx graph; else echo "NX not available"; fi
+
+nx-clear-cache:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx reset; else echo "NX not available"; fi
+
+nx-install:
+    @pnpm add -g nx@latest
+    @echo "✓ NX installed globally"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check Docker Nix environment
+    @echo "🐳 Docker version:"
+    @docker --version
+    @echo ""
+    @echo "🔧 Nix version:"
+    @nix --version
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v just || echo "just not found"
+    @echo ""
+    @echo "📦 Node environment:"
+    @node --version
+    @pnpm --version
+    @echo "📊 NX: {{ if NX_AVAILABLE }}$(nx --version){{ else }}not installed{{ endif }}"
+    @echo ""
+    @echo "✅ Docker Nix environment is ready!"
+
+# Development mode
+dev:
+    @just build
+    @just run
+
+# Build Docker image with Nix
+build:
+    docker build -t docker-nix .
+
+# Run container
+run:
+    docker run -p 8080:8080 docker-nix
+
+# Run container in background
+run-detached:
+    docker run -d -p 8080:8080 docker-nix
+
+# Stop container
+stop:
+    docker stop $(docker ps -q --filter "name=docker-nix")
+
+# Remove container
+rm:
+    docker rm $(docker ps -aq --filter "name=docker-nix")
+
+# Clean up
+clean:
+    @just stop
+    @just rm
+    docker system prune -f
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ Docker Nix development environment ready!"
+
+# Health check
+health:
+    curl -f http://localhost:8080/health || echo "Service not running"
+
+# Execute command in container
+exec command="/bin/bash":
+    docker exec -it $(docker ps -q --filter "name=docker-nix") {{command}}
+
+# Run tests
+test:
+    docker run --rm docker-nix pytest
+
+# Lint Docker files
+lint:
+    hadolint Dockerfile
+
+# Type check
+typecheck:
+    echo "Type checking not applicable for Docker Nix"
+
+# Package for distribution
+package:
+    @just build
+    @just clean
+    mkdir -p dist
+    docker save docker-nix:latest > dist/docker-nix.tar
+
+# Quality checks
+quality:
+    @just lint
+    @just test
+    @just health
+
+# View logs
+logs:
+    docker logs -f $(docker ps -q --filter "name=docker-nix")

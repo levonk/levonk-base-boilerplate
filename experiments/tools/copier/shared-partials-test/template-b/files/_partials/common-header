@@ -1,0 +1,6 @@
+# Common Header (Shared)
+# This partial is shared across all templates
+
+Project: {{ project_name }}
+Environment: {{ environment | default('development') }}
+Generated: {{ now() }}

@@ -1,0 +1,24 @@
+# Shared lint + security tooling (pinned images for reproducibility)
+YAMLLINT_IMAGE := docker.io/cytopia/yamllint:1.35
+MARKDOWNLINT_IMAGE := ghcr.io/igorshubovych/markdownlint-cli:0.42.0
+HADOLINT_IMAGE := docker.io/hadolint/hadolint:2.12.0
+CHECKOV_IMAGE := docker.io/bridgecrew/checkov:3.2.334
+TRIVY_IMAGE := docker.io/aquasec/trivy:0.53.0
+DOCKLE_IMAGE := docker.io/goodwithtech/dockle:v0.4.14
+FALCO_IMAGE := docker.io/falcosecurity/falco-no-driver:0.37.0
+DOCKER_BENCH_IMAGE := docker.io/docker/docker-bench-security:1.6.0
+SCOUT_BIN ?= docker scout
+TRIVY_SEVERITY ?= HIGH,CRITICAL
+TRIVY_IMAGE_TARGET ?=
+DOCKLE_IMAGE_TARGET ?= $(SERVICE_NAME):latest
+MARKDOWN_LINT_TARGETS ?= "**/*.md"
+
+# Automatically include override compose files if present
+YAML_LINT_TARGETS := $(COMPOSE_FILE)
+ifneq ("$(wildcard $(COMPOSE_OVERRIDE_FILE))","")
+YAML_LINT_TARGETS += $(COMPOSE_OVERRIDE_FILE)
+endif
+
+CACHE_DIR := $(WORKDIR)/.cache
+CHECKOV_CACHE_DIR := $(CACHE_DIR)/checkov
+TRIVY_CACHE_DIR := $(CACHE_DIR)/trivy

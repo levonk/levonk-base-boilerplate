@@ -1,0 +1,41 @@
+# {{ package_name }} - Agent Instructions
+
+## Overview
+{{ description }}
+
+## Development Commands
+```bash
+# Install dependencies
+go mod download
+
+# Run tests
+go test ./...
+
+# Build
+go build -o bin/{{ package_slug }} ./main.go
+
+# Run
+go run main.go
+```
+
+## Project Structure
+- `main.go` - Main entry point
+- `pkg/{{ package_slug }}/` - Library package
+- `go.mod` - Go module definition
+- `devbox.json` - Development environment
+- `.envrc` - Environment configuration
+
+## Testing
+Run all tests with coverage:
+```bash
+go test -cover ./...
+```
+
+## Dependencies
+- Go {{ go_version }}
+- testify for testing
+{% if include_cli %}- cobra for CLI{% endif %}
+{% if include_http %}- gorilla/mux for HTTP{% endif %}
+{% if include_postgres %}- lib/pq for PostgreSQL{% endif %}
+{% if include_redis %}- go-redis for Redis{% endif %}
+{% if include_sqlite %}- mattn/go-sqlite3 for SQLite{% endif %}

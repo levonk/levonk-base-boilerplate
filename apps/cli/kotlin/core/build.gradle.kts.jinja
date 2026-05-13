@@ -1,0 +1,54 @@
+plugins {
+    kotlin("jvm") version "{{ kotlin_version }}"
+    application
+}
+
+group = "{{ group_id }}"
+version = "0.1.0"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // CLI argument parsing
+    implementation("com.github.ajalt.clikt:clikt:4.2.1")
+    
+    // Logging
+    implementation("org.slf4j:slf4j-api:2.0.9")
+    implementation("ch.qos.logback:logback-classic:1.4.11")
+    
+    // JSON handling
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
+    
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    
+    // Testing
+    testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("io.mockk:mockk:1.13.5")
+    
+    {% if include_postgres %}
+    // PostgreSQL
+    implementation("org.postgresql:postgresql:42.6.0")
+    {% endif %}
+    
+    {% if include_sqlite %}
+    // SQLite
+    implementation("org.xerial:sqlite-jdbc:3.42.0.0")
+    {% endif %}
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+application {
+    mainClass.set("{{ group_id }}.{{ project_slug | replace('-', '_') }}.MainKt")
+}

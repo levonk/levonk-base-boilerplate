@@ -1,0 +1,12 @@
+{
+  "name": "{{ project_name | default('airflow-dags') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "dags",
+  "projectType": "application",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-python-test.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-python-lint.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-docker-build.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-docker-compose.jinja" %}
+  }
+}

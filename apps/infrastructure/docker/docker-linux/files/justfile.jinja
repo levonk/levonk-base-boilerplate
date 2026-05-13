@@ -1,0 +1,26 @@
+# {{ _service_name | title }} - Build System
+# Justfile for Docker service management and development
+
+{% include "partials.bak/justfile/common-vars.jinja" %}
+
+{% include "partials.bak/justfile/lint-vars.jinja" %}
+
+{% include "partials.bak/justfile/help.jinja" %}
+
+{% include "partials.bak/justfile/bootstrap.jinja" %}
+
+build: ## Build {{ _service_name | title }} Docker images (runtime + debug)
+    @echo BLUE + "Building {{ _service_name | title }} Docker images..." + NC
+    @docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} build
+    @docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} --profile debug build
+    @echo GREEN + "✓ Images built" + NC
+
+{% include "partials.bak/justfile/lifecycle.jinja" %}
+
+{% include "partials.bak/justfile/lint-standard.jinja" %}
+
+{% include "partials.bak/justfile/lint-docker-hadolint.jinja" %}
+
+{% include "partials.bak/justfile/security-scans.jinja" %}
+
+{% include "partials.bak/justfile/clean.jinja" %}

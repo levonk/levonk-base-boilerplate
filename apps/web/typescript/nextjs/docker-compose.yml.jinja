@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  {{ package_name | replace(" ", "-") | lower }}:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+	  - TZ=${TZ:-America/Los_Angeles}
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    restart: unless-stopped

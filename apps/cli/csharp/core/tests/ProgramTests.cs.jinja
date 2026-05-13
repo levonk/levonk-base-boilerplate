@@ -1,0 +1,85 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using FluentAssertions;
+using Xunit;
+
+public class ProgramTests
+{
+    private static string ProjectRoot => FindProjectRoot();
+
+    private static string ProjectPath => Path.Combine(ProjectRoot, "{{ project_name }}.csproj");
+
+    private static string FindProjectRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            var candidate = Path.Combine(dir.FullName, "{{ project_name }}.csproj");
+            if (File.Exists(candidate))
+            {
+                return dir.FullName;
+            }
+            dir = dir.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate project root containing {{ project_name }}.csproj");
+    }
+
+    private static (int ExitCode, string Stdout, string Stderr) RunCli(string arguments, string? stdin = null)
+    {
+        var psi = new ProcessStartInfo("dotnet", $"run --no-build --configuration Release --project \"{ProjectPath}\" -- {arguments}")
+        {
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            WorkingDirectory = ProjectRoot
+        };
+
+        var proc = Process.Start(psi)!;
+
+        if (stdin != null)
+        {
+            proc.StandardInput.Write(stdin);
+            proc.StandardInput.Close();
+        }
+
+        var stdout = proc.StandardOutput.ReadToEnd();
+        var stderr = proc.StandardError.ReadToEnd();
+        proc.WaitForExit();
+
+        return (proc.ExitCode, stdout, stderr);
+    }
+
+    [Fact]
+    public void ShowsHelp()
+    {
+        var (code, stdout, stderr) = RunCli("--help");
+        code.Should().Be(0, $"stderr: {stderr}");
+        stdout.Should().Contain("Usage:");
+    }
+
+    [Fact]
+    public void ProcessesStdin()
+    {
+        var (code, stdout, stderr) = RunCli("--json -", "hello");
+        code.Should().Be(0, $"stderr: {stderr}");
+        stdout.Should().Contain("stdin");
+        stdout.Should().Contain("processed");
+    }
+
+    [Fact]
+    public void ProcessesFileGlob()
+    {
+        var tmp = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cli-test-{{ project_slug }}-{Guid.NewGuid()}"));
+        File.WriteAllText(Path.Combine(tmp.FullName, "a.txt"), "a");
+        File.WriteAllText(Path.Combine(tmp.FullName, "b.txt"), "b");
+
+        var (code, stdout, stderr) = RunCli($"--json \"{tmp.FullName.Replace("\\\\", "/")}/**/*.txt\"");
+        code.Should().Be(0, $"stderr: {stderr}");
+        stdout.Should().Contain("a.txt");
+        stdout.Should().Contain("b.txt");
+    }
+}

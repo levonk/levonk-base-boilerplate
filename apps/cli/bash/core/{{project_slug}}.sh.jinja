@@ -1,0 +1,334 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+shopt -s nullglob globstar
+
+# Configuration
+APP_NAME="{{ project_slug }}"
+VERSION="{{ version | default('1.0.0') }}"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/$APP_NAME"
+CONFIG_FILE="${CONFIG_DIR}/config.conf"
+JSON_OUTPUT=false
+QUIET_MODE=false
+VERBOSE_MODE=false
+LOG_LEVEL="info"
+CURRENT_MODULE="main"
+
+TEMP_FILE=$(mktemp)
+
+cleanup() {
+    rm -f "$TEMP_FILE"
+}
+trap cleanup EXIT INT TERM
+
+# Color and terminal detection
+detect_color_support() {
+    # Check if terminal supports color
+    if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
+        # Check if FORCE_COLOR is set
+        if [[ "${FORCE_COLOR:-}" == "1" ]]; then
+            return 0
+        fi
+        # Check terminal capabilities
+        if tput colors >/dev/null 2>&1 && [[ "$(tput colors)" -ge 8 ]]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Initialize colors
+if detect_color_support; then
+    COLOR_ENABLED=true
+    # Log level colors
+    COLOR_INFO="\033[0;36m"      # Cyan
+    COLOR_WARN="\033[0;33m"      # Yellow
+    COLOR_ERROR="\033[0;31m"     # Red
+    COLOR_FATAL="\033[0;35m"     # Magenta
+    COLOR_RESET="\033[0m"
+    
+    # Module colors (unique colors per module)
+    declare -A MODULE_COLORS
+    MODULE_COLORS[main]="\033[0;32m"       # Green
+    MODULE_COLORS[config]="\033[0;34m"     # Blue
+    MODULE_COLORS[parser]="\033[0;36m"     # Cyan
+    MODULE_COLORS[processor]="\033[0;35m"  # Magenta
+    MODULE_COLORS[output]="\033[0;33m"     # Yellow
+else
+    COLOR_ENABLED=false
+    COLOR_INFO=""
+    COLOR_WARN=""
+    COLOR_ERROR=""
+    COLOR_FATAL=""
+    COLOR_RESET=""
+    declare -A MODULE_COLORS
+fi
+
+# Get color for a specific module
+get_module_color() {
+    local module="$1"
+    if [[ "$COLOR_ENABLED" == true ]] && [[ -n "${MODULE_COLORS[$module]:-}" ]]; then
+        echo -e "${MODULE_COLORS[$module]}"
+    else
+        echo ""
+    fi
+}
+
+# Logging functions with timestamp, module, and color coding
+log_timestamp() {
+    date '+%Y-%m-%d %H:%M:%S'
+}
+
+log_message() {
+    local level="$1"
+    shift
+    local message="$*"
+    
+    # Check if we should log based on quiet/verbose mode
+    if [[ "$QUIET_MODE" == true ]]; then
+        return 0
+    fi
+    
+    # Check log level hierarchy: fatal > error > warn > info > debug
+    case "$LOG_LEVEL" in
+        fatal)
+            if [[ "$level" != "fatal" ]]; then
+                return 0
+            fi
+            ;;
+        error)
+            if [[ "$level" != "fatal" ]] && [[ "$level" != "error" ]]; then
+                return 0
+            fi
+            ;;
+        warn)
+            if [[ "$level" != "fatal" ]] && [[ "$level" != "error" ]] && [[ "$level" != "warn" ]]; then
+                return 0
+            fi
+            ;;
+        info)
+            if [[ "$level" == "debug" ]]; then
+                return 0
+            fi
+            ;;
+    esac
+    
+    # Get color for log level
+    local level_color=""
+    case "$level" in
+        info)
+            level_color="$COLOR_INFO"
+            ;;
+        warn)
+            level_color="$COLOR_WARN"
+            ;;
+        error)
+            level_color="$COLOR_ERROR"
+            ;;
+        fatal)
+            level_color="$COLOR_FATAL"
+            ;;
+        debug)
+            level_color="$COLOR_INFO"
+            ;;
+    esac
+    
+    # Get color for module
+    local module_color=$(get_module_color "$CURRENT_MODULE")
+    
+    # Format: [TIMESTAMP] [MODULE] [LEVEL] message
+    local timestamp=$(log_timestamp)
+    local level_upper=$(echo "$level" | tr '[:lower:]' '[:upper:]')
+    
+    if [[ "$COLOR_ENABLED" == true ]]; then
+        echo -e "${level_color}[$timestamp]${COLOR_RESET} ${module_color}[$CURRENT_MODULE]${COLOR_RESET} ${level_color}[$level_upper]${COLOR_RESET} $message" >&2
+    else
+        echo "[$timestamp] [$CURRENT_MODULE] [$level_upper] $message" >&2
+    fi
+}
+
+log_info() {
+    log_message "info" "$@"
+}
+
+log_warn() {
+    log_message "warn" "$@"
+}
+
+log_error() {
+    log_message "error" "$@"
+}
+
+log_fatal() {
+    log_message "fatal" "$@"
+    exit 1
+}
+
+log_debug() {
+    if [[ "$VERBOSE_MODE" == true ]]; then
+        log_message "debug" "$@"
+    fi
+}
+
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") [OPTIONS] [INPUTS...]
+
+{{ description | default('A CLI tool') }}
+
+Options:
+  -c, --config FILE   Path to config file (default: \$XDG_CONFIG_HOME/$APP_NAME/config.conf)
+      --json          Output JSON to stdout
+  -q, --quiet        Suppress all output except errors
+  -v, --verbose      Enable verbose (debug) output
+      --usage        Show usage information
+      --version      Show version information
+      --nocolor      Disable color output
+  -h, --help          Show this help
+
+Examples:
+  $(basename "$0) file.txt
+  $(basename "$0) "**/*.txt"
+  cat file.txt | $(basename "$0) -
+EOF
+}
+
+show_version() {
+    echo "$APP_NAME $VERSION"
+}
+
+show_usage() {
+    usage
+}
+
+# Parse Arguments
+inputs=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -)
+            inputs+=("$1")
+            shift
+            ;;
+        -c|--config)
+            CONFIG_FILE="$2"
+            shift 2
+            ;;
+        --json)
+            JSON_OUTPUT=true
+            shift
+            ;;
+        -q|--quiet)
+            QUIET_MODE=true
+            shift
+            ;;
+        -v|--verbose)
+            VERBOSE_MODE=true
+            LOG_LEVEL="debug"
+            shift
+            ;;
+        --usage)
+            show_usage
+            exit 0
+            ;;
+        --version)
+            show_version
+            exit 0
+            ;;
+        --nocolor)
+            export NO_COLOR=1
+            COLOR_ENABLED=false
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            log_error "Unknown option: $1"
+            usage
+            exit 1
+            ;;
+        *)
+            inputs+=("$1")
+            shift
+            ;;
+    esac
+done
+
+log_info "Starting $APP_NAME with ${#inputs[@]} input(s)"
+
+results=()
+read_stdin=false
+
+# Input strategy
+if [[ {% raw %}${#inputs[@]}{% endraw %} -eq 0 ]]; then
+    if [[ ! -t 0 ]]; then
+        read_stdin=true
+        log_debug "No inputs provided, reading from stdin"
+    else
+        log_error "No inputs provided and no stdin detected"
+        usage
+        exit 1
+    fi
+else
+    for input in "${inputs[@]}"; do
+        if [[ "$input" == "-" ]]; then
+            read_stdin=true
+            log_debug "Reading from stdin via '-' argument"
+            continue
+        fi
+
+        matches=()
+        # Use shell globbing to expand patterns (supports ** because of globstar)
+        for path in $input; do
+            matches+=("$path")
+        done
+
+        if [[ {% raw %}${#matches[@]}{% endraw %} -eq 0 ]]; then
+            log_warn "No files found for pattern '$input'"
+            continue
+        fi
+
+        for file_path in "${matches[@]}"; do
+            if [[ -f "$file_path" ]]; then
+                if content=$(<"$file_path"); then
+                    log_info "Processing $file_path"
+                    results+=("file::$file_path::{% raw %}${#content}{% endraw %}")
+                else
+                    log_error "Failed to read $file_path"
+                fi
+            else
+                log_warn "Skipping non-file path '$file_path'"
+            fi
+        done
+    done
+fi
+
+# Process stdin if requested
+if $read_stdin; then
+    log_info "Processing stdin"
+    stdin_content=$(cat)
+    results+=("stdin::-::{% raw %}${#stdin_content}{% endraw %}")
+fi
+
+log_info "Processed ${#results[@]} item(s)"
+
+# Output
+if $JSON_OUTPUT; then
+    echo "["
+    for i in "${!results[@]}"; do
+        IFS="::" read -r _source label length <<< "${results[$i]}"
+        printf '  {"source": "%s", "length": %s, "status": "processed"}' "$label" "$length"
+        if [[ $i -lt $(( {% raw %}${#results[@]}{% endraw %} - 1 )) ]]; then
+            echo ","
+        else
+            echo
+        fi
+    done
+    echo "]"
+else
+    for entry in "${results[@]}"; do
+        IFS="::" read -r _source label length <<< "$entry"
+        echo "✓ Processed $label ($length bytes)"
+    fi
+fi

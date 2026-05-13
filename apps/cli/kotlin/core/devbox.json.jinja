@@ -1,0 +1,40 @@
+{
+  "name": "{{ project_name | default('kotlin-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ description | default('A Kotlin CLI application') }}",
+  "packages": [
+    "openjdk@17",
+    "gradle",
+    "kotlin",
+    "just"
+    {% if include_postgres %},
+    "postgresql"
+    {% endif %}
+  ],
+  "shell": {
+    "init_hook": [
+      "just bootstrap-internal"
+    ]
+  },
+  "scripts": {
+    "bootstrap": "just bootstrap-internal",
+    "doctor": "just doctor-internal",
+    "clean": "just clean-internal",
+    "build": "just build-internal",
+    "lint": "just lint-internal",
+    "test": "just test-internal",
+    "typecheck": "just typecheck-internal",
+    "dev": "just dev-internal",
+    "debug": "just debug-internal",
+    "install": "just install-internal",
+    "release": "just release-internal"
+  },
+  "env": {
+    {% if include_postgres %}
+    "DATABASE_URL": "jdbc:postgresql://localhost/{{ project_name | default('kotlin-cli-app') }}",
+    {% endif %}
+    {% if include_sqlite %}
+    "DATABASE_URL": "jdbc:sqlite:./{{ project_name | default('kotlin-cli-app') }}.db",
+    {% endif %}
+  }
+}

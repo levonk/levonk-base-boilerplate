@@ -1,0 +1,69 @@
+---
+modeline: "vim: set ft=markdown:"
+title: "{Proper Cased Title}"
+package_name: "{package_name}"
+adr-id: "{adrYYYYMMDD###}"
+slug: "{adr-id-lowercased-hyphenated-short-slug}"
+url: "{url to this document in GitHub (reference origin) or elsewhere}"
+synopsis: "{Synopsis}"
+author: {default to https://github.com/levonk}
+date-created: "{YYYY-MM-DD}"
+date-updated: "{YYYY-MM-DD updated on change}"
+version: "{0.0.0 incremented on change}"
+status: "development|testing|production|deprecated|replaced"
+aliases: []
+tags: ["doc/architecture/adr"]
+supersedes: ["{slugs list}"]
+superseded-by: ["{slugs list}"]
+related-to: ["{slugs list}"]
+external_integration: false
+completeness:
+  # Add language/platform and its completeness score (0-100)
+  # e.g., "typescript": 100,
+  # e.g., "python": 50
+type: "" # concrete, interface, facade, or other
+{be creative with extensive context specific additional front-matter}
+---
+
+# @{{category}}/{{domain}}-{{package_name}}
+
+> {{package_description}}
+
+## ✨ Features
+
+- Feature 1
+- Feature 2
+- Feature 3
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+```bash
+pnpm add @{{category}}/{{domain}}-{{package_name}}
+
+## Installation
+
+```bash
+pnpm add @{{category}}/{{domain}}-{{package_name}}
+```
+
+## Usage
+
+```typescript
+import { example } from '@{{category}}/{{domain}}-{{package_name}}';
+```
+
+## Development
+
+```bash
+bazel build //...
+bazel test //...
+```
+
+## References
+
+- [Package Documentation]()
+- [Related ADRs]()
+
+<!-- vim: set ft=markdown: -->

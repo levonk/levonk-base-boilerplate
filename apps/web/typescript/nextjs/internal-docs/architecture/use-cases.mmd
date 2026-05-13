@@ -1,0 +1,255 @@
+# Job-Aide NextJS Boilerplate - Use Cases
+
+```mermaid
+graph TD
+    %% User Roles
+    User[Unauthenticated User]
+    AuthUser[Authenticated User]
+    Admin[Admin User]
+    Developer[Developer]
+
+    %% Main Use Cases
+    User --> AuthFlow[Authentication Flow]
+    User --> BrowsePublic[Browse Public Content]
+    User --> ViewDocumentation[View Documentation]
+    User --> ExploreFeatures[Explore Features]
+
+    AuthUser --> Dashboard[Access Dashboard]
+    AuthUser --> ManageProfile[Manage Profile]
+    AuthUser --> UseCoreFeatures[Use Core Features]
+    AuthUser --> AccessAPI[Access API]
+    AuthUser --> ManageSettings[Manage Settings]
+
+    Admin --> AdminPanel[Access Admin Panel]
+    Admin --> UserManagement[Manage Users]
+    Admin --> SystemConfig[Configure System]
+    Admin --> MonitorSystem[Monitor System]
+    Admin --> ManageContent[Manage Content]
+
+    Developer --> DevSetup[Development Setup]
+    Developer --> CustomizeBoilerplate[Customize Boilerplate]
+    Developer --> ExtendFeatures[Extend Features]
+    Developer --> DeployApp[Deploy Application]
+    Developer --> TestSuite[Run Test Suite]
+
+    %% Authentication Sub-cases
+    AuthFlow --> SignUp[Sign Up]
+    AuthFlow --> SignIn[Sign In]
+    AuthFlow --> SocialAuth[Social Login]
+    AuthFlow --> PasswordReset[Reset Password]
+    AuthFlow --> TwoFactorAuth[2FA Authentication]
+    AuthFlow --> SessionManagement[Session Management]
+
+    %% Dashboard Sub-cases
+    Dashboard --> ViewOverview[View Overview]
+    Dashboard --> QuickActions[Quick Actions]
+    Dashboard --> RecentActivity[Recent Activity]
+    Dashboard --> Notifications[View Notifications]
+    Dashboard --> Analytics[View Analytics]
+
+    %% Core Features Sub-cases
+    UseCoreFeatures --> DataManagement[Data Management]
+    UseCoreFeatures --> Reporting[Generate Reports]
+    UseCoreFeatures --> Collaboration[Collaboration Tools]
+    UseCoreFeatures --> Integrations[Third-party Integrations]
+    UseCoreFeatures --> Workflows[Workflow Management]
+
+    %% API Access Sub-cases
+    AccessAPI --> APIKeys[Manage API Keys]
+    AccessAPI --> APIDocumentation[View API Docs]
+    AccessAPI --> RateLimits[View Rate Limits]
+    AccessAPI --> Webhooks[Manage Webhooks]
+    AccessAPI --> SDKUsage[Use SDKs]
+
+    %% Admin Sub-cases
+    UserManagement --> CreateUser[Create User]
+    UserManagement --> EditUser[Edit User]
+    UserManagement --> SuspendUser[Suspend User]
+    UserManagement --> UserRoles[Manage Roles]
+    UserManagement --> BulkOperations[Bulk Operations]
+
+    SystemConfig --> AppSettings[App Settings]
+    SystemConfig --> FeatureFlags[Feature Flags]
+    SystemConfig --> SecurityConfig[Security Settings]
+    SystemConfig --> EmailConfig[Email Configuration]
+    SystemConfig --> StorageConfig[Storage Settings]
+
+    %% Developer Sub-cases
+    DevSetup --> LocalDev[Local Development]
+    DevSetup --> EnvironmentSetup[Environment Setup]
+    DevSetup --> Dependencies[Install Dependencies]
+    DevSetup --> DatabaseSetup[Database Setup]
+    DevSetup --> DevTools[Configure Dev Tools]
+
+    CustomizeBoilerplate --> Theming[Custom Theming]
+    CustomizeBoilerplate --> Components[Custom Components]
+    CustomizeBoilerplate --> Layouts[Custom Layouts]
+    CustomizeBoilerplate --> Routing[Custom Routing]
+    CustomizeBoilerplate --> StateManagement[State Management]
+
+    %% Styling
+    classDef userRole fill:#e1f5fe
+    classDef useCase fill:#f3e5f5
+    classDef subCase fill:#fff3e0
+
+    class User,AuthUser,Admin,Developer userRole
+    class AuthFlow,BrowsePublic,ViewDocumentation,ExploreFeatures,Dashboard,ManageProfile,UseCoreFeatures,AccessAPI,ManageSettings,AdminPanel,UserManagement,SystemConfig,MonitorSystem,ManageContent,DevSetup,CustomizeBoilerplate,ExtendFeatures,DeployApp,TestSuite useCase
+    class SignUp,SignIn,SocialAuth,PasswordReset,TwoFactorAuth,SessionManagement,ViewOverview,QuickActions,RecentActivity,Notifications,Analytics,DataManagement,Reporting,Collaboration,Integrations,Workflows,APIKeys,APIDocumentation,RateLimits,Webhooks,SDKUsage,CreateUser,EditUser,SuspendUser,UserRoles,BulkOperations,AppSettings,FeatureFlags,SecurityConfig,EmailConfig,StorageConfig,LocalDev,EnvironmentSetup,Dependencies,DatabaseSetup,DevTools,Theming,Components,Layouts,Routing,StateManagement subCase
+```
+
+## Use Case Descriptions
+
+### **Authentication & Access**
+- **Sign Up**: New user registration with email/password or social providers
+- **Sign In**: Existing user login with credentials
+- **Social Login**: Authentication via OAuth providers (Google, GitHub, etc.)
+- **Reset Password**: Secure password recovery via email
+- **2FA Authentication**: Two-factor authentication for enhanced security
+- **Session Management**: Secure session handling and token management
+
+### **Public Access**
+- **Browse Public Content**: View marketing pages, landing pages
+- **View Documentation**: Access comprehensive documentation
+- **Explore Features**: Interactive feature demonstrations
+
+### **Authenticated User Actions**
+- **Access Dashboard**: Personalized landing page with overview
+- **Manage Profile**: Update personal information and preferences
+- **Use Core Features**: Access main application functionality
+- **Access API**: Programmatic access to application features
+- **Manage Settings**: Configure user-specific settings
+
+### **Administrative Functions**
+- **Access Admin Panel**: Administrative interface
+- **Manage Users**: CRUD operations for user accounts
+- **Configure System**: Application-wide settings and configuration
+- **Monitor System**: System health, performance, and usage metrics
+- **Manage Content**: Content management and moderation
+
+### **Developer Workflows**
+- **Development Setup**: Quick start for local development
+- **Customize Boilerplate**: Tailor the boilerplate to specific needs
+- **Extend Features**: Add new functionality and features
+- **Deploy Application**: Deploy to various hosting platforms
+- **Run Test Suite**: Execute comprehensive testing
+
+### **Core Application Features**
+- **Data Management**: CRUD operations for business data
+- **Generate Reports**: Create and export various reports
+- **Collaboration Tools**: Real-time collaboration features
+- **Third-party Integrations**: Connect with external services
+- **Workflow Management**: Business process automation
+
+### **API & Integration**
+- **Manage API Keys**: Generate and manage API credentials
+- **View API Documentation**: Comprehensive API reference
+- **Monitor Rate Limits**: Track API usage and limits
+- **Manage Webhooks**: Configure webhook endpoints
+- **Use SDKs**: Client libraries for easy integration
+
+## User Personas
+
+### **Unauthenticated User**
+- Potential customer or partner exploring the platform
+- Needs clear value proposition and easy onboarding
+
+### **Authenticated User**
+- Regular user consuming the service
+- Needs intuitive interface and reliable features
+
+### **Admin User**
+- System administrator or power user
+- Needs comprehensive control and oversight tools
+
+### **Developer**
+- Developer building on or extending the platform
+- Needs robust development tools and documentation
+
+## Technical Architecture Considerations
+
+### **Frontend Architecture**
+- **Next.js 14+**: App Router, Server Components, Client Components
+- **TypeScript**: Type-safe development with strict mode
+- **Tailwind CSS**: Utility-first styling framework
+- **State Management**: Zustand/React Query for client state
+- **Form Handling**: React Hook Form with Zod validation
+
+### **Authentication & Security**
+- **NextAuth.js**: Authentication with multiple providers
+- **RBAC**: Role-based access control
+- **CSRF Protection**: Cross-site request forgery prevention
+- **Rate Limiting**: API rate limiting and abuse prevention
+- **Security Headers**: Comprehensive security headers
+
+### **Data & API**
+- **API Routes**: Next.js API routes for backend functionality
+- **Database**: PostgreSQL with Prisma ORM
+- **Caching**: Redis for session and data caching
+- **File Storage**: Cloud storage integration (S3, R2)
+- **Webhooks**: Event-driven architecture
+
+### **Performance & Scalability**
+- **SSR/SSG**: Server-side rendering and static generation
+- **Code Splitting**: Automatic and manual code splitting
+- **Image Optimization**: Next.js Image component
+- **CDN Integration**: Content delivery network
+- **Monitoring**: Performance monitoring and alerting
+
+### **Development Experience**
+- **Hot Reload**: Fast refresh during development
+- **TypeScript**: Full type safety and IntelliSense
+- **ESLint/Prettier**: Code quality and formatting
+- **Testing**: Vitest + Playwright testing setup
+- **Documentation**: Auto-generated API documentation
+
+### **Deployment & DevOps**
+- **Container Support**: Docker configuration included
+- **CI/CD**: GitHub Actions workflows
+- **Environment Management**: Multiple environment support
+- **Monitoring**: Application performance monitoring
+- **Error Tracking**: Comprehensive error logging
+
+## Boilerplate Customization Points
+
+### **Styling & Branding**
+- **Theme System**: Dark/light mode with custom themes
+- **Component Library**: Reusable UI components
+- **Design Tokens**: Consistent design system
+- **Responsive Design**: Mobile-first responsive layouts
+
+### **Feature Modules**
+- **User Management**: User registration, profiles, roles
+- **Content Management**: CMS-like functionality
+- **Analytics**: User behavior and system analytics
+- **Notifications**: Email and in-app notifications
+- **File Management**: Upload, store, and manage files
+
+### **Integration Points**
+- **Payment Processing**: Stripe/Polar integration
+- **Email Service**: Email provider integration
+- **Search**: Full-text search capabilities
+- **Chat/Messaging**: Real-time communication
+- **Calendar**: Scheduling and calendar integration
+
+## Best Practices Included
+
+### **Code Quality**
+- **Type Safety**: Comprehensive TypeScript usage
+- **Error Handling**: Robust error boundaries and handling
+- **Performance**: Optimized bundle sizes and loading
+- **Accessibility**: WCAG compliance and screen reader support
+- **SEO**: Meta tags, structured data, and sitemaps
+
+### **Security**
+- **Input Validation**: Comprehensive input sanitization
+- **SQL Injection Prevention**: Parameterized queries
+- **XSS Protection**: Content Security Policy
+- **Authentication**: Secure session management
+- **Data Privacy**: GDPR compliance considerations
+
+### **Testing Strategy**
+- **Unit Tests**: Component and utility testing
+- **Integration Tests**: API and database testing
+- **E2E Tests**: Full user journey testing
+- **Performance Tests**: Load and stress testing
+- **Security Tests**: Vulnerability scanning

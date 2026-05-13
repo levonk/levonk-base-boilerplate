@@ -1,0 +1,26 @@
+Import-Module Pester
+
+Describe "{{ project_slug }} CLI" {
+    It "shows help" {
+        $result = pwsh -c "./{{ project_slug }}.ps1 --help"
+        $result | Should -Match "Usage:"
+    }
+
+    It "processes stdin" {
+        $result = "hello" | pwsh -c "./{{ project_slug }}.ps1 --json -"
+        $result | Should -Match "stdin"
+    }
+
+    It "processes glob input" {
+        $tmp = New-Item -ItemType Directory -Force -Path (Join-Path $env:TEMP "pscli-{{ project_slug }}")
+        "a" | Set-Content (Join-Path $tmp.FullName "a.txt")
+        "b" | Set-Content (Join-Path $tmp.FullName "b.txt")
+
+        Push-Location $tmp.FullName
+        $result = pwsh -c "./{{ project_slug }}.ps1 --json '**/*.txt'"
+        Pop-Location
+
+        $result | Should -Match "a.txt"
+        $result | Should -Match "b.txt"
+    }
+}

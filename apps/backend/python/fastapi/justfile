@@ -1,0 +1,109 @@
+# FastAPI Backend Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    uv sync
+    echo "FastAPI bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check Python and FastAPI environment
+    @echo "🐍 Python version:"
+    @python --version
+    @echo ""
+    @echo "📦 Dependencies:"
+    @uv list
+    @echo ""
+    @echo "🔧 Development tools:"
+    @command -v ruff || echo "ruff not found"
+    @command -v pytest || echo "pytest not found"
+    @command -v mypy || echo "mypy not found"
+    @echo ""
+    @echo "✅ FastAPI environment is ready!"
+
+# Development server
+dev-server:
+    uvicorn {{ service_name }}.{{ service_name }}:app --host 0.0.0.0 --port {{ port }} --reload
+
+# Install dependencies
+install:
+    uv sync
+
+# Run tests
+run-test:
+    pytest
+
+# Run tests with coverage
+test-coverage:
+    pytest --cov={{ service_name }} --cov-report=html
+
+# Lint code
+lint-code:
+    ruff check .
+    ruff format --check .
+
+# Format code
+format:
+    ruff format .
+
+# Type checking
+mypy:
+    mypy .
+
+# Build for production
+prod-build:
+    uv build
+
+# Clean up
+clean-up:
+    rm -rf .pytest_cache .coverage htmlcov dist build
+
+# Database migrations (if using)
+migrate:
+    alembic upgrade head
+
+# Create new migration
+migration:
+    alembic revision --autogenerate -m "$(message)"
+
+# Health check
+health:
+    curl -f http://localhost:{{ port }}/health || echo "Service not running"
+
+# Docker commands
+docker-build:
+    docker build -t {{ service_name }} .
+
+docker-run:
+    docker run -p {{ port }}:{{ port }} {{ service_name }}
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ FastAPI development environment ready!"

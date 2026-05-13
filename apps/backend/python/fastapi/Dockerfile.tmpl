@@ -1,0 +1,48 @@
+FROM base-alpine AS builder
+
+USER root
+
+# Install Python and build tooling
+RUN apk add --no-cache python3 py3-pip py3-setuptools py3-wheel build-base
+
+WORKDIR /app
+
+# Copy project files
+COPY pyproject.toml README.md ./
+COPY app ./app
+COPY tests ./tests
+
+# Install project with dev extras
+RUN pip install --upgrade pip \
+  && pip install .[dev]
+
+# Runtime image
+FROM base-alpine AS runner
+
+USER root
+
+# Install Python runtime only
+RUN apk add --no-cache python3 py3-pip py3-setuptools py3-wheel \
+  && rm -rf /var/cache/apk/* /tmp/*
+
+WORKDIR /app
+
+ENV NODE_ENV=production \
+    PUID=${PUID:-1000} \
+    PGID=${PGID:-1000} \
+    TZ=${TZ:-America/Los_Angeles} \
+    PORT={{ port }}
+
+# Copy installed packages and app from builder
+COPY --from=builder /usr/lib/python3.*/site-packages /usr/lib/python3.*/site-packages
+COPY --from=builder /app ./
+
+EXPOSE {{ port }}
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD python -m http.client localhost:{{ port }} "/health" || exit 1
+
+# Use appuser from base-alpine
+USER appuser
+
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "{{ port }}"]

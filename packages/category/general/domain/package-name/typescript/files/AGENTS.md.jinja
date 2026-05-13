@@ -1,0 +1,77 @@
+# {{ package_name }} - Agent Instructions
+
+## Overview
+{{ description }}
+
+## Development Commands
+```bash
+# Install dependencies
+pnpm install
+
+# Run tests
+pnpm test
+
+# Build
+pnpm build
+
+# Development mode
+pnpm dev
+
+# Type checking
+pnpm typecheck
+
+# Linting
+pnpm lint
+
+# Format code
+pnpm format
+```
+
+## Project Structure
+- `src/` - Source code directory
+  - `index.ts` - Main entry point
+  - `lib/` - Library code
+- `tests/` - Test files (use .test.mts extension)
+- `package.json` - Package definition
+- `tsconfig.json` - TypeScript configuration
+- `eslint.config.mts` - ESLint configuration
+- `devbox.json` - Development environment
+- `.envrc` - Environment configuration
+
+## Testing
+Run all tests with coverage:
+```bash
+pnpm test:coverage
+```
+
+Run tests in watch mode:
+```bash
+pnpm test:watch
+```
+
+## TypeScript Standards
+- Use explicit file extensions (.mts, .cts, .tsx)
+- Use category-based path aliases (@/core/*, @/features/*, etc.)
+- Follow ESLint configuration from @job-aide/tools-lint-eslint-config
+- Use double quotes, 2-space indentation, semicolons
+- Use kebab-case for filenames
+- Prefer `type` over `interface` for type definitions
+- Use `import type` for type-only imports
+
+## Dependencies
+- Node.js {{ node_version }}
+- TypeScript {{ typescript_version }}
+- Vitest for testing
+{% if include_cli %}- Commander.js for CLI{% endif %}
+{% if include_http %}- Express.js for HTTP{% endif %}
+{% if include_postgres %}- pg for PostgreSQL{% endif %}
+{% if include_redis %}- redis for Redis{% endif %}
+{% if include_sqlite %}- better-sqlite3 for SQLite{% endif %}
+
+## Environment
+Use Devbox for reproducible development environment. The devbox.json includes:
+- Node.js and pnpm
+- Git, curl, vim
+{% if include_docker %}- Docker and docker-compose{% endif %}
+{% if include_postgres %}- PostgreSQL client{% endif %}
+{% if include_redis %}- Redis tools{% endif %}

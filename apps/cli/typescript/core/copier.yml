@@ -1,0 +1,85 @@
+project_name:
+  type: str
+  help: What is the project name?
+  default: "my-cli-tool"
+
+project_slug:
+  type: str
+  help: What is the project slug? (e.g. my-tool)
+  default: "{{ project_name | lower | replace(' ', '-') }}"
+
+description:
+  type: str
+  help: Short description of the project
+  default: "A CLI tool"
+
+# Devbox configuration
+node_env:
+  type: str
+  help: Node.js environment
+  default: "development"
+
+ts_node_project:
+  type: str
+  help: TypeScript Node project configuration
+  default: "./tsconfig.json"
+
+include_commander:
+  type: bool
+  help: Include Commander.js for CLI?
+  default: false
+
+include_inquirer:
+  type: bool
+  help: Include Inquirer.js for prompts?
+  default: false
+
+include_chalk:
+  type: bool
+  help: Include Chalk for colors?
+  default: false
+
+include_axios:
+  type: bool
+  help: Include Axios for HTTP requests?
+  default: false
+
+include_lodash:
+  type: bool
+  help: Include Lodash utilities?
+  default: false
+
+include_yaml:
+  type: bool
+  help: Include YAML support?
+  default: false
+
+include_json_schema:
+  type: bool
+  help: Include JSON Schema validation?
+  default: false
+
+include_development:
+  type: bool
+  help: Include development environment variables?
+  default: false
+
+log_level:
+  type: str
+  help: Log level for development
+  default: "info"
+
+debug:
+  type: str
+  help: Debug flag for development
+  default: "app:*"
+
+config_path:
+  type: str
+  help: Configuration file path
+  default: "./config.json"
+
+_templates:
+  - nx.json.jinja
+  - justfile.jinja
+  - tsconfig.json.jinja

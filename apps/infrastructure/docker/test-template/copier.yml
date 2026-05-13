@@ -1,0 +1,18 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "Project name"
+  default: "test-docker-project"
+
+environment:
+  type: str
+  help: "Environment"
+  default: "development"
+
+docker_image:
+  type: str
+  help: "Docker base image"
+  default: "ubuntu:latest"

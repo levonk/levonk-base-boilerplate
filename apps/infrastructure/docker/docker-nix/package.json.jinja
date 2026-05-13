@@ -1,0 +1,19 @@
+{
+  "name": "docker-nix",
+  "version": "1.0.0",
+  "description": "Docker Nix container with NX monorepo support",
+  "scripts": {
+    "build": "docker compose build",
+    "build:all": "docker compose build",
+    "up": "docker compose up -d",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f",
+    "clean": "docker compose down -v"
+  },
+  "devDependencies": {
+    "@nx-tools/nx-container": "^5.0.0",
+    "@nx/js": "^19.0.0",
+    "nx": "^19.0.0"
+  },
+  "packageManager": "pnpm@*"
+}

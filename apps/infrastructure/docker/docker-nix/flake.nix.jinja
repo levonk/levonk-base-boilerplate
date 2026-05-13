@@ -1,0 +1,159 @@
+{
+  description = "{{ _service_description }}";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  };
+
+  outputs = { self, nixpkgs }:
+    let
+      system = "{{ _nix_system }}";
+      pkgs = nixpkgs.legacyPackages.${system};
+
+      # Define the application derivation here
+      app = pkgs.stdenv.mkDerivation {
+        pname = "{{ _service_name_slug }}";
+        version = "0.1.0";
+        src = ./.;
+
+        # Add your build inputs here
+        buildInputs = [ ];
+
+        # Example build phase (adjust as needed)
+        buildPhase = ''
+          echo "Building {{ _service_name_slug }}..."
+          # make build
+        '';
+
+        installPhase = ''
+          mkdir -p $out/bin
+          # cp bin/{{ _service_name_slug }} $out/bin/
+
+          # Placeholder for demonstration
+          echo '#!${pkgs.runtimeShell}' > $out/bin/{{ _service_name_slug }}
+          echo 'echo "Starting {{ _service_name_slug }} on port {{ _service_port }}..."' >> $out/bin/{{ _service_name_slug }}
+          echo 'while true; do sleep 1; done' >> $out/bin/{{ _service_name_slug }}
+          chmod +x $out/bin/{{ _service_name_slug }}
+        '';
+      };
+
+      # Common configuration for both images
+      commonConfig = {
+        Cmd = [ "${app}/bin/{{ _service_name_slug }}" ];
+        ExposedPorts = {
+          "{{ _service_port }}/tcp" = {};
+        };
+        Env = [
+          "SERVICE_NAME={{ _service_name_slug }}"
+          "SERVICE_PORT={{ _service_port }}"
+          "NODE_ENV=production"
+        ];
+      };
+
+      # Development Shell
+      devShells.${system}.default = pkgs.mkShell {
+        buildInputs = [
+          # Security & Linting Tools
+          pkgs.dockle
+          pkgs.trivy
+          pkgs.hadolint
+          pkgs.checkov
+          pkgs.yamllint
+          pkgs.markdownlint-cli
+
+          # Container Tools
+          pkgs.docker
+          pkgs.docker-compose
+        ];
+
+        shellHook = ''
+          echo "🛠️  {{ _service_name }} Dev Shell"
+          echo "   - Dockle: $(dockle --version)"
+          echo "   - Trivy: $(trivy --version)"
+          echo "   - Hadolint: $(hadolint --version)"
+        '';
+      };
+
+    in
+    {
+      packages.${system} = {
+        default = app;
+
+        # Production Image: Minimal, only app + runtime closure
+        docker-prod = pkgs.dockerTools.buildLayeredImage {
+          name = "{{ _service_name_slug }}";
+          tag = "latest";
+          contents = [ app ];
+          config = commonConfig;
+        };
+
+        # Debug Image: App + Interactive Tools
+        docker-debug = pkgs.dockerTools.buildLayeredImage {
+          name = "{{ _service_name_slug }}-debug";
+          tag = "latest";
+
+          # The "Twist": Add debugging tools
+          contents = [
+            app
+            # Shells
+            pkgs.zsh
+            pkgs.bashInteractive
+
+            # Network
+            pkgs.curl
+            pkgs.wget
+            pkgs.iproute2    # ip, ss
+            pkgs.dnsutils    # dig, nslookup
+            pkgs.netcat-gnu  # nc
+            pkgs.nettools     # netstat
+            pkgs.tcpdump
+            pkgs.socat
+            pkgs.mtr
+            pkgs.iputils     # ping
+
+            # Remote + VCS
+            pkgs.openssh
+            pkgs.git
+
+            # System & Process
+            pkgs.coreutils
+            pkgs.procps      # ps, top, free
+            pkgs.strace
+            pkgs.lsof
+            pkgs.htop
+            pkgs.psmisc      # killall, fuser
+
+            # File & Text
+            pkgs.vim
+            pkgs.jq          # JSON processing
+            pkgs.ripgrep     # rg
+            pkgs.findutils   # find, xargs
+            pkgs.file
+            pkgs.tree
+            pkgs.gnused
+            pkgs.gnugrep
+            pkgs.gawk
+            pkgs.less
+            pkgs.which
+            pkgs.binutils    # strings, etc.
+            pkgs.tee         # (part of coreutils usually, but ensuring)
+
+            # Archives
+            pkgs.gnutar
+            pkgs.gzip
+            pkgs.unzip
+
+            # Misc
+            pkgs.iana-etc    # /etc/services
+            pkgs.cacert      # SSL certs
+          ];
+
+          config = commonConfig // {
+            Env = commonConfig.Env ++ [
+              "PATH=/bin:${pkgs.zsh}/bin:${pkgs.bashInteractive}/bin:${pkgs.coreutils}/bin:${pkgs.curl}/bin:${pkgs.procps}/bin:${pkgs.iproute2}/bin:${pkgs.nettools}/bin:${pkgs.openssh}/bin:${pkgs.git}/bin:${pkgs.jq}/bin:${pkgs.vim}/bin"
+            ];
+          };
+        };
+      };
+    };
+}

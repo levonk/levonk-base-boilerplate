@@ -1,0 +1,24 @@
+# Direnv configuration for {{ project_name }}
+# This file is loaded automatically when entering the directory
+
+# Load environment variables from .env if it exists
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Set default values
+export NODE_ENV=${NODE_ENV:-production}
+export PORT=${PORT:-{{ service_port }}}
+{% if include_postgres %}
+export DATABASE_URL=${DATABASE_URL:-postgresql://paperclip:paperclip@localhost:{{ postgres_port }}/paperclip}
+{% endif %}
+export PAPERCLIP_BIND=${PAPERCLIP_BIND:-0.0.0.0}
+
+# Add local node_modules to PATH if it exists
+if [ -d node_modules/.bin ]; then
+    export PATH=$(pwd)/node_modules/.bin:$PATH
+fi
+
+echo "🚀 {{ project_name }} environment loaded"
+echo "   Port: $PORT"
+echo "   Node Env: $NODE_ENV"

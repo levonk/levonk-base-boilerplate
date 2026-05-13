@@ -1,0 +1,223 @@
+# {{ monorepo_name }}
+
+{{ description }}
+
+## 🚀 Quick Start
+
+This is a pnpm-based monorepo powered by Turbo for optimal build performance and developer experience.
+
+### Prerequisites
+
+- Node.js 18.0.0 or higher
+- pnpm 8.0.0 or higher
+
+### Installation
+
+```bash
+# Install dependencies
+pnpm install
+
+# Setup git hooks
+pnpm prepare
+```
+
+### Development
+
+```bash
+# Start all apps in development mode
+pnpm dev
+
+# Start specific app
+pnpm --filter <app-name> dev
+```
+
+### Building
+
+```bash
+# Build all packages and apps
+pnpm build
+
+# Build specific package
+pnpm --filter <package-name> build
+```
+
+### Testing
+
+```bash
+# Run all tests
+pnpm test
+
+# Run unit tests only
+pnpm test:unit
+
+# Run integration tests
+pnpm test:integration
+
+# Run E2E tests
+pnpm test:e2e
+
+# Generate coverage reports
+pnpm test:coverage
+```
+
+### Code Quality
+
+```bash
+# Lint all packages
+pnpm lint
+
+# Fix linting issues
+pnpm lint:fix
+
+# Type checking
+pnpm typecheck
+
+# Format code
+pnpm format
+
+# Check formatting
+pnpm format:check
+```
+
+## 📁 Project Structure
+
+```
+{{ monorepo_name }}/
+├── apps/                    # Applications (Next.js, Express, etc.)
+│   └── web/                # Web applications
+├── packages/               # Shared packages and utilities
+│   ├── ui/                # UI components
+│   ├── config/            # Shared configuration
+│   └── utils/             # Utility functions
+├── docs/                   # Documentation
+├── .github/                # GitHub workflows
+├── turbo.json             # Turbo configuration
+├── pnpm-workspace.yaml    # pnpm workspace configuration
+└── package.json           # Root package configuration
+```
+
+## 🛠️ Technologies
+
+- **Package Manager**: pnpm
+- **Build System**: Turbo
+- **Language**: TypeScript
+- **Linting**: ESLint + Prettier
+- **Testing**: Vitest
+- **Git Hooks**: Husky + lint-staged
+- **Version Management**: Changesets
+
+## 📦 Adding New Packages
+
+### Adding an Application
+
+```bash
+# Create new app directory
+mkdir -p apps/my-app
+cd apps/my-app
+
+# Initialize package
+pnpm init
+
+# Add to workspace
+# The workspace will automatically detect the new package
+```
+
+### Adding a Shared Package
+
+```bash
+# Create new package directory
+mkdir -p packages/my-package
+cd packages/my-package
+
+# Initialize package
+pnpm init
+
+# Add to workspace
+# The workspace will automatically detect the new package
+```
+
+## 🔄 Dependency Management
+
+### Adding Dependencies
+
+```bash
+# Add to specific package
+pnpm --filter <package-name> add <dependency>
+
+# Add to all packages
+pnpm -r add <dependency>
+
+# Add dev dependency
+pnpm --filter <package-name> add -D <dependency>
+```
+
+### Internal Dependencies
+
+```bash
+# Add internal package dependency
+pnpm --filter <package-name> add <internal-package>@workspace:*
+```
+
+## 🚀 Deployment
+
+### Build for Production
+
+```bash
+# Build all packages
+pnpm build
+
+# Build specific app
+pnpm --filter <app-name> build
+```
+
+### Version Management
+
+This monorepo uses Changesets for version management:
+
+```bash
+# Add changeset
+pnpm changeset
+
+# Version packages
+pnpm version-packages
+
+# Release packages
+pnpm release
+```
+
+## 🧪 Testing Strategy
+
+- **Unit Tests**: Fast tests for individual functions and components
+- **Integration Tests**: Tests for package interactions
+- **E2E Tests**: End-to-end application tests
+
+## 📋 Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `pnpm dev` | Start all apps in development mode |
+| `pnpm build` | Build all packages and apps |
+| `pnpm lint` | Lint all packages |
+| `pnpm lint:fix` | Fix linting issues |
+| `pnpm test` | Run all tests |
+| `pnpm test:unit` | Run unit tests only |
+| `pnpm test:integration` | Run integration tests |
+| `pnpm test:e2e` | Run E2E tests |
+| `pnpm test:coverage` | Generate coverage reports |
+| `pnpm typecheck` | Type check all packages |
+| `pnpm format` | Format code |
+| `pnpm format:check` | Check formatting |
+| `pnpm clean` | Clean build artifacts |
+| `pnpm clean:hard` | Clean everything including node_modules |
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details.

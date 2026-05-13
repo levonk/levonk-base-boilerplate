@@ -1,0 +1,6 @@
+  {{ _service_name_slug }}-debug:
+    image: {{ _service_name_slug }}-debug:latest
+    container_name: {{ _service_name_slug }}-debug
+    labels:
+      - "dev.quenary.tugtainer.protected=false"
+{% include "_partials/shared/docker-compose-debug-common.jinja" %}

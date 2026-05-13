@@ -1,0 +1,72 @@
+{
+  "name": "{{ project_name | default('csharp-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ project_description | default('A C# CLI application') }}",
+  "shell": {
+    "init": [
+      "echo '🔷 Setting up {{ project_name | default('csharp-cli-app') }} development environment...'"
+    ],
+    "scripts": {
+      "build": "dotnet build",
+      "build-release": "dotnet build -c Release",
+      "test": "dotnet test",
+      "test-coverage": "dotnet test --collect:\"XPlat Code Coverage\"",
+      "lint": "dotnet format --verify-no-changes",
+      "format": "dotnet format",
+      "format-check": "dotnet format --verify-no-changes",
+      "run": "dotnet run --project src/{{ project_name | default('CSharpCliApp') }}/{{ project_name | default('CSharpCliApp') }}.csproj",
+      "dev": "dotnet watch --project src/{{ project_name | default('CSharpCliApp') }}/{{ project_name | default('CSharpCliApp') }}.csproj",
+      "clean": "dotnet clean",
+      "restore": "dotnet restore",
+      "pack": "dotnet pack",
+      "check": "dotnet build && dotnet test && dotnet format --verify-no-changes"
+    }
+  },
+  "packages": {
+    "nixpkgs#dotnet-sdk_8": "",
+    "nixpkgs#dotnet-runtime_8": "",
+    {% if include_commandline %}
+    "nixpkgs#dotnetPackages.CommandLineParser": "",
+    {% endif %}
+    {% if include_serilog %}
+    "nixpkgs#dotnetPackages.Serilog": "",
+    {% endif %}
+    {% if include_newtonsoft %}
+    "nixpkgs#dotnetPackages.NewtonsoftJson": "",
+    {% endif %}
+    {% if include_autoMapper %}
+    "nixpkgs#dotnetPackages.AutoMapper": "",
+    {% endif %}
+    {% if include_fluentValidation %}
+    "nixpkgs#dotnetPackages.FluentValidation": "",
+    {% endif %}
+    {% if include_mediatr %}
+    "nixpkgs#dotnetPackages.MediatR": "",
+    {% endif %}
+    {% if include_entityFramework %}
+    "nixpkgs#dotnetPackages.EntityFrameworkCore": "",
+    "nixpkgs#postgresql": "",
+    {% endif %}
+    {% if include_dapper %}
+    "nixpkgs#dotnetPackages.Dapper": "",
+    {% endif %}
+    {% if include_npgsql %}
+    "nixpkgs#dotnetPackages.Npgsql": "",
+    {% endif %}
+    {% if include_sqlite %}
+    "nixpkgs#dotnetPackages.Sqlite": "",
+    {% endif %}
+  },
+  "env": {
+    "DOTNET_ROOT": "{{ dotnet_root | default('/nix/store/dotnet') }}",
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "{{ dotnet_telemetry_optout | default('1') }}",
+    "ASPNETCORE_ENVIRONMENT": "{{ aspnetcore_environment | default('Development') }}",
+    {% if include_entityFramework %}
+    "CONNECTION_STRINGS__DEFAULTCONNECTION": "{{ connection_string | default('Host=localhost;Database=' + (project_name | default('csharp-cli-app'))) }}",
+    {% endif %}
+    {% if include_development %}
+    "LOG_LEVEL": "{{ log_level | default('Information') }}",
+    "DEBUG": "{{ debug | default('false') }}",
+    {% endif %}
+  }
+}

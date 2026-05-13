@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+import os
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.providers.cncf.kubernetes.operators.pod import KubernetesPodOperator
+
+# Default args demonstrate retries, timeouts, and ownership.
+default_args = {
+    "owner": "{{ project_name }}",
+    "depends_on_past": False,
+    "retries": 2,
+    "retry_delay": timedelta(minutes=2),
+}
+
+# Example Python callable
+
+def hello_task_fn() -> None:
+    print("hello from Airflow project boilerplate")
+
+with DAG(
+    dag_id="{{ dag_id }}",
+    default_args=default_args,
+    schedule_interval=None,
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    description="Boilerplate DAG for Airflow project",
+    tags=["boilerplate"],
+) as dag:
+
+    hello = PythonOperator(
+        task_id="hello_python",
+        python_callable=hello_task_fn,
+        execution_timeout=timedelta(minutes=5),
+        retries=1,
+    )
+
+    # Example task running in its own container with resource limits using KubernetesPodOperator.
+    # Requires KubernetesExecutor with a valid pod template/service account in cluster.
+    kpo_example = KubernetesPodOperator(
+        task_id="kpo_example",
+        name="kpo-example",
+        namespace=os.getenv("AIRFLOW__KUBERNETES__NAMESPACE", "default"),
+        image="{{ image_name | default('local/airflow-node') }}:{{ image_tag | default('latest') }}",
+        cmds=["python", "-c"],
+        arguments=[
+            "print('hello from KPO with resource limits'); import time; time.sleep(1)"
+        ],
+        get_logs=True,
+        is_delete_operator_pod=True,
+        startup_timeout_seconds=120,
+        container_resources={
+            "limits": {"cpu": "500m", "memory": "512Mi"},
+            "requests": {"cpu": "250m", "memory": "256Mi"},
+        },
+        retries=1,
+        retry_delay=timedelta(minutes=1),
+        execution_timeout=timedelta(minutes=10),
+    )
+
+    hello >> kpo_example

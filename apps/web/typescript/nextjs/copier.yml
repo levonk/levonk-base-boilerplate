@@ -1,0 +1,24 @@
+# Template variables
+_defaults:
+  package_name: "my-next-app"
+  description: "A Next.js application"
+
+# Questions
+package_name:
+  type: str
+  help: "What is your package name?"
+
+description:
+  type: str
+  help: "Project description"
+
+# Template configuration
+_templates_suffix: ".jinja"
+_ignore:
+  - "node_modules"
+  - ".next"
+  - "dist"
+  - "out"
+  - ".git"
+  - "__pycache__"
+  - "*.pyc"

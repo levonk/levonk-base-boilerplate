@@ -1,0 +1,79 @@
+# Environment Variables Template
+# Copy this to .env and customize for your environment
+
+# Service Configuration
+{{ _env_prefix }}_SERVICE_NAME={{ _service_name }}
+{{ _env_prefix }}_SERVICE_PORT={{ _service_port }}
+{{ _env_prefix }}_NODE_ENV=production
+{{ _env_prefix }}_PUID=1000
+{{ _env_prefix }}_PGID=1000
+{{ _env_prefix }}_TZ=UTC
+{{ _env_prefix }}_HOST_IP=0.0.0.0
+{{ _env_prefix }}_HOST_PORT={{ _service_port }}
+{{ _env_prefix }}_CONTAINER_IP=0.0.0.0
+{{ _env_prefix }}_CONTAINER_PORT={{ _service_port }}
+
+# Health Check Configuration
+{{ _env_prefix }}_SERVICE_HEALTH_ENDPOINT={{ _service_health_endpoint }}
+{{ _env_prefix }}_HEALTH_CHECK_INTERVAL=30s
+{{ _env_prefix }}_HEALTH_CHECK_TIMEOUT=10s
+{{ _env_prefix }}_HEALTH_CHECK_RETRIES=3
+
+# Logging Configuration
+{{ _env_prefix }}_LOG_LEVEL=info
+{{ _env_prefix }}_LOG_FORMAT=json
+{{ _env_prefix }}_LOG_FILE=/app/logs/app.log
+
+# Database Configuration (if applicable)
+# {{ _env_prefix }}_DATABASE_URL=postgresql://user:password@db:5432/{{ _service_name }}
+# {{ _env_prefix }}_DATABASE_SSL_MODE=require
+# {{ _env_prefix }}_DATABASE_CONNECTION_POOL_SIZE=10
+
+# Valkey / Redis Configuration (if applicable)
+# {{ _env_prefix }}_REDIS_URL=redis://redis:6379
+# {{ _env_prefix }}_REDIS_PASSWORD=
+# {{ _env_prefix }}_REDIS_DB=0
+
+# External API Keys (use secure secret management in production)
+# {{ _env_prefix }}_API_KEY_1=your_api_key_here
+# {{ _env_prefix }}_API_KEY_2=your_api_key_here
+
+# Monitoring Configuration
+# {{ _env_prefix }}_PROMETHEUS_METRICS_ENABLED=true
+# {{ _env_prefix }}_PROMETHEUS_METRICS_PORT=9090
+
+# Security Configuration
+# {{ _env_prefix }}_SECRET_KEY_BASE=generate_a_strong_random_key_here
+# {{ _env_prefix }}_JWT_SECRET=generate_a_strong_random_key_here
+
+# Feature Flags
+# {{ _env_prefix }}_ENABLE_DEBUG_MODE=false
+# {{ _env_prefix }}_ENABLE_CORS=true
+# {{ _env_prefix }}_ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
+
+# Performance Configuration
+# {{ _env_prefix }}_MAX_WORKERS=4
+# {{ _env_prefix }}_REQUEST_TIMEOUT=30
+# {{ _env_prefix }}_RATE_LIMIT_REQUESTS_PER_MINUTE=1000
+
+# Email Configuration (if applicable)
+# {{ _env_prefix }}_SMTP_HOST=smtp.gmail.com
+# {{ _env_prefix }}_SMTP_PORT=587
+# {{ _env_prefix }}_SMTP_USER=your_email@gmail.com
+# {{ _env_prefix }}_SMTP_PASSWORD=your_app_password
+# {{ _env_prefix }}_FROM_EMAIL=noreply@yourdomain.com
+
+# File Upload Configuration (if applicable)
+# {{ _env_prefix }}_UPLOAD_MAX_SIZE=10MB
+# {{ _env_prefix }}_UPLOAD_ALLOWED_TYPES=jpg,jpeg,png,pdf
+# {{ _env_prefix }}_UPLOAD_DESTINATION=/app/uploads
+
+# Cache Configuration
+# {{ _env_prefix }}_CACHE_TTL=3600
+# {{ _env_prefix }}_CACHE_BACKEND=redis
+# {{ _env_prefix }}_CACHE_PREFIX={{ _service_name }}
+
+# SSL/TLS Configuration
+# {{ _env_prefix }}_SSL_CERT_PATH=/path/to/cert.pem
+# {{ _env_prefix }}_SSL_KEY_PATH=/path/to/key.pem
+# {{ _env_prefix }}_SSL_CA_PATH=/path/to/ca.pem

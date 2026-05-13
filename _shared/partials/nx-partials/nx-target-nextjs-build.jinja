@@ -1,0 +1,8 @@
+    "build": {
+      "executor": "@nx/next:build",
+      "options": {
+        "outputPath": "dist/{{ project_name | default('app') }}"
+      },
+      "dependsOn": ["^build"],
+      "cache": true
+    },

@@ -1,0 +1,78 @@
+# {{ package_name }} - Agent Guidelines
+
+## Project Overview
+
+{{ description }}
+
+## Development Guidelines
+
+### Core Tools
+- **Environment**: We use `mise` for environment management. You must use this tool to install and update your environment.
+- **Package Management**: Use appropriate package managers for bash projects
+- **Testing**: Use BATS (Bash Automated Testing System) for testing
+
+### Project Structure
+
+```
+{{ package_slug }}/
+├── src/
+│   └── main.sh              # Main script entrypoint
+├── tests/
+│   └── test_main.bats       # BATS tests
+├── docs/                    # Documentation
+├── internal-docs/           # Internal documentation
+├── .envrc                   # Environment configuration
+├── devbox.json              # Dev environment setup
+├── README.md                # Project documentation
+└── AGENTS.md                # This file
+```
+
+### Development Guidelines
+
+- **Greenfield**: Everything is greenfield. Don't make bandaids, fix root causes.
+- **Code Reuse & Creation**:
+  1. Check existing code before creating new functionality
+  2. Prefer existing solutions over custom implementations
+  3. Follow bash best practices and security guidelines
+
+### Testing Workflow
+
+```bash
+# Set up environment
+mise exec -- bash tests/test_main.bats
+
+# Run specific test
+mise exec -- bats tests/test_main.bats
+```
+
+### Security Considerations
+
+- Always validate input parameters
+- Use `set -euo pipefail` for error handling
+- Avoid eval and insecure shell constructs
+- Follow principle of least privilege
+
+## Quality Standards
+
+### Code Style
+- Use 2-space indentation
+- Follow bash best practices
+- Include proper error handling
+- Add comprehensive comments
+
+### Documentation
+- Every script must have header documentation
+- Include usage examples
+- Document dependencies
+- Maintain README.md
+
+## Contributing
+
+1. Follow the established patterns
+2. Add tests for new functionality
+3. Update documentation
+4. Ensure all tests pass
+
+## License
+
+{{ license }}

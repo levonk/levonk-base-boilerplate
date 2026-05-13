@@ -1,0 +1,98 @@
+/*
+ {{ package_description }}
+ Author: {{ author_name }} <{{ author_email }}>
+ License: {{ license }}
+ */
+
+import Foundation
+{% if use_swift_log %}
+import os.log
+{% endif %}
+
+/// Sample service class demonstrating basic functionality and logging.
+public class Service {
+{% if use_swift_log %}
+    private let logger = Logger(subsystem: "com.example.{{ package_slug }}", category: "Service")
+{% endif %}
+    
+    /// Initializes a new Service instance.
+    public init() {}
+    
+    /// Processes the given input with context-aware logging.
+    ///
+    /// - Parameters:
+    ///   - input: The input string to process
+    ///   - context: Processing context information
+    /// - Returns: Processed result string
+    /// - Throws: ProcessingError if processing fails
+    public func process(_ input: String, context: String) throws -> String {
+{% if use_swift_log %}
+        logger.info("Starting process with context: \(context)")
+        logger.debug("Input received: \(input)")
+{% endif %}
+        
+        do {
+            let result = input.uppercased()
+{% if use_swift_log %}
+            logger.info("Processing completed successfully")
+{% endif %}
+            return result
+        } catch {
+{% if use_swift_log %}
+            logger.error("Processing failed: \(error.localizedDescription)")
+{% endif %}
+            throw ProcessingError.failed
+        }
+    }
+    
+    /// Multiplies the given number by two.
+    ///
+    /// - Parameter value: The number to multiply
+    /// - Returns: The result of multiplication
+    public func multiplyByTwo(_ value: Int) -> Int {
+{% if use_swift_log %}
+        logger.debug("Multiplying \(value) by 2")
+{% endif %}
+        return value * 2
+    }
+}
+
+/// Errors that can occur during processing.
+public enum ProcessingError: Error {
+    case failed
+    
+    var localizedDescription: String {
+        switch self {
+        case .failed:
+            return "Processing failed"
+        }
+    }
+}
+
+/// Factory function to create a Service instance.
+///
+/// - Returns: A new Service instance
+public func createService() -> Service {
+    return Service()
+}
+
+/// Module-level convenience function for processing data.
+///
+/// - Parameters:
+///   - input: The input string to process
+///   - context: Processing context information
+/// - Returns: Processed result string
+/// - Throws: ProcessingError if processing fails
+public func process(_ input: String, context: String) throws -> String {
+    let service = createService()
+    return try service.process(input, context)
+}
+
+/// Module-level convenience function for multiplication.
+///
+/// - Parameter value: The number to multiply
+/// - Returns: The result of multiplication
+public func multiplyByTwo(_ value: Int) -> Int {
+    let service = createService()
+    return service.multiplyByTwo(value)
+}

@@ -1,0 +1,17 @@
+    "docker:up": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose up -d",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["docker:build"],
+      "cache": false
+    },
+    "docker:down": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker compose down",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },

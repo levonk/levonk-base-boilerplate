@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "{{ display_name }}",
+  "version": "{{ extension_version }}",
+  "description": "{{ description }}",
+  "author": "{{ author_name }}",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    {% if include_popup -%}
+    "default_popup": "popup/index.html",
+    "default_title": "{{ display_name }}"
+    {%- endif %}
+  },
+  {% if include_options_page -%}
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
+  {%- endif %}
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

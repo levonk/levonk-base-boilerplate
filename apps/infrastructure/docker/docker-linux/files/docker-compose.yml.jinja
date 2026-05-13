@@ -1,0 +1,94 @@
+---
+# {{ _service_name | title }} Docker Compose Configuration
+# Generated secure docker-compose configuration for {{ _service_description | lower }}
+
+# Default logging configuration - use json-file with rotation
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+    tag: "{{ '{{' }}.Name{{ '}}' }}"
+    labels: "service"
+
+
+services:
+  localnet-app-{{ _service_name_slug }}:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.{{ _service_name_slug }}
+    container_name: localnet-app-{{ _service_name_slug }}
+    restart: unless-stopped
+    logging: *default-logging
+    user: "${{ _env_prefix }}_PUID:-1000}:${{ _env_prefix }}_PGID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${{ _env_prefix }}_HOST_IP:-0.0.0.0}:${{ _env_prefix }}_HOST_PORT:-{{ _service_port }}:${{ _env_prefix }}_CONTAINER_IP:-0.0.0.0}:${{ _env_prefix }}_CONTAINER_PORT:-{{ _service_port }}}"
+    environment:
+{% include "files/partials/docker-compose/env-core.jinja" %}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ _service_port }}{{ _service_health_endpoint }}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - {{ _service_name_slug }}-network
+
+{% include "files/partials/docker-linux/docker-compose-service-debug.jinja" %}
+{% if _include_ui %}
+    depends_on:
+      {{ _service_name_slug }}-ui:
+        condition: service_healthy
+
+  {{ _service_name_slug }}-ui:
+    build:
+      context: ./ui
+      dockerfile: docker/Dockerfile
+    container_name: {{ _service_name_slug }}-ui
+    restart: unless-stopped
+    ports:
+      - "{{ _ui_port }}:{{ _ui_port }}"
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://{{ _service_name_slug }}:{{ _service_port }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ _ui_port }}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - {{ _service_name_slug }}-network
+{% endif %}
+{% if _use_traefik %}
+    labels:
+      - "dev.quenary.tugtainer.protected=false"
+      - "traefik.enable=true"
+      - "traefik.http.routers.{{ _service_name_slug }}.rule=Host(`{{ _service_name_slug }}.{{ _domain }}`)"
+      - "traefik.http.routers.{{ _service_name_slug }}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.{{ _service_name_slug }}.loadbalancer.server.port={{ _service_port }}"
+{% if _enable_monitoring %}
+      - "traefik.http.middlewares.{{ _service_name_slug }}-metrics.forwardauth.address=http://prometheus:9090"
+      - "traefik.http.routers.{{ _service_name_slug }}-metrics.rule=Host(`metrics.{{ _domain }}`)"
+{% endif %}
+{% endif %}
+{% if _enable_monitoring %}
+    labels:
+      - "prometheus.io/scrape=true"
+      - "prometheus.io/port={{ _service_port }}"
+      - "prometheus.io/path=/metrics"
+{% endif %}
+
+networks:
+  {{ _service_name_slug }}-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

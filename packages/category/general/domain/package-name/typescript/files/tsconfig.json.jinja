@@ -1,0 +1,24 @@
+{
+{% if include_workspace_deps %}
+  "extends": "../../../../../../../tsconfig.base.json",
+{% endif %}
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": false,
+    "strict": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "skipLibCheck": true,
+    "types": ["vitest/globals"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "__test__"]
+}

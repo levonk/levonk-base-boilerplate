@@ -1,0 +1,25 @@
+{
+  "name": "{{ _service_name_slug }}",
+  "version": "1.0.0",
+  "description": "{{ _service_description }} - NX orchestrated Docker Compose service",
+  "private": true,
+  "scripts": {
+    "build": "nx run {{ _service_name_slug }}:docker:build",
+    "build:push": "nx run {{ _service_name_slug }}:docker:push",
+    "up": "nx run {{ _service_name_slug }}:docker:up",
+    "down": "nx run {{ _service_name_slug }}:docker:down",
+    "lint": "docker-compose config > /dev/null && echo '✅ docker-compose.yml valid'",
+    "test": "echo 'Tests configured in project.json'",
+    "affected:build": "nx affected -t docker:build",
+    "graph": "nx graph"
+  },
+  "devDependencies": {
+    "@nx-tools/nx-container": "^6.2.0",
+    "@nx/js": "^20.0.0",
+    "nx": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@*"
+}

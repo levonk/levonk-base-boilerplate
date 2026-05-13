@@ -1,0 +1,34 @@
+project_name:
+  type: str
+  help: What is the project name?
+  default: "my-cli-tool"
+
+project_slug:
+  type: str
+  help: What is the project slug? (e.g. my-tool)
+  default: "{{ project_name | lower | replace(' ', '-') }}"
+
+description:
+  type: str
+  help: Short description of the project
+  default: "A CLI tool"
+
+kotlin_version:
+  type: str
+  help: Kotlin version
+  default: "1.9.22"
+
+group_id:
+  type: str
+  help: Maven group ID
+  default: "com.example"
+
+include_postgres:
+  type: bool
+  help: Include PostgreSQL support?
+  default: false
+
+include_sqlite:
+  type: bool
+  help: Include SQLite support?
+  default: false

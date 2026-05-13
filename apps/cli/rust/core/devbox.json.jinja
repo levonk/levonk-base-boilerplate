@@ -1,0 +1,53 @@
+{
+  "name": "{{ project_name | default('rust-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ project_description | default('A Rust CLI application') }}",
+  "packages": [
+    "rustc",
+    "cargo",
+    "rust-analyzer",
+    "clippy",
+    "rustfmt",
+    "just",
+    "cargo-watch",
+    "cargo-tarpaulin",
+    "cargo-audit",
+    "pkg-config"
+    {% if include_openssl %},
+    "openssl",
+    "openssl.dev"
+    {% endif %}{% if include_postgres %},
+    "postgresql"
+    {% endif %}{% if include_sqlite %},
+    "sqlite"
+    {% endif %}
+  ],
+  "shell": {
+    "init_hook": [
+      "just bootstrap-internal"
+    ]
+  },
+  "scripts": {
+    "bootstrap": "just bootstrap-internal",
+    "doctor": "just doctor-internal",
+    "clean": "just clean-internal",
+    "build": "just build-internal",
+    "lint": "just lint-internal",
+    "test": "just test-internal",
+    "typecheck": "just typecheck-internal",
+    "dev": "just dev-internal",
+    "debug": "just debug-internal",
+    "install": "just install-internal",
+    "release": "just release-internal"
+  },
+  "env": {
+    "RUST_LOG": "{{ rust_log_level | default('info') }}",
+    "RUST_BACKTRACE": "{{ rust_backtrace | default('1') }}",
+    {% if include_postgres %}
+    "DATABASE_URL": "postgresql://localhost/{{ project_name | default('rust-cli-app') }}",
+    {% endif %}
+    {% if include_sqlite %}
+    "DATABASE_URL": "sqlite:./{{ project_name | default('rust-cli-app') }}.db",
+    {% endif %}
+  }
+}

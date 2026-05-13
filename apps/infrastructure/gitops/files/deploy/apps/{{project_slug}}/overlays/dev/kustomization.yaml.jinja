@@ -1,0 +1,154 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: {{ project_name }}-dev
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Base configuration
+bases:
+  - ../../base
+
+namespace: {{ project_name }}-dev
+
+# Patches for development environment
+patches:
+  # Patch for development replicas
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        replicas: 1
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+  # Patch for development resources
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        template:
+          spec:
+            containers:
+              - name: {{ project_name }}
+                resources:
+                  limits:
+                    cpu: 200m
+                    memory: 256Mi
+                  requests:
+                    cpu: 100m
+                    memory: 128Mi
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+  # Patch for development environment variables
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        template:
+          spec:
+            containers:
+              - name: {{ project_name }}
+                env:
+                  - name: APP_ENV
+                    value: "development"
+                  - name: LOG_LEVEL
+                    value: "debug"
+                  - name: DEBUG_MODE
+                    value: "true"
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+# ConfigMap generator for development
+configMapGenerator:
+  - name: {{ project_name }}-dev-config
+    literals:
+      - APP_ENV=development
+      - LOG_LEVEL=debug
+      - DEBUG_MODE=true
+      - FEATURE_FLAGS=all
+
+# Secret generator for development
+secretGenerator:
+  - name: {{ project_name }}-dev-secrets
+    literals:
+      - DEV_SECRET_KEY=dev-secret-key-change-me
+
+# Common labels for development
+commonLabels:
+  environment: dev
+  app.kubernetes.io/environment: dev
+
+# Common annotations for development
+commonAnnotations:
+  config.kubernetes.io/environment: "development"
+
+# Images for development
+images:
+  - name: {{ app_image }}
+    newTag: {{ app_version }}-dev
+
+# Replicas for development
+replicas:
+  - name: {{ project_name }}
+    count: 1
+
+# Resource limits for development
+resources:
+  - type: Deployment
+    name: {{ project_name }}
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Namespace configuration
+namespace: {{ project_name }}-dev
+
+# Generator options
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    environment: dev
+
+# Helm chart values for development
+helmCharts:
+- name: {{ project_name }}
+  releaseName: {{ project_name }}-dev
+  namespace: {{ project_name }}-dev
+  values:
+    replicaCount: 1
+    image:
+      tag: {{ app_version }}-dev
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    ingress:
+      enabled: true
+      hosts:
+        - host: {{ project_name }}-dev.{{ ingress_domain }}
+          paths:
+            - path: /
+              pathType: Prefix
+    env:
+      - name: APP_ENV
+        value: "development"
+      - name: LOG_LEVEL
+        value: "debug"

@@ -1,0 +1,96 @@
+# Paperclip AI Orchestration Service
+# Open-source orchestration for zero-human companies
+# See: https://github.com/paperclipai/paperclip
+
+{% if base_os == "alpine" %}
+FROM node:{{ node_version }}-alpine AS builder
+{% else %}
+FROM node:{{ node_version }}-bullseye-slim AS builder
+{% endif %}
+
+# Install pnpm globally
+RUN npm install -g pnpm@{{ pnpm_version }}
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN pnpm build
+
+# Runtime stage
+{% if base_os == "alpine" %}
+FROM node:{{ node_version }}-alpine AS runtime
+{% else %}
+FROM node:{{ node_version }}-bullseye-slim AS runtime
+{% endif %}
+
+# Install pnpm globally
+RUN npm install -g pnpm@{{ pnpm_version }}
+
+{% if base_os == "alpine" %}
+# Install runtime dependencies
+RUN apk add --no-cache \
+    curl \
+    postgresql-client \
+{% if include_dev_tools %}
+    git \
+    vim \
+    bash \
+{% endif %}
+{% else %}
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    postgresql-client \
+{% if include_dev_tools %}
+    git \
+    vim \
+    bash \
+{% endif %}
+    && rm -rf /var/lib/apt/lists/*
+{% endif %}
+
+# Create non-root user
+RUN addgroup -g 1000 -S paperclip && \
+    adduser -u 1000 -S paperclip -G paperclip
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install production dependencies only
+RUN pnpm install --prod --frozen-lockfile && \
+    pnpm cache clean --force
+
+# Copy built application from builder
+COPY --from=builder --chown=paperclip:paperclip /app/dist ./dist
+COPY --from=builder --chown=paperclip:paperclip /app/node_modules ./node_modules
+COPY --from=builder --chown=paperclip:paperclip /app/package.json ./package.json
+
+# Switch to non-root user
+USER paperclip
+
+# Expose Paperclip API port
+EXPOSE {{ service_port }}
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://127.0.0.1:{{ service_port }}/health || exit 1
+
+# Set environment variables
+ENV NODE_ENV=production \
+    PORT={{ service_port }}
+
+# Start Paperclip
+CMD ["pnpm", "start"]

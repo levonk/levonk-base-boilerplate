@@ -1,0 +1,58 @@
+up: ## Start {{ _service_name | title }} services
+	@echo "$(BLUE)Starting {{ _service_name | title }} services...$(NC)"
+	@$(DOCKER_COMPOSE) up -d
+	@echo "$(GREEN)✓ Services started$(NC)"
+	@echo "Run 'make health-check' to verify service health"
+
+run: up ## Alias for up (ADR compliance)
+
+deploy: ## Deploy {{ _service_name | title }} services (alias for up)
+	@$(MAKE) up
+
+debug: ## Start {{ _service_name | title }} debug container (opt-in)
+	@echo "$(BLUE)Starting {{ _service_name | title }} debug container...$(NC)"
+	@$(DOCKER_COMPOSE) --profile debug up -d
+	@echo "$(GREEN)✓ Debug container started$(NC)"
+
+down: ## Stop {{ _service_name | title }} services
+	@echo "$(YELLOW)Stopping {{ _service_name | title }} services...$(NC)"
+	@$(DOCKER_COMPOSE) down
+	@echo "$(GREEN)✓ Services stopped$(NC)"
+
+restart: ## Restart {{ _service_name | title }} services
+	@echo "$(YELLOW)Restarting {{ _service_name | title }} services...$(NC)"
+	@$(DOCKER_COMPOSE) restart
+	@echo "$(GREEN)✓ Services restarted$(NC)"
+
+logs: ## View logs from all services (last 100 lines)
+	@$(DOCKER_COMPOSE) logs --tail=100
+
+logs-follow: ## Follow logs from all services
+	@$(DOCKER_COMPOSE) logs -f
+
+shell: ## Access an interactive shell inside the service container
+	@$(DOCKER_COMPOSE) exec -it $(SERVICE_NAME) /bin/sh
+
+health-check: ## Check health status of services
+	@echo "$(BLUE)Checking {{ _service_name | title }} service health...$(NC)"
+	@$(DOCKER_COMPOSE) ps
+	@echo ""
+	@echo "$(BLUE)Running health checks...$(NC)"
+	@$(DOCKER_COMPOSE) exec -T $(SERVICE_NAME) curl -f http://localhost:$(SERVICE_PORT)$(SERVICE_HEALTH_ENDPOINT) >/dev/null 2>&1 \
+		&& echo "$(GREEN)✓ {{ _service_name | title }} healthy$(NC)" \
+		|| (echo "$(RED)✗ {{ _service_name | title }} unhealthy$(NC)"; exit 1)
+
+test: ## Smoke test that services are running and responsive
+	@echo "$(BLUE)Running {{ _service_name | title }} smoke tests...$(NC)"
+	@$(DOCKER_COMPOSE) ps | grep -q "$(SERVICE_NAME)" || (echo "$(RED)✗ services not running$(NC)"; exit 1)
+	@$(MAKE) health-check
+	@echo "$(GREEN)✓ Smoke tests complete$(NC)"
+
+status: ## Show docker compose service status
+	@echo "$(BLUE){{ _service_name | title }} Service Status$(NC)"
+	@$(DOCKER_COMPOSE) ps
+
+backup: ## Create secure backup of service data and configuration
+	@echo "$(BLUE)Creating backup of {{ _service_name | title }} service...$(NC)"
+	@./scripts/backup.sh
+	@echo "$(GREEN)✓ Backup completed$(NC)"

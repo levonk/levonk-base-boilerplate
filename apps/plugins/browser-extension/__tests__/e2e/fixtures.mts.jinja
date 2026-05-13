@@ -1,0 +1,33 @@
+import { test as base, chromium, type BrowserContext } from "@playwright/test";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const EXTENSION_PATH = path.resolve(__dirname, "../../dist");
+
+export const test = base.extend<{
+  context: BrowserContext;
+  extensionId: string;
+}>({
+  context: async ({}, use) => {
+    const context = await chromium.launchPersistentContext("", {
+      headless: false, // Extensions usually require a visible browser
+      args: [
+        `--disable-extensions-except=${EXTENSION_PATH}`,
+        `--load-extension=${EXTENSION_PATH}`,
+      ],
+    });
+    await use(context);
+    await context.close();
+  },
+  extensionId: async ({ context }, use) => {
+    let [background] = context.serviceWorkers();
+    if (!background)
+      background = await context.waitForEvent("serviceworker");
+
+    const extensionId = background.url().split("/")[2];
+    await use(extensionId);
+  },
+});
+
+export const expect = base.expect;

@@ -1,0 +1,216 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+# Project Information
+project_name:
+  type: str
+  help: "Project name (kebab-case)"
+  default: "my-gitops-project"
+
+project_slug:
+  type: str
+  help: "Project slug for file names (snake_case)"
+  default: "my_gitops_project"
+
+project_description:
+  type: str
+  help: "Short description of the project"
+  default: "GitOps project with Helm charts and Kustomize overlays"
+
+# Application Information
+app_name:
+  type: str
+  help: "Application name (PascalCase)"
+  default: "MyApp"
+
+app_image:
+  type: str
+  help: "Container image repository (e.g., myregistry/myapp)"
+  default: "myregistry/myapp"
+
+app_version:
+  type: str
+  help: "Application version"
+  default: "1.0.0"
+
+app_port:
+  type: int
+  help: "Application port"
+  default: 8080
+
+# Helm Chart Configuration
+chart_name:
+  type: str
+  help: "Helm chart name"
+  default: "{{ project_name }}"
+
+chart_version:
+  type: str
+  help: "Helm chart version"
+  default: "0.1.0"
+
+# Environment Configuration
+environments:
+  type: str
+  multiselect: true
+  help: "Target environments"
+  choices:
+    - dev
+    - staging
+    - prod
+  default: ["dev", "staging", "prod"]
+
+# OCI Configuration
+oci_registry:
+  type: str
+  help: "OCI registry for charts (e.g., ghcr.io/myorg)"
+  default: "ghcr.io/myorg"
+
+enable_oci:
+  type: bool
+  help: "Enable OCI chart publishing"
+  default: true
+
+# Kustomize Configuration
+enable_kustomize:
+  type: bool
+  help: "Enable Kustomize overlays"
+  default: true
+
+# GitOps Configuration
+gitops_tool:
+  type: str
+  help: "GitOps tool (argocd, flux, etc.)"
+  default: "argocd"
+
+enable_argocd:
+  type: bool
+  help: "Enable ArgoCD application manifests"
+  default: true
+
+# Development Tools
+enable_devbox:
+  type: bool
+  help: "Enable devbox environment"
+  default: true
+
+enable_justfile:
+  type: bool
+  help: "Enable justfile tasks"
+  default: true
+
+enable_direnv:
+  type: bool
+  help: "Enable direnv environment"
+  default: true
+
+# Advanced Configuration
+enable_monitoring:
+  type: bool
+  help: "Enable monitoring (Prometheus, Grafana)"
+  default: false
+
+enable_logging:
+  type: bool
+  help: "Enable structured logging"
+  default: true
+
+enable_tracing:
+  type: bool
+  help: "Enable distributed tracing"
+  default: false
+
+enable_autoscaling:
+  type: bool
+  help: "Enable horizontal pod autoscaling"
+  default: false
+
+# Security Configuration
+enable_security_context:
+  type: bool
+  help: "Enable security context (non-root, etc.)"
+  default: true
+
+enable_network_policies:
+  type: bool
+  help: "Enable network policies"
+  default: false
+
+enable_pod_security_policy:
+  type: bool
+  help: "Enable Pod Security Policy"
+  default: false
+
+# Ingress Configuration
+enable_ingress:
+  type: bool
+  help: "Enable ingress configuration"
+  default: true
+
+ingress_class:
+  type: str
+  help: "Ingress class"
+  default: "nginx"
+
+ingress_domain:
+  type: str
+  help: "Base domain for ingress"
+  default: "example.com"
+
+# Database Configuration
+has_database:
+  type: bool
+  help: "Application requires database"
+  default: false
+
+database_type:
+  type: str
+  help: "Database type"
+  choices:
+    - postgresql
+    - mysql
+    - mongodb
+    - redis
+  default: "postgresql"
+
+# Certificate Management
+enable_cert_manager:
+  type: bool
+  help: "Enable cert-manager for TLS certificates"
+  default: true
+
+# Testing Configuration
+enable_tests:
+  type: bool
+  help: "Generate test manifests"
+  default: true
+
+# Author Information
+author_name:
+  type: str
+  help: "Author name"
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: "Author email"
+  default: "your.email@example.com"
+
+# Repository Information
+repo_url:
+  type: str
+  help: "Repository URL"
+  default: "https://github.com/myorg/{{ project_name }}"
+
+# License
+license:
+  type: str
+  help: "License for the project"
+  choices:
+    - MIT
+    - Apache-2.0
+    - BSD-3-Clause
+    - GPL-3.0
+    - Proprietary
+  default: "MIT"

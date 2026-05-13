@@ -1,0 +1,86 @@
+{
+  "name": "{{ project_name | default('python-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ project_description | default('A Python CLI application') }}",
+  "shell": {
+    "init": [
+      "echo '🐍 Setting up {{ project_name | default('python-cli-app') }} development environment...'"
+    ],
+    "scripts": {
+      "build": "python -m build",
+      "install": "pip install -e .",
+      "install-dev": "pip install -e \".[dev]\"",
+      "test": "pytest",
+      "test-coverage": "pytest --cov=src --cov-report=html",
+      "lint": "ruff check .",
+      "format": "ruff format .",
+      "format-check": "ruff format --check .",
+      "run": "python -m {{ project_slug | default(project_name | lower | replace(' ', '_')) }}",
+      "dev": "watchfiles \"python -m {{ project_slug | default(project_name | lower | replace(' ', '_')) }}\" src",
+      "clean": "rm -rf build dist *.egg-info",
+      "docs": "mkdocs serve",
+      "type-check": "mypy src",
+      "check": "ruff check . && mypy src"
+    }
+  },
+  "packages": {
+    "nixpkgs#python311": "",
+    "nixpkgs#python311Packages.pip": "",
+    "nixpkgs#python311Packages.setuptools": "",
+    "nixpkgs#python311Packages.wheel": "",
+    "nixpkgs#python311Packages.build": "",
+    "nixpkgs#python311Packages.pytest": "",
+    "nixpkgs#python311Packages.pytest-cov": "",
+    "nixpkgs#python311Packages.ruff": "",
+    "nixpkgs#python311Packages.mypy": "",
+    "nixpkgs#python311Packages.watchfiles": "",
+    "nixpkgs#python311Packages.mkdocs": "",
+    {% if include_requests %}
+    "nixpkgs#python311Packages.requests": "",
+    {% endif %}
+    {% if include_click %}
+    "nixpkgs#python311Packages.click": "",
+    {% endif %}
+    {% if include_sqlalchemy %}
+    "nixpkgs#python311Packages.sqlalchemy": "",
+    {% endif %}
+    {% if include_async %}
+    "nixpkgs#python311Packages.aiohttp": "",
+    "nixpkgs#python311Packages.asyncio": "",
+    {% endif %}
+    {% if include_pandas %}
+    "nixpkgs#python311Packages.pandas": "",
+    {% endif %}
+    {% if include_numpy %}
+    "nixpkgs#python311Packages.numpy": "",
+    {% endif %}
+    {% if include_openssl %}
+    "nixpkgs#openssl": "",
+    "nixpkgs#openssl.dev": "",
+    {% endif %}
+    {% if include_postgres %}
+    "nixpkgs#python311Packages.psycopg2": "",
+    "nixpkgs#postgresql": "",
+    {% endif %}
+    {% if include_sqlite %}
+    "nixpkgs#python311Packages.sqlite3": "",
+    {% endif %}
+  },
+  "env": {
+    "PYTHONPATH": "{{ pythonpath | default('./src') }}",
+    "PYTHONPATH_DEV": "{{ pythonpath_dev | default('./src:./tests') }}",
+    {% if include_async %}
+    "PYTHONASYNCIODEBUG": "1",
+    {% endif %}
+    {% if include_postgres %}
+    "DATABASE_URL": "postgresql://localhost/{{ project_name | default('python-cli-app') }}",
+    {% endif %}
+    {% if include_sqlite %}
+    "DATABASE_URL": "sqlite:./{{ project_name | default('python-cli-app') }}.db",
+    {% endif %}
+    {% if include_development %}
+    "FLASK_ENV": "development",
+    "FLASK_DEBUG": "1",
+    {% endif %}
+  }
+}

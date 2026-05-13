@@ -1,0 +1,226 @@
+# Docker Compose Development Commands
+# NX Monorepo-compatible Docker Compose Service
+
+# Default recipe
+default:
+    @just --list
+
+# Configuration
+ENV_FILE := ".env"
+COMPOSE_FILE := "docker-compose.yml"
+
+# NX binary detection (DRY - resolves local pnpm bin or global nx)
+NX_BIN := if path_exists("./node_modules/.bin/nx") == "true" { "./node_modules/.bin/nx" } else { `command -v nx 2>/dev/null || echo ""` }
+NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox run clean-internal
+
+dev:
+    devbox run dev-internal
+
+build:
+    devbox run build-internal
+
+test:
+    devbox run test-internal
+
+lint:
+    devbox run lint-internal
+
+typecheck:
+    devbox run typecheck-internal
+
+# Bootstrap recipes (REQUIRED - ADR-20260131001 compliance)
+bootstrap:
+    devbox run bootstrap-internal
+
+bootstrap-internal:
+    @echo "🚀 Bootstrapping NX Monorepo Docker Compose environment..."
+    @# Run all pnpm commands in single shell so PATH persists
+    @export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}" && \
+        export PATH="$PNPM_HOME:$PATH" && \
+        (rm -f "$PNPM_HOME/global/5/pnpm-lock.yaml"* 2>/dev/null || true) && \
+        mkdir -p "$PNPM_HOME/global/5" "$PNPM_HOME/store" && \
+        pnpm config set global-dir "$PNPM_HOME/global" && \
+        pnpm config set global-bin-dir "$PNPM_HOME" && \
+        pnpm config set store-dir "$PNPM_HOME/store" && \
+        pnpm add -g nx && \
+        pnpm install && \
+        echo "✅ Bootstrap complete - NX is ready"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    @echo "🐳 Docker Compose Environment Check"
+    @echo "====================================="
+    @echo ""
+    @echo "Docker:"
+    @docker --version || echo "  ❌ Docker not found"
+    @echo ""
+    @echo "Docker Compose:"
+    @docker-compose --version || echo "  ❌ Docker Compose not found"
+    @echo ""
+    @echo "Node.js:"
+    @node --version || echo "  ❌ Node.js not found"
+    @echo ""
+    @echo "pnpm:"
+    @pnpm --version || echo "  ❌ pnpm not found"
+    @echo ""
+    @echo "NX:"
+    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        {{NX_BIN}} --version; \
+    else \
+        echo "  ❌ NX not found - run 'just bootstrap'"; \
+    fi
+    @echo ""
+    @echo "just:"
+    @just --version || echo "  ❌ just not found"
+    @echo ""
+    @echo "✅ Doctor check complete"
+
+# Development mode (legacy direct)
+dev-internal:
+    @echo "🚀 Starting Docker Compose development mode..."
+    docker-compose up --build
+
+# Start services (legacy direct)
+up-internal:
+    @echo "🚀 Starting Docker Compose services..."
+    docker-compose up -d
+
+# Stop services (legacy direct)
+down-internal:
+    @echo "🛑 Stopping Docker Compose services..."
+    docker-compose down
+
+# View logs
+logs:
+    docker-compose logs -f
+
+# View logs for specific service
+logs-service service:
+    docker-compose logs -f {{service}}
+
+# Build containers
+build:
+    docker-compose build
+
+# Clean up
+clean:
+    docker-compose down -v
+    docker system prune -f
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ Docker Compose development environment ready!"
+
+# Health check
+health:
+    docker-compose ps
+
+# Execute command in container
+exec service="web" command="/bin/bash":
+    docker-compose exec {{service}} {{command}}
+
+# Run tests
+test:
+    docker-compose run --rm {{ _service_name_slug }} pytest
+
+# Lint Docker files
+lint:
+    docker-compose config
+    hadolint Dockerfile
+
+# Type check
+typecheck:
+    echo "Type checking not applicable for Docker Compose"
+
+# Package for distribution
+package:
+    @just build
+    @just clean
+    mkdir -p dist
+    docker save {{ _service_name_slug }}:latest > dist/{{ _service_name_slug }}.tar
+
+# Quality checks
+quality:
+    @just lint
+    @just test
+    @just health
+
+# ============================================================================
+# NX Build Orchestration (Monorepo Integration)
+# ============================================================================
+
+# NX: Build this service's Docker images via NX
+nx-build:
+    devbox run nx-build-internal
+
+nx-build-internal:
+    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        echo "🔨 NX: Building {{ _service_name_slug }} with smart caching..."; \
+        {{NX_BIN}} run {{ _service_name_slug }}:docker:build; \
+    else \
+        echo "⚠️  NX not installed. Falling back to docker-compose build..."; \
+        docker-compose build; \
+    fi
+
+# NX: Build and start this service via NX
+nx-up:
+    devbox run nx-up-internal
+
+nx-up-internal:
+    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        echo "🚀 NX: Building and starting {{ _service_name_slug }}..."; \
+        {{NX_BIN}} run {{ _service_name_slug }}:docker:up; \
+    else \
+        echo "⚠️  NX not installed. Using docker-compose directly..."; \
+        docker-compose up -d; \
+    fi
+
+# NX: Build only affected services (changed since last commit)
+nx-affected:
+    devbox run nx-affected-internal
+
+nx-affected-internal:
+    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        echo "🔍 NX: Building affected services..."; \
+        {{NX_BIN}} affected -t docker:build --base=main --head=HEAD; \
+    else \
+        echo "❌ NX not installed. Run: just bootstrap"; \
+        exit 1; \
+    fi
+
+# NX: Visualize dependency graph
+nx-graph:
+    devbox run nx-graph-internal
+
+nx-graph-internal:
+    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        echo "📊 NX: Opening dependency graph..."; \
+        {{NX_BIN}} graph; \
+    else \
+        echo "❌ NX not installed. Run: just bootstrap"; \
+        exit 1; \
+    fi
+
+# NX: Clear build cache
+nx-clear-cache:
+    devbox run nx-clear-cache-internal
+
+nx-clear-cache-internal:
+    @echo "🧹 Clearing NX build cache..."
+    @rm -rf .nx/cache
+    @docker builder prune -f
+    @echo "✅ NX cache cleared"
+
+# NX: Install dependencies
+nx-install:
+    devbox run nx-install-internal
+
+nx-install-internal:
+    @echo "📦 Installing NX dependencies..."
+    @pnpm install
+    @echo "✅ NX dependencies installed"

@@ -1,0 +1,382 @@
+---
+modeline: "vim: set ft=markdown:"
+title: "{{ (boilerplate_name | default(project_name)) | title }}: {{ boilerplate_description | default(description) }}"
+slug: {{ (boilerplate_name | default(project_name)) | lower | replace(' ', '-') | replace('_', '-') }}
+url: "{{ url | default('TBD') }}"
+synopsis: {{ synopsis | default("Copier-based template for rapidly scaffolding " + (boilerplate_type | default('CLI')) + " projects") }}
+author: https://github.com/levonk
+date-created: {{ date_created | default("2025-" + current_month | default('01') + "-" + current_day | default('01')) }}
+date-updated: {{ date_updated | default("2025-" + current_month | default('01') + "-" + current_day | default('01')) }}
+version: {{ version | default("1.0.0") }}
+status: "accepted"
+aliases: {{ aliases | default(["template-" + (boilerplate_name | default(project_name)), (boilerplate_type | default('CLI')) + "-templates"]) }}
+tags: [doc/templates, scaffolding, copier, jinja{% if tech_stack %}, {{ tech_stack | join(', ') }}{% endif %}]
+related-to: {{ related_to | default(["adr-20251014002-application-organization", "adr-20250926001-package-organization"]) | tojson }}
+---
+
+# {{ (boilerplate_name | default(project_name)) | title }}: {{ boilerplate_description | default(description) }}
+
+## What is This Template?
+
+This is a **Copier template** that scaffolds {{ boilerplate_type | default('CLI') }} projects with production-ready structure and all expected deliverables. When you need to create a new {{ boilerplate_type | default('CLI') }}, use this template to generate a complete, well-structured starting point.
+
+### Quick Start
+
+To generate a new {{ (boilerplate_type | default('CLI')) | lower }} project:
+
+```bash
+copier copy {{ template_path | default('./boilerplate/path') }} ./path/to/new-{{ (boilerplate_name | default(project_name)) | lower | replace(' ', '-') | replace('_', '-') }}
+```
+
+Answer the prompts to customize the template with your project details, and you'll have a complete project ready to go.
+
+### Ticket Tracking
+
+This project uses the **tkr** tool (<https://github.com/levonk/tkr>) for ticket tracking and task management. When working with template improvements:
+
+- **Track your work**: Create tickets for template enhancements using `tkr`
+- **Follow the workflow**: Use `tkr ready` to get the next actionable ticket, `tkr start` to begin work
+- **Document changes**: Update tickets with notes about template improvements or issues found
+- **Maintain quality**: Ensure all template work is tracked and reviewed through the ticket system
+
+---
+
+## Template Overview
+
+### Generated Project Structure
+
+```
+{{ project_name | default("my-" + boilerplate_name) }}/
+{% if include_readme %}├── README.md                      # Project documentation and usage guide{% endif %}
+{% if include_docs %}├── docs/                          # Detailed documentation
+│   ├── architecture.md           # System architecture overview
+│   ├── getting-started.md        # Setup and first steps
+│   └── troubleshooting.md        # Common issues and solutions{% endif %}
+{% if include_internal_docs %}├── internal-docs/               # Project-specific ADRs and specs
+│   ├── adr/                      # Architecture Decision Records
+│   └── specs/                    # Feature specifications{% endif %}
+{% if source_directory %}├── {{ source_directory }}/                # Source code{% else %}├── src/                          # Source code{% endif %}
+{% if include_tests %}├── tests/                        # Test files
+│   ├── unit/                     # Unit tests
+│   ├── integration/              # Integration tests
+│   └── fixtures/                 # Test data and helpers{% endif %}
+{% if package_manager %}├── {{ package_files[0] }}{% if package_files[1] %}, {{ package_files[1] }}{% endif %}  # Dependency management{% endif %}
+{% if include_docker %}├── Dockerfile                    # Container definition
+├── docker-compose.yml           # Development containers{% endif %}
+{% if include_ci_cd %}├── .github/workflows/            # CI/CD pipelines
+│   ├── ci.yml                   # Continuous integration
+│   └── release.yml              # Release automation{% endif %}
+├── .gitignore                    # Git ignore rules
+{% if include_linting %}├── {{ linting_config }}           # Code quality configuration{% endif %}
+{% if include_devbox %}├── devbox.json                   # Development environment{% endif %}
+└── {{ copier_yaml }}             # Template configuration
+```
+
+### Key Features
+
+{% for feature in key_features %}
+- **{{ feature.title }}**: {{ feature.description }}
+{% endfor %}
+
+---
+
+## Template Inputs
+
+### Required Inputs
+
+{% for input in required_inputs %}
+- **`{{ input.name }}`** ({{ input.type }}): {{ input.help }}
+{% endfor %}
+
+### Optional Inputs
+
+{% for input in optional_inputs %}
+- **`{{ input.name }}`** ({{ input.type }}): {{ input.help }}{% if input.default %} (default: `{{ input.default }}`){% endif %}
+{% endfor %}
+
+### Conditional Features
+
+{% for condition in conditional_features %}
+- **{{ condition.trigger }}**: Enables {{ condition.features | join(', ') }}
+{% endfor %}
+
+---
+
+## Technology Stack
+
+### Core Technologies
+
+{% for tech in core_technologies %}
+- **{{ tech.name }}**: {{ tech.version }} - {{ tech.purpose }}
+{% endfor %}
+
+### Development Tools
+
+{% for tool in dev_tools %}
+- **{{ tool.name }}**: {{ tool.purpose }}{% if tool.config %} (configured in `{{ tool.config }}`){% endif %}
+{% endfor %}
+
+### Testing Framework
+
+{% if testing_framework %}
+- **{{ testing_framework.name }}**: {{ testing_framework.description }}
+{% if testing_framework.features %}
+  - Features: {{ testing_framework.features | join(', ') }}
+{% endif %}
+{% else %}
+- **Vitest**: Test framework with TypeScript support
+{% endif %}
+
+---
+
+## Usage Patterns
+
+### Basic Usage
+
+```bash
+# Generate project with defaults
+copier copy {{ template_path }} ./my-project --defaults
+
+# Generate with custom inputs
+copier copy {{ template_path }} ./my-project \
+  --project-name=my-awesome-project \
+  --include-tests=true \
+  --tech-stack=typescript
+```
+
+### Development Workflow
+
+```bash
+# 1. Generate the project
+copier copy {{ template_path }} ./my-project
+cd ./my-project
+
+# 2. Set up development environment{% if include_devbox %}
+devbox shell{% else %}
+# Install dependencies
+{{ install_command }}{% endif %}
+
+# 3. Run tests{% if include_tests %}
+{{ test_command }}{% endif %}
+
+# 4. Start development server{% if dev_server %}
+{{ dev_server }}{% endif %}
+```
+
+### Customization Examples
+
+#### Example 1: Minimal Project
+```bash
+copier copy {{ template_path }} ./minimal-project \
+  --project-name=minimal-app \
+  --include-tests=false \
+  --include-docs=false
+```
+
+#### Example 2: Full-Featured Project
+```bash
+copier copy {{ template_path }} ./full-featured \
+  --project-name=enterprise-app \
+  --include-tests=true \
+  --include-docs=true \
+  --include-ci-cd=true \
+  --tech-stack={{ tech_stack | first | default("typescript") }}
+```
+
+---
+
+## File Templates and Customization
+
+### Configuration Files
+
+{% for config in config_files %}
+#### `{{ config.path }}`
+{{ config.description }}
+{% if config.variables %}
+**Variables available:**
+{% for var in config.variables %}
+- `{{ var.name }}`: {{ var.description }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+### Source Code Templates
+
+{% for template in source_templates %}
+#### `{{ template.path }}`
+{{ template.description }}
+{% if template.conditionality %}
+**Conditional rendering**: `{% raw %}{% if {{ template.conditionality }} %}{% endraw %}`
+{% endif %}
+{% endfor %}
+
+### Test Templates
+
+{% if include_tests %}
+{% for test in test_templates %}
+#### `{{ test.path }}`
+{{ test.description }}
+- Uses {{ test.framework | default("Vitest") }}
+- Tests {{ test.coverage | default("core functionality") }}
+{% endfor %}
+{% endif %}
+
+---
+
+## Integration with Monorepo
+
+### Package Organization
+
+This template follows the monorepo's package organization principles:
+
+- **Category**: {{ package_category | default(boilerplate_type) }}
+- **Domain**: {{ package_domain | default("user-defined") }}
+- **Technology**: {{ primary_tech | default("typescript") }}
+
+### Workspace Dependencies
+
+{% if workspace_dependencies %}
+Generated projects include workspace dependencies:
+{% for dep in workspace_dependencies %}
+- `@workspace/{{ dep.name }}`: {{ dep.description }}
+{% endfor %}
+{% endif %}
+
+### Build Integration
+
+{% if build_integration %}
+The template integrates with the monorepo's build system:
+{% for integration in build_integration %}
+- **{{ integration.tool }}**: {{ integration.description }}
+{% endfor %}
+{% endif %}
+
+---
+
+## Best Practices
+
+### Development Guidelines
+
+{% for practice in dev_practices %}
+- **{{ practice.title }}**: {{ practice.description }}
+{% endfor %}
+
+### Code Quality Standards
+
+{% if quality_standards %}
+{% for standard in quality_standards %}
+- **{{ standard.aspect }}**: {{ standard.requirement }}
+{% endfor %}
+{% else %}
+- **ESLint**: Enforced code style and quality
+- **Prettier**: Consistent code formatting
+- **TypeScript**: Type safety and better developer experience
+{% endif %}
+
+### Testing Requirements
+
+{% if include_tests %}
+- **Test coverage**: Minimum {{ test_coverage | default("80%") }}
+- **Test types**: Unit, integration, and {% if include_e2e %}end-to-end{% endif %} tests
+- **Test organization**: Follow the template's test structure
+{% endif %}
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+{% for issue in common_issues %}
+#### {{ issue.title }}
+{{ issue.description }}
+
+**Solution**: {{ issue.solution }}
+{% endfor %}
+
+### Template-Specific Issues
+
+{% for template_issue in template_issues %}
+#### {{ template_issue.title }}
+{{ template_issue.description }}
+
+**Fix**: {{ template_issue.fix }}
+{% endfor %}
+
+---
+
+## Migration and Updates
+
+### Updating Generated Projects
+
+When the template is updated, you can update existing projects:
+
+```bash
+copier update --vcs-ref=HEAD ./path/to/existing-project
+```
+
+### Version Compatibility
+
+{% for version in version_compatibility %}
+- **Template {{ version.template_version }}**: Compatible with {{ version.compatible_with }}
+{% endfor %}
+
+---
+
+## References
+
+- [Copier Documentation](https://copier.readthedocs.io/)
+- [Jinja2 Template Syntax](https://jinja.palletsprojects.com/templates/)
+{% if internal_refs %}
+{% for ref in internal_refs %}
+- [{{ ref.title }}]({{ ref.path }})
+{% endfor %}
+{% else %}
+- [ARCHITECTURE: Monorepo Structure](../internal-docs/ARCHITECTURE.md)
+- [ADR 002: Refined Package Organization](../internal-docs/adr/adr-20251014001-refined-package-organization.md)
+- [ADR 003: Application Organization](../internal-docs/adr/adr-20251014002-application-organization.md)
+{% endif %}
+
+---
+
+## Contributing to This Template
+
+### Template Development
+
+When contributing to this template:
+
+1. **Test changes**: Always test template generation with `copier copy`
+2. **Update documentation**: Keep this `AGENTS.md.jinja` in sync with changes
+3. **Version properly**: Update version in `copier.yaml` and documentation
+4. **Follow conventions**: Use established patterns from other templates
+
+### Template Structure
+
+```
+{{ template_path }}/
+├── copier.yaml                   # Template configuration
+├── files/                        # Template files
+│   ├── {{ main_source }}/        # Main source code
+│   ├── tests/                    # Test files
+│   └── docs/                     # Documentation
+├── README.md                     # Template documentation
+└── AGENTS.md.jinja              # This file - agent documentation
+```
+
+### Testing Template Changes
+
+```bash
+# Test template generation
+copier copy {{ template_path }} /tmp/test-{{ boilerplate_name }}
+
+# Verify generated structure
+cd /tmp/test-{{ boilerplate_name }}
+tree -L 3
+
+# Test build and functionality{% if include_devbox %}
+devbox shell{% endif %}
+{{ install_command }}
+{{ test_command }}
+```
+
+<!-- vim: set ft=markdown: -->

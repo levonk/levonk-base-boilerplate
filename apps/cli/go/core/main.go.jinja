@@ -1,0 +1,187 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"os/signal"
+
+	"github.com/bmatcuk/doublestar/v4"
+	"github.com/mattn/go-isatty"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+var (
+	cfgFile string
+	jsonOutput bool
+	quiet bool
+	verbose bool
+	noColor bool
+	logger *Logger
+	version = "1.0.0"
+
+	rootCmd = &cobra.Command{
+		Use:   "{{ project_slug }} [inputs...]",
+		Short: "{{ description }}",
+		Long: `{{ description }}
+
+Examples:
+  {{ project_slug }} file.txt
+  {{ project_slug }} "**/*.txt"
+  cat file.txt | {{ project_slug }} -`,
+		Version: version,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
+			// Handle --usage flag
+			usage, _ := cmd.Flags().GetBool("usage")
+			if usage {
+				return cmd.Usage()
+			}
+
+			// Initialize logger
+			logger = NewLogger("main")
+			logger.SetQuiet(quiet)
+			logger.SetVerbose(verbose)
+			logger.SetNoColor(noColor)
+
+			if !quiet {
+				logger.Info("Using config file: %s", viper.ConfigFileUsed())
+			}
+
+			filesToProcess := []string{}
+			readStdin := false
+
+			// Input Strategy
+			if len(args) == 0 {
+				if !isatty.IsTerminal(os.Stdin.Fd()) {
+					readStdin = true
+				} else {
+					return cmd.Help()
+				}
+			} else {
+				for _, arg := range args {
+					if arg == "-" {
+						readStdin = true
+					} else {
+						// Glob expansion
+						base, pattern := doublestar.SplitPattern(arg)
+						fs := os.DirFS(base)
+						if base == "." {
+							fs = os.DirFS(".")
+							pattern = arg
+						}
+
+						matches, err := doublestar.Glob(fs, pattern)
+						if err != nil {
+							logger.Error("Error globbing %s: %v", arg, err)
+							continue
+						}
+						if len(matches) == 0 {
+							logger.Warn("No files found for pattern '%s'", arg)
+						}
+						for _, m := range matches {
+							if base != "." {
+								filesToProcess = append(filesToProcess, base+string(os.PathSeparator)+m)
+							} else {
+								filesToProcess = append(filesToProcess, m)
+							}
+						}
+					}
+				}
+			}
+
+			results := []map[string]interface{}{}
+
+			// Process Stdin
+			if readStdin {
+				logger.Info("Processing stdin...")
+				content, err := io.ReadAll(os.Stdin)
+				if err != nil {
+					logger.Error("Error reading stdin: %v", err)
+					return err
+				}
+				results = append(results, processContent(string(content), "stdin"))
+			}
+
+			// Process Files
+			for _, file := range filesToProcess {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+					logger.Info("Processing %s...", file)
+					content, err := os.ReadFile(file)
+					if err != nil {
+						logger.Error("Error reading %s: %v", file, err)
+						continue
+					}
+					results = append(results, processContent(string(content), file))
+				}
+			}
+
+			// Output Strategy
+			if jsonOutput {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				return enc.Encode(results)
+			} else {
+				fmt.Printf("Processed %d inputs.\n", len(results))
+			}
+
+			return nil
+		},
+	}
+)
+
+func processContent(content string, source string) map[string]interface{} {
+	// Dummy logic
+	return map[string]interface{}{
+		"source": source,
+		"length": len(content),
+		"status": "processed",
+	}
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+	
+	// Persistent flags
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/{{ project_slug }}/config.yaml)")
+	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
+	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
+	
+	// Local flags
+	rootCmd.Flags().Bool("usage", false, "Show usage information")
+	
+	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
+}
+
+func initConfig() {
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+	} else {
+		configDir, _ := os.UserConfigDir()
+		viper.AddConfigPath(configDir + "/{{ project_slug }}")
+		viper.SetConfigName("config")
+	}
+	viper.SetEnvPrefix("{{ project_slug | upper | replace('-', '_') }}")
+	viper.AutomaticEnv()
+	viper.ReadInConfig()
+}
+
+func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
+		os.Exit(1)
+	}
+}
+
+{# vim: set ft=go: #}

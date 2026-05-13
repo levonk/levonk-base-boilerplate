@@ -1,0 +1,81 @@
+# {{ _service_name | title }} - Nix-based Docker Service
+# Generated from boilerplate template
+
+## Overview
+
+{{ _service_description }}
+
+This service is built using **Nix** to generate reproducible, minimal Docker images. It features a unique "Dual Image" workflow to solve the "distroless debugging" problem.
+
+## The "Twist": Prod vs. Debug Images
+
+We generate two images from the same source:
+
+1.  **Production Image (`{{ _service_name_slug }}:latest`)**:
+    *   **Content**: Contains *only* the application binary and its runtime dependencies (closure).
+    *   **Size**: Extremely small.
+    *   **Security**: Minimal attack surface (no shell, no package manager).
+    *   **Use Case**: Production deployment.
+
+2.  **Debug Image (`{{ _service_name_slug }}-debug:latest`)**:
+    *   **Content**: The *exact same* application layer, plus a layer of debugging tools (`zsh`, `curl`, `htop`, `strace`, `vim`, etc.).
+    *   **Use Case**: Local development, troubleshooting, and debugging.
+
+## Quick Start
+
+### Prerequisites
+
+- [Nix](https://nixos.org/download.html) (with flakes enabled)
+- Docker
+- Docker Compose
+
+### Build and Run
+
+```bash
+# 1. Build the Production Image
+make build
+
+# 2. Start the service
+make up
+
+# 3. Check health
+make health-check
+```
+
+### Debugging
+
+If you run into issues, build and run the debug image:
+
+```bash
+# 1. Build the Debug Image
+make build-debug
+
+# 2. Run it interactively (example)
+docker run -it --rm {{ _service_name_slug }}-debug zsh
+```
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SERVICE_NAME` | Service identifier | `{{ _service_name_slug }}` |
+| `SERVICE_PORT` | Port the service listens on | `{{ _service_port }}` |
+| `NODE_ENV` | Environment | `production` |
+
+## Build System
+
+The `Makefile` wraps Nix commands for convenience:
+
+- `make build`: Builds `.#docker-prod` and loads it into Docker.
+- `make build-debug`: Builds `.#docker-debug` and loads it into Docker.
+- `make up`: Runs `docker-compose up`.
+
+{% include "_partials/readme/lint-security.jinja" %}
+
+## Project Structure
+
+- `flake.nix`: Defines the Nix build outputs (app, prod image, debug image).
+- `docker-compose.yml`: Orchestrates the service.
+- `Makefile`: Helper commands.

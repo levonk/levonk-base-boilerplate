@@ -1,0 +1,142 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+# Basic project information
+package_name:
+  type: str
+  help: What is the human-readable package name? (e.g., "My Awesome Library")
+  validate: |
+    {% if not package_name|regex_match('^[a-zA-Z][a-zA-Z0-9\-_\s]*$') %}
+    Package name must start with a letter and contain only letters, numbers, hyphens, underscores, and spaces.
+    {% endif %}
+
+package_slug:
+  type: str
+  help: What is the crate slug for Cargo.toml? (e.g., "my-awesome-library")
+  default: "{{ package_name | lower | replace(' ', '-') | replace('_', '-') }}"
+  validate: |
+    {% if not package_slug|regex_match('^[a-z][a-z0-9-]*$') %}
+    Package slug must be lowercase, start with a letter, and use hyphens instead of spaces/underscores.
+    {% endif %}
+
+crate_name:
+  type: str
+  help: What is the Rust crate name for code? (e.g., "my_awesome_library")
+  default: "{{ package_slug | replace('-', '_') }}"
+  validate: |
+    {% if not crate_name|regex_match('^[a-z][a-z0-9_]*$') %}
+    Crate name must be lowercase, start with a letter, and use underscores instead of hyphens.
+    {% endif %}
+
+module_name:
+  type: str
+  help: What is the main module filename? (e.g., "my_awesome_library" -> src/my_awesome_library.rs)
+  default: "{{ crate_name }}"
+  validate: |
+    {% if not module_name|regex_match('^[a-z][a-z0-9_]*$') %}
+    Module name must be lowercase, start with a letter, and use underscores.
+    {% endif %}
+
+description:
+  type: str
+  help: Short description of the package
+  default: "A Rust package"
+
+author_name:
+  type: str
+  help: Author name
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: Author email
+  default: "your.email@example.com"
+
+license:
+  type: str
+  help: License type
+  choices:
+    - AGPL-3.0
+    - MIT
+    - Apache-2.0
+    - MPL-2.0
+  default: "AGPL-3.0"
+
+repository_url:
+  type: str
+  help: Repository URL
+  default: "https://github.com/yourusername/{{ package_slug }}"
+
+# Feature flags
+include_async:
+  type: bool
+  help: Include async support (tokio)?
+  default: false
+
+include_serde:
+  type: bool
+  help: Include serialization support (serde)?
+  default: false
+
+include_cli:
+  type: bool
+  help: Include CLI support (clap)?
+  default: false
+
+include_tui:
+  type: bool
+  help: Include TUI support (ratatui)?
+  default: false
+
+include_docker:
+  type: bool
+  help: Include Docker configuration?
+  default: true
+
+# Dependencies
+keywords:
+  type: str
+  help: Comma-separated keywords
+  default: "rust,library"
+
+categories:
+  type: str
+  help: Comma-separated categories
+  default: "development-tools::cargo-plugins"
+
+# Devbox configuration
+rust_log_level:
+  type: str
+  help: Rust log level for development
+  default: "info"
+
+rust_backtrace:
+  type: str
+  help: Rust backtrace setting for development
+  default: "1"
+
+include_openssl:
+  type: bool
+  help: Include OpenSSL for TLS support?
+  default: false
+
+include_postgres:
+  type: bool
+  help: Include PostgreSQL support?
+  default: false
+
+include_sqlite:
+  type: bool
+  help: Include SQLite support?
+  default: false
+
+include_tokio:
+  type: bool
+  help: Include Tokio async runtime support?
+  default: false
+
+include_wasm:
+  type: bool
+  help: Include WebAssembly (WASM) support?
+  default: false

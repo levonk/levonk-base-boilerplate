@@ -1,0 +1,21 @@
+# {{ project_name }} - Docker Configuration
+
+This is Template A's configuration that uses shared partials.
+
+{% include "partials.bak/common-header" %}
+
+## Template A Specific Configuration
+
+This configuration is specific to Template A:
+- Base Image: {{ docker_image }}
+- Registry: {{ docker_registry }}
+- Build Context: {{ build_context }}
+
+## Docker Settings
+
+Here are some Docker-specific configurations:
+- Dockerfile: {{ dockerfile_name }}
+- Multi-stage build: enabled
+- Health check: included
+
+{% include "partials.bak/common-footer" %}

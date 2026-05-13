@@ -1,0 +1,14 @@
+FROM swift:5.10-jammy AS builder
+WORKDIR /app
+COPY . .
+RUN swift build -c release
+
+FROM ubuntu:22.04
+RUN useradd -m -u 1001 appuser \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=builder /app/.build/release/{{ project_slug }} /app/{{ project_slug }}
+USER appuser
+ENTRYPOINT ["/app/{{ project_slug }}"]

@@ -1,0 +1,15 @@
+clean: ## Remove containers and networks (keeps volumes)
+	@echo "$(RED)⚠ Removing containers and networks...$(NC)"
+	@$(DOCKER_COMPOSE) down --remove-orphans
+	@echo "$(GREEN)✓ Containers and networks removed$(NC)"
+
+clean-all: ## Remove containers, networks, and volumes (DESTRUCTIVE)
+	@echo "$(RED)⚠ WARNING: This will remove all data volumes!$(NC)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		$(DOCKER_COMPOSE) down -v --remove-orphans; \
+		echo "$(GREEN)✓ All data removed$(NC)"; \
+	else \
+		echo "$(YELLOW)Cancelled$(NC)"; \
+	fi

@@ -1,0 +1,117 @@
+import chalk from 'chalk';
+import supportsColor from 'supports-color';
+import process from 'process';
+
+export type LogLevel = 'info' | 'warn' | 'error' | 'fatal';
+
+export interface LoggerOptions {
+  quiet?: boolean;
+  verbose?: boolean;
+  noColor?: boolean;
+  module?: string;
+}
+
+// Color palette for log levels
+const levelColors = {
+  info: chalk.blue,
+  warn: chalk.yellow,
+  error: chalk.red,
+  fatal: chalk.bgRed.white,
+};
+
+// Color palette for modules (unique colors per module)
+const moduleColors = [
+  chalk.cyan,
+  chalk.magenta,
+  chalk.green,
+  chalk.blue,
+  chalk.yellow,
+  chalk.red,
+  chalk.white,
+  chalk.gray,
+];
+
+// Module name to color mapping
+const moduleColorMap = new Map<string, typeof chalk.Chalk>();
+
+function getModuleColor(moduleName: string): typeof chalk.Chalk {
+  if (!moduleColorMap.has(moduleName)) {
+    const index = moduleColorMap.size % moduleColors.length;
+    moduleColorMap.set(moduleName, moduleColors[index]);
+  }
+  return moduleColorMap.get(moduleName)!;
+}
+
+function formatTimestamp(): string {
+  const now = new Date();
+  return now.toISOString();
+}
+
+function shouldUseColor(options: LoggerOptions): boolean {
+  if (options.noColor) return false;
+  if (process.env.NO_COLOR) return false;
+  return supportsColor.stdout !== false;
+}
+
+export class Logger {
+  private options: LoggerOptions;
+
+  constructor(options: LoggerOptions = {}) {
+    this.options = {
+      quiet: false,
+      verbose: false,
+      noColor: false,
+      module: '{{ project_slug }}',
+      ...options,
+    };
+  }
+
+  private formatMessage(
+    level: LogLevel,
+    message: string,
+    extra?: Record<string, unknown>
+  ): string {
+    const timestamp = formatTimestamp();
+    const module = this.options.module || '{{ project_slug }}';
+    const useColor = shouldUseColor(this.options);
+
+    const levelFn = useColor ? levelColors[level] : (text: string) => text;
+    const moduleFn = useColor ? getModuleColor(module) : (text: string) => text;
+
+    const levelStr = levelFn(`[${level.toUpperCase()}]`);
+    const moduleStr = moduleFn(`[${module}]`);
+
+    let output = `${timestamp} ${moduleStr} ${levelStr} ${message}`;
+
+    if (extra && this.options.verbose) {
+      const extraStr = Object.entries(extra)
+        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+        .join(' ');
+      output += ` ${extraStr}`;
+    }
+
+    return output;
+  }
+
+  info(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    console.log(this.formatMessage('info', message, extra));
+  }
+
+  warn(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    console.warn(this.formatMessage('warn', message, extra));
+  }
+
+  error(message: string, extra?: Record<string, unknown>): void {
+    console.error(this.formatMessage('error', message, extra));
+  }
+
+  fatal(message: string, extra?: Record<string, unknown>): void {
+    console.error(this.formatMessage('fatal', message, extra));
+  }
+}
+
+export function createLogger(options: LoggerOptions = {}): Logger {
+  return new Logger(options);
+}

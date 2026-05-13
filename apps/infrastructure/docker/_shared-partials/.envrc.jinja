@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Shared direnv environment setup for {{ project_name }}
+
+# Use strict mode
+set -euo pipefail
+
+# Log direnv loading
+if [[ -n "${DIRENV_DEBUG:-}" ]]; then
+    echo "direnv: Loading {{ project_name }} environment"
+fi
+
+# Add local bin to PATH if it exists
+if [ -d "{{REPO_ROOT}}/node_modules/.bin" ]; then
+    PATH_add "{{REPO_ROOT}}/node_modules/.bin"
+fi
+
+# Add local bin to PATH if it exists
+if [ -d "{{REPO_ROOT}}/.local/bin" ]; then
+    PATH_add "{{REPO_ROOT}}/.local/bin"
+fi
+
+# Export common environment variables
+export NODE_ENV="${NODE_ENV:-development}"
+export PROJECT_ROOT="{{REPO_ROOT}}"

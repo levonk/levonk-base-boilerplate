@@ -1,0 +1,300 @@
+# {{ _service_name | title }} - Production Docker Service
+# Generated from boilerplate template
+# Updated for daemonless Nix architecture with service-specific directories
+
+## Overview
+
+{{ _service_description }}
+
+This service is built using hardened base-{{ base_os }} image with enterprise-grade security practices including:
+- Non-root execution
+- Minimal attack surface
+- Health checks
+- Proper resource limits
+{% if base_os == "nixpkgs" %}
+- **Daemonless Nix**: Uses flake-based dependency management
+- **Service-specific directories**: Avoids path conflicts with shared volumes
+- **Hierarchical inheritance**: Can inherit from nix-sidecar when needed
+{% endif %}
+
+## Architecture
+
+{% if base_os == "nixpkgs" %}
+### Nix Container Architecture
+
+This service follows the daemonless Nix architecture as defined in:
+**[ADR-20260109001: Nix Container Architecture](/internal-docs/adr/adr-20260109001-nix-container-architecture.md)**
+
+#### Key Features:
+- **Daemonless Mode**: No Nix daemon - direct store access for better performance
+- **Service-specific Directories**: Each service uses `/{{ _service_name_slug }}/` to avoid conflicts
+- **Flake-based Dependencies**: Dependencies declared in `assets/static/{{ _service_name_slug }}/flake.nix`
+- **Lightweight Healthchecks**: Basic operational readiness, heavy verification via supercronic
+- **Shared Volumes**: `/etc/nix` and `/nix` shared across containers, initialized by nix-sidecar
+
+#### Directory Structure:
+```
+{{ _service_name_slug }}/
+├── assets/static/
+│   ├── {{ _service_name_slug }}/
+│   │   ├── flake.nix          # Service dependencies
+│   │   ├── entrypoint.sh      # Service startup script
+│   │   └── supercronic.crond  # Maintenance tasks (if enabled)
+│   └── usr/local/bin/
+│       └── healthcheck.sh     # Lightweight health check
+└── Dockerfile.{{ _service_name_slug }}
+```
+
+#### Usage:
+```bash
+# Activate Nix environment
+nix develop /{{ _service_name_slug }}/assets/static/{{ _service_name_slug }}#default
+
+# Or from service directory
+cd /{{ _service_name_slug }}
+nix develop assets/static/{{ _service_name_slug }}#default
+```
+{% endif %}
+
+## Features
+
+- **Security**: Hardened base {{ base_os }} image with non-root user
+- **Health Checks**: Built-in health monitoring{% if base_os == "nixpkgs" %} (lightweight, heavy checks via supercronic){% endif %}
+- **Resource Limits**: Configurable CPU and memory limits
+- **Logging**: Structured JSON logging
+- **Monitoring**: Prometheus metrics endpoint
+{% if base_os == "nixpkgs" %}
+- **Nix Integration**: Reproducible builds with flake.nix
+- **Maintenance**: Automated store optimization and verification
+{% endif %}
+
+## Quick Start
+
+### Prerequisites
+
+- [Nix](https://nixos.org/download.html) (recommended)
+- [direnv](https://direnv.net/) (recommended)
+- Docker and Docker Compose
+
+### Setup Environment
+
+This project uses `nix` and `direnv` to provide a reproducible development environment with all necessary tools (including `docker-compose`, `dockle`, `trivy`, etc.).
+
+1.  **Install Prerequisites** (if not already installed):
+    ```bash
+    # Install Nix and direnv using the bootstrap target
+    make bootstrap
+    ```
+
+2.  **Allow direnv**:
+    ```bash
+    direnv allow
+    ```
+    This will automatically load the Nix flake dev shell.
+
+### Build and Run
+
+```bash
+# Build the service
+make build
+
+# Start the service
+make up
+
+# Check health
+make health-check
+
+# View logs
+make logs
+```
+
+### Development
+
+```bash
+# Run tests
+make test
+
+# Lint configuration
+make lint
+
+# Clean up
+make clean
+```
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SERVICE_NAME` | Service identifier | `{{ _service_name }}` |
+| `SERVICE_PORT` | Port the service listens on | `{{ _service_port }}` |
+| `NODE_ENV` | Node.js environment | `production` |
+
+### Ports
+
+- **{{ _service_port }}**: Main service port
+
+### Health Checks
+
+- **Endpoint**: `{{ _service_health_endpoint }}`
+- **Interval**: 30 seconds
+- **Timeout**: 10 seconds
+- **Retries**: 3
+
+## Build System
+
+The Makefile provides convenient commands:
+
+### Core Commands
+- `build` - Build Docker images
+- `up` - Start services
+- `down` - Stop services
+- `restart` - Restart services
+- `logs` - View logs
+- `health-check` - Verify health
+
+### Development Commands
+- `test` - Run test suite
+- `lint` - Lint configuration files
+- `shell` - Access container shell
+- `clean` - Remove containers (keep data)
+- `clean-all` - Remove everything (WARNING: destroys data)
+
+{% include "partials.bak/readme/lint-security.jinja" %}
+
+## Security
+
+### Container Hardening
+
+- **Base Image**: `base-debian` (hardened Debian 12-slim)
+- **User**: Non-root (`appuser:appuser`)
+- **Capabilities**: Dropped all capabilities
+- **Filesystem**: Read-only root filesystem
+- **Networks**: Isolated network with explicit rules
+
+### Best Practices
+
+- No privileged containers
+- No host network access
+- No Docker socket mounting
+- Resource limits enforced
+- Secrets mounted at runtime
+
+## Monitoring
+
+### Health Checks
+
+The service includes comprehensive health checks:
+- Application health via HTTP endpoint
+- Resource usage monitoring
+- Dependency availability
+
+### Logging
+
+- Structured JSON logs
+- Correlation IDs for request tracing
+- Error logging with stack traces
+- Audit logging for security events
+
+### Metrics
+
+- Prometheus metrics endpoint
+- Application performance metrics
+- System resource metrics
+- Custom business metrics
+
+## Deployment
+
+### Docker Compose
+
+```yaml
+services:
+  {{ _service_name }}:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: {{ _service_name }}
+    restart: unless-stopped
+    ports:
+      - "{{ _service_port }}:{{ _service_port }}"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ _service_port }}{{ _service_health_endpoint }}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+```
+
+### Kubernetes
+
+For Kubernetes deployment, use the provided Helm chart in `k8s/` directory.
+
+## Development
+
+### Local Development
+
+```bash
+# Install dependencies
+npm ci
+
+# Run tests
+npm test
+
+# Start development server
+npm run dev
+```
+
+### Testing
+
+```bash
+# Run all tests
+make test
+
+# Run specific test suite
+npm test -- --grep "authentication"
+
+# Run linting
+make lint
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Port already in use**
+   ```bash
+   # Find what's using the port
+   lsof -i :{{ _service_port }}
+
+   # Change port in docker-compose.yml
+   ```
+
+2. **Health check failures**
+   ```bash
+   # Check service logs
+   make logs
+
+   # Test health endpoint manually
+   curl http://localhost:{{ _service_port }}{{ _service_health_endpoint }}
+   ```
+
+3. **Permission denied**
+   ```bash
+   # Check user permissions
+   make shell
+   whoami
+   id
+   ```
+
+## Contributing
+
+1. Follow the established patterns
+2. Add tests for new features
+3. Update documentation
+4. Ensure security best practices
+
+## License
+
+See LICENSE file in the project root.

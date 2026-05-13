@@ -1,0 +1,23 @@
+# {{ project_name }} - Docker Configuration
+
+This project demonstrates the use of shared partials in Copier templates.
+
+{% include "partials.bak/docker-header.jinja" %}
+
+## Project Details
+
+This is a test template that includes shared partials:
+- Environment: {{ environment | default('development') }}
+- Docker Image: {{ docker_image | default('ubuntu:latest') }}
+
+## Usage
+
+```bash
+# Build the project
+docker build -t {{ project_name }} .
+
+# Run the container
+docker run -d --name {{ project_name }}-container {{ project_name }}
+```
+
+{% include "partials.bak/docker-footer.jinja" %}

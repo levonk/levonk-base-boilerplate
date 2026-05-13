@@ -1,0 +1,64 @@
+/**
+ * HTTP Server for {{ package_name }}
+ * {{ description }}
+ *
+ * @author {{ author_name }} <{{ author_email }}>
+ * @license {{ license }}
+ */
+
+{% if include_http %}
+import express from 'express';
+import { {{ package_slug | capitalize | replace('-', '') }}, hello } from './index.js';
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Routes
+app.get('/', (req, res) => {
+  res.json({
+    message: hello(),
+    name: '{{ package_name }}',
+    version: '1.0.0'
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/hello', (req, res) => {
+  const lib = new {{ package_slug | capitalize | replace('-', '') }}();
+  res.json({ greeting: lib.hello() });
+});
+
+// Error handling middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
+// Start server
+if (import.meta.url === `file://${process.argv[1]}`) {
+  app.listen(PORT, () => {
+    console.log(`{{ package_name }} server running on port ${PORT}`);
+    console.log(`Visit http://localhost:${PORT} to get started`);
+  });
+}
+
+export default app;
+{% else %}
+// HTTP server support is not enabled for this template.
+// To enable HTTP server support, set include_http: true in copier.yaml
+import { hello } from './index.js';
+
+console.log(hello());
+{% endif %}

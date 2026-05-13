@@ -1,0 +1,249 @@
+//! Error types for {{ crate_name }}
+//!
+//! This module defines all error types used throughout the library.
+
+use thiserror::Error;
+
+/// Result type for this crate
+pub type Result<T> = std::result::Result<T, {{ crate_name | capitalize | replace('_', '') }}Error>;
+
+/// Main error type for the {{ crate_name }} library
+#[derive(Error, Debug)]
+pub enum {{ crate_name | capitalize | replace('_', '') }}Error {
+    /// IO error occurred
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+
+    /// Parse error occurred
+    #[error("Parse error: {0}")]
+    Parse(String),
+
+    /// Validation error occurred
+    #[error("Validation error: {field} - {message}")]
+    Validation { field: String, message: String },
+
+    /// Configuration error occurred
+    #[error("Configuration error: {0}")]
+    Config(String),
+
+    /// Serialization error
+    #[cfg(feature = "serde")]
+    #[error("Serialization error: {0}")]
+    Serialization(#[from] serde_json::Error),
+
+    /// Deserialization error
+    #[cfg(feature = "serde")]
+    #[error("Deserialization error: {0}")]
+    Deserialization(#[from] toml::de::Error),
+
+    /// Network error
+    #[error("Network error: {0}")]
+    Network(String),
+
+    /// Timeout error
+    #[error("Operation timed out after {duration:?}")]
+    Timeout { duration: std::time::Duration },
+
+    /// Not found error
+    #[error("Resource not found: {resource}")]
+    NotFound { resource: String },
+
+    /// Permission denied error
+    #[error("Permission denied: {operation}")]
+    PermissionDenied { operation: String },
+
+    /// Generic error with custom message
+    #[error("{0}")]
+    Generic(String),
+}
+
+impl {{ crate_name | capitalize | replace('_', '') }}Error {
+    /// Create a new validation error
+    ///
+    /// # Arguments
+    ///
+    /// * `field` - The field that failed validation
+    /// * `message` - The validation error message
+    pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {
+        Self::Validation {
+            field: field.into(),
+            message: message.into(),
+        }
+    }
+
+    /// Create a new configuration error
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The configuration error message
+    pub fn config(message: impl Into<String>) -> Self {
+        Self::Config(message.into())
+    }
+
+    /// Create a new parse error
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The parse error message
+    pub fn parse(message: impl Into<String>) -> Self {
+        Self::Parse(message.into())
+    }
+
+    /// Create a new network error
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The network error message
+    pub fn network(message: impl Into<String>) -> Self {
+        Self::Network(message.into())
+    }
+
+    /// Create a new timeout error
+    ///
+    /// # Arguments
+    ///
+    /// * `duration` - The duration that timed out
+    pub fn timeout(duration: std::time::Duration) -> Self {
+        Self::Timeout { duration }
+    }
+
+    /// Create a new not found error
+    ///
+    /// # Arguments
+    ///
+    /// * `resource` - The resource that was not found
+    pub fn not_found(resource: impl Into<String>) -> Self {
+        Self::NotFound {
+            resource: resource.into(),
+        }
+    }
+
+    /// Create a new permission denied error
+    ///
+    /// # Arguments
+    ///
+    /// * `operation` - The operation that was denied
+    pub fn permission_denied(operation: impl Into<String>) -> Self {
+        Self::PermissionDenied {
+            operation: operation.into(),
+        }
+    }
+
+    /// Create a new generic error
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - The error message
+    pub fn generic(message: impl Into<String>) -> Self {
+        Self::Generic(message.into())
+    }
+
+    /// Check if this is a retryable error
+    ///
+    /// # Returns
+    ///
+    /// `true` if the error is retryable, `false` otherwise
+    pub fn is_retryable(&self) -> bool {
+        match self {
+            Self::Network(_) => true,
+            Self::Timeout { .. } => true,
+            Self::Io(_) => false,
+            Self::Parse(_) => false,
+            Self::Validation { .. } => false,
+            Self::Config(_) => false,
+            #[cfg(feature = "serde")]
+            Self::Serialization(_) => false,
+            #[cfg(feature = "serde")]
+            Self::Deserialization(_) => false,
+            Self::NotFound { .. } => false,
+            Self::PermissionDenied { .. } => false,
+            Self::Generic(_) => false,
+        }
+    }
+
+    /// Get the error category
+    ///
+    /// # Returns
+    ///
+    /// A string representing the error category
+    pub fn category(&self) -> &'static str {
+        match self {
+            Self::Io(_) => "io",
+            Self::Parse(_) => "parse",
+            Self::Validation { .. } => "validation",
+            Self::Config(_) => "config",
+            #[cfg(feature = "serde")]
+            Self::Serialization(_) => "serialization",
+            #[cfg(feature = "serde")]
+            Self::Deserialization(_) => "deserialization",
+            Self::Network(_) => "network",
+            Self::Timeout { .. } => "timeout",
+            Self::NotFound { .. } => "not_found",
+            Self::PermissionDenied { .. } => "permission_denied",
+            Self::Generic(_) => "generic",
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn test_validation_error() {
+        let error = {{ crate_name | capitalize | replace('_', '') }}Error::validation("field", "message");
+        assert!(matches!(error, {{ crate_name | capitalize | replace('_', '') }}Error::Validation { .. }));
+        assert_eq!(error.category(), "validation");
+        assert!(!error.is_retryable());
+    }
+
+    #[test]
+    fn test_network_error() {
+        let error = {{ crate_name | capitalize | replace('_', '') }}Error::network("connection failed");
+        assert!(matches!(error, {{ crate_name | capitalize | replace('_', '') }}Error::Network(_)));
+        assert_eq!(error.category(), "network");
+        assert!(error.is_retryable());
+    }
+
+    #[test]
+    fn test_timeout_error() {
+        let error = {{ crate_name | capitalize | replace('_', '') }}Error::timeout(Duration::from_secs(30));
+        assert!(matches!(error, {{ crate_name | capitalize | replace('_', '') }}Error::Timeout { .. }));
+        assert_eq!(error.category(), "timeout");
+        assert!(error.is_retryable());
+    }
+
+    #[test]
+    fn test_not_found_error() {
+        let error = {{ crate_name | capitalize | replace('_', '') }}Error::not_found("file.txt");
+        assert!(matches!(error, {{ crate_name | capitalize | replace('_', '') }}Error::NotFound { .. }));
+        assert_eq!(error.category(), "not_found");
+        assert!(!error.is_retryable());
+    }
+
+    #[test]
+    fn test_permission_denied_error() {
+        let error = {{ crate_name | capitalize | replace('_', '') }}Error::permission_denied("read");
+        assert!(matches!(error, {{ crate_name | capitalize | replace('_', '') }}Error::PermissionDenied { .. }));
+        assert_eq!(error.category(), "permission_denied");
+        assert!(!error.is_retryable());
+    }
+
+    #[test]
+    fn test_generic_error() {
+        let error = {{ crate_name | capitalize | replace('_', '') }}Error::generic("something went wrong");
+        assert!(matches!(error, {{ crate_name | capitalize | replace('_', '') }}Error::Generic(_)));
+        assert_eq!(error.category(), "generic");
+        assert!(!error.is_retryable());
+    }
+
+    #[test]
+    fn test_error_display() {
+        let error = {{ crate_name | capitalize | replace('_', '') }}Error::validation("email", "invalid format");
+        let display = format!("{}", error);
+        assert!(display.contains("Validation error"));
+        assert!(display.contains("email"));
+        assert!(display.contains("invalid format"));
+    }
+}

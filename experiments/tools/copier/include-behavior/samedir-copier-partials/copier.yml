@@ -1,0 +1,7 @@
+# Test 2: copier/_partials directory
+
+project_name:
+  type: str
+  default: test-project
+
+_templates_suffix: .jinja

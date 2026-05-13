@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#
+# Generated git pre-commit hook for {{ _service_name_slug }}.
+# Runs the shared quality gate before allowing the commit.
+
+set -Eeuo pipefail
+
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${HOOK_DIR}/.." && pwd)"
+
+QUALITY_SCRIPT="${PROJECT_ROOT}/scripts/run-quality-checks.sh"
+
+if [[ ! -x "${QUALITY_SCRIPT}" ]]; then
+  echo "error: ${QUALITY_SCRIPT} must be executable (run 'chmod +x scripts/run-quality-checks.sh')." >&2
+  exit 1
+fi
+
+exec "${QUALITY_SCRIPT}"

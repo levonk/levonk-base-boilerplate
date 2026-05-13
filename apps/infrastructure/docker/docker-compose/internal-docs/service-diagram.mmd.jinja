@@ -1,0 +1,39 @@
+flowchart LR
+    Client["Client (user or upstream service)"]
+{% if _use_traefik %}
+    Proxy["Traefik reverse proxy"]
+{% endif %}
+{% if _include_ui %}
+    UI["{{ _service_name }}-ui"]
+{% endif %}
+    Service["{{ _service_name }}"]
+    Dependency["External dependency"]
+    Health["Health endpoint {{ _service_health_endpoint }}"]
+    Observability[(Observability stack)]
+{% if _enable_monitoring %}
+    Metrics["Metrics collector (/metrics)"]
+{% endif %}
+
+{% if _use_traefik and _include_ui %}
+    Client -->|HTTPS| Proxy
+    Proxy --> UI
+    UI --> Service
+{% elif _use_traefik %}
+    Client -->|HTTPS| Proxy
+    Proxy --> Service
+{% elif _include_ui %}
+    Client --> UI
+    UI --> Service
+{% else %}
+    Client --> Service
+{% endif %}
+    Service --> Dependency
+    Service --> Health
+    Service --> Observability
+{% if _enable_monitoring %}
+    Service -.-> Metrics
+    Metrics -.-> Observability
+{% endif %}
+    Service -->|Docker network| {{ _service_name }}-network[
+"{{ _service_name }}-network"
+]

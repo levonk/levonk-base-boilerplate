@@ -1,0 +1,413 @@
+using Spectre.Console;
+using Spectre.Console.Cli;
+using System.ComponentModel;
+using DotNet.Globbing;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Linq;
+
+public class Program
+{
+    public static int Main(string[] args)
+    {
+        // Handle --version early
+        if (args.Contains("--version"))
+        {
+            Console.WriteLine("{{ project_slug }} {{ version }}");
+            return 0;
+        }
+
+        // Handle --usage early
+        if (args.Contains("--usage"))
+        {
+            PrintUsage();
+            return 0;
+        }
+
+        args = args.Select(a => a == "-" ? "__STDIN__" : a).ToArray();
+
+        Console.CancelKeyPress += (_, e) =>
+        {
+            e.Cancel = true;
+            Environment.Exit(130);
+        };
+
+        var app = new CommandApp<ProcessCommand>();
+        app.Configure(config =>
+        {
+            config.SetApplicationName("{{ project_slug }}");
+            config.Settings.StrictParsing = false;
+        });
+        return app.Run(args);
+    }
+
+    private static void PrintUsage()
+    {
+        Console.WriteLine("{{ project_slug }} - {{ description }}");
+        Console.WriteLine();
+        Console.WriteLine("USAGE:");
+        Console.WriteLine("  {{ project_slug }} [OPTIONS] [INPUTS...]");
+        Console.WriteLine();
+        Console.WriteLine("ARGUMENTS:");
+        Console.WriteLine("  INPUTS...    Input files or glob patterns. Use '-' for stdin.");
+        Console.WriteLine();
+        Console.WriteLine("OPTIONS:");
+        Console.WriteLine("  -c, --config FILE    Path to config file");
+        Console.WriteLine("  --json               Output results as JSON");
+        Console.WriteLine("  --quiet              Suppress all output except errors");
+        Console.WriteLine("  --verbose            Enable verbose output");
+        Console.WriteLine("  --nocolor             Disable colored output");
+        Console.WriteLine("  --version             Show version information");
+        Console.WriteLine("  --usage               Show usage information");
+        Console.WriteLine("  -h, --help            Show help information");
+        Console.WriteLine();
+    }
+}
+
+public class ProcessCommand : Command<ProcessCommand.Settings>
+{
+    private static Logger? _logger;
+    private static readonly Dictionary<string, Color> ModuleColors = new();
+    private static readonly Color[] ColorPalette = new[]
+    {
+        Color.Blue, Color.Green, Color.Yellow, Color.Cyan, Color.Magenta, Color.Orange1
+    };
+    private static int _colorIndex = 0;
+
+    public class Settings : CommandSettings
+    {
+        [CommandArgument(0, "[inputs]")]
+        [Description("Input files or glob patterns. Use '-' for stdin.")]
+        public string[]? Inputs { get; set; }
+
+        [CommandOption("-c|--config")]
+        [Description("Path to config file")]
+        public string? ConfigPath { get; set; }
+
+        [CommandOption("--json")]
+        [Description("Output results as JSON")]
+        public bool Json { get; set; }
+
+        [CommandOption("--quiet")]
+        [Description("Suppress all output except errors")]
+        public bool Quiet { get; set; }
+
+        [CommandOption("--verbose")]
+        [Description("Enable verbose output")]
+        public bool Verbose { get; set; }
+
+        [CommandOption("--nocolor")]
+        [Description("Disable colored output")]
+        public bool NoColor { get; set; }
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        // Initialize logger with settings
+        _logger = new Logger(settings);
+        _logger.LogInfo("{{ project_slug }}", "Starting {{ project_slug }} v{{ version }}");
+
+        // Config resolution (env > provided > XDG/AppData)
+        var config = settings.ConfigPath
+            ?? Environment.GetEnvironmentVariable("{{ project_slug | upper | replace('-', '_') }}_CONFIG")
+            ?? (OperatingSystem.IsWindows()
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "{{ project_slug }}", "config.json")
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "{{ project_slug }}", "config.json"));
+
+        if (!settings.Quiet && !settings.Json)
+        {
+            _logger.LogInfo("{{ project_slug }}", $"Using config: {config}");
+        }
+
+        var filesToProcess = new List<string>();
+        var readStdin = false;
+
+        // Input strategy
+        if (settings.Inputs == null || settings.Inputs.Length == 0)
+        {
+            if (!Console.IsInputRedirected)
+            {
+                _logger.LogError("{{ project_slug }}", "No inputs provided and stdin is not redirected");
+                _logger.LogInfo("{{ project_slug }}", "Run with --usage for help");
+                return 1;
+            }
+            readStdin = true;
+        }
+        else
+        {
+            foreach (var input in settings.Inputs)
+            {
+                if (input == "__STDIN__")
+                {
+                    readStdin = true;
+                    continue;
+                }
+
+                if (File.Exists(input))
+                {
+                    filesToProcess.Add(input);
+                    continue;
+                }
+
+                try
+                {
+                    var matcher = Glob.Parse(NormalizeGlob(input), new GlobOptions
+                    {
+                        Evaluation = { CaseInsensitive = OperatingSystem.IsWindows() }
+                    });
+
+                    var baseDir = GetGlobBaseDirectory(input);
+                    foreach (var file in Directory.EnumerateFiles(baseDir, "*", SearchOption.AllDirectories))
+                    {
+                        var relative = NormalizePath(Path.GetRelativePath(baseDir, file));
+                        if (matcher.IsMatch(relative))
+                        {
+                            filesToProcess.Add(file);
+                        }
+                    }
+
+                    if (filesToProcess.Count == 0)
+                    {
+                        _logger.LogWarn("{{ project_slug }}", $"No files found for pattern '{input}'");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("{{ project_slug }}", $"Error parsing glob '{input}': {ex.Message}");
+                }
+            }
+        }
+
+        var results = new List<ResultItem>();
+
+        // Process stdin
+        if (readStdin)
+        {
+            if (settings.Verbose)
+            {
+                _logger.LogInfo("{{ project_slug }}", "Reading from stdin");
+            }
+            var content = Console.In.ReadToEnd();
+            results.Add(ProcessContent("stdin", content));
+        }
+
+        // Process files
+        foreach (var file in filesToProcess)
+        {
+            try
+            {
+                if (settings.Verbose)
+                {
+                    _logger.LogInfo("{{ project_slug }}", $"Processing file: {file}");
+                }
+                var content = File.ReadAllText(file);
+                results.Add(ProcessContent(file, content));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("{{ project_slug }}", $"Error reading {file}: {ex.Message}");
+            }
+        }
+
+        if (settings.Json)
+        {
+            Console.WriteLine(JsonSerializer.Serialize(results, ResultJsonContext.Default.ListResultItem));
+        }
+        else if (!settings.Quiet)
+        {
+            foreach (var r in results)
+            {
+                _logger.LogInfo("{{ project_slug }}", $"Processed {r.Source} ({r.Length} bytes)");
+            }
+        }
+
+        _logger.LogInfo("{{ project_slug }}", "Completed successfully");
+        return 0;
+    }
+
+    private static ResultItem ProcessContent(string source, string content)
+    {
+        return new ResultItem
+        {
+            Source = source,
+            Length = content.Length,
+            Status = "processed"
+        };
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return path.Replace('\\', '/');
+    }
+
+    private static string NormalizeGlob(string input)
+    {
+        var baseDir = GetGlobBaseDirectory(input);
+        if (Path.IsPathRooted(input))
+        {
+            var baseWithSep = baseDir.EndsWith(Path.DirectorySeparatorChar)
+                ? baseDir
+                : baseDir + Path.DirectorySeparatorChar;
+            if (input.StartsWith(baseWithSep, StringComparison.Ordinal))
+            {
+                return NormalizePath(input.Substring(baseWithSep.Length));
+            }
+        }
+
+        return NormalizePath(input);
+    }
+
+    private static string GetGlobBaseDirectory(string input)
+    {
+        if (!Path.IsPathRooted(input))
+        {
+            return Directory.GetCurrentDirectory();
+        }
+
+        var root = Path.GetPathRoot(input) ?? Path.DirectorySeparatorChar.ToString();
+        var remainder = input.Substring(root.Length);
+        var separators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
+        var parts = remainder.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+
+        var baseDir = root;
+        foreach (var part in parts)
+        {
+            if (part.IndexOfAny(new[] { '*', '?', '[', ']' }) >= 0)
+            {
+                break;
+            }
+            baseDir = Path.Combine(baseDir, part);
+        }
+
+        if (!Directory.Exists(baseDir))
+        {
+            return Directory.GetCurrentDirectory();
+        }
+
+        return baseDir;
+    }
+
+    public class ResultItem
+    {
+        public string Source { get; set; } = string.Empty;
+        public int Length { get; set; }
+        public string Status { get; set; } = "processed";
+    }
+
+    // Logger class with smart color detection and module-based coloring
+    private class Logger
+    {
+        private readonly ProcessCommand.Settings _settings;
+        private readonly bool _supportsColor;
+
+        public Logger(ProcessCommand.Settings settings)
+        {
+            _settings = settings;
+            _supportsColor = !settings.NoColor && 
+                             !Console.IsOutputRedirected && 
+                             !Console.IsErrorRedirected &&
+                             Environment.GetEnvironmentVariable("NO_COLOR") == null &&
+                             (Environment.GetEnvironmentVariable("TERM") != "dumb" || 
+                              OperatingSystem.IsWindows());
+        }
+
+        private Color GetModuleColor(string module)
+        {
+            if (!_supportsColor)
+            {
+                return Color.Default;
+            }
+
+            if (!ModuleColors.ContainsKey(module))
+            {
+                ModuleColors[module] = ColorPalette[_colorIndex % ColorPalette.Length];
+                _colorIndex++;
+            }
+
+            return ModuleColors[module];
+        }
+
+        public void LogInfo(string module, string message)
+        {
+            if (_settings.Quiet)
+            {
+                return;
+            }
+
+            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var level = "INFO";
+            var levelColor = _supportsColor ? Color.Blue : Color.Default;
+            var moduleColor = GetModuleColor(module);
+
+            if (_supportsColor)
+            {
+                AnsiConsole.MarkupLine(
+                    $"[grey]{timestamp}[/] [{levelColor}]{level}[/] [{moduleColor}]{module}[/] {message}");
+            }
+            else
+            {
+                Console.WriteLine($"{timestamp} {level} {module} {message}");
+            }
+        }
+
+        public void LogWarn(string module, string message)
+        {
+            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var level = "WARN";
+            var levelColor = _supportsColor ? Color.Yellow : Color.Default;
+            var moduleColor = GetModuleColor(module);
+
+            if (_supportsColor)
+            {
+                AnsiConsole.MarkupLine(
+                    $"[grey]{timestamp}[/] [{levelColor}]{level}[/] [{moduleColor}]{module}[/] {message}");
+            }
+            else
+            {
+                Console.Error.WriteLine($"{timestamp} {level} {module} {message}");
+            }
+        }
+
+        public void LogError(string module, string message)
+        {
+            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var level = "ERROR";
+            var levelColor = _supportsColor ? Color.Red : Color.Default;
+            var moduleColor = GetModuleColor(module);
+
+            if (_supportsColor)
+            {
+                AnsiConsole.MarkupLine(
+                    $"[grey]{timestamp}[/] [{levelColor}]{level}[/] [{moduleColor}]{module}[/] {message}");
+            }
+            else
+            {
+                Console.Error.WriteLine($"{timestamp} {level} {module} {message}");
+            }
+        }
+
+        public void LogFatal(string module, string message)
+        {
+            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var level = "FATAL";
+            var levelColor = _supportsColor ? Color.Red : Color.Default;
+            var moduleColor = GetModuleColor(module);
+
+            if (_supportsColor)
+            {
+                AnsiConsole.MarkupLine(
+                    $"[grey]{timestamp}[/] [{levelColor}]{level}[/] [{moduleColor}]{module}[/] {message}");
+            }
+            else
+            {
+                Console.Error.WriteLine($"{timestamp} {level} {module} {message}");
+            }
+        }
+    }
+}
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(List<ProcessCommand.ResultItem>))]
+internal partial class ResultJsonContext : JsonSerializerContext
+{
+}

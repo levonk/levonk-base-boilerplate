@@ -1,0 +1,11 @@
+# Ignore copier template files from linting
+# These are Jinja2 templates that get processed by copier
+*.jinja
+assets/service-name/
+assets/usr/local/bin/*.jinja
+
+# Keep only actual generated files for linting
+Dockerfile.*
+docker-compose.*
+Makefile
+README.md

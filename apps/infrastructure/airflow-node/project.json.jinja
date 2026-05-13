@@ -1,0 +1,9 @@
+{
+  "name": "{{ project_name | default('airflow-task') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-docker-build.jinja" %}
+  }
+}

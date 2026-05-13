@@ -1,0 +1,16 @@
+{
+  "name": "{{ project_name | default('airflow-project') }}",
+  "version": "1.0.0",
+  "description": "Airflow DAG project with NX monorepo support",
+  "scripts": {
+    "build": "echo 'No build step for Airflow DAGs'",
+    "test": "pytest dags/",
+    "lint": "flake8 dags/"
+  },
+  "devDependencies": {
+    "@nx/js": "^19.0.0",
+    "@nxlv/python": "^19.0.0",
+    "nx": "^19.0.0"
+  },
+  "packageManager": "pnpm@*"
+}

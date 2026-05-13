@@ -1,0 +1,62 @@
+.PHONY: help install install-dev clean test lint format typecheck build all
+
+help:
+	@echo "Available commands:"
+	@echo "  make install      - Install package"
+	@echo "  make install-dev  - Install package with dev dependencies"
+	@echo "  make clean        - Remove build artifacts"
+	@echo "  make test         - Run tests"
+	@echo "  make test-cov     - Run tests with coverage"
+	@echo "  make lint         - Run linters"
+	@echo "  make format       - Format code"
+	@echo "  make typecheck    - Run type checking"
+	@echo "  make build        - Build package"
+	@echo "  make all          - Format, lint, typecheck, and test"
+
+install:
+	pip install -e .
+
+install-dev:
+	pip install -e ".[dev]"
+
+clean:
+	rm -rf build/ dist/ *.egg-info htmlcov/ .coverage .pytest_cache/ .mypy_cache/ .ruff_cache/
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+
+test:
+	pytest
+
+test-cov:
+	pytest --cov --cov-report=html --cov-report=term
+
+test-unit:
+	pytest -m unit
+
+test-integration:
+	pytest -m integration
+
+lint:
+	ruff check src tests
+	mypy src
+
+format:
+	black src tests
+	isort src tests
+	ruff check --fix src tests
+
+typecheck:
+	mypy src
+
+build:
+	python -m build
+
+all: format lint typecheck test
+
+# Security scanning (optional, requires safety package)
+security:
+	pip install safety
+	safety check
+
+# vim: set ft=make:

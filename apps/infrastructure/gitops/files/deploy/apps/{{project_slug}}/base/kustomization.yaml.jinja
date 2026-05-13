@@ -1,0 +1,126 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: {{ project_name }}-base
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+resources:
+  # Include the Helm chart as a resource
+  - ../../charts/{{ project_slug }}/
+
+# Common labels and annotations
+commonLabels:
+  app.kubernetes.io/name: {{ project_name }}
+  app.kubernetes.io/component: {{ project_name }}
+  app.kubernetes.io/managed-by: kustomize
+
+commonAnnotations:
+  config.kubernetes.io/origin: {{ repo_url }}
+
+# Namespace configuration
+namespace: {{ project_name }}
+
+# Replicas configuration
+replicas:
+  - name: {{ project_name }}
+    count: 1
+
+# Images configuration
+images:
+  - name: {{ app_image }}
+    newTag: {{ app_version }}
+
+# ConfigMap generator
+configMapGenerator:
+  - name: {{ project_name }}-config
+    literals:
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - APP_ENV=production
+
+# Secret generator (placeholder)
+secretGenerator:
+  - name: {{ project_name }}-secrets
+    literals:
+      - SECRET_KEY=change-me
+
+# Patches for common configurations
+patches:
+  # Patch for resource limits
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        template:
+          spec:
+            containers:
+              - name: {{ project_name }}
+                resources:
+                  limits:
+                    cpu: 500m
+                    memory: 512Mi
+                  requests:
+                    cpu: 250m
+                    memory: 256Mi
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+# Strategic merge patches
+patchesStrategicMerge:
+  # Add any strategic merge patches here
+  # - deployment-patch.yaml
+  # - service-patch.yaml
+
+# JSON 6902 patches
+patchesJson6902:
+  # Add any JSON 6902 patches here
+  # - patch-with-json6902.yaml
+
+# Replacements
+replacements:
+  # Replace environment variables
+  - source:
+      kind: ConfigMap
+      name: {{ project_name }}-config
+      fieldPath: data.LOG_LEVEL
+    targets:
+      - select:
+          kind: Deployment
+          name: {{ project_name }}
+        fieldPaths:
+          - spec.template.spec.containers.[name={{ project_name }}].env.[name=LOG_LEVEL].value
+
+# Crds
+crds: []
+
+# Generators options
+generatorOptions:
+  disableNameSuffixHash: true
+
+# Helm chart configuration
+helmCharts:
+  - name: {{ project_name }}
+    releaseName: {{ project_name }}
+    namespace: {{ project_name }}
+    values:
+      replicaCount: 1
+      image:
+        repository: {{ app_image }}
+        tag: {{ app_version }}
+      service:
+        type: ClusterIP
+        port: {{ app_port }}
+      ingress:
+        enabled: false
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi
+        requests:
+          cpu: 250m
+          memory: 256Mi

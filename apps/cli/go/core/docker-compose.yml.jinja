@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  cli:
+    build: .
+    image: {{ project_slug }}:latest
+    entrypoint: ["{{ project_slug }}"]
+    volumes:
+      - .:/app
+    # Keep container running if needed, or just run one-off
+    # command: ["--help"]

@@ -1,0 +1,90 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineConfig, defineProject } from "vitest/config";
+
+// ESM-safe __dirname
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
+  resolve: {
+    alias: [
+      { find: /^@\/app\/(.*)$/, replacement: path.resolve(__dirname, "src/$1") },
+      { find: /^@\/components\/(.*)$/, replacement: path.resolve(__dirname, "src/components/$1") },
+      { find: /^@\/lib\/(.*)$/, replacement: path.resolve(__dirname, "src/lib/$1") },
+      { find: /^@\/utils\/(.*)$/, replacement: path.resolve(__dirname, "src/utils/$1") },
+      { find: /^@\/types\/(.*)$/, replacement: path.resolve(__dirname, "src/types/$1") },
+    ],
+  },
+  projects: [
+    defineProject({
+      test: {
+        name: "unit",
+        include: [
+          "tests/unit/**/*.test.mts",
+          "tests/unit/**/*.spec.mts",
+          "__tests__/unit/**/*.test.mts",
+          "__tests__/unit/**/*.spec.mts"
+        ],
+        environment: "node",
+        testTimeout: 30_000,
+        hookTimeout: 30_000
+      }
+    }),
+    defineProject({
+      test: {
+        name: "e2e-requirements",
+        include: [
+          "tests/e2e/requirements/**/*.test.mts",
+          "tests/e2e/requirements/**/*.spec.mts",
+          "__tests__/e2e/requirements/**/*.test.mts",
+          "__tests__/e2e/requirements/**/*.spec.mts"
+        ],
+        environment: "node",
+        testTimeout: 60_000,
+        hookTimeout: 60_000
+      }
+    }),
+    defineProject({
+      test: {
+        name: "integration",
+        include: [
+          "tests/integration/**/*.test.mts",
+          "tests/integration/**/*.spec.mts",
+          "__tests__/integration/**/*.test.mts",
+          "__tests__/integration/**/*.spec.mts"
+        ],
+        environment: "node",
+        testTimeout: 60_000,
+        hookTimeout: 60_000
+      }
+    }),
+    defineProject({
+      test: {
+        name: "performance",
+        include: [
+          "tests/performance/**/*.test.mts",
+          "tests/performance/**/*.spec.mts",
+          "__tests__/performance/**/*.test.mts",
+          "__tests__/performance/**/*.spec.mts"
+        ],
+        environment: "node",
+        testTimeout: 60_000,
+        hookTimeout: 60_000
+      }
+    }),
+    defineProject({
+      test: {
+        name: "e2e-usecases",
+        include: [
+          "tests/e2e/usecases/**/*.test.mts",
+          "tests/e2e/usecases/**/*.spec.mts",
+          "__tests__/e2e/usecases/**/*.test.mts",
+          "__tests__/e2e/usecases/**/*.spec.mts"
+        ],
+        environment: "node",
+        testTimeout: 60_000,
+        hookTimeout: 60_000
+      }
+    })
+  ]
+});

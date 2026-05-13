@@ -1,0 +1,67 @@
+---
+# {{ _service_name | title }} Docker Compose Configuration
+# Generated secure docker-compose configuration for {{ _service_description | lower }}
+
+services:
+  localnet-app-{{ _service_name_slug }}:
+    image: {{ _service_name_slug }}:latest
+    container_name: localnet-app-{{ _service_name_slug }}
+    restart: unless-stopped
+    labels:
+      - "dev.quenary.tugtainer.protected=false"
+    user: "${{ _env_prefix }}_PUID:-1000}:${{ _env_prefix }}_PGID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${{ _env_prefix }}_HOST_IP:-0.0.0.0}:${{ _env_prefix }}_HOST_PORT:-{{ _service_port }}}:${{ _env_prefix }}_CONTAINER_IP:-0.0.0.0}:${{ _env_prefix }}_CONTAINER_PORT:-{{ _service_port }}}"
+    environment:
+{% include "_partials/docker-compose/env-core.jinja" %}
+    # Healthcheck assumes curl is available.
+    # NOTE: In the 'prod' image, curl might NOT be available if it's truly minimal.
+    # You might need to use a different healthcheck strategy for prod (e.g., built-in language features)
+    # or ensure the minimal image has a basic http client.
+    # For now, we assume the user might want to use the debug image for initial testing.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:{{ _service_port }}{{ _service_health_endpoint }} || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - {{ _service_name_slug }}-network
+
+{% include "_partials/docker-nix/docker-compose-service-debug.jinja" %}
+
+{% if _include_ui %}
+  {{ _service_name_slug }}-ui:
+    build:
+      context: ./ui
+      dockerfile: docker/Dockerfile
+    container_name: {{ _service_name_slug }}-ui
+    restart: unless-stopped
+    ports:
+      - "{{ _ui_port }}:{{ _ui_port }}"
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://{{ _service_name_slug }}:{{ _service_port }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ _ui_port }}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - {{ _service_name_slug }}-network
+{% endif %}
+
+networks:
+  {{ _service_name_slug }}-network:
+    driver: bridge
+
+# vim: set ft=yaml:
+

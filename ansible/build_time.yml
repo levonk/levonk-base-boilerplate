@@ -1,9 +1,0 @@
----
-# Placeholder build-time playbook
-- hosts: localhost
-  connection: local
-  gather_facts: false
-  tasks:
-    - name: Build-time no-op
-      debug:
-        msg: "Build-time provisioning placeholder"

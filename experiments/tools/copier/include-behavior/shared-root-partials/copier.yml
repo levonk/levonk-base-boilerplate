@@ -1,0 +1,7 @@
+# Test 1: Root directory with _partials
+
+project_name:
+  type: str
+  default: test-project
+
+_templates_suffix: .jinja

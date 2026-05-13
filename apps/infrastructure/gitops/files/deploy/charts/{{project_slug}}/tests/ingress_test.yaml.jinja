@@ -1,0 +1,319 @@
+suite: ingress test
+templates:
+  - ingress.yaml
+tests:
+  - it: should create ingress when enabled
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+    asserts:
+      - isKind:
+          of: Ingress
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.ingressClassName
+          value: {{ ingress_class }}
+      - isNotEmpty:
+          path: spec.rules
+      - isNotEmpty:
+          path: spec.rules[0].host
+      - equal:
+          path: spec.rules[0].host
+          value: {{ project_name }}.{{ ingress_domain }}
+      - isNotEmpty:
+          path: spec.rules[0].http.paths
+      - equal:
+          path: spec.rules[0].http.paths[0].path
+          value: /
+      - equal:
+          path: spec.rules[0].http.paths[0].pathType
+          value: Prefix
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.rules[0].http.paths[0].backend.service.port.name
+          value: http
+  - it: should have proper labels when enabled
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+    asserts:
+      - equal:
+          path: metadata.labels.app.kubernetes.io/name
+          value: {{ chart_name }}
+      - equal:
+          path: metadata.labels.app.kubernetes.io/instance
+          value: {{ chart_name }}-test
+  - it: should have TLS when enabled
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.tls
+      value:
+        - secretName: {{ chart_name }}-tls
+          hosts:
+            - {{ project_name }}.{{ ingress_domain }}
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_ingress }}].ingress.tls
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.tls[0].secretName
+          value: {{ chart_name }}-tls
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.tls[0].hosts[0]
+          value: {{ project_name }}.{{ ingress_domain }}
+  - it: should have annotations when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.annotations
+      value:
+        nginx.ingress.kubernetes.io/rewrite-target: /$2
+        cert-manager.io/cluster-issuer: "letsencrypt-prod"
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/rewrite-target
+          value: /$2
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.cert-manager.io/cluster-issuer
+          value: letsencrypt-prod
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/ssl-redirect
+          value: "true"
+  - it: should have multiple hosts when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.hosts
+      value:
+        - host: {{ project_name }}.{{ ingress_domain }}
+          paths:
+            - path: /api
+              pathType: Prefix
+        - host: api.{{ ingress_domain }}
+          paths:
+            - path: /
+              pathType: Prefix
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].host
+          value: {{ project_name }}.{{ ingress_domain }}
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[0].path
+          value: /api
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[1].host
+          value: api.{{ ingress_domain }}
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[1].paths[0].path
+          value: /
+  - it: should have multiple TLS hosts when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.tls
+      value:
+        - secretName: {{ chart_name }}-tls
+          hosts:
+            - {{ project_name }}.{{ ingress_domain }}
+            - api.{{ ingress_domain }}
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.tls[0].secretName
+          value: {{ chart_name }}-tls
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.tls[0].hosts[0]
+          value: {{ project_name }}.{{ ingress_domain }}
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.tls[0].hosts[1]
+          value: api.{{ ingress_domain }}
+  - it: should have custom path types when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.hosts[0].paths
+      value:
+        - path: /api/v1
+          pathType: Prefix
+        - path: /api/v2
+          pathType: Prefix
+        - path: /api/v3
+          pathType: Exact
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[0].path
+          value: /api/v1
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[0].pathType
+          value: Prefix
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[1].path
+          value: /api/v2
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[1].pathType
+          value: Prefix
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[2].path
+          value: /api/v3
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[2].pathType
+          value: Exact
+  - it: should have backend service when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[0].backend
+      value:
+        service:
+          name: {{ chart_name }}-backend
+          port:
+            name: http
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[0].backend.service.name
+          value: {{ chart_name }}-backend
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.hosts[0].paths[0].backend.service.port.name
+          value: http
+  - it: should have resource limits when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.annotations
+      value:
+        nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+        nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+        nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/proxy-body-size
+          value: 50m
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/proxy-read-timeout
+          value: "120"
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/proxy-send-timeout
+          value: "120"
+  - it: should have rewrite rules when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.annotations
+      value:
+        nginx.ingress.kubernetes.io/rewrite-target: /api$1
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/rewrite-target
+          value: /api$1
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/ssl-redirect
+          value: "true"
+  - it: should have CORS headers when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.annotations
+      value:
+        nginx.ingress.kubernetes.io/enable-cors: "true"
+        nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+        nginx.ingress.kubernetes.io/cors-allow-methods: "GET,POST,PUT,DELETE,OPTIONS"
+        nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type"
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/enable-cors
+          value: "true"
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/cors-allow-origin
+          value: "*"
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/cors-allow-methods
+          value: "GET,POST,PUT,DELETE,OPTIONS"
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/cors-allow-headers
+          value: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type"
+  - it: should have rate limiting when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.annotations
+      value:
+        nginx.ingress.kubernetes.io/rate-limit: "100"
+        nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/rate-limit
+          value: "100"
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/rate-limit-window
+          value: "1m"
+  - it: should have authentication when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.annotations
+      value:
+        nginx.ingress.kubernetes.io/auth-type: "basic"
+        nginx.ingress.kubernetes.io/auth-secret: {{ chart_name }}-auth
+        nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/auth-type
+          value: basic
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/auth-secret
+          value: {{ chart_name }}-auth
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.annotations.nginx.ingress.kubernetes.io/auth-realm
+          value: "Authentication Required"
+  - it: should have custom default backend when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].ingress.spec.defaultBackend
+      value:
+        service:
+          name: {{ chart_name }}-default
+          port:
+            number: {{ app_port }}
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.spec.defaultBackend.service.name
+          value: {{ chart_name }}-default
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.spec.defaultBackend.service.port.number
+          value: {{ app_port }}
+  - it: should have extra labels when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].metadata.labels
+      value:
+        extra-label: "extra-value"
+        team: "platform"
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.metadata.labels.extra-label
+          value: "extra-value"
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.metadata.labels.team
+          value: "platform"
+  - it: should have extra annotations when specified
+    set:
+      path: $[{{ if enable_ingress }}].ingress.enabled
+      value: true
+      path: $[{{ if enable_ingress }}].metadata.annotations
+      value:
+        extra-annotation: "extra-value"
+        ingress.kubernetes.io/backend-protocol: "HTTPS"
+    asserts:
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.metadata.annotations.extra-annotation
+          value: "extra-value"
+      - equal:
+          path: $[{{ if enable_ingress }}].ingress.metadata.annotations.ingress.kubernetes.io/backend-protocol
+          value: "HTTPS"

@@ -1,0 +1,125 @@
+# Contributing to {{category}}-{{domain}}-{{package_name}}
+
+Thank you for considering contributing to this package!
+
+## Development Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd {{package_name}}
+   ```
+
+2. **Create a virtual environment**
+   ```bash
+   python{{python_version}} -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. **Install development dependencies**
+   ```bash
+   make install-dev
+   # or
+   pip install -e ".[dev]"
+   ```
+
+## Development Workflow
+
+### Running Tests
+```bash
+# Run all tests
+make test
+
+# Run with coverage
+make test-cov
+
+# Run specific test markers
+pytest -m unit
+pytest -m integration
+```
+
+### Code Quality
+```bash
+# Format code (automatically fixes issues)
+make format
+
+# Lint code (check for issues)
+make lint
+
+# Type check
+make typecheck
+
+# Run all checks
+make all
+```
+
+### Pre-commit Checklist
+Before committing, ensure:
+- [ ] All tests pass (`make test`)
+- [ ] Code is formatted (`make format`)
+- [ ] No linting errors (`make lint`)
+- [ ] Type checking passes (`make typecheck`)
+- [ ] New code has tests
+- [ ] Documentation is updated
+
+## Code Standards
+
+### Security
+- **NO hardcoded secrets**: Use environment variables
+- **Input validation**: Validate all external inputs
+- **Dependencies**: Keep dependencies updated
+- **Type safety**: Use type hints everywhere
+
+### Code Style
+- **Line length**: Max 100 characters
+- **Formatting**: Use Black and isort
+- **Type hints**: Required for all functions
+- **Docstrings**: Use Google-style docstrings
+
+### Testing
+- Write tests before or alongside code (TDD)
+- Aim for >80% code coverage
+- Test edge cases and error conditions
+- Use descriptive test names
+
+## Submitting Changes
+
+1. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make your changes**
+   - Follow code standards
+   - Add tests
+   - Update documentation
+
+3. **Run quality checks**
+   ```bash
+   make all
+   ```
+
+4. **Commit your changes**
+   ```bash
+   git add .
+   git commit -m "feat: add your feature description"
+   ```
+
+   Use conventional commit messages:
+   - `feat:` New feature
+   - `fix:` Bug fix
+   - `docs:` Documentation changes
+   - `test:` Test changes
+   - `refactor:` Code refactoring
+   - `chore:` Build/tooling changes
+
+5. **Push and create a pull request**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+## Questions?
+
+Open an issue or reach out to the maintainers.
+
+<!-- vim: set ft=markdown: -->

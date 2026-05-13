@@ -1,0 +1,56 @@
+# copier.yml
+project_name:
+  type: str
+  help: What is the name of your project?
+  default: my-app
+
+language:
+  type: str
+  help: Pick your primary programming language
+  choices:
+    Rust: rustup
+    Node.js: nodejs
+    Kotlin: kotlin
+    Python: python3
+    Swift: swift
+    Bash: bash
+    Zsh: zsh
+    Java: java
+    Go: go
+
+app_type:
+  type: str
+  help: What kind of application are you building?
+  choices:
+    CLI Tool: cli
+    Web App/API: web
+    Background Service: service
+
+dependencies:
+  type: json
+  help: Select required services (space-separated list)
+  choices:
+    PostgreSQL: postgresql
+    Valkey (Redis alternative): valkey
+    Traefik: traefik
+    Localstack: localstack
+  default: []
+
+# Helper to determine tool-specific commands
+_lint_cmd:
+  type: str
+  default: >-
+    {% if language == 'go' %}golangci-lint run
+    {% elif language == 'python3' %}flake8 .
+    {% elif language == 'nodejs' %}eslint .
+    {% else %}echo "No linter configured"
+    {% endif %}
+
+_test_cmd:
+  type: str
+  default: >-
+    {% if language == 'go' %}go test ./...
+    {% elif language == 'python3' %}pytest
+    {% elif language == 'nodejs' %}npm test
+    {% else %}echo "No tests configured"
+    {% endif %}

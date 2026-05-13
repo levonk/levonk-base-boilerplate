@@ -1,0 +1,30 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Web application",
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest",
+    "test:unit": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "*",
+    "react": "*",
+    "react-dom": "*",
+    "@{{ monorepo_name }}/ui": "workspace:*",
+    "@{{ monorepo_name }}/config": "workspace:*",
+    "@{{ monorepo_name }}/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "*",
+    "@types/react": "*",
+    "@types/react-dom": "*",
+    "typescript": "*",
+    "vitest": "*"
+  }
+}

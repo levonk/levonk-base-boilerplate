@@ -1,1 +1,0 @@
-- Illegal crawlers nonsense pages https://heydonworks.com/article/poisoning-well/

@@ -1,0 +1,29 @@
+{
+  "name": "{{ project_name | default('devbox-env') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "devbox run -- echo 'Environment validated'",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "shell": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "devbox shell",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "update": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "devbox update",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

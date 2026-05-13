@@ -1,0 +1,105 @@
+# VSCode Extension Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    pnpm install
+    echo "VSCode extension bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check VSCode extension development environment
+    @echo "🔌 VSCode extension environment:"
+    @echo "📦 Dependencies:"
+    @pnpm list --depth=0
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v vsce || echo "vsce not found"
+    @echo ""
+    @echo "✅ VSCode extension environment is ready!"
+
+# Development mode (watch and compile)
+dev:
+    pnpm run dev
+
+# Install dependencies
+install:
+    pnpm install
+
+# Compile TypeScript
+compile:
+    pnpm run compile
+
+# Run tests
+test:
+    pnpm test
+
+# Run tests in watch mode
+test-watch:
+    pnpm test --watch
+
+# Package extension
+package:
+    pnpm run package
+
+# Package in watch mode
+package-watch:
+    pnpm run package --watch
+
+# Lint code
+lint:
+    pnpm run lint
+
+# Format code
+format:
+    pnpm run format
+
+# Type checking
+typecheck:
+    pnpm run typecheck
+
+# Clean build artifacts
+clean:
+    rm -rf out/ dist/ *.vsix
+
+# Publish extension
+publish:
+    pnpm vsce publish
+
+# Publish in dry-run mode
+publish-dry-run:
+    pnpm vsce publish --dry-run
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ VSCode extension development environment ready!"
+
+# Verify extension
+verify:
+    pnpm run verify

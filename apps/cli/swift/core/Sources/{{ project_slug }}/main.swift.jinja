@@ -1,0 +1,389 @@
+import Foundation
+
+#if os(Linux)
+import Glibc
+#else
+import Darwin
+#endif
+
+// MARK: - Logging System
+
+enum LogLevel: String, CaseIterable {
+  case info = "INFO"
+  case warn = "WARN"
+  case error = "ERROR"
+  case fatal = "FATAL"
+  
+  var colorCode: String {
+    switch self {
+    case .info: return "\u{001B}[36m"    // Cyan
+    case .warn: return "\u{001B}[33m"    // Yellow
+    case .error: return "\u{001B}[31m"   // Red
+    case .fatal: return "\u{001B}[35m"   // Magenta
+    }
+  }
+  
+  var resetCode: String {
+    return "\u{001B}[0m"
+  }
+}
+
+class Logger {
+  private let moduleName: String
+  private var quiet: Bool = false
+  private var verbose: Bool = false
+  private var useColor: Bool = true
+  private var moduleColor: String
+  
+  var isQuiet: Bool {
+    return quiet
+  }
+  
+  // Predefined colors for different modules (to ensure uniqueness)
+  private static let moduleColors: [String] = [
+    "\u{001B}[32m",  // Green
+    "\u{001B}[34m",  // Blue
+    "\u{001B}[36m",  // Cyan
+    "\u{001B}[37m",  // White
+    "\u{001B}[90m",  // Bright Black (Gray)
+    "\u{001B}[94m",  // Bright Blue
+    "\u{001B}[96m",  // Bright Cyan
+    "\u{001B}[92m",  // Bright Green
+  ]
+  
+  init(moduleName: String = "{{ project_slug }}") {
+    self.moduleName = moduleName
+    // Assign a consistent color to this module based on hash of name
+    let hash = moduleName.reduce(0) { $0 + Int($1.asciiValue ?? 0) }
+    self.moduleColor = Logger.moduleColors[hash % Logger.moduleColors.count]
+    detectColorSupport()
+  }
+  
+  private func detectColorSupport() {
+    // Check if we're in a TTY and if NO_COLOR is set
+    let isTTY = isatty(fileno(stdout)) != 0
+    let noColorEnv = ProcessInfo.processInfo.environment["NO_COLOR"] != nil
+    self.useColor = isTTY && !noColorEnv
+  }
+  
+  func setQuiet(_ quiet: Bool) {
+    self.quiet = quiet
+  }
+  
+  func setVerbose(_ verbose: Bool) {
+    self.verbose = verbose
+  }
+  
+  func setNoColor(_ noColor: Bool) {
+    self.useColor = !noColor
+  }
+  
+  private func formatTimestamp() -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    return formatter.string(from: Date())
+  }
+  
+  private func formatMessage(_ level: LogLevel, _ message: String) -> String {
+    let timestamp = formatTimestamp()
+    let levelStr: String
+    let moduleStr: String
+    
+    if useColor {
+      levelStr = "\(level.colorCode)\(level.rawValue)\(level.resetCode)"
+      moduleStr = "\(moduleColor)[\(moduleName)]\(level.resetCode)"
+    } else {
+      levelStr = level.rawValue
+      moduleStr = "[\(moduleName)]"
+    }
+    
+    return "[\(timestamp)] \(moduleStr) \(levelStr): \(message)"
+  }
+  
+  func info(_ message: String) {
+    if !quiet {
+      print(formatMessage(.info, message))
+    }
+  }
+  
+  func warn(_ message: String) {
+    if !quiet {
+      fputs(formatMessage(.warn, message) + "\n", stderr)
+    }
+  }
+  
+  func error(_ message: String) {
+    if !quiet {
+      fputs(formatMessage(.error, message) + "\n", stderr)
+    }
+  }
+  
+  func fatal(_ message: String, exitCode: Int32 = 1) {
+    if !quiet {
+      fputs(formatMessage(.fatal, message) + "\n", stderr)
+    }
+    exit(exitCode)
+  }
+  
+  func verbose(_ message: String) {
+    if verbose && !quiet {
+      print(formatMessage(.info, message))
+    }
+  }
+}
+
+// Global logger instance
+let logger = Logger()
+
+struct CLIResult: Codable {
+  let source: String
+  let length: Int
+}
+
+func globToRegex(_ pattern: String) -> NSRegularExpression? {
+  // Supports: **, *, ?, and path separators.
+  var regex = "^"
+  var i = pattern.startIndex
+
+  while i < pattern.endIndex {
+    let ch = pattern[i]
+
+    if ch == "*" {
+      let next = pattern.index(after: i)
+      if next < pattern.endIndex, pattern[next] == "*" {
+        regex += ".*"
+        i = pattern.index(after: next)
+        continue
+      }
+      regex += "[^/]*"
+      i = pattern.index(after: i)
+      continue
+    }
+
+    if ch == "?" {
+      regex += "[^/]"
+      i = pattern.index(after: i)
+      continue
+    }
+
+    // Escape regex metacharacters.
+    if ".+()|^$[]{}\\".contains(ch) {
+      regex += "\\\\" + String(ch)
+    } else {
+      regex += String(ch)
+    }
+
+    i = pattern.index(after: i)
+  }
+
+  regex += "$"
+  return try? NSRegularExpression(pattern: regex)
+}
+
+func globBaseDir(_ pattern: String) -> String {
+  // Take prefix up to first wildcard.
+  let wildcardSet = CharacterSet(charactersIn: "*?[")
+  if let range = pattern.rangeOfCharacter(from: wildcardSet) {
+    let prefix = String(pattern[..<range.lowerBound])
+    if let lastSlash = prefix.lastIndex(of: "/") {
+      let dir = String(prefix[..<lastSlash])
+      return dir.isEmpty ? "." : dir
+    }
+    return "."
+  }
+
+  // No wildcards; base is dirname.
+  if let lastSlash = pattern.lastIndex(of: "/") {
+    let dir = String(pattern[..<lastSlash])
+    return dir.isEmpty ? "." : dir
+  }
+  return "."
+}
+
+func expandGlob(_ pattern: String) -> [String] {
+  let base = globBaseDir(pattern)
+  let fm = FileManager.default
+
+  guard let re = globToRegex(pattern) else {
+    return []
+  }
+
+  guard let enumerator = fm.enumerator(atPath: base) else {
+    return []
+  }
+
+  var matches: [String] = []
+  for case let rel as String in enumerator {
+    let full = base == "." ? rel : base + "/" + rel
+    var isDir: ObjCBool = false
+    if fm.fileExists(atPath: full, isDirectory: &isDir), isDir.boolValue {
+      continue
+    }
+
+    let range = NSRange(location: 0, length: full.utf16.count)
+    if re.firstMatch(in: full, options: [], range: range) != nil {
+      matches.append(full)
+    }
+  }
+
+  return matches
+}
+
+func readAllStdin() -> String {
+  let data = FileHandle.standardInput.readDataToEndOfFile()
+  return String(data: data, encoding: .utf8) ?? ""
+}
+
+func stdinIsTTY() -> Bool {
+  return isatty(fileno(stdin)) != 0
+}
+
+func printUsage() {
+  let usage = """
+Usage: {{ project_slug }} [OPTIONS] [INPUTS...]
+
+A CLI tool for processing files and stdin.
+
+OPTIONS:
+  -h, --help          Show this help message and exit
+  --usage             Show usage information
+  --version           Show version information and exit
+  -v, --verbose       Enable verbose logging
+  -q, --quiet         Suppress all output except errors
+  --nocolor           Disable colored output
+  --json              Output results in JSON format
+  -c, --config FILE   Use specified config file
+
+ENVIRONMENT:
+  {{ project_slug | upper }}_CONFIG  Path to config file (overrides --config if not specified)
+  NO_COLOR            Disable colored output
+
+EXAMPLES:
+  {{ project_slug }} file.txt
+  {{ project_slug }} "**/*.txt"
+  cat file.txt | {{ project_slug }} -
+  {{ project_slug }} --verbose file.txt
+  {{ project_slug }} --json file.txt
+"""
+  print(usage)
+}
+
+func printVersion() {
+  print("{{ project_slug }} version {{ version }}")
+}
+
+var jsonOutput = false
+var configPath: String? = nil
+var inputs: [String] = []
+
+var it = CommandLine.arguments.dropFirst().makeIterator()
+while let arg = it.next() {
+  switch arg {
+  case "--help", "-h":
+    printUsage()
+    exit(0)
+  case "--usage":
+    printUsage()
+    exit(0)
+  case "--version":
+    printVersion()
+    exit(0)
+  case "--verbose", "-v":
+    logger.setVerbose(true)
+  case "--quiet", "-q":
+    logger.setQuiet(true)
+  case "--nocolor":
+    logger.setNoColor(true)
+  case "--json":
+    jsonOutput = true
+  case "--config", "-c":
+    guard let value = it.next() else {
+      logger.error("Missing value for --config")
+      exit(2)
+    }
+    configPath = value
+  default:
+    inputs.append(arg)
+  }
+}
+
+// Default config precedence (minimal): explicit flag wins, otherwise env
+if configPath == nil {
+  let envKey = "{{ project_slug | upper }}_CONFIG"
+  configPath = ProcessInfo.processInfo.environment[envKey]
+}
+
+if !jsonOutput && !logger.isQuiet {
+  if let cfg = configPath {
+    logger.info("Using config file: \(cfg)")
+  }
+}
+
+var results: [CLIResult] = []
+var readStdin = false
+
+if inputs.isEmpty {
+  // If stdin is a TTY, show help and exit with usage error.
+  if stdinIsTTY() {
+    printUsage()
+    exit(2)
+  }
+
+  // Non-TTY: read stdin, but treat empty stdin as usage error.
+  let content = readAllStdin()
+  if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+    printUsage()
+    exit(2)
+  }
+  readStdin = true
+  results.append(CLIResult(source: "stdin", length: content.count))
+  logger.verbose("Read \(content.count) bytes from stdin")
+} else {
+  for input in inputs {
+    if input == "-" {
+      readStdin = true
+      logger.verbose("Reading from stdin")
+    } else if input.contains("*") || input.contains("?") {
+      logger.verbose("Expanding glob pattern: \(input)")
+      let matches = expandGlob(input)
+      if matches.isEmpty {
+        logger.warn("No files found for pattern '\(input)'")
+      }
+      for m in matches {
+        if let content = try? String(contentsOfFile: m, encoding: .utf8) {
+          results.append(CLIResult(source: m, length: content.count))
+          logger.verbose("Processed \(m): \(content.count) bytes")
+        } else {
+          logger.error("Error reading \(m)")
+        }
+      }
+    } else {
+      logger.verbose("Processing file: \(input)")
+      if let content = try? String(contentsOfFile: input, encoding: .utf8) {
+        results.append(CLIResult(source: input, length: content.count))
+        logger.verbose("Processed \(input): \(content.count) bytes")
+      } else {
+        logger.error("Error reading \(input)")
+      }
+    }
+  }
+}
+
+if readStdin && !inputs.isEmpty {
+  let content = readAllStdin()
+  results.append(CLIResult(source: "stdin", length: content.count))
+  logger.verbose("Read \(content.count) bytes from stdin (with explicit inputs)")
+}
+
+if jsonOutput {
+  let enc = JSONEncoder()
+  enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+  if let data = try? enc.encode(results), let s = String(data: data, encoding: .utf8) {
+    print(s)
+  } else {
+    logger.fatal("Failed to encode JSON")
+  }
+} else {
+  logger.info("Processed \(results.count) inputs.")
+}

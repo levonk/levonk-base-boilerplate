@@ -1,0 +1,122 @@
+require 'open3'
+require 'json'
+require 'fileutils'
+
+RSpec.describe "{{ project_slug }} CLI" do
+  def run_cli(args = [], stdin: nil)
+    cmd = ["ruby", "{{ project_slug }}.rb"] + Array(args)
+    Open3.popen3(*cmd) do |i, o, e, wait|
+      i.write(stdin) if stdin
+      i.close
+      [wait.value.exitstatus, o.read, e.read]
+    end
+  end
+
+  it "shows help" do
+    code, out, _ = run_cli(["--help"])
+    expect(code).to eq(0)
+    expect(out).to include("Usage")
+  end
+
+  it "shows version" do
+    code, out, _ = run_cli(["--version"])
+    expect(code).to eq(0)
+    expect(out).to include("{{ project_class_name }}")
+    expect(out).to match(/\d+\.\d+\.\d+/)
+  end
+
+  it "shows usage" do
+    code, out, _ = run_cli(["usage"])
+    expect(code).to eq(0)
+    expect(out).to include("process")
+  end
+
+  it "processes stdin" do
+    code, out, err = run_cli(["--json", "-"], stdin: "hello")
+    expect(code).to eq(0)
+    data = JSON.parse(out)
+    expect(data.first["source"]).to eq("stdin")
+    # Verify logging output is present in stderr
+    expect(err).to include("INFO")
+  end
+
+  it "processes globs" do
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "a.txt"), "a")
+      File.write(File.join(dir, "b.txt"), "b")
+      Dir.chdir(dir) do
+        code, out, err = run_cli(["--json", "**/*.txt"])
+        expect(code).to eq(0)
+        data = JSON.parse(out)
+        sources = data.map { |d| d["source"] }
+        expect(sources).to include("a.txt", "b.txt")
+        # Verify logging output
+        expect(err).to include("INFO")
+      end
+    end
+  end
+
+  it "suppresses output with --quiet" do
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "test.txt"), "content")
+      Dir.chdir(dir) do
+        code, out, err = run_cli(["--quiet", "--json", "test.txt"])
+        expect(code).to eq(0)
+        data = JSON.parse(out)
+        expect(data.first["source"]).to eq("test.txt")
+        # Verify logging is suppressed (no INFO messages)
+        expect(err).not_to include("INFO")
+      end
+    end
+  end
+
+  it "enables verbose output with --verbose" do
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "test.txt"), "content")
+      Dir.chdir(dir) do
+        code, out, err = run_cli(["--verbose", "test.txt"])
+        expect(code).to eq(0)
+        # Verify debug messages are present
+        expect(err).to include("DEBUG")
+      end
+    end
+  end
+
+  it "disables color with --nocolor" do
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "test.txt"), "content")
+      Dir.chdir(dir) do
+        code, out, err = run_cli(["--nocolor", "test.txt"])
+        expect(code).to eq(0)
+        # Verify no ANSI color codes in output
+        expect(err).not_to match(/\e\[/)
+      end
+    end
+  end
+
+  it "logs with timestamp and module name" do
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "test.txt"), "content")
+      Dir.chdir(dir) do
+        code, out, err = run_cli(["test.txt"])
+        expect(code).to eq(0)
+        # Verify timestamp format (ISO 8601)
+        expect(err).to match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+        # Verify module name is present
+        expect(err).to include("{{ project_slug }}")
+      end
+    end
+  end
+
+  it "logs different levels with appropriate colors when supported" do
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "test.txt"), "content")
+      Dir.chdir(dir) do
+        code, out, err = run_cli(["test.txt"])
+        expect(code).to eq(0)
+        # Verify different log levels
+        expect(err).to include("INFO")
+      end
+    end
+  end
+end

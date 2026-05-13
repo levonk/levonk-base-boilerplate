@@ -1,0 +1,10 @@
+# Common Header (Shared)
+# This partial is shared across all Docker templates
+
+# {{ project_name }} Docker Configuration
+Environment: {{ environment | default('development') }}
+Generated: {{ now() }}
+
+# Docker Image Information
+Image: {{ docker_image | default('ubuntu:latest') }}
+Registry: {{ docker_registry | default('local') }}

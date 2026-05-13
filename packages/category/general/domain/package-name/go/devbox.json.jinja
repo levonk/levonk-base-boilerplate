@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": ["go@{{ go_version }}", "git", "curl", "vim", "just", "golangci-lint"],
+  "shell": {
+    "init_hook": [
+      "echo '🐹 Go environment initialized'",
+      "echo '📦 Project: {{ package_name }}'",
+      "echo '🔧 Go version: {{ go_version }}'",
+      "echo '🛠️  Use: just test && just lint'"
+    ],
+    "scripts": {
+      "bootstrap": "just bootstrap-internal",
+      "doctor": "just doctor-internal",
+      "clean": "just clean-internal",
+      "build": "just build-internal",
+      "test": "just test-internal",
+      "lint": "just lint-internal",
+      "typecheck": "just typecheck-internal",
+      "dev": "just dev-internal"
+    }
+  },
+  "env": {
+    "GO111MODULE": "on",
+    "CGO_ENABLED": "1",
+    "PACKAGE_NAME": "{{ package_name }}",
+    "PACKAGE_SLUG": "{{ package_slug }}",
+    "MODULE_NAME": "{{ module_name }}",
+    "GO_VERSION": "{{ go_version }}"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": ["python{{ python_version | default(311) }}", "pip", "poetry", "just", "black", "isort", "flake8", "mypy", "pytest", "pytest-cov", "build", "twine"],
+  "shell": {
+    "init_hook": [
+      "echo '🐍 Python environment initialized'",
+      "echo '📦 Project: {{ package_name | default(python-package) }}'",
+      "echo '🔧 Python version: {{ python_version | default(3.11) }}'",
+      "echo '🛠️  Use: just test && just lint'"
+    ],
+    "scripts": {
+      "bootstrap": "just bootstrap-internal",
+      "doctor": "just doctor-internal",
+      "clean": "just clean-internal",
+      "build": "just build-internal",
+      "test": "just test-internal",
+      "lint": "just lint-internal",
+      "typecheck": "just typecheck-internal",
+      "dev": "just dev-internal"
+    }
+  },
+  "env": {
+    "PYTHONPATH": "{{ python_path | default(src) }}",
+    "PYTHON_VERSION": "{{ python_version | default(3.11) }}",
+    "PACKAGE_NAME": "{{ package_name | default(python-package) }}",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1"
+  }
+}

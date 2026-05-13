@@ -1,0 +1,19 @@
+{
+  "name": "{{ project_name | default('fastapi-service') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-python-serve.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-python-test.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-python-lint.jinja" %}
+    "typecheck": {
+      "executor": "@nxlv/python:run",
+      "options": {
+        "command": "mypy .",
+        "cwd": "{projectRoot}"
+      }
+    },
+    {% include "partials.bak/partials/nx-partials/nx-target-docker-build.jinja" %}
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "{{ project_name | default('bash-scripts') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bats tests/",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "shellcheck *.sh",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "shfmt -w *.sh",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+help: ## Show Makefile usage and available commands
+	@echo "$(BLUE){{ _service_name | title }} - Build System$(NC)"
+	@echo ""
+	@grep -E '^[a-zA-Z0-9_.-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-22s$(NC) %s\n", $$1, $$2}'
+	@echo ""

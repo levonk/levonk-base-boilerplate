@@ -1,0 +1,90 @@
+{
+  "name": "{{ project_name | default('ruby-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ project_description | default('A Ruby CLI application') }}",
+  "shell": {
+    "init": [
+      "echo '💎 Setting up {{ project_name | default('ruby-cli-app') }} development environment...'"
+    ],
+    "scripts": {
+      "build": "bundle install",
+      "build-release": "bundle install --deployment --without development test",
+      "test": "bundle exec rspec",
+      "test-coverage": "bundle exec rspec --format documentation",
+      "lint": "bundle exec rubocop",
+      "format": "bundle exec rubocop -a",
+      "format-check": "bundle exec rubocop -x",
+      "run": "bundle exec ruby bin/{{ project_slug | default(project_name | lower | replace(' ', '-')) }}",
+      "dev": "bundle exec ruby bin/{{ project_slug | default(project_name | lower | replace(' ', '-')) }} --debug",
+      "clean": "rm -rf vendor/ .bundle/",
+      "install": "gem build {{ project_name | default('ruby-cli-app') }}.gemspec",
+      "publish": "gem push {{ project_name | default('ruby-cli-app') }}-*.gem",
+      "check": "bundle exec rubocop && bundle exec rspec"
+    }
+  },
+  "packages": {
+    "nixpkgs#ruby_3_2": "",
+    "nixpkgs#bundler": "",
+    {% if include_rails %}
+    "nixpkgs#rubyPackages.rails": "",
+    {% endif %}
+    {% if include_sinatra %}
+    "nixpkgs#rubyPackages.sinatra": "",
+    {% endif %}
+    {% if include_thor %}
+    "nixpkgs#rubyPackages.thor": "",
+    {% endif %}
+    {% if include_cliui %}
+    "nixpkgs#rubyPackages.cliUi": "",
+    {% endif %}
+    {% if include_colorize %}
+    "nixpkgs#rubyPackages.colorize": "",
+    {% endif %}
+    {% if include_json %}
+    "nixpkgs#rubyPackages.json": "",
+    {% endif %}
+    {% if include_yaml %}
+    "nixpkgs#rubyPackages.yaml": "",
+    {% endif %}
+    {% if include_httparty %}
+    "nixpkgs#rubyPackages.httparty": "",
+    {% endif %}
+    {% if include_pg %}
+    "nixpkgs#rubyPackages.pg": "",
+    "nixpkgs#postgresql": "",
+    {% endif %}
+    {% if include_mysql2 %}
+    "nixpkgs#rubyPackages.mysql2": "",
+    "nixpkgs#mysql": "",
+    {% endif %}
+    {% if include_sqlite3 %}
+    "nixpkgs#rubyPackages.sqlite3": "",
+    {% endif %}
+    {% if include_redis %}
+    "nixpkgs#rubyPackages.redis": "",
+    {% endif %}
+  },
+  "env": {
+    "GEM_HOME": "{{ gem_home | default('./.gems') }}",
+    "BUNDLE_PATH": "{{ bundle_path | default('./vendor/bundle') }}",
+    "BUNDLE_DEPLOYMENT": "{{ bundle_deployment | default('false') }}",
+    "RUBYOPT": "{{ ruby_opt | default('') }}",
+    {% if include_development %}
+    "RACK_ENV": "{{ rack_env | default('development') }}",
+    "RAILS_ENV": "{{ rails_env | default('development') }}",
+    "DEBUG": "{{ debug | default('1') }}",
+    {% endif %}
+    {% if include_pg %}
+    "DATABASE_URL": "postgresql://localhost/{{ project_name | default('ruby-cli-app') }}",
+    {% endif %}
+    {% if include_mysql2 %}
+    "DATABASE_URL": "mysql2://localhost/{{ project_name | default('ruby-cli-app') }}",
+    {% endif %}
+    {% if include_sqlite3 %}
+    "DATABASE_URL": "sqlite3:./{{ project_name | default('ruby-cli-app') }}.db",
+    {% endif %}
+    {% if include_redis %}
+    "REDIS_URL": "{{ redis_url | default('redis://localhost:6379') }}",
+    {% endif %}
+  }
+}

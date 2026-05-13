@@ -1,0 +1,208 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: {{ project_name }}-prod
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Base configuration
+bases:
+  - ../../base
+
+namespace: {{ project_name }}-prod
+
+# Patches for production environment
+patches:
+  # Patch for production replicas
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        replicas: 3
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+  # Patch for production resources
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        template:
+          spec:
+            containers:
+              - name: {{ project_name }}
+                resources:
+                  limits:
+                    cpu: 2000m
+                    memory: 2Gi
+                  requests:
+                    cpu: 1000m
+                    memory: 1Gi
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+  # Patch for production environment variables
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        template:
+          spec:
+            containers:
+              - name: {{ project_name }}
+                env:
+                  - name: APP_ENV
+                    value: "production"
+                  - name: LOG_LEVEL
+                    value: "warn"
+                  - name: DEBUG_MODE
+                    value: "false"
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+  # Patch for production security context
+  {% if enable_security_context %}
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        template:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              runAsGroup: 1000
+              fsGroup: 1000
+            containers:
+              - name: {{ project_name }}
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 1000
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop:
+                      - ALL
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+  {% endif %}
+
+# ConfigMap generator for production
+configMapGenerator:
+  - name: {{ project_name }}-prod-config
+    literals:
+      - APP_ENV=production
+      - LOG_LEVEL=warn
+      - DEBUG_MODE=false
+      - FEATURE_FLAGS=production-features
+
+# Secret generator for production
+secretGenerator:
+  - name: {{ project_name }}-prod-secrets
+    literals:
+      - PROD_SECRET_KEY=prod-secret-key-change-me
+
+# Common labels for production
+commonLabels:
+  environment: prod
+  app.kubernetes.io/environment: prod
+
+# Common annotations for production
+commonAnnotations:
+  config.kubernetes.io/environment: "production"
+
+# Images for production
+images:
+  - name: {{ app_image }}
+    newTag: {{ app_version }}
+
+# Replicas for production
+replicas:
+  - name: {{ project_name }}
+    count: 3
+
+# Resource limits for production
+resources:
+  - type: Deployment
+    name: {{ project_name }}
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+    requests:
+      cpu: 1000m
+      memory: 1Gi
+
+# Namespace configuration
+namespace: {{ project_name }}-prod
+
+# Generator options
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    environment: prod
+
+# Helm chart values for production
+helmCharts:
+- name: {{ project_name }}
+  releaseName: {{ project_name }}-prod
+  namespace: {{ project_name }}-prod
+  values:
+    replicaCount: 3
+    image:
+      tag: {{ app_version }}
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+    ingress:
+      enabled: true
+      hosts:
+        - host: {{ project_name }}.{{ ingress_domain }}
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: {{ project_name }}-prod-tls
+          hosts:
+            - {{ project_name }}.{{ ingress_domain }}
+    env:
+      - name: APP_ENV
+        value: "production"
+      - name: LOG_LEVEL
+        value: "warn"
+    monitoring:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+    autoscaling:
+      enabled: {{ 'true' if enable_autoscaling else 'false' }}
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 70
+    {% if enable_security_context %}
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: true
+    {% endif %}

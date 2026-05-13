@@ -1,0 +1,33 @@
+package {{package_slug}}
+
+// Version of the library
+const Version = "1.0.0"
+
+// New creates a new instance of the {{package_slug}} library
+func New() *Library {
+	return &Library{
+		name: "{{package_name}}",
+		version: Version,
+	}
+}
+
+// Library represents the main library structure
+type Library struct {
+	name    string
+	version string
+}
+
+// Name returns the library name
+func (l *Library) Name() string {
+	return l.name
+}
+
+// Version returns the library version
+func (l *Library) Version() string {
+	return l.version
+}
+
+// Hello returns a greeting message
+func (l *Library) Hello() string {
+	return "Hello from " + l.name + " v" + l.version
+}

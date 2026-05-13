@@ -1,0 +1,43 @@
+{
+  "name": "{{ project_name | default('csharp-cli') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet build",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet test",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet format --verify-no-changes",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet format",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "run": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "dotnet run",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

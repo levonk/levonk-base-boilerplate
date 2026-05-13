@@ -1,0 +1,14 @@
+{# Shared environment wiring for service containers.
+   Maps namespaced env variables based on _env_prefix (CATEGORY_SERVICE_SUB)
+   into the generic in-container variables used by images.
+#}
+      - PUID=${{ _env_prefix }}_PUID:-1000}
+      - PGID=${{ _env_prefix }}_PGID:-1000}
+      - TZ=${{ _env_prefix }}_TZ:-UTC}
+      - NODE_ENV=${{ _env_prefix }}_NODE_ENV:-production}
+      - SERVICE_NAME=${{ _env_prefix }}_SERVICE_NAME:-{{ _service_name_slug | default(_service_name) }}}
+      - SERVICE_PORT=${{ _env_prefix }}_SERVICE_PORT:-{{ _service_port }}}
+      - {{ _env_prefix }}_HOST_IP=${{ _env_prefix }}_HOST_IP:-0.0.0.0}
+      - {{ _env_prefix }}_HOST_PORT=${{ _env_prefix }}_HOST_PORT:-{{ _service_port }}}
+      - {{ _env_prefix }}_CONTAINER_IP=${{ _env_prefix }}_CONTAINER_IP:-0.0.0.0}
+      - {{ _env_prefix }}_CONTAINER_PORT=${{ _env_prefix }}_CONTAINER_PORT:-{{ _service_port }}}

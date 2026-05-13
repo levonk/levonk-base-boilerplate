@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies
+COPY pyproject.toml README.md ./
+RUN pip install poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --only main --no-interaction --no-ansi
+
+# Copy source
+COPY {{ project_slug }} ./{{ project_slug }}
+
+ENTRYPOINT ["python", "-m", "{{ project_slug }}"]
+CMD ["--help"]

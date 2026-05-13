@@ -1,0 +1,16 @@
+FROM bash:5.2
+
+WORKDIR /app
+
+# Add non-root user for execution
+RUN adduser -D appuser
+
+COPY {{ project_slug }}.sh /app/
+RUN chmod +x /app/{{ project_slug }}.sh
+
+USER appuser
+
+ENTRYPOINT ["/bin/bash", "/app/{{ project_slug }}.sh"]
+CMD ["--help"]
+
+{# vim: set ft=dockerfile: #}

@@ -1,0 +1,101 @@
+# Docker Test Template Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    echo "Docker Test template bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check Docker Test environment
+    @echo "🧪 Docker version:"
+    @docker --version
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v just || echo "just not found"
+    @echo ""
+    @echo "✅ Docker Test environment is ready!"
+
+# Development mode
+dev:
+    @just build
+    @just test
+
+# Build Docker image
+build:
+    docker build -t test-template .
+
+# Run tests
+test:
+    docker run --rm test-template pytest
+
+# Run tests in interactive mode
+test-interactive:
+    docker run -it --rm test-template /bin/bash
+
+# Clean up
+clean:
+    docker system prune -f
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ Docker Test template development environment ready!"
+
+# Health check
+health:
+    echo "✅ Docker Test template environment is ready"
+
+# Execute command in container
+exec command="/bin/bash":
+    docker run -it --rm test-template {{command}}
+
+# Lint Docker files
+lint:
+    hadolint Dockerfile
+
+# Type check
+typecheck:
+    echo "Type checking not applicable for Docker Test template"
+
+# Package for distribution
+package:
+    @just build
+    @just clean
+    mkdir -p dist
+    docker save test-template:latest > dist/test-template.tar
+
+# Quality checks
+quality:
+    @just lint
+    @just test
+    @just health
+
+# View logs
+logs:
+    docker logs -f $(docker ps -q --filter "name=test-template")

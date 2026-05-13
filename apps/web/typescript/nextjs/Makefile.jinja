@@ -1,0 +1,13 @@
+.PHONY: build up down
+
+COMPOSE_FILE ?= docker-compose.yml
+SERVICE_NAME ?= {{ package_name | replace(" ", "-") | lower }}
+
+build:
+	docker compose -f $(COMPOSE_FILE) build $(SERVICE_NAME)
+
+up:
+	docker compose -f $(COMPOSE_FILE) up $(SERVICE_NAME)
+
+down:
+	docker compose -f $(COMPOSE_FILE) down $(SERVICE_NAME)

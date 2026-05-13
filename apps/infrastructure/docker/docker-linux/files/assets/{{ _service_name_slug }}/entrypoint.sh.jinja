@@ -1,0 +1,65 @@
+#!/bin/bash
+# Entrypoint script for daemonless Nix containers
+# Uses service-specific directories to avoid path conflicts
+# See: /internal-docs/adr/adr-20260109001-nix-container-architecture.md
+
+set -euo pipefail
+
+# Service configuration
+SERVICE_NAME="{{ _service_name_slug }}"
+SERVICE_DIR="/${SERVICE_NAME}"
+FLAKE_DIR="${SERVICE_DIR}/assets/static/${SERVICE_NAME}"
+
+echo "🚀 Starting ${SERVICE_NAME} (daemonless Nix mode)"
+echo "   Service directory: ${SERVICE_DIR}"
+echo "   Flake directory: ${FLAKE_DIR}"
+
+# Create user if doesn't exist
+if ! id "${SERVICE_NAME}" >/dev/null 2>&1; then
+    echo "📝 Creating user: ${SERVICE_NAME}"
+    groupadd -g "${PGID:-1000}" "${SERVICE_NAME}"
+    useradd -u "${PUID:-1000}" -g "${SERVICE_NAME}" -s /bin/bash "${SERVICE_NAME}"
+fi
+
+# Ensure proper ownership
+chown -R "${SERVICE_NAME}:${SERVICE_NAME}" "${SERVICE_DIR}"
+
+{% if base_os == "nixpkgs" %}
+# Nix-specific setup
+echo "🔧 Setting up Nix environment"
+
+# Check if flake exists
+if [ ! -f "${FLAKE_DIR}/flake.nix" ]; then
+    echo "❌ Flake not found at ${FLAKE_DIR}/flake.nix"
+    exit 1
+fi
+
+# Verify flake is accessible
+echo "✅ Flake found: ${FLAKE_DIR}/flake.nix"
+
+# Note: Use 'nix develop ${FLAKE_DIR}#default' to activate environment
+# Dependencies are declared in the flake, not installed globally
+
+{% if _inherits_from_nix_sidecar %}
+# Inheritance setup (if extending nix-sidecar)
+echo "🔗 Inheriting from nix-sidecar"
+# The flake should include: nix-sidecar.url = "path:../nix-sidecar/assets/static/nix-sidecar"
+{% endif %}
+
+{% if _include_maintenance %}
+# Setup maintenance tasks (for sidecar-like services)
+echo "⏰ Setting up maintenance with supercronic"
+if [ -f "${FLAKE_DIR}/supercronic.crond" ]; then
+    # Start supercronic in background
+    supercronic "${FLAKE_DIR}/supercronic.crond" &
+    echo "✅ Supercronic started"
+else
+    echo "⚠️  No supercronic.crond found"
+fi
+{% endif %}
+{% endif %}
+
+echo "✅ Setup complete, starting service..."
+
+# Switch to service user
+exec gosu "${SERVICE_NAME}" "$@"

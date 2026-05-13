@@ -1,0 +1,28 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "Project name (kebab-case)"
+  default: "wrapper-test-project"
+
+docker_image:
+  type: str
+  help: "Docker base image"
+  default: "alpine:latest"
+
+docker_registry:
+  type: str
+  help: "Docker registry"
+  default: "local"
+
+build_context:
+  type: str
+  help: "Build context directory"
+  default: "."
+
+dockerfile_name:
+  type: str
+  help: "Name of the Dockerfile"
+  default: "Dockerfile"

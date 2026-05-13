@@ -1,0 +1,18 @@
+# Test runner image for the browser extension
+# Uses Playwright's official image with Chromium/Firefox/WebKit preinstalled.
+FROM mcr.microsoft.com/playwright:v1.48.0-jammy
+
+WORKDIR /workspace
+
+ENV NODE_ENV=development
+
+# Install dependencies first (leverages Docker layer caching)
+COPY package.json pnpm-lock.yaml* ./
+RUN corepack enable pnpm \
+  && pnpm install --frozen-lockfile
+
+# Copy the rest of the project
+COPY . .
+
+# By default, build the extension and run Playwright end-to-end tests.
+CMD ["pnpm", "test:e2e"]

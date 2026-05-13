@@ -1,0 +1,27 @@
+.PHONY: help bootstrap doctor build up run deploy debug down restart logs logs-follow health-check test lint lint-yaml lint-md lint-docker lint-iac clean clean-all shell status backup security-scan docker-scout trivy dockle runtime-scan audit ensure-tools
+.DEFAULT_GOAL := help
+
+{% include "_partials/makefile/common-vars.jinja" %}
+DOCKERFILE_PATH ?= docker/Dockerfile
+
+{% include "_partials/makefile/lint-vars.jinja" %}
+
+{% include "_partials/makefile/help.jinja" %}
+
+{% include "_partials/makefile/bootstrap.jinja" %}
+
+build: ## Build {{ _service_name | title }} Docker images (runtime + debug)
+	@echo "$(BLUE)Building {{ _service_name | title }} Docker images...$(NC)"
+	@$(DOCKER_COMPOSE) build
+	@$(DOCKER_COMPOSE) --profile debug build
+	@echo "$(GREEN)✓ Images built$(NC)"
+
+{% include "_partials/makefile/lifecycle.jinja" %}
+
+{% include "_partials/makefile/lint-standard.jinja" %}
+
+{% include "_partials/makefile/lint-docker-hadolint.jinja" %}
+
+{% include "_partials/makefile/security-scans.jinja" %}
+
+{% include "_partials/makefile/clean.jinja" %}

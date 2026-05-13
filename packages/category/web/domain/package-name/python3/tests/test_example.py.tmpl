@@ -1,0 +1,25 @@
+"""
+Example test file for {{category}}-{{domain}}-{{package_name}}
+
+Copyright (c) 2025 the person whose account is https://github.com/levonk.
+Licensed under the GNU AGPL-3.0 License.
+"""
+
+import pytest
+
+
+@pytest.mark.unit
+def test_example() -> None:
+    """Example test case."""
+    assert True
+
+
+@pytest.mark.unit
+def test_version_available() -> None:
+    """Test that package version is available."""
+    from {{category}}_{{domain}}_{{package_name}} import __version__
+
+    assert __version__ == "0.1.0"
+
+
+# vim: set ft=python:

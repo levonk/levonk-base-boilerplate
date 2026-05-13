@@ -1,0 +1,207 @@
+//! Main module for {{ crate_name }}
+//!
+//! This module contains the core functionality of the library.
+
+{% if include_async %}
+use std::future::Future;
+{% endif %}
+use thiserror::Error;
+
+/// Result type for this module
+pub type Result<T> = std::result::Result<T, {{ crate_name | capitalize | replace('_', '') }}Error>;
+
+/// Main error type for the {{ crate_name }} library
+#[derive(Error, Debug)]
+pub enum {{ crate_name | capitalize | replace('_', '') }}Error {
+    /// IO error occurred
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+
+    /// Parse error occurred
+    #[error("Parse error: {0}")]
+    Parse(String),
+
+    /// Validation error occurred
+    #[error("Validation error: {field} - {message}")]
+    Validation { field: String, message: String },
+
+    /// Configuration error occurred
+    #[error("Configuration error: {0}")]
+    Config(String),
+
+    /// Generic error
+    #[error("Generic error: {0}")]
+    Generic(String),
+}
+
+/// Main struct for {{ crate_name }}
+#[derive(Debug, Clone)]
+pub struct {{ crate_name | capitalize | replace('_', '') }} {
+    /// Internal state
+    state: String,
+}
+
+impl {{ crate_name | capitalize | replace('_', '') }} {
+    /// Create a new instance
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use {{ crate_name }}::{{ module_name }}::{{ crate_name | capitalize | replace('_', '') }};
+    ///
+    /// let instance = {{ crate_name | capitalize | replace('_', '') }}::new("initial_state");
+    /// ```
+    pub fn new(initial_state: impl Into<String>) -> Self {
+        Self {
+            state: initial_state.into(),
+        }
+    }
+
+    /// Get the current state
+    ///
+    /// # Returns
+    ///
+    /// A string slice containing the current state
+    pub fn state(&self) -> &str {
+        &self.state
+    }
+
+    /// Set a new state
+    ///
+    /// # Arguments
+    ///
+    /// * `new_state` - The new state to set
+    pub fn set_state(&mut self, new_state: impl Into<String>) {
+        self.state = new_state.into();
+    }
+
+{% if include_async %}
+    /// Process data asynchronously
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The data to process
+    ///
+    /// # Returns
+    ///
+    /// A future that resolves to the processed data
+    pub async fn process_async(&self, data: &str) -> Result<String> {
+        // Simulate async work
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let processed = format!("Processed: {}", data);
+        Ok(processed)
+    }
+{% endif %}
+
+    /// Process data synchronously
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The data to process
+    ///
+    /// # Returns
+    ///
+    /// The processed data
+    pub fn process(&self, data: &str) -> Result<String> {
+        let processed = format!("Processed: {}", data);
+        Ok(processed)
+    }
+
+    /// Validate input data
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The data to validate
+    ///
+    /// # Returns
+    ///
+    /// Ok(()) if valid, Err with validation error if invalid
+    pub fn validate(&self, data: &str) -> Result<()> {
+        if data.is_empty() {
+            return Err({{ crate_name | capitalize | replace('_', '') }}Error::Validation {
+                field: "data".to_string(),
+                message: "Data cannot be empty".to_string(),
+            });
+        }
+
+        if data.len() > 1000 {
+            return Err({{ crate_name | capitalize | replace('_', '') }}Error::Validation {
+                field: "data".to_string(),
+                message: "Data too long (max 1000 characters)".to_string(),
+            });
+        }
+
+        Ok(())
+    }
+}
+
+impl Default for {{ crate_name | capitalize | replace('_', '') }} {
+    fn default() -> Self {
+        Self::new("default")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_instance() {
+        let instance = {{ crate_name | capitalize | replace('_', '') }}::new("test_state");
+        assert_eq!(instance.state(), "test_state");
+    }
+
+    #[test]
+    fn test_set_state() {
+        let mut instance = {{ crate_name | capitalize | replace('_', '') }}::new("initial");
+        instance.set_state("new_state");
+        assert_eq!(instance.state(), "new_state");
+    }
+
+    #[test]
+    fn test_process() {
+        let instance = {{ crate_name | capitalize | replace('_', '') }}::new("test");
+        let result = instance.process("test_data");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Processed: test_data");
+    }
+
+    #[test]
+    fn test_validate_empty() {
+        let instance = {{ crate_name | capitalize | replace('_', '') }}::new("test");
+        let result = instance.validate("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_too_long() {
+        let instance = {{ crate_name | capitalize | replace('_', '') }}::new("test");
+        let long_data = "a".repeat(1001);
+        let result = instance.validate(&long_data);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_valid() {
+        let instance = {{ crate_name | capitalize | replace('_', '') }}::new("test");
+        let result = instance.validate("valid_data");
+        assert!(result.is_ok());
+    }
+
+{% if include_async %}
+    #[tokio::test]
+    async fn test_process_async() {
+        let instance = {{ crate_name | capitalize | replace('_', '') }}::new("test");
+        let result = instance.process_async("test_data").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Processed: test_data");
+    }
+{% endif %}
+
+    #[test]
+    fn test_default() {
+        let instance = {{ crate_name | capitalize | replace('_', '') }}::default();
+        assert_eq!(instance.state(), "default");
+    }
+}

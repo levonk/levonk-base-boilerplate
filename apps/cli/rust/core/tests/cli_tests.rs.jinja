@@ -1,0 +1,78 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
+
+#[test]
+fn test_help() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--help")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Usage:"));
+}
+
+#[test]
+fn test_version() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--version")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("{{ project_slug }}"));
+}
+
+#[test]
+fn test_usage() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--usage")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Usage:"));
+}
+
+#[test]
+fn test_quiet() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--quiet")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("ERROR").not()); // Quiet mode should suppress non-error output
+}
+
+#[test]
+fn test_verbose() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--verbose")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("DEBUG")); // Verbose mode should show DEBUG logs
+}
+
+#[test]
+fn test_nocolor() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--nocolor")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success();
+}
+
+#[test]
+fn test_no_args() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.assert()
+        .failure(); // Should fail as TTY stdin is empty
+}
+
+#[test]
+fn test_stdin() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("Processing content from stdin"));
+}

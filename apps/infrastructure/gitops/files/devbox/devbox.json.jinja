@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "name": "{{ project_name }}",
+  "description": "{{ project_description }}",
+  "shell": {
+    "init": [
+      "echo 'Welcome to {{ project_name }} development environment!'",
+      "echo 'Project: {{ project_name }}'",
+      "echo 'Description: {{ project_description }}'",
+      "echo 'Author: {{ author_name }} ({{ author_email }})'",
+      "echo 'Repository: {{ repo_url }}'"
+    ]
+  },
+  "packages": {
+    "kubernetes": {
+      "description": "Kubernetes CLI tools",
+      "version": "latest",
+      "systems": ["linux", "darwin"]
+    },
+    "helm": {
+      "description": "Helm package manager",
+      "version": "3.14.0",
+      "systems": ["linux", "darwin"]
+    },
+    "kubectl": {
+      "description": "Kubernetes command-line tool",
+      "version": "1.28.0",
+      "systems": ["linux", "darwin"]
+    },
+    "kustomize": {
+      "description": "Kubernetes configuration customization",
+      "version": "5.4.0",
+      "systems": ["linux", "darwin"]
+    },
+    "argocd-cli": {
+      "description": "ArgoCD CLI",
+      "version": "2.8.0",
+      "systems": ["linux", "darwin"]
+    },
+    "flux": {
+      "description": "Flux CLI",
+      "version": "2.2.0",
+      "systems": ["linux", "darwin"]
+    },
+    "yq": {
+      "description": "YAML processor",
+      "version": "4.44.2",
+      "systems": ["linux", "darwin"]
+    },
+    "jq": {
+      "description": "JSON processor",
+      "version": "1.7.1",
+      "systems": ["linux", "darwin"]
+    },
+    "just": {
+      "description": "Just command runner",
+      "version": "1.25.0",
+      "systems": ["linux", "darwin"]
+    },
+    "direnv": {
+      "description": "Directory environment variables",
+      "version": "2.32.0",
+      "systems": ["linux", "darwin"]
+    },
+    "pre-commit": {
+      "description": "Git hooks",
+      "version": "3.5.0",
+      "systems": ["linux", "darwin"]
+    },
+    "shellcheck": {
+      "description": "Shell script analysis",
+      "version": "0.9.0",
+      "systems": ["linux", "darwin"]
+    },
+    "hadolint": {
+      "description": "Dockerfile linter",
+      "version": "2.12.0",
+      "systems": ["linux", "darwin"]
+    },
+    "kube-score": {
+      "description": "Kubernetes best practice linter",
+      "version": "1.16.0",
+      "systems": ["linux", "darwin"]
+    },
+    "kubeval": {
+      "description": "Kubernetes YAML validator",
+      "version": "0.16.0",
+      "systems": ["linux", "darwin"]
+    },
+    "kubeconform": {
+      "description": "Kubernetes validation tool",
+      "version": "0.6.4",
+      "systems": ["linux", "darwin"]
+    },
+    "helm-unittest": {
+      "description": "Helm unit testing plugin",
+      "version": "0.3.0",
+      "systems": ["linux", "darwin"]
+    },
+    "python3": {
+      "description": "Python 3 for testing utilities",
+      "version": "3.11.0",
+      "systems": ["linux", "darwin"]
+    },
+    "pytest": {
+      "description": "Python testing framework",
+      "version": "7.4.0",
+      "systems": ["linux", "darwin"]
+    },
+    "pytest-cov": {
+      "description": "Pytest coverage plugin",
+      "version": "4.1.0",
+      "systems": ["linux", "darwin"]
+    },
+    "pytest-html": {
+      "description": "Pytest HTML report plugin",
+      "version": "3.2.0",
+      "systems": ["linux", "darwin"]
+    },
+    "pytest-json-report": {
+      "description": "Pytest JSON report plugin",
+      "version": "1.5.0",
+      "systems": ["linux", "darwin"]
+    },
+    "pytest-junit": {
+      "description": "Pytest JUnit XML report plugin",
+      "version": "1.13.0",
+      "systems": ["linux", "darwin"]
+    },
+    "coverage": {
+      "description": "Python coverage tool",
+      "version": "7.3.0",
+      "systems": ["linux", "darwin"]
+    },
+    "tox": {
+      "description": "Python testing tool",
+      "version": "4.11.0",
+      "systems": ["linux", "darwin"]
+    },
+    "black": {
+      "description": "Python code formatter",
+      "version": "23.7.0",
+      "systems": ["linux", "darwin"]
+    },
+    "isort": {
+      "description": "Python import sorter",
+      "version": "5.12.0",
+      "systems": ["linux", "darwin"]
+    },
+    "flake8": {
+      "description": "Python linter",
+      "version": "6.0.0",
+      "systems": ["linux", "darwin"]
+    },
+    "mypy": {
+      "description": "Python type checker",
+      "version": "1.5.0",
+      "systems": ["linux", "darwin"]
+    },
+    "bandit": {
+      "description": "Python security linter",
+      "version": "1.7.0",
+      "systems": ["linux", "darwin"]
+    },
+    "safety": {
+      "description": "Python dependency security scanner",
+      "version": "2.3.0",
+      "systems": ["linux", "darwin"]
+    }
+  },
+  "env": {
+    "PROJECT_NAME": "{{ project_name }}",
+    "PROJECT_SLUG": "{{ project_slug }}",
+    "PROJECT_DESCRIPTION": "{{ project_description }}",
+    "APP_NAME": "{{ app_name }}",
+    "APP_IMAGE": "{{ app_image }}",
+    "APP_VERSION": "{{ app_version }}",
+    "APP_PORT": "{{ app_port }}",
+    "CHART_NAME": "{{ chart_name }}",
+    "CHART_VERSION": "{{ chart_version }}",
+    "INGRESS_DOMAIN": "{{ ingress_domain }}",
+    "OCI_REGISTRY": "{{ oci_registry }}",
+    "GITOPS_TOOL": "{{ gitops_tool }}",
+    "AUTHOR_NAME": "{{ author_name }}",
+    "AUTHOR_EMAIL": "{{ author_email }}",
+    "REPO_URL": "{{ repo_url }}",
+    "LICENSE": "{{ license }}",
+    "KUBECONFIG": "${HOME}/.kube/config",
+    "KUBECONFIG_DIR": "${HOME}/.kube",
+    "HELM_CACHE_HOME": "${HOME}/.cache/helm",
+    "ARGOCD_OPTS": "--port-forward-namespace argocd",
+    "HELM_UNITTEST_LOG_LEVEL": "info",
+    "HELM_UNITTEST_TIMEOUT": "30",
+    "HELM_UNITTEST_PARALLEL": "4",
+    "PYTEST_ADDOPTS": "--strict-markers --strict-config",
+    "PYTEST_COVERAGE": "--cov=deploy/charts/{{ project_slug }}/tests --cov-report=html --cov-report=term-missing",
+    "PYTHONPATH": "${PWD}:${PYTHONPATH}"
+  },
+  "scripts": {
+    "setup": [
+      "echo 'Setting up development environment...'",
+      "echo 'Creating Kubernetes contexts...'",
+      "kubectl config use-context docker-desktop || kubectl config set-context docker-desktop --cluster=docker-desktop --user=docker-desktop",
+      "echo 'Adding Helm repositories...'",
+      "helm repo add stable https://charts.helm.sh/stable",
+      "helm repo add jetstack https://charts.jetstack.io/stable",
+      "helm repo update",
+      "echo 'Installing Helm unittest plugin...'",
+      "helm plugin install https://github.com/helm-unittest/helm-unittest || echo 'Helm unittest plugin already installed'",
+      "echo 'Installing ArgoCD CLI...' if command -v argocd >/dev/null 2>&1",
+      "echo 'Installing Flux CLI...' if command -v flux >/dev/null 2>&1",
+      "echo 'Setting up Python testing environment...'",
+      "pip install --upgrade pip",
+      "pip install pytest pytest-cov pytest-html pytest-json-report pytest-junit coverage tox black isort flake8 mypy bandit safety",
+      "echo 'Development environment setup complete!'"
+    ],
+    "validate": [
+      "echo 'Validating Kubernetes manifests...'",
+      "kubeval --strict deploy/apps/{{ project_slug }}/base/kustomization.yaml",
+      "kubeconform --strict deploy/apps/{{ project_slug }}/base/kustomization.yaml",
+      "kube-score score deploy/apps/{{ project_slug }}/base/kustomization.yaml",
+      "echo 'Validating Helm chart...'",
+      "helm lint deploy/charts/{{ project_slug }}/",
+      "echo 'Validating Helm unit tests...'",
+      "helm unittest deploy/charts/{{ project_slug }}/ --strict --dry-run",
+      "echo 'Validating Python test files...'",
+      "python -m pytest --collect-only deploy/charts/{{ project_slug }}/tests/ || echo 'No Python tests found'",
+      "echo 'Validation complete!'"
+    ],
+    "test": [
+      "echo 'Running tests...'",
+      "echo 'Testing Helm chart rendering...'",
+      "helm template {{ project_name }}-test deploy/charts/{{ project_slug }}/ --dry-run --validate",
+      "echo 'Testing Kustomize build...'",
+      "kustomize build deploy/apps/{{ project_slug }}/overlays/dev",
+      "echo 'Running Helm unit tests...'",
+      "helm unittest deploy/charts/{{ project_slug }}/ --strict",
+      "echo 'Running Python tests if available...'",
+      "python -m pytest deploy/charts/{{ project_slug }}/tests/ --verbose || echo 'No Python tests found'",
+      "echo 'Tests complete!'"
+    ],
+    "test-helm": [
+      "echo 'Running Helm unit tests only...'",
+      "helm unittest deploy/charts/{{ project_slug }}/ --strict --verbose"
+    ],
+    "test-python": [
+      "echo 'Running Python tests only...'",
+      "python -m pytest deploy/charts/{{ project_slug }}/tests/ --verbose --cov=deploy/charts/{{ project_slug }}/tests --cov-report=html --cov-report=term-missing || echo 'No Python tests found'"
+    ],
+    "test-coverage": [
+      "echo 'Generating test coverage reports...'",
+      "helm unittest deploy/charts/{{ project_slug }}/ --strict --coverage",
+      "python -m pytest deploy/charts/{{ project_slug }}/tests/ --cov=deploy/charts/{{ project_slug }}/tests --cov-report=html --cov-report=xml --cov-report=term-missing || echo 'No Python tests found'"
+    ],
+    "test-watch": [
+      "echo 'Running tests in watch mode...'",
+      "helm unittest deploy/charts/{{ project_slug }}/ --strict --watch"
+    ],
+    "test-update": [
+      "echo 'Updating test snapshots...'",
+      "helm unittest deploy/charts/{{ project_slug }}/ --strict --update-snapshots"
+    ],
+    "test-debug": [
+      "echo 'Running tests in debug mode...'",
+      "helm unittest deploy/charts/{{ project_slug }}/ --strict --verbose --debug"
+    ],
+    "test-performance": [
+      "echo 'Running performance tests...'",
+      "time helm unittest deploy/charts/{{ project_slug }}/ --strict"
+    ],
+    "test-report": [
+      "echo 'Generating test reports...'",
+      "helm unittest deploy/charts/{{ project_slug }}/ --strict --output-file test-report.json",
+      "python -m pytest deploy/charts/{{ project_slug }}/tests/ --junitxml=test-report.xml --html=test-report.html || echo 'No Python tests found'"
+    ],
+    "clean": [
+      "echo 'Cleaning up...'",
+      "kubectl delete namespace {{ project_name }}-dev --ignore-not-found=true",
+      "kubectl delete namespace {{ project_name }}-staging --ignore-not-found=true",
+      "kubectl delete namespace {{ project_name }}-prod --ignore-not-found=true",
+      "echo 'Cleaning up test artifacts...'",
+      "rm -f test-report.* coverage.* unittest-report.* .coverage",
+      "echo 'Cleanup complete!'"
+    ],
+    "deploy-dev": [
+      "echo 'Deploying to development environment...'",
+      "kubectl apply -k deploy/apps/{{ project_slug }}/overlays/dev",
+      "echo 'Development deployment complete!'"
+    ],
+    "deploy-staging": [
+      "echo 'Deploying to staging environment...'",
+      "kubectl apply -k deploy/apps/{{ project_slug }}/overlays/staging",
+      "echo 'Staging deployment complete!'"
+    ],
+    "deploy-prod": [
+      "echo 'Deploying to production environment...'",
+      "kubectl apply -k deploy/apps/{{ project_slug }}/overlays/prod",
+      "echo 'Production deployment complete!'"
+    ],
+    "status": [
+      "echo 'Checking deployment status...'",
+      "kubectl get pods -n {{ project_name }}-dev",
+      "kubectl get services -n {{ project_name }}-dev",
+      "kubectl get ingress -n {{ project_name }}-dev",
+      "echo 'Status check complete!'"
+    ],
+    "logs": [
+      "echo 'Fetching logs...'",
+      "kubectl logs -n {{ project_name }}-dev -l deployment={{ project_name }}",
+      "echo 'Logs complete!'"
+    ],
+    "port-forward": [
+      "echo 'Setting up port forward...'",
+      "kubectl port-forward -n {{ project_name }}-dev svc/{{ project_name }} {{ app_port }}:{{ app_port }}",
+      "echo 'Port forward complete!'"
+    ]
+  }
+}

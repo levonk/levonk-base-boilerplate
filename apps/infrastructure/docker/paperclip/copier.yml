@@ -1,0 +1,73 @@
+# Paperclip AI Orchestration Service Boilerplate
+# Generates a Docker container for paperclipai/paperclip
+# See: https://github.com/paperclipai/paperclip
+
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "Project name (kebab-case)"
+  default: "paperclip"
+
+service_name:
+  type: str
+  help: "Service name (used for container names)"
+  default: "paperclip"
+
+service_description:
+  type: str
+  help: "Brief description of the service"
+  default: "Open-source orchestration for zero-human companies"
+
+base_os:
+  type: str
+  choices:
+    - alpine
+    - debian
+  default: alpine
+  help: "Base OS for the container (alpine preferred for smaller size)"
+
+node_version:
+  type: str
+  help: "Node.js version (paperclip requires 20+)"
+  default: "20"
+
+pnpm_version:
+  type: str
+  help: "pnpm version (paperclip requires 9.15+)"
+  default: "9.15.0"
+
+service_port:
+  type: str
+  help: "Port for the Paperclip API server"
+  default: "3100"
+
+postgres_port:
+  type: str
+  help: "Port for PostgreSQL database"
+  default: "5432"
+
+postgres_version:
+  type: str
+  help: "PostgreSQL version"
+  default: "15"
+
+include_postgres:
+  type: bool
+  help: "Include PostgreSQL container in docker-compose"
+  default: true
+
+include_dev_tools:
+  type: bool
+  help: "Include development tools (curl, git, vim)"
+  default: false
+
+_templates:
+  README.md.jinja: README.md
+  Dockerfile.jinja: Dockerfile
+  docker-compose.yml.jinja: docker-compose.yml
+  .dockerignore.jinja: .dockerignore
+  .envrc.jinja: .envrc
+  .env.example.jinja: .env.example

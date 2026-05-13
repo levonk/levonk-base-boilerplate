@@ -1,0 +1,162 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: {{ project_name }}-staging
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Base configuration
+bases:
+  - ../../base
+
+namespace: {{ project_name }}-staging
+
+# Patches for staging environment
+patches:
+  # Patch for staging replicas
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        replicas: 2
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+  # Patch for staging resources
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        template:
+          spec:
+            containers:
+              - name: {{ project_name }}
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 1Gi
+                  requests:
+                    cpu: 500m
+                    memory: 512Mi
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+  # Patch for staging environment variables
+  - patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: {{ project_name }}
+      spec:
+        template:
+          spec:
+            containers:
+              - name: {{ project_name }}
+                env:
+                  - name: APP_ENV
+                    value: "staging"
+                  - name: LOG_LEVEL
+                    value: "info"
+                  - name: DEBUG_MODE
+                    value: "false"
+    target:
+      kind: Deployment
+      name: {{ project_name }}
+
+# ConfigMap generator for staging
+configMapGenerator:
+  - name: {{ project_name }}-staging-config
+    literals:
+      - APP_ENV=staging
+      - LOG_LEVEL=info
+      - DEBUG_MODE=false
+      - FEATURE_FLAGS=staging-features
+
+# Secret generator for staging
+secretGenerator:
+  - name: {{ project_name }}-staging-secrets
+    literals:
+      - STAGING_SECRET_KEY=staging-secret-key-change-me
+
+# Common labels for staging
+commonLabels:
+  environment: staging
+  app.kubernetes.io/environment: staging
+
+# Common annotations for staging
+commonAnnotations:
+  config.kubernetes.io/environment: "staging"
+
+# Images for staging
+images:
+  - name: {{ app_image }}
+    newTag: {{ app_version }}-staging
+
+# Replicas for staging
+replicas:
+  - name: {{ project_name }}
+    count: 2
+
+# Resource limits for staging
+resources:
+  - type: Deployment
+    name: {{ project_name }}
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+# Namespace configuration
+namespace: {{ project_name }}-staging
+
+# Generator options
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    environment: staging
+
+# Helm chart values for staging
+helmCharts:
+- name: {{ project_name }}
+  releaseName: {{ project_name }}-staging
+  namespace: {{ project_name }}-staging
+  values:
+    replicaCount: 2
+    image:
+      tag: {{ app_version }}-staging
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+    ingress:
+      enabled: true
+      hosts:
+        - host: {{ project_name }}-staging.{{ ingress_domain }}
+          paths:
+            - path: /
+              pathType: Prefix
+      tls:
+        - secretName: {{ project_name }}-staging-tls
+          hosts:
+            - {{ project_name }}-staging.{{ ingress_domain }}
+    env:
+      - name: APP_ENV
+        value: "staging"
+      - name: LOG_LEVEL
+        value: "info"
+    monitoring:
+      enabled: true
+      serviceMonitor:
+        enabled: true

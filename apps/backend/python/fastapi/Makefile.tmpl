@@ -1,0 +1,38 @@
+.PHONY: help dev test lint format typecheck build up
+
+COMPOSE_FILE ?= docker-compose.yml
+SERVICE_NAME ?= {{ service_name | replace(" ", "-") | lower }}
+
+help:
+	@echo "Available commands:"
+	@echo "  make dev        - Run FastAPI app with uvicorn (reload)"
+	@echo "  make test       - Run pytest tests"
+	@echo "  make lint       - Run Ruff and mypy"
+	@echo "  make format     - Run Black, isort, and Ruff autofix"
+	@echo "  make typecheck  - Run mypy type checker"
+	@echo "  make build      - Build Docker image via docker-compose"
+	@echo "  make up         - Run service via docker-compose"
+
+dev:
+	uvicorn app.main:app --reload --host 0.0.0.0 --port {{ port }}
+
+test:
+	pytest
+
+lint:
+	ruff check app tests
+	mypy app
+
+format:
+	black app tests
+	isort app tests
+	ruff check --fix app tests
+
+typecheck:
+	mypy app
+
+build:
+	docker compose -f $(COMPOSE_FILE) build $(SERVICE_NAME)
+
+up:
+	docker compose -f $(COMPOSE_FILE) up $(SERVICE_NAME)

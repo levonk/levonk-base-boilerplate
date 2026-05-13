@@ -1,0 +1,109 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: {{ project_name }}-prod-cluster
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+namespace: {{ project_name }}-prod
+
+resources:
+  # Add cluster-specific resources
+  # - namespace.yaml
+  # - network-policies.yaml
+  # - resource-quotas.yaml
+  # - monitoring.yaml
+  # - security-policies.yaml
+  # - backup-policies.yaml
+
+# Common labels for production cluster
+commonLabels:
+  environment: prod
+  cluster: prod
+  app.kubernetes.io/environment: prod
+
+# Common annotations for production cluster
+commonAnnotations:
+  config.kubernetes.io/environment: "production"
+  config.kubernetes.io/cluster: "prod"
+
+# Cluster-specific configurations
+patchesStrategicMerge:
+  # Add cluster-specific patches
+  # - resource-quotas-patch.yaml
+  # - network-policies-patch.yaml
+  # - monitoring-patch.yaml
+  # - security-policies-patch.yaml
+  # - backup-policies-patch.yaml
+
+# JSON 6902 patches for cluster-specific changes
+patchesJson6902:
+  # Add cluster-specific JSON patches
+  # - patch-with-json6902.yaml
+
+# Generators for cluster-specific resources
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    environment: prod
+    cluster: prod
+
+# ConfigMaps for cluster configuration
+configMapGenerator:
+  - name: {{ project_name }}-prod-cluster-config
+    literals:
+      - CLUSTER_NAME=prod
+      - CLUSTER_TYPE=production
+      - CLUSTER_REGION=us-west-2
+      - CLUSTER_VERSION=1.28.0
+      - CLUSTER_PROVIDER=eks
+      - CLUSTER_MONITORING=true
+      - CLUSTER_SECURITY=true
+      - CLUSTER_BACKUP=true
+
+# Secrets for cluster configuration
+secretGenerator:
+  - name: {{ project_name }}-prod-cluster-secrets
+    literals:
+      - CLUSTER_SECRET_KEY=prod-cluster-secret-change-me
+
+# Namespace configuration
+namespace: {{ project_name }}-prod
+
+# Resources for production cluster
+resources:
+  # Add cluster-specific resources here
+  # - namespace.yaml
+  # - resource-quotas.yaml
+  # - network-policies.yaml
+  # - monitoring.yaml
+  # - security-policies.yaml
+  # - backup-policies.yaml
+
+# Patches for cluster-specific configurations
+patches:
+  # Add cluster-specific patches here
+  # - patch-resource-quotas.yaml
+  # - patch-network-policies.yaml
+  # - patch-monitoring.yaml
+  # - patch-security-policies.yaml
+  # - patch-backup-policies.yaml
+
+# Replacement configurations
+replacements:
+  # Add cluster-specific replacements here
+  # - replace-cluster-name.yaml
+
+# Helm charts for cluster configuration
+helmCharts:
+  # Add cluster-specific Helm charts here
+  # - name: cluster-config
+  #   releaseName: {{ project_name }}-prod-cluster
+  #   namespace: {{ project_name }}-prod
+  #   values:
+  #     clusterName: prod
+  #     clusterType: production
+  #     monitoring: true
+  #     security: true
+  #     backup: true

@@ -1,0 +1,287 @@
+
+### Testing Commands
+
+```bash
+# Run all tests
+just test
+
+# Run Helm unit tests
+just helm-unittest
+
+# Run tests with coverage
+just test-coverage
+
+# Run tests in watch mode
+just test-watch
+
+# Update test snapshots
+just test-update
+
+# Debug tests
+just debug-tests
+```
+
+### Helm Unit Testing
+
+The boilerplate includes comprehensive Helm unit testing using the `helm-unittest` plugin:
+
+- **Test Coverage**: All chart resources and features
+- **Test Suites**: Deployment, Service, Ingress, ConfigMap, Secret, HPA, ServiceAccount
+- **Test Assertions**: Resource validation, value checking, edge cases
+- **Test Reports**: Coverage reports, HTML reports, JUnit XML reports
+- **Test Development**: Watch mode, debug mode, performance testing
+
+#### Test Structure
+
+```
+deploy/charts/{{ project_slug }}/tests/
+├── deployment_test.yaml      # Deployment resource tests
+├── service_test.yaml         # Service resource tests
+├── ingress_test.yaml         # Ingress resource tests
+├── configmap_test.yaml       # ConfigMap resource tests
+├── secret_test.yaml          # Secret resource tests
+├── hpa_test.yaml             # HPA resource tests
+├── serviceaccount_test.yaml  # ServiceAccount resource tests
+└── _helpers_test.yaml        # Template helper tests
+```
+
+#### Running Tests
+
+```bash
+# Run all Helm unit tests
+just helm-unittest
+
+# Run tests with verbose output
+just helm-unittest-verbose
+
+# Run tests in watch mode
+just helm-unittest-watch
+
+# Run specific test suite
+just helm-unittest-deployment
+just helm-unittest-service
+just helm-unittest-ingress
+just helm-unittest-configmap
+just helm-unittest-secret
+just helm-unittest-hpa
+just helm-unittest-serviceaccount
+just helm-unittest-helpers
+
+# Run tests with coverage
+just helm-unittest-coverage
+
+# Update test snapshots
+just helm-unittest-update
+
+# Debug tests
+just debug-tests
+```
+
+#### Test Development
+
+```bash
+# Run tests in development mode
+just test-dev
+
+# Run tests with watch mode
+just test-watch
+
+# Run specific test file
+just helm-unittest-specific
+
+# Debug specific test
+just debug-specific-test
+```
+
+#### Test Coverage
+
+```bash
+# Generate coverage report
+just test-coverage
+
+# Generate HTML coverage report
+just test-coverage-html
+```
+
+#### Test Reports
+
+```bash
+# Generate test reports
+just test-report
+
+# Generate HTML test report
+just test-report-html
+
+# Generate JUnit XML report
+just test-report-junit
+```
+
+#### Test Validation
+
+```bash
+# Validate test structure
+just validate-test-structure
+
+# Validate tests without running
+just validate-tests
+```
+
+#### Test Performance
+
+```bash
+# Run performance tests
+just test-performance
+
+# Run performance tests with verbose output
+just test-performance-verbose
+```
+
+#### Test Integration
+
+```bash
+# Run integration tests
+just test-integration
+
+# Run integration tests with verbose output
+just test-integration-verbose
+```
+
+#### Test Environment Variables
+
+The following environment variables control test behavior:
+
+- `HELM_UNITTEST_LOG_LEVEL`: Log level for helm-unittest (default: info)
+- `HELM_UNITTEST_TIMEOUT`: Test timeout in seconds (default: 30)
+- `HELM_UNITTEST_PARALLEL`: Number of parallel tests (default: 4)
+- `PYTEST_ADDOPTS`: Additional pytest options
+- `PYTEST_COVERAGE`: Coverage options for pytest
+- `PYTHONPATH`: Python path for test modules
+
+#### Test Configuration
+
+Tests are configured in the test files using the helm-unittest syntax:
+
+```yaml
+suite: deployment test
+templates:
+  - deployment.yaml
+tests:
+  - it: should create deployment
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+```
+
+#### Test Assertions
+
+Common assertions used in tests:
+
+- `isKind`: Check resource kind
+- `equal`: Check exact value match
+- `isNotEmpty`: Check value is not empty
+- `contains`: Check value contains substring
+- `matchRegex`: Check value matches regex pattern
+- `notContains`: Check value does not contain substring
+- `notEqual`: Check value does not match
+
+#### Test Data
+
+Tests use various test data and scenarios:
+
+- **Default Values**: Tests with default chart values
+- **Custom Values**: Tests with custom value overrides
+- **Edge Cases**: Tests with edge case scenarios
+- **Error Cases**: Tests for error handling
+- **Feature Flags**: Tests for optional features
+
+#### Test Best Practices
+
+1. **Test Naming**: Use descriptive test names
+2. **Test Organization**: Group related tests in suites
+3. **Test Coverage**: Test all chart resources and features
+4. **Test Data**: Use realistic test data
+5. **Test Assertions**: Use appropriate assertions
+6. **Test Maintenance**: Keep tests up to date with chart changes
+
+#### Test Troubleshooting
+
+Common test issues and solutions:
+
+1. **Test Failures**: Check test assertions and expected values
+2. **Template Errors**: Check template syntax and helper functions
+3. **Value Errors**: Check value overrides and defaults
+4. **Path Errors**: Check resource paths and field names
+5. **Assertion Errors**: Check assertion syntax and parameters
+
+#### Test Examples
+
+Example test for deployment resource:
+
+```yaml
+suite: deployment test
+templates:
+  - deployment.yaml
+tests:
+  - it: should create deployment
+    asserts:
+      - isKind:
+          of: Deployment
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.replicas
+          value: 1
+```
+
+Example test for service resource:
+
+```yaml
+suite: service test
+templates:
+  - service.yaml
+tests:
+  - it: should create service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.type
+          value: ClusterIP
+```
+
+#### Test Integration with CI/CD
+
+Tests can be integrated into CI/CD pipelines:
+
+```yaml
+# GitHub Actions example
+- name: Run Helm Unit Tests
+  run: |
+    just helm-unittest
+    just test-coverage
+
+# GitLab CI example
+test:
+  script:
+    - just helm-unittest
+    - just test-coverage
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+```
+
+#### Test Documentation
+
+Test documentation should include:
+
+- Test purpose and scope
+- Test scenarios and cases
+- Test data and fixtures
+- Test assertions and expectations
+- Test maintenance guidelines
+

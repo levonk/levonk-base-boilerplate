@@ -1,0 +1,39 @@
+project_name:
+  type: str
+  help: What is the project name?
+  default: "my-cli-tool"
+
+project_slug:
+  type: str
+  help: What is the project slug? (e.g. my-tool)
+  default: "{{ project_name | lower | replace(' ', '-') }}"
+
+description:
+  type: str
+  help: Short description of the project
+  default: "A CLI tool"
+
+rust_log_level:
+  type: str
+  help: Rust log level for development
+  default: "info"
+
+rust_backtrace:
+  type: str
+  help: Rust backtrace setting for development
+  default: "1"
+
+include_openssl:
+  type: bool
+  help: Include OpenSSL for TLS support?
+  default: false
+
+include_postgres:
+  type: bool
+  help: Include PostgreSQL support?
+  default: false
+
+include_sqlite:
+  type: bool
+  help: Include SQLite support?
+  default: false

@@ -1,0 +1,40 @@
+{{- if .Values.configMaps -}}
+{{- range $name, $config := .Values.configMaps }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "{{ chart_name }}.fullname" . }}-{{ $name }}
+  labels:
+    {{- include "{{ chart_name }}.labels" . | nindent 4 }}
+data:
+  {{- toYaml $config.data | nindent 2 }}
+{{- end }}
+{{- end }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "{{ chart_name }}.fullname" . }}-config
+  labels:
+    {{- include "{{ chart_name }}.labels" . | nindent 4 }}
+data:
+  app_name: "{{ .Chart.Name }}"
+  app_version: "{{ .Chart.AppVersion }}"
+  chart_version: "{{ .Chart.Version }}"
+  {{- if .Values.logging.enabled }}
+  log_level: "{{ .Values.logging.level }}"
+  log_format: "{{ .Values.logging.format }}"
+  {{- end }}
+  {{- if .Values.tracing.enabled }}
+  tracing_enabled: "true"
+  jaeger_service: "{{ .Values.tracing.jaeger.service }}"
+  {{- end }}
+  {{- if .Values.database.enabled }}
+  database_type: "{{ .Values.database.type }}"
+  database_host: "{{ .Values.database.host }}"
+  database_port: "{{ .Values.database.port }}"
+  database_name: "{{ .Values.database.name }}"
+  database_ssl_mode: "{{ .Values.database.sslMode }}"
+  {{- end }}

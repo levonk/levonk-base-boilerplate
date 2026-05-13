@@ -1,0 +1,88 @@
+# @{{category}}/{{domain}}-{{package_name}}
+
+> {{package_description}}
+
+## ✨ Features
+
+- Feature 1
+- Feature 2
+- Feature 3
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Bash 4.0+
+- Linux/macOS environment
+
+## Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd {{package_name}}
+
+# Make the script executable
+chmod +x src/main.sh
+
+# Optional: Add to your PATH
+ln -s "$(pwd)/src/main.sh" /usr/local/bin/{{package_name}}
+```
+
+## Usage
+
+```bash
+# Run the script
+./src/main.sh
+
+# Show help
+./src/main.sh --help
+
+# Show version
+./src/main.sh --version
+```
+
+## Development
+
+### Running Tests
+
+{% if include_tests %}
+```bash
+# Run all tests
+bats tests/
+
+# Run specific test
+bats tests/test_main.bats
+
+# Run tests with verbose output
+bats --verbose tests/
+```
+{% endif %}
+
+### Code Style
+
+This project follows shell scripting best practices:
+
+- Use `set -euo pipefail` for error handling
+- Use functions for modularity
+- Add comments for complex logic
+- Follow naming conventions (snake_case for variables, kebab-case for files)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the {{license}} License - see the [LICENSE](LICENSE) file for details.
+
+## References
+
+- [Bash Style Guide](https://google.github.io/styleguide/shellguide.html)
+- [Bash Best Practices](https://github.com/koalaman/shellcheck/wiki/Practices)
+
+<!-- vim: set ft=markdown: -->

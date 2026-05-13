@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": ["bash", "shellcheck", "shfmt", "bats", "coreutils", "just"],
+  "shell": {
+    "init_hook": [
+      "echo '🐚 Bash environment initialized'",
+      "echo '📦 Project: {{ package_name | default('bash-package') }}'",
+      "echo '🛠️  Use: just test && just lint'"
+    ],
+    "scripts": {
+      "bootstrap": "just bootstrap-internal",
+      "doctor": "just doctor-internal",
+      "clean": "just clean-internal",
+      "build": "just build-internal",
+      "test": "just test-internal",
+      "lint": "just lint-internal",
+      "typecheck": "just typecheck-internal",
+      "dev": "just dev-internal"
+    }
+  },
+  "env": {
+    "SHELL": "/bin/bash",
+    "BASH_VERSION": "{{ bash_version | default('5.0') }}",
+    "TEST_DIR": "tests/",
+    "PACKAGE_NAME": "{{ package_name | default('bash-package') }}"
+  }
+}

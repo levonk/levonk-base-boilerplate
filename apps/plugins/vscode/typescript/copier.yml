@@ -1,0 +1,42 @@
+# Template variables
+_subdirectory: "template"
+
+extension_name:
+  type: str
+  help: "The human-readable name of the extension"
+  default: "VSCode Recents"
+
+extension_id:
+  type: str
+  help: "The kebab-case ID"
+  default: "vscode-recents"
+  validator: "^[a-z0-9-]+$"
+
+publisher:
+  type: str
+  help: "Your publisher name (for marketplace)"
+
+description:
+  type: str
+  default: "Advanced recent files tracker"
+  help: "Description"
+
+author_name:
+  type: str
+  help: "Author Name"
+
+author_email:
+  type: str
+  help: "Author Email"
+
+repository_url:
+  type: str
+  help: "Repository URL"
+
+# File exclusions
+_exclude:
+  - "node_modules"
+  - "out"
+  - "dist"
+  - ".vscode-test"
+  - "*.log"

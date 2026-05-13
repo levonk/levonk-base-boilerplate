@@ -1,0 +1,16 @@
+    "lint": {
+      "executor": "@nxlv/python:run",
+      "options": {
+        "command": "ruff check .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "format": {
+      "executor": "@nxlv/python:run",
+      "options": {
+        "command": "ruff format .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },

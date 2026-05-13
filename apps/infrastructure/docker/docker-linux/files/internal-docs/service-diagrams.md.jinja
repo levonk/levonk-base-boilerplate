@@ -1,0 +1,96 @@
+# {{ _service_name | title }} Service Diagram Pack
+
+⭐ **Purpose**
+
+Illustrate the default control flow for the generated {{ _service_name }} stack so the service owner can adapt it once custom dependencies or sidecars are added.
+
+☑️ **Mermaid Flow**
+
+```mermaid
+flowchart LR
+    Client["Client (user or upstream)"]
+{% if _use_traefik %}
+    Proxy["Traefik reverse proxy"]
+{% endif %}
+{% if _include_ui %}
+    UI["{{ _service_name }}-ui (frontend)"]
+{% endif %}
+    Service["{{ _service_name }} (backend)"]
+    Dependency["Downstream dependency"]
+    Health["Health endpoint {{ _service_health_endpoint }}"]
+    Observability[(Observability stack)]
+{% if _enable_monitoring %}
+    Metrics["Metrics collector (/metrics)"]
+{% endif %}
+
+{% if _use_traefik and _include_ui %}
+    Client -->|HTTPS| Proxy
+    Proxy --> UI
+    UI --> Service
+{% elif _use_traefik %}
+    Client -->|HTTPS| Proxy
+    Proxy --> Service
+{% elif _include_ui %}
+    Client --> UI
+    UI --> Service
+{% else %}
+    Client --> Service
+{% endif %}
+    Service --> Dependency
+    Service --> Health
+    Service --> Observability
+{% if _enable_monitoring %}
+    Service -.-> Metrics
+    Metrics -.-> Observability
+{% endif %}
+```
+
+☑️ **Mermaid Sequence**
+
+```mermaid
+sequenceDiagram
+    participant Client as Client
+{% if _use_traefik %}
+    participant Proxy as Traefik
+{% endif %}
+{% if _include_ui %}
+    participant UI as {{ _service_name }}-ui
+{% endif %}
+    participant Service as {{ _service_name }}
+    participant Dependency as Downstream dependency
+    participant Observability as Observability pipeline
+{% if _enable_monitoring %}
+    participant Metrics as Metrics collector
+{% endif %}
+
+{% if _use_traefik and _include_ui %}
+    Client->>Proxy: HTTPS request for UI
+    Proxy->>UI: Forward request
+    UI-->>Client: Rendered view
+    UI->>Proxy: API call (/api/...)
+    Proxy->>Service: Forward API call
+{% elif _use_traefik %}
+    Client->>Proxy: HTTPS request
+    Proxy->>Service: Routed request
+{% elif _include_ui %}
+    Client->>UI: HTTP request
+    UI->>Service: API call
+{% else %}
+    Client->>Service: Request
+{% endif %}
+    Service->>Dependency: Query/command
+    Dependency-->>Service: Result
+    Service-->>Client: Response
+    Service--)Observability: Log/trace event
+{% if _enable_monitoring %}
+    Metrics->>Service: Scrape /metrics
+    Service-->>Metrics: Metrics data
+{% endif %}
+```
+
+✅ **Implementation Notes**
+
+- Replace the `Downstream dependency` placeholder with real integrations such as databases, queues, or external APIs.
+- Extend the diagrams when adding sidecars (migrations, workers, cron jobs) so the operational runbooks stay accurate.
+- Ensure docker-compose overrides or k8s manifests remain in sync with this documentation when topologies change.
+- Export finalized diagrams as SVG/PNG (`mmdc`) to embed in higher-level design docs or dashboards.

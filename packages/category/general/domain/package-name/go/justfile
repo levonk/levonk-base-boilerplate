@@ -1,0 +1,291 @@
+# Justfile for {{ package_name | default('go-package') }} Go Package
+
+# Default target
+default: dev
+
+# Internal targets (prefixed with - to avoid showing in help)
+-bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Bootstrapping {{ package_name | default('go-package') }}..."
+    
+    # Download dependencies
+    go mod download
+    go mod tidy
+    
+    # Ensure bin directory exists
+    mkdir -p bin
+    
+    echo "✅ Bootstrap complete"
+
+-doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Running health checks for {{ package_name | default('go-package') }}..."
+    
+    # Check required tools
+    echo "Checking tools:"
+    command -v go >/dev/null 2>&1 && echo "✅ go" || echo "❌ go missing"
+    command -v git >/dev/null 2>&1 && echo "✅ git" || echo "❌ git missing"
+    command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
+    
+    # Check Go version
+    if command -v go >/dev/null 2>&1; then
+        echo "Go version: $(go version)"
+    fi
+    
+    # Check project structure
+    echo "Checking structure:"
+    test -f go.mod && echo "✅ go.mod" || echo "❌ go.mod missing"
+    test -f go.sum && echo "✅ go.sum" || echo "⚠️  go.sum missing (will be created)"
+    test -d cmd && echo "✅ cmd directory" || echo "⚠️  cmd directory missing"
+    test -d pkg && echo "✅ pkg directory" || echo "⚠️  pkg directory missing"
+    test -d internal && echo "✅ internal directory" || echo "⚠️  internal directory missing"
+    
+    echo "🏁 Doctor complete"
+
+-clean-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧹 Cleaning {{ package_name | default('go-package') }}..."
+    
+    # Remove build artifacts
+    rm -rf bin/
+    rm -f *.exe
+    rm -f *.test
+    rm -f *.prof
+    
+    # Clean cache
+    go clean -cache
+    go clean -testcache
+    
+    echo "✅ Clean complete"
+
+-build-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Building {{ package_name | default('go-package') }}..."
+    
+    # Ensure bin directory exists
+    mkdir -p bin
+    
+    # Build the main application
+    if [ -f "main.go" ]; then
+        go build -o bin/{{ package_slug | default('app') }} main.go
+    elif [ -d "cmd" ]; then
+        # Build all commands in cmd directory
+        for cmd in cmd/*; do
+            if [ -d "$cmd" ]; then
+                cmd_name=$(basename "$cmd")
+                echo "Building $cmd_name..."
+                go build -o bin/"$cmd_name" "./cmd/$cmd_name"
+            fi
+        done
+    else
+        echo "⚠️  No main.go or cmd directory found"
+    fi
+    
+    echo "✅ Build complete"
+
+-dev-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting development environment for {{ package_name | default('go-package') }}..."
+    
+    # Watch for changes and run hot reload
+    echo "👀 Watching for changes... (Ctrl+C to stop)"
+    echo "🛠️  Available commands:"
+    echo "   just test    - Run tests"
+    echo "   just lint    - Run linting"
+    echo "   just build   - Build application"
+    echo "   just run     - Run application"
+    
+    # Simple watch loop
+    while true; do
+        sleep 5
+        # Check if any Go files changed
+        if find . -name "*.go" -newer /tmp/last-check 2>/dev/null | grep -q .; then
+            touch /tmp/last-check
+            echo "🔄 Go files changed, consider rebuilding"
+        fi
+    done
+
+-test-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing {{ package_name | default('go-package') }}..."
+    
+    # Run tests with coverage
+    go test -v -cover ./...
+    
+    echo "✅ Tests complete"
+
+-lint-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Linting {{ package_name | default('go-package') }}..."
+    
+    # Run golangci-lint if available
+    if command -v golangci-lint >/dev/null 2>&1; then
+        golangci-lint run
+    else
+        echo "⚠️  golangci-lint not available, running basic checks..."
+        # Basic go vet and fmt checks
+        go vet ./...
+        go fmt ./...
+    fi
+    
+    echo "✅ Linting complete"
+
+-typecheck-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Type checking {{ package_name | default('go-package') }}..."
+    
+    # Run type checking
+    go vet ./...
+    
+    echo "✅ Type checking complete"
+
+# Public targets (user-facing)
+bootstrap: bootstrap-internal
+doctor: doctor-internal
+clean: clean-internal
+build: build-internal
+dev: dev-internal
+test: test-internal
+lint: lint-internal
+typecheck: typecheck-internal
+
+# Additional Go-specific targets
+run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Running {{ package_name | default('go-package') }}..."
+    
+    # Run the main application
+    if [ -f "bin/{{ package_slug | default('app') }}" ]; then
+        ./bin/{{ package_slug | default('app') }}
+    elif [ -f "main.go" ]; then
+        go run main.go
+    elif [ -d "cmd" ]; then
+        # Run the first command found
+        for cmd in cmd/*; do
+            if [ -d "$cmd" ]; then
+                cmd_name=$(basename "$cmd")
+                echo "Running $cmd_name..."
+                go run "./cmd/$cmd_name"
+                break
+            fi
+        done
+    else
+        echo "❌ No executable found"
+        exit 1
+    fi
+
+test-coverage:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📊 Running tests with coverage for {{ package_name | default('go-package') }}..."
+    
+    # Create coverage directory
+    mkdir -p coverage
+    
+    # Run tests with coverage
+    go test -cover -coverprofile=coverage/coverage.out ./...
+    
+    # Generate HTML coverage report
+    if command -v go >/dev/null 2>&1; then
+        go tool cover -html=coverage/coverage.out -o coverage/coverage.html
+        echo "📊 Coverage report generated: coverage/coverage.html"
+    fi
+    
+    echo "✅ Coverage complete"
+
+benchmark:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "⚡ Running benchmarks for {{ package_name | default('go-package') }}..."
+    
+    # Run benchmarks
+    go test -bench=. -benchmem ./...
+    
+    echo "✅ Benchmarks complete"
+
+mod-tidy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧹 Tidying Go modules..."
+    
+    go mod tidy
+    
+    echo "✅ Modules tidied"
+
+mod-download:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📥 Downloading Go modules..."
+    
+    go mod download
+    
+    echo "✅ Modules downloaded"
+
+mod-verify:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Verifying Go modules..."
+    
+    go mod verify
+    
+    echo "✅ Modules verified"
+
+generate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔧 Generating Go code..."
+    
+    # Run go generate
+    go generate ./...
+    
+    echo "✅ Code generation complete"
+
+validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "✅ Validating {{ package_name | default('go-package') }}..."
+    
+    # Run all validation checks
+    just typecheck
+    just lint
+    just test
+    
+    echo "✅ Validation complete"
+
+install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing {{ package_name | default('go-package') }}..."
+    
+    # Install the binary
+    if [ -f "bin/{{ package_slug | default('app') }}" ]; then
+        cp bin/{{ package_slug | default('app') }} ~/.local/bin/
+        echo "✅ Installed to ~/.local/bin/"
+    else
+        echo "❌ No binary found. Run 'just build' first."
+        exit 1
+    fi
+
+uninstall:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🗑️  Uninstalling {{ package_name | default('go-package') }}..."
+    
+    # Remove the binary
+    if [ -f ~/.local/bin/{{ package_slug | default('app') }} ]; then
+        rm -f ~/.local/bin/{{ package_slug | default('app') }}
+        echo "🗑️  Removed from ~/.local/bin/"
+    else
+        echo "⚠️  Binary not found in ~/.local/bin/"
+    fi
+    
+    echo "✅ Uninstallation complete"

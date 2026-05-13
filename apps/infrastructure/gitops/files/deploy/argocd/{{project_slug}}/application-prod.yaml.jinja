@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ project_name }}-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: {{ project_name }}
+    app.kubernetes.io/component: {{ project_name }}
+    app.kubernetes.io/part-of: {{ project_name }}
+    environment: prod
+  annotations:
+    argocd.argoproj.io/sync-options: CreateNamespace=true
+    argocd.argoproj.io/compare-options: IgnoreExtraneousLabels
+    argocd.argoproj.io/sync-wave: "forward"
+spec:
+  project: default
+  source:
+    repoURL: {{ repo_url }}
+    targetRevision: HEAD
+    path: deploy/apps/{{ project_slug }}/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ project_name }}-prod
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /spec/minReplicas
+        - /spec/maxReplicas
+  retry:
+    limit: 3
+    backoff:
+      duration: 10s
+      factor: 2
+      maxDuration: 5m

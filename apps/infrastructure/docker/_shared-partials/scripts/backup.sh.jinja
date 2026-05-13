@@ -1,0 +1,183 @@
+#!/bin/bash
+# {{ _service_name | title }} Backup Script
+# Creates secure backups of service data and configuration
+
+set -euo pipefail
+
+# Configuration
+SERVICE_NAME="{{ _service_name }}"
+BACKUP_DIR="./backups"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+BACKUP_NAME="${SERVICE_NAME}_backup_${TIMESTAMP}"
+BACKUP_PATH="${BACKUP_DIR}/${BACKUP_NAME}"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Create backup directory
+create_backup_dir() {
+    log_info "Creating backup directory..."
+    mkdir -p "$BACKUP_PATH"
+    chmod 700 "$BACKUP_PATH"
+}
+
+# Backup environment configuration
+backup_env() {
+    log_info "Backing up environment configuration..."
+    if [[ -f ".env" ]]; then
+        cp .env "$BACKUP_PATH/.env.backup"
+        chmod 600 "$BACKUP_PATH/.env.backup"
+        log_success "Environment configuration backed up"
+    else
+        log_warn "No .env file found"
+    fi
+}
+
+# Backup Docker Compose configuration
+backup_compose() {
+    log_info "Backing up Docker Compose configuration..."
+    if [[ -f "docker-compose.yml" ]]; then
+        cp docker-compose.yml "$BACKUP_PATH/"
+        log_success "Docker Compose configuration backed up"
+    fi
+    if [[ -f "docker-compose.override.yml" ]]; then
+        cp docker-compose.override.yml "$BACKUP_PATH/"
+        log_success "Docker Compose override backed up"
+    fi
+}
+
+# Backup volumes (if any)
+backup_volumes() {
+    log_info "Checking for Docker volumes..."
+    local volumes
+    volumes=$(docker volume ls --format "{{ '{{' }}.Name{{ '}}' }}" | grep "^${SERVICE_NAME}" || true)
+
+    if [[ -n "$volumes" ]]; then
+        log_info "Backing up Docker volumes..."
+        mkdir -p "$BACKUP_PATH/volumes"
+
+        for volume in $volumes; do
+            log_info "Backing up volume: $volume"
+            docker run --rm \
+                -v "$volume:/source" \
+                -v "$PWD/$BACKUP_PATH/volumes:/backup" \
+                alpine:latest \
+                tar czf "/backup/${volume}.tar.gz" -C /source .
+            log_success "Volume $volume backed up"
+        done
+    else
+        log_warn "No Docker volumes found for service"
+    fi
+}
+
+# Backup logs
+backup_logs() {
+    log_info "Backing up logs..."
+    mkdir -p "$BACKUP_PATH/logs"
+
+    # Backup Docker container logs
+    if docker ps -a --format "table {{ '{{' }}.Names{{ '}}' }}" | grep -q "^${SERVICE_NAME}"; then
+        docker logs "$SERVICE_NAME" > "$BACKUP_PATH/logs/${SERVICE_NAME}.log" 2>&1
+        log_success "Container logs backed up"
+    fi
+
+    # Backup application logs if they exist
+    if [[ -d "logs" ]]; then
+        cp -r logs "$BACKUP_PATH/"
+        log_success "Application logs backed up"
+    fi
+}
+
+# Create backup archive
+create_archive() {
+    log_info "Creating backup archive..."
+    local archive_name="${BACKUP_NAME}.tar.gz"
+    local archive_path="${BACKUP_DIR}/${archive_name}"
+
+    tar czf "$archive_path" -C "$BACKUP_DIR" "$BACKUP_NAME"
+    chmod 600 "$archive_path"
+
+    # Calculate and display backup size
+    local size
+    size=$(du -sh "$archive_path" | cut -f1)
+    log_success "Backup archive created: $archive_path ($size)"
+
+    # Clean up temporary directory
+    rm -rf "$BACKUP_PATH"
+
+    echo "$archive_path"
+}
+
+# Verify backup integrity
+verify_backup() {
+    local archive_path="$1"
+    log_info "Verifying backup integrity..."
+
+    if tar tf "$archive_path" > /dev/null 2>&1; then
+        log_success "Backup integrity verified"
+        return 0
+    else
+        log_error "Backup integrity check failed!"
+        return 1
+    fi
+}
+
+# Main backup function
+main() {
+    log_info "Starting backup for ${SERVICE_NAME}..."
+    log_info "Backup timestamp: $TIMESTAMP"
+
+    # Check if service is running (optional - backups can be done while running)
+    if docker ps --format "table {{ '{{' }}.Names{{ '}}' }}" | grep -q "^${SERVICE_NAME}"; then
+        log_warn "Service is currently running. Consider stopping it for a consistent backup."
+        read -p "Continue anyway? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "Backup cancelled by user"
+            exit 0
+        fi
+    fi
+
+    create_backup_dir
+    backup_env
+    backup_compose
+    backup_volumes
+    backup_logs
+
+    local archive_path
+    archive_path=$(create_archive)
+
+    if verify_backup "$archive_path"; then
+        log_success "Backup completed successfully!"
+        log_info "Backup location: $archive_path"
+
+        # Display retention information
+        log_info "Remember to manage backup retention according to your data retention policy"
+    else
+        log_error "Backup failed verification!"
+        exit 1
+    fi
+}
+
+# Run main function
+main "$@"

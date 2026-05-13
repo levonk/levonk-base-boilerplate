@@ -1,0 +1,110 @@
+project_name:
+  type: str
+  help: What is the project name?
+  default: "my-cli-tool"
+
+project_slug:
+  type: str
+  help: What is the project slug? (e.g. my-tool)
+  default: "{{ project_name | lower | replace(' ', '-') }}"
+
+project_class_name:
+  type: str
+  help: Java Class Name
+  default: "{{ project_name | title | replace(' ', '') }}"
+
+description:
+  type: str
+  help: Short description of the project
+  default: "A CLI tool"
+
+# Devbox configuration
+java_version:
+  type: str
+  help: Java version
+  default: "21"
+
+maven_version:
+  type: str
+  help: Maven version
+  default: "3.9"
+
+include_picocli:
+  type: bool
+  help: Include PicoCLI framework?
+  default: false
+
+include_jcommander:
+  type: bool
+  help: Include JCommander framework?
+  default: false
+
+include_args4j:
+  type: bool
+  help: Include args4j framework?
+  default: false
+
+include_jackson:
+  type: bool
+  help: Include Jackson for JSON?
+  default: false
+
+include_gson:
+  type: bool
+  help: Include Gson for JSON?
+  default: false
+
+include_snakeyaml:
+  type: bool
+  help: Include SnakeYAML?
+  default: false
+
+include_apache_commons:
+  type: bool
+  help: Include Apache Commons?
+  default: false
+
+include_guava:
+  type: bool
+  help: Include Guava?
+  default: false
+
+include_openssl:
+  type: bool
+  help: Include OpenSSL support?
+  default: false
+
+include_postgres:
+  type: bool
+  help: Include PostgreSQL support?
+  default: false
+
+include_mysql:
+  type: bool
+  help: Include MySQL support?
+  default: false
+
+include_h2:
+  type: bool
+  help: Include H2 database?
+  default: false
+
+include_development:
+  type: bool
+  help: Include development environment variables?
+  default: false
+
+log_level:
+  type: str
+  help: Log level for development
+  default: "INFO"
+
+debug:
+  type: str
+  help: Debug flag for development
+  default: "true"
+
+config_file:
+  type: str
+  help: Configuration file path
+  default: "./config.yml"

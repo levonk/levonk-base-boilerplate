@@ -1,0 +1,217 @@
+ # Production-ready Docker service using hardened base image (base-debian/base-alpine)
+# Uses daemonless Nix architecture with service-specific directories
+# See: /internal-docs/adr/adr-20260109001-nix-container-architecture.md
+
+# Build stage for compilation and dependency management
+{% if _build_stage %}
+{% if base_os == "alpine" %}
+FROM base-alpine AS build
+{% elif base_os == "debian" %}
+FROM base-debian AS build
+{% elif base_os == "nixpkgs" %}
+FROM base-nix AS build
+{% endif %}
+
+# Build arguments
+ARG PUID=1000
+ARG PGID=1000
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
+
+# Install build dependencies
+{% if base_os == "alpine" %}
+RUN apk add --no-cache \
+    {% if _build_language == "go" %}go git{% endif %} \
+    {% if _build_language == "rust" %}rust cargo git{% endif %} \
+    {% if _build_language == "node" %}nodejs npm git{% endif %} \
+    {% if _build_language == "python" %}python3 py3-pip git{% endif %} \
+    {% if _build_language == "java" %}openjdk17 maven git{% endif %}
+{% elif base_os == "debian" %}
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    {% if _build_language == "go" %}golang git{% endif %} \
+    {% if _build_language == "rust" %}rustc cargo git{% endif %} \
+    {% if _build_language == "node" %}nodejs npm git{% endif %} \
+    {% if _build_language == "python" %}python3 python3-pip git{% endif %} \
+    {% if _build_language == "java" %}openjdk-17-jdk maven git{% endif %} && \
+    rm -rf /var/lib/apt/lists/*
+{% elif base_os == "nixpkgs" %}
+# Nix build: Use flake for dependencies
+RUN mkdir -p /build && \
+    chown -R ${PUID}:${PGID} /build
+{% endif %}
+
+# Create build directory
+RUN mkdir -p /build && \
+    chown -R ${PUID}:${PGID} /build
+
+# Copy source code
+COPY --chown=${PUID}:${PGID} . /build/
+
+# Set working directory for build
+WORKDIR /build
+
+# Build the application
+{% if _build_language == "go" %}
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o main .
+{% elif _build_language == "rust" %}
+RUN cargo build --release
+{% elif _build_language == "node" %}
+RUN npm ci --only=production && \
+    {% if _include_ui %}npm run build &&{% endif %} \
+    npm cache clean --force
+{% elif _build_language == "python" %}
+RUN pip install --no-cache-dir -r requirements.txt
+{% elif _build_language == "java" %}
+RUN mvn clean package -DskipTests
+{% elif base_os == "nixpkgs" %}
+# Nix build: Use flake to build
+RUN nix build .#default --out-link /build/result
+{% endif %}
+
+{% endif %}
+
+# Runtime stage
+{% if base_os == "alpine" %}
+FROM base-alpine AS runtime
+{% elif base_os == "debian" %}
+FROM base-debian AS runtime
+{% elif base_os == "nixpkgs" %}
+FROM base-nix AS runtime
+{% endif %}
+
+# Labels for metadata and security scanning
+LABEL org.opencontainers.image.title="{{ _service_name | title }}" \
+      org.opencontainers.image.description="{{ _service_description }}" \
+      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.vendor="LocalNet" \
+      org.opencontainers.image.base_os="{{ base_os }}" \
+      org.opencontainers.image.service_slug="{{ _service_name_slug }}" \
+      maintainer="devops@localnet"
+
+ARG PUID=1000
+ARG PGID=1000
+
+# Environment variables (override in docker-compose or runtime)
+ENV NODE_ENV=production \
+    SERVICE_NAME="{{ _service_name_slug }}" \
+    SERVICE_PORT="{{ _service_port }}"
+
+{% if base_os == "nixpkgs" %}
+# Nix-specific: Create service-specific directory for flake.nix
+# Each service gets its own directory to avoid path conflicts
+RUN mkdir -p /{{ _service_name_slug }} && \
+    chown -R ${PUID}:${PGID} /{{ _service_name_slug }}
+
+# Copy application code to service-specific directory
+COPY --chown=${PUID}:${PGID} . /{{ _service_name_slug }}/
+
+# Set working directory to service-specific path
+WORKDIR /{{ _service_name_slug }}
+
+# Note: This container should use daemonless Nix mode
+# Dependencies are declared in assets/static/{{ _service_name_slug }}/flake.nix
+# Use: nix develop /{{ _service_name_slug }}/assets/static/{{ _service_name_slug }}#default
+{% else %}
+# Create application directory with proper permissions
+RUN mkdir -p /app && \
+    chown -R ${PUID}:${PGID} /app
+
+# Copy application from build stage if build stage is enabled
+{% if _build_stage %}
+# Copy built artifacts from build stage
+{% if _build_language == "go" %}
+COPY --from=build --chown=${PUID}:${PGID} /build/main /app/
+{% elif _build_language == "rust" %}
+COPY --from=build --chown=${PUID}:${PGID} /build/target/release/{{ _service_name_slug }} /app/
+{% elif _build_language == "node" %}
+COPY --from=build --chown=${PUID}:${PGID} /build/node_modules /app/
+COPY --from=build --chown=${PUID}:${PGID} /build/dist /app/  # Built UI assets
+COPY --from=build --chown=${PUID}:${PGID} /build/package.json /app/
+{% elif _build_language == "python" %}
+COPY --from=build --chown=${PUID}:${PGID} /build/requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=build --chown=${PUID}:${PGID} /build/src /app/src
+{% elif _build_language == "java" %}
+COPY --from=build --chown=${PUID}:${PGID} /build/target/*.jar /app/app.jar
+{% elif base_os == "nixpkgs" %}
+COPY --from=build --chown=${PUID}:${PGID} /build/result /app/
+{% endif %}
+{% else %}
+# Copy application code (build context should be set appropriately)
+COPY --chown=${PUID}:${PGID} . /app/
+
+# Install dependencies (if using Node.js - adjust for other languages)
+{% if _include_ui %}
+# For Node.js applications with UI
+RUN pnpm ci --only=production && \
+    pnpm run build && \
+    pnpm cache clean --force
+{% else %}
+# For backend services only
+RUN pnpm ci --only=production && \
+    pnpm cache clean --force
+{% endif %}
+{% endif %}
+{% endif %}
+
+# Switch to non-root user for security
+USER ${PUID}
+
+# Expose service port
+EXPOSE {{ _service_port }}
+
+# Health check
+{% if base_os == "nixpkgs" %}
+# Nix containers: Use lightweight healthcheck, heavy checks via supercronic
+# Heavy verification runs daily via supercronic, not healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+	CMD ["/usr/local/bin/healthcheck.sh"]
+{% else %}
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+	CMD curl -f http://127.0.0.1:{{ _service_port }}{{ _service_health_endpoint }} || exit 1
+{% endif %}
+
+# Start the application
+CMD ["sleep", "infinity"]
+
+FROM runtime AS debug
+
+USER root
+
+{% if base_os == "alpine" %}
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    htop \
+    iputils \
+    lsof \
+    net-tools \
+    openssh-client \
+    procps \
+    strace \
+    tcpdump \
+    vim
+{% elif base_os == "debian" %}
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      curl \
+      git \
+      htop \
+      iputils-ping \
+      lsof \
+      net-tools \
+      openssh-client \
+      procps \
+      strace \
+      tcpdump \
+      vim && \
+    rm -rf /var/lib/apt/lists/*
+{% elif base_os == "nixpkgs" %}
+# Nix debugging: Install additional tools via nix-env
+# Note: Consider using a separate debug flake.nix for complex debugging environments
+RUN nix-env -iA nixpkgs.bash nixpkgs.git nixpkgs.htop nixpkgs.iputils nixpkgs.lsof nixpkgs.net-tools nixpkgs.openssh nixpkgs.procps nixpkgs.strace nixpkgs.tcpdump nixpkgs.vim nixpkgs.busybox
+{% endif %}
+
+USER appuser

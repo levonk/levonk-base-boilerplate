@@ -1,0 +1,25 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  experimental: {
+    appDir: true,
+  },
+  images: {
+    domains: [],
+  },
+  env: {
+    CUSTOM_KEY: process.env.CUSTOM_KEY,
+  },
+  async rewrites() {
+    return [];
+  },
+  async redirects() {
+    return [];
+  },
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    return config;
+  },
+};
+
+module.exports = nextConfig;
+
+{# vim: set ft=javascript: #}

@@ -1,0 +1,4 @@
+{"$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json"}
+,"shell": {"init_hook": ["echo '☕ Java environment initialized'", "echo '📦 Project: {{ package_name | default(java-package) }}'", "echo '🔧 Java version: {{ java_version | default(17) }}'", "echo '🛠️  Use: just test && just lint'"], "scripts": {"bootstrap": "just bootstrap-internal", "doctor": "just doctor-internal", "clean": "just clean-internal", "build": "just build-internal", "test": "just test-internal", "lint": "just lint-internal", "typecheck": "just typecheck-internal", "dev": "just dev-internal"}}
+}
+}

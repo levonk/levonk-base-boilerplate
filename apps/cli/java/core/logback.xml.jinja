@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender with color support -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+        <encoder>
+            <pattern>
+                {% raw %}%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %highlight(%-5level) %cyan(%mdc{module}) - %msg%n{% endraw %}
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!-- Console appender without color (for nocolor flag or non-TTY) -->
+    <appender name="CONSOLE_NO_COLOR" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>
+                {% raw %}%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %mdc{module} - %msg%n{% endraw %}
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!-- Quiet appender (only errors and fatal) -->
+    <appender name="QUIET" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+        <encoder>
+            <pattern>
+                {% raw %}%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) %mdc{module} - %msg%n{% endraw %}
+            </pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+    </appender>
+
+    <!-- Quiet appender without color -->
+    <appender name="QUIET_NO_COLOR" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>
+                {% raw %}%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %mdc{module} - %msg%n{% endraw %}
+            </pattern>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+    </appender>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <!-- Use conditional logic based on system properties set by the application -->
+        <if condition='property("LOG_COLOR").equals("true")'>
+            <then>
+                <if condition='property("LOG_QUIET").equals("true")'>
+                    <then>
+                        <appender-ref ref="QUIET" />
+                    </then>
+                    <else>
+                        <appender-ref ref="CONSOLE" />
+                    </else>
+                </if>
+            </then>
+            <else>
+                <if condition='property("LOG_QUIET").equals("true")'>
+                    <then>
+                        <appender-ref ref="QUIET_NO_COLOR" />
+                    </then>
+                    <else>
+                        <appender-ref ref="CONSOLE_NO_COLOR" />
+                    </else>
+                </if>
+            </else>
+        </if>
+    </root>
+
+    <!-- Set verbose level if verbose flag is set -->
+    <if condition='property("LOG_VERBOSE").equals("true")'>
+        <then>
+            <root level="DEBUG" />
+        </then>
+    </if>
+
+    <!-- Set quiet level to ERROR if quiet flag is set -->
+    <if condition='property("LOG_QUIET").equals("true")'>
+        <then>
+            <root level="ERROR" />
+        </then>
+    </if>
+</configuration>
+{# vim: set ft=xml: #}

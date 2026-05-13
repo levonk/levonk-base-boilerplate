@@ -1,0 +1,17 @@
+{
+  "name": "{{ project_name | default('python-cli') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-python-test.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-python-lint.jinja" %}
+    "run": {
+      "executor": "@nxlv/python:run",
+      "options": {
+        "command": "python -m src.main",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

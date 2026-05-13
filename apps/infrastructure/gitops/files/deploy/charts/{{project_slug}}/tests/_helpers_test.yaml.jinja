@@ -1,0 +1,372 @@
+suite: helpers test
+templates:
+  - _helpers.tpl
+tests:
+  - it: should render chart name
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: {{ chart_name }}
+  - it: should render chart fullname
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: {{ chart_name }}-test
+  - it: should render chart
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.chart\" . }}"
+          value: {{ chart_name }}-{{ chart_version }}
+  - it: should render labels
+    asserts:
+      - contains:
+          path: "{{ include \"{{ chart_name }}.labels\" . }}"
+          content: "helm.sh/chart: {{ chart_name }}-{{ chart_version }}"
+      - contains:
+          path: "{{ include \"{{ chart_name }}.labels\" . }}"
+          content: "app.kubernetes.io/name: {{ chart_name }}"
+      - contains:
+          path: "{{ include \"{{ chart_name }}.labels\" . }}"
+          content: "app.kubernetes.io/instance: {{ chart_name }}-test"
+      - contains:
+          path: "{{ include \"{{ chart_name }}.labels\" . }}"
+          content: "app.kubernetes.io/managed-by: Helm"
+      - contains:
+          path: "{{ include \"{{ chart_name }}.labels\" . }}"
+          content: "app.kubernetes.io/version: {{ app_version }}"
+  - it: should render selector labels
+    asserts:
+      - contains:
+          path: "{{ include \"{{ chart_name }}.selectorLabels\" . }}"
+          content: "app.kubernetes.io/name: {{ chart_name }}"
+      - contains:
+          path: "{{ include \"{{ chart_name }}.selectorLabels\" . }}"
+          content: "app.kubernetes.io/instance: {{ chart_name }}-test"
+  - it: should render service account name
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.serviceAccountName\" . }}"
+          value: {{ chart_name }}-test
+  - it: should render image name
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.image\" . }}"
+          value: {{ app_image }}:{{ app_version }}
+  - it: should render image pull secrets
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.imagePullSecrets\" . }}"
+          value: []
+  - it: should render exists function with existing object
+    set:
+      path: $[{{ if .Values.serviceAccount.create }}]
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.exists\" . }}"
+          value: true
+  - it: should render exists function with non-existing object
+    set:
+      path: $[{{ if .Values.nonExistentObject }}]
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.exists\" . }}"
+          value: false
+  - it: should render chart name with override
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: custom-name
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: custom-name
+  - it: should render chart fullname with override
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: custom-fullname
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: custom-fullname
+  - it: should render service account name with override
+    set:
+      path: $[{{ if .Values.serviceAccount.create }}]
+      path: $[{{ if .Values.serviceAccount.name }}]
+      value: custom-service-account
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.serviceAccountName\" . }}"
+          value: custom-service-account
+  - it: should render service account name with create disabled
+    set:
+      path: $[{{ if not .Values.serviceAccount.create }}]
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.serviceAccountName\" . }}"
+          value: default
+  - it: should render image name with registry
+    set:
+      path: $[{{ if .Values.global.imageRegistry }}]
+      value: registry.example.com
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.image\" . }}"
+          value: registry.example.com/{{ app_image }}:{{ app_version }}
+  - it: should render image name with tag override
+    set:
+      path: $[{{ if .Values.image.tag }}]
+      value: custom-tag
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.image\" . }}"
+          value: {{ app_image }}:custom-tag
+  - it: should render image name with repository override
+    set:
+      path: $[{{ if .Values.image.repository }}]
+      value: custom-repo
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.image\" . }}"
+          value: custom-repo:{{ app_version }}
+  - it: should render labels with common labels
+    set:
+      path: $[{{ if .Values.commonLabels }}]
+      value:
+        team: platform
+        environment: production
+    asserts:
+      - contains:
+          path: "{{ include \"{{ chart_name }}.labels\" . }}"
+          content: "team: platform"
+      - contains:
+          path: "{{ include \"{{ chart_name }}.labels\" . }}"
+          content: "environment: production"
+  - it: should render labels without app version
+    set:
+      path: $[{{ if not .Chart.AppVersion }}]
+    asserts:
+      - notContains:
+          path: "{{ include \"{{ chart_name }}.labels\" . }}"
+          content: "app.kubernetes.io/version:"
+  - it: should render selector labels with common labels
+    set:
+      path: $[{{ if .Values.commonLabels }}]
+      value:
+        team: platform
+        environment: production
+    asserts:
+      - contains:
+          path: "{{ include \"{{ chart_name }}.selectorLabels\" . }}"
+          content: "team: platform"
+      - contains:
+          path: "{{ include \"{{ chart_name }}.selectorLabels\" . }}"
+          content: "environment: production"
+  - it: should render image pull secrets with global image pull secrets
+    set:
+      path: $[{{ if .Values.global.imagePullSecrets }}]
+      value:
+        - name: registry-secret
+        - name: docker-registry-secret
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.imagePullSecrets\" . }}"
+          value:
+            - name: registry-secret
+            - name: docker-registry-secret
+  - it: should render image pull secrets with image pull secrets
+    set:
+      path: $[{{ if .Values.image.pullSecrets }}]
+      value:
+        - name: registry-secret
+        - name: docker-registry-secret
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.imagePullSecrets\" . }}"
+          value:
+            - name: registry-secret
+            - name: docker-registry-secret
+  - it: should render image pull secrets with both global and image pull secrets
+    set:
+      path: $[{{ if .Values.global.imagePullSecrets }}]
+      value:
+        - name: global-secret
+      path: $[{{ if .Values.image.pullSecrets }}]
+      value:
+        - name: image-secret
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.imagePullSecrets\" . }}"
+          value:
+            - name: global-secret
+            - name: image-secret
+  - it: should render exists function with running pod
+    set:
+      path: $[{{ if .Values.serviceAccount.create }}]
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.exists\" . }}"
+          value: true
+  - it: should render exists function with completed pod
+    set:
+      path: $[{{ if .Values.serviceAccount.create }}]
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.exists\" . }}"
+          value: true
+  - it: should render exists function with failed pod
+    set:
+      path: $[{{ if .Values.serviceAccount.create }}]
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.exists\" . }}"
+          value: true
+  - it: should render exists function with non-existing pod
+    set:
+      path: $[{{ if .Values.nonExistentObject }}]
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.exists\" . }}"
+          value: false
+  - it: should render chart name with special characters
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: "my-chart-with-special-characters"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: "my-chart-with-special-characters"
+  - it: should render chart fullname with special characters
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: "my-fullname-with-special-characters"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: "my-fullname-with-special-characters"
+  - it: should render chart name with long name
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: "this-is-a-very-long-chart-name-that-should-be-truncated"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: "this-is-a-very-long-chart-name-that-should-be-truncated"
+  - it: should render chart fullname with long name
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: "this-is-a-very-long-fullname-that-should-be-truncated"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: "this-is-a-very-long-fullname-that-should-be-truncated"
+  - it: should render chart name with hyphens
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: "chart-with-hyphens"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: "chart-with-hyphens"
+  - it: should render chart fullname with hyphens
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: "fullname-with-hyphens"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: "fullname-with-hyphens"
+  - it: should render chart name with underscores
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: "chart_with_underscores"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: "chart_with_underscores"
+  - it: should render chart fullname with underscores
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: "fullname_with_underscores"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: "fullname_with_underscores"
+  - it: should render chart name with numbers
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: "chart123"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: "chart123"
+  - it: should render chart fullname with numbers
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: "fullname123"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: "fullname123"
+  - it: should render chart name with mixed characters
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: "Chart123_with-underscores"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: "Chart123_with-underscores"
+  - it: should render chart fullname with mixed characters
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: "Fullname123_with-underscores"
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: "Fullname123_with-underscores"
+  - it: should render chart name with empty string
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: ""
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: ""
+  - it: should render chart fullname with empty string
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: ""
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: ""
+  - it: should render chart name with null value
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: null
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: {{ chart_name }}
+  - it: should render chart fullname with null value
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: null
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: {{ chart_name }}-test
+  - it: should render chart name with undefined value
+    set:
+      path: $[{{ if .Values.nameOverride }}]
+      value: undefined
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.name\" . }}"
+          value: undefined
+  - it: should render chart fullname with undefined value
+    set:
+      path: $[{{ if .Values.fullnameOverride }}]
+      value: undefined
+    asserts:
+      - equal:
+          path: "{{ include \"{{ chart_name }}.fullname\" . }}"
+          value: undefined

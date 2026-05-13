@@ -1,0 +1,23 @@
+{
+  "name": "{{ project_name | default('simple-service') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-docker-build.jinja" %}
+    "docker:run": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker run -d --name {{ project_name | default('simple-service') }} {{ project_name | default('simple-service') }}:latest",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "docker:stop": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker stop {{ project_name | default('simple-service') }} && docker rm {{ project_name | default('simple-service') }}",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

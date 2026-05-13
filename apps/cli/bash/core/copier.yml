@@ -1,0 +1,115 @@
+project_name:
+  type: str
+  help: What is the project name?
+  default: "my-cli-tool"
+
+project_slug:
+  type: str
+  help: What is the project slug? (e.g. my-tool)
+  default: "{{ project_name | lower | replace(' ', '-') }}"
+
+version:
+  type: str
+  help: Version of the project
+  default: "1.0.0"
+
+description:
+  type: str
+  help: Short description of the project
+  default: "A CLI tool"
+
+# Devbox configuration
+shell_path:
+  type: str
+  help: Shell path for bash
+  default: "/bin/bash"
+
+bash_env:
+  type: str
+  help: Bash environment file
+  default: "./config.env"
+
+include_jq:
+  type: bool
+  help: Include jq for JSON processing?
+  default: false
+
+include_yq:
+  type: bool
+  help: Include yq for YAML processing?
+  default: false
+
+include_curl:
+  type: bool
+  help: Include curl for HTTP requests?
+  default: false
+
+include_wget:
+  type: bool
+  help: Include wget for downloads?
+  default: false
+
+include_gnu_coreutils:
+  type: bool
+  help: Include GNU coreutils?
+  default: false
+
+include_findutils:
+  type: bool
+  help: Include findutils?
+  default: false
+
+include_grep:
+  type: bool
+  help: Include GNU grep?
+  default: false
+
+include_sed:
+  type: bool
+  help: Include GNU sed?
+  default: false
+
+include_awk:
+  type: bool
+  help: Include GNU awk?
+  default: false
+
+include_development:
+  type: bool
+  help: Include development environment variables?
+  default: false
+
+debug:
+  type: str
+  help: Debug flag for development
+  default: "1"
+
+verbose:
+  type: str
+  help: Verbose flag for development
+  default: "1"
+
+include_config:
+  type: bool
+  help: Include configuration file support?
+  default: false
+
+config_file:
+  type: str
+  help: Configuration file path
+  default: "./config.yaml"
+
+include_colors:
+  type: bool
+  help: Include color support?
+  default: false
+
+no_color:
+  type: str
+  help: NO_COLOR environment variable
+  default: ""
+
+force_color:
+  type: str
+  help: FORCE_COLOR environment variable
+  default: "1"

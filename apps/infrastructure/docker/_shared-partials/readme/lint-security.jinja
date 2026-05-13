@@ -1,0 +1,19 @@
+## Linting & Security Checks
+
+The boilerplate now ships with containerized tooling so every contributor can run the same checks without installing extra CLIs locally. The most common targets are:
+
+| Command | What it does |
+|---------|--------------|
+| `make lint` | Runs the full lint suite (`yamllint`, `markdownlint`, `hadolint`, and Checkov) inside pinned Docker images. |
+| `make lint-yaml` | Validates `docker-compose*.yml` syntax with `yamllint`. |
+| `make lint-md` | Ensures project docs follow `markdownlint` rules (ignores `node_modules` and `.git`). |
+| `make lint-docker` | Runs `hadolint` against `docker/Dockerfile` to catch Dockerfile anti-patterns. |
+| `make lint-iac` | Executes Checkov against the repo to surface IaC misconfigurations early. |
+| `make docker-scout` | Generates a CVE report for the local image tag via Docker Scout (requires the Docker CLI plugin). |
+| `make trivy` | Runs Trivy config scans by default and image scans when `TRIVY_IMAGE_TARGET` is set. |
+| `make dockle` | Runs Dockle image linting against the local image (default `latest` tag) to check for CIS benchmarks and best practices. |
+| `make runtime-scan` | Launches a Falco container with modern eBPF sensors to detect suspicious runtime activity (requires elevated kernel capabilities). |
+| `make audit` | Executes `docker-bench-security` with read-only mounts to audit the local Docker daemon hardening. |
+| `make security-scan` | Convenience wrapper that runs `make lint`, `make trivy`, `make dockle`, `make docker-scout`, and the templated `scripts/security-scan.sh` report. |
+
+All scanners run with `--security-opt=no-new-privileges` (where supported) and use the `.cache/` directory for offline artifacts so repeated runs stay fast on CI and developer laptops alike.

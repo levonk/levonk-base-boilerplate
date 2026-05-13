@@ -1,0 +1,26 @@
+{
+  "packages": [
+    "{{ language }}@latest",
+    {% if language == 'go' %}"golangci-lint@latest",{% endif %}
+    {% if language == 'python3' %}"python3Packages.pytest", "python3Packages.flake8",{% endif %}
+    {% for dep in dependencies %}
+    "{{ dep }}@latest"{{ "," if not loop.last }}
+    {% endfor %}
+  ],
+  "env": {
+    "APP_NAME": "{{ project_name }}",
+    {% if 'postgresql' in dependencies %}"DATABASE_URL": "postgres://localhost:5432/{{ project_name }}",{% endif %}
+    {% if 'valkey' in dependencies %}"VALKEY_URL": "valkey://localhost:6379",{% endif %}
+  },
+  "shell": {
+    "init_hook": [
+      "echo 'Welcome to your {{ language }} {{ app_type }} environment!'"
+    ],
+    "scripts": {
+      "lint": "{{ _lint_cmd }}",
+      "test": "{{ _test_cmd }}",
+      "build": "{% if language == 'go' %}go build -o {{ project_name }}{% elif language == 'nodejs' %}npm run build{% else %}echo 'No build step required'{% endif %}",
+      "start": "{% if app_type == 'web' %}devbox services up{% else %}echo 'Run devbox run build first'{% endif %}"
+    }
+  }
+}

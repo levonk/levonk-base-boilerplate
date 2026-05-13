@@ -1,0 +1,21 @@
+{
+  "extends": "../../../../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "verbatimModuleSyntax": false,
+    "strict": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["vitest"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "__test__"]
+}

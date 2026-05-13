@@ -1,0 +1,11 @@
+{
+  "name": "{{ project_name | default('docker-service') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "implicitDependencies": [],
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-docker-build.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-docker-compose.jinja" %}
+  }
+}

@@ -1,0 +1,78 @@
+/**
+ * Tests for {{ package_name }}
+ * {{ description }}
+ *
+ * @author {{ author_name }} <{{ author_email }}>
+ * @license {{ license }}
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest';
+import { {{ package_slug | capitalize | replace('-', '') }}, {{ package_slug | capitalize | replace('-', '') }}Instance, hello, name, version } from '../src/index.js';
+
+describe('{{ package_slug | capitalize | replace('-', '') }}', () => {
+  let instance: {{ package_slug | capitalize | replace('-', '') }};
+
+  beforeEach(() => {
+    instance = new {{ package_slug | capitalize | replace('-', '') }}();
+  });
+
+  describe('constructor', () => {
+    it('should create an instance with correct name', () => {
+      const lib = new {{ package_slug | capitalize | replace('-', '') }}();
+      expect(lib.getName()).toBe('{{ package_name }}');
+    });
+
+    it('should create an instance with version 1.0.0', () => {
+      expect(instance.getVersion()).toBe('1.0.0');
+    });
+  });
+
+  describe('hello()', () => {
+    it('should return a greeting message', () => {
+      const result = instance.hello();
+      expect(result).toBe('Hello from {{ package_name }}!');
+    });
+
+    it('should return a string', () => {
+      const result = instance.hello();
+      expect(typeof result).toBe('string');
+    });
+  });
+
+  describe('getName()', () => {
+    it('should return the package name', () => {
+      expect(instance.getName()).toBe('{{ package_name }}');
+    });
+  });
+
+  describe('getVersion()', () => {
+    it('should return correct version', () => {
+      const lib = new {{ package_slug | capitalize | replace('-', '') }}();
+      expect(lib.getVersion()).toBe('1.0.0');
+    });
+  });
+});
+
+describe('Exported functions', () => {
+  it('hello() should return greeting from default instance', () => {
+    expect(hello()).toBe('Hello from {{ package_name }}!');
+  });
+
+  it('name() should return package name', () => {
+    expect(name()).toBe('{{ package_name }}');
+  });
+
+  it('version() should return version', () => {
+    expect(version()).toBe('1.0.0');
+  });
+});
+
+describe('Default instance', () => {
+  it('should be an instance of {{ package_slug | capitalize | replace('-', '') }}', () => {
+    expect({{ package_slug | capitalize | replace('-', '') }}Instance).toBeInstanceOf({{ package_slug | capitalize | replace('-', '') }});
+  });
+
+  it('should work like any other instance', () => {
+    expect({{ package_slug | capitalize | replace('-', '') }}Instance.hello()).toBe('Hello from {{ package_name }}!');
+  });
+});

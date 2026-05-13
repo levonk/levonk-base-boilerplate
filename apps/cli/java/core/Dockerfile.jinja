@@ -1,0 +1,12 @@
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY . .
+RUN mvn -q -DskipTests package
+
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+RUN useradd -m appuser
+COPY --from=build /app/target/{{ project_slug }}-jar-with-dependencies.jar /app/
+USER appuser
+ENTRYPOINT ["java", "-jar", "/app/{{ project_slug }}.jar"]
+CMD ["--help"]

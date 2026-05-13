@@ -1,0 +1,41 @@
+{
+    "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+    "packages": [
+        "dotnet-sdk",
+        "dotnet-runtime",
+        "just"
+        {% if include_efcore %},
+        "postgresql",
+        "sqlite"
+        {% endif %}
+        {% if include_grpc %},
+        "protobuf"
+        {% endif %}
+    ],
+    "shell": {
+        "init_hook": [
+            "echo '� C# environment initialized'",
+            "echo '📦 Project: {{ package_name | default('csharp-package') }}'",
+            "echo '🛠️  Use: just dev && just test'"
+        ],
+        "scripts": {
+            "bootstrap": "just bootstrap-internal",
+            "doctor": "just doctor-internal",
+            "clean": "just clean-internal",
+            "build": "just build-internal",
+            "test": "just test-internal",
+            "lint": "just lint-internal",
+            "typecheck": "just typecheck-internal",
+            "dev": "just dev-internal"
+        }
+    },
+    "env": {
+        "DOTNET_ROOT": "/nix/store/dotnet",
+        "DOTNET_CLI_TELEMETRY_OPTOUT": "1"
+        {% if include_efcore %},
+        "ASPNETCORE_ENVIRONMENT": "Development"
+        {% endif %},
+        "PACKAGE_NAME": "{{ package_name | default('csharp-package') }}",
+        "NAMESPACE_NAME": "{{ namespace_name | default('CSharpPackage') }}"
+    }
+}

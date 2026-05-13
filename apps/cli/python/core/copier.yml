@@ -1,0 +1,75 @@
+project_name:
+  type: str
+  help: What is the project name?
+  default: "my-cli-tool"
+
+project_slug:
+  type: str
+  help: What is the project slug? (e.g. my-tool)
+  default: "{{ project_name | lower | replace(' ', '_') | replace('-', '_') }}"
+
+description:
+  type: str
+  help: Short description of the project
+  default: "A CLI tool"
+
+# Devbox configuration
+pythonpath:
+  type: str
+  help: Python path for source code
+  default: "./src"
+
+pythonpath_dev:
+  type: str
+  help: Python path for development (includes tests)
+  default: "./src:./tests"
+
+include_requests:
+  type: bool
+  help: Include requests library for HTTP calls?
+  default: false
+
+include_click:
+  type: bool
+  help: Include Click for CLI framework?
+  default: false
+
+include_sqlalchemy:
+  type: bool
+  help: Include SQLAlchemy for database support?
+  default: false
+
+include_async:
+  type: bool
+  help: Include async support (aiohttp)?
+  default: false
+
+include_pandas:
+  type: bool
+  help: Include pandas for data analysis?
+  default: false
+
+include_numpy:
+  type: bool
+  help: Include numpy for numerical computing?
+  default: false
+
+include_openssl:
+  type: bool
+  help: Include OpenSSL support?
+  default: false
+
+include_postgres:
+  type: bool
+  help: Include PostgreSQL support?
+  default: false
+
+include_sqlite:
+  type: bool
+  help: Include SQLite support?
+  default: false
+
+include_development:
+  type: bool
+  help: Include development environment variables?
+  default: false

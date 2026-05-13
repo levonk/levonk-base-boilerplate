@@ -1,0 +1,23 @@
+import { defineConfig } from "@playwright/test";
+
+export default defineConfig({
+  testDir: "__tests__/e2e",
+  timeout: 60_000,
+  expect: {
+    timeout: 10_000,
+  },
+  reporter: [["list"]],
+  use: {
+    headless: true,
+  },
+  projects: [
+    {
+      name: "chromium",
+      use: { browserName: "chromium" },
+    },
+    {
+      name: "firefox",
+      use: { browserName: "firefox" },
+    },
+  ],
+});

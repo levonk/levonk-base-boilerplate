@@ -1,0 +1,97 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: {{ project_name }}-staging-cluster
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+namespace: {{ project_name }}-staging
+
+resources:
+  # Add cluster-specific resources
+  # - namespace.yaml
+  # - network-policies.yaml
+  # - resource-quotas.yaml
+  # - monitoring.yaml
+
+# Common labels for staging cluster
+commonLabels:
+  environment: staging
+  cluster: staging
+  app.kubernetes.io/environment: staging
+
+# Common annotations for staging cluster
+commonAnnotations:
+  config.kubernetes.io/environment: "staging"
+  config.kubernetes.io/cluster: "staging"
+
+# Cluster-specific configurations
+patchesStrategicMerge:
+  # Add cluster-specific patches
+  # - resource-quotas-patch.yaml
+  # - network-policies-patch.yaml
+  # - monitoring-patch.yaml
+
+# JSON 6902 patches for cluster-specific changes
+patchesJson6902:
+  # Add cluster-specific JSON patches
+  # - patch-with-json6902.yaml
+
+# Generators for cluster-specific resources
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    environment: staging
+    cluster: staging
+
+# ConfigMaps for cluster configuration
+configMapGenerator:
+  - name: {{ project_name }}-staging-cluster-config
+    literals:
+      - CLUSTER_NAME=staging
+      - CLUSTER_TYPE=staging
+      - CLUSTER_REGION=us-west-2
+      - CLUSTER_VERSION=1.28.0
+      - CLUSTER_PROVIDER=eks
+      - CLUSTER_MONITORING=true
+
+# Secrets for cluster configuration
+secretGenerator:
+  - name: {{ project_name }}-staging-cluster-secrets
+    literals:
+      - CLUSTER_SECRET_KEY=staging-cluster-secret-change-me
+
+# Namespace configuration
+namespace: {{ project_name }}-staging
+
+# Resources for staging cluster
+resources:
+  # Add cluster-specific resources here
+  # - namespace.yaml
+  # - resource-quotas.yaml
+  # - network-policies.yaml
+  # - monitoring.yaml
+
+# Patches for cluster-specific configurations
+patches:
+  # Add cluster-specific patches here
+  # - patch-resource-quotas.yaml
+  # - patch-network-policies.yaml
+  # - patch-monitoring.yaml
+
+# Replacement configurations
+replacements:
+  # Add cluster-specific replacements here
+  # - replace-cluster-name.yaml
+
+# Helm charts for cluster configuration
+helmCharts:
+  # Add cluster-specific Helm charts here
+  # - name: cluster-config
+  #   releaseName: {{ project_name }}-staging-cluster
+  #   namespace: {{ project_name }}-staging
+  #   values:
+  #     clusterName: staging
+  #     clusterType: staging
+  #     monitoring: true

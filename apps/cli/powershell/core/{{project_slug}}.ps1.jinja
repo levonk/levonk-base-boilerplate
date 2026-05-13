@@ -1,0 +1,259 @@
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    {{ description }}
+
+.EXAMPLE
+    {{ project_slug }} file.txt
+.EXAMPLE
+    {{ project_slug }} "**/*.txt"
+.EXAMPLE
+    Get-Content file.txt | {{ project_slug }} -
+#>
+[CmdletBinding()]
+param (
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]] $Inputs,
+
+    [string] $ConfigPath,
+
+    [switch] $Json,
+
+    [switch] $Quiet,
+    [switch] $Verbose,
+    [switch] $Usage,
+    [switch] $Version,
+    [switch] $Help,
+    [switch] $NoColor
+)
+
+begin {
+    # Version information
+    $ScriptVersion = "{{ version | default('1.0.0') }}"
+    $ScriptName = "{{ project_slug }}"
+
+    # Show usage and exit
+    function Show-Usage {
+        @"
+
+Usage: $ScriptName [OPTIONS] [INPUTS...]
+
+{{ description }}
+
+Options:
+  -c, --config FILE   Path to config file
+      --json          Output JSON to stdout
+  -q, --quiet         Suppress all output (except errors)
+  -v, --verbose       Enable verbose output
+      --usage         Show this usage message
+      --version       Show version information
+  -h, --help          Show this help message
+      --nocolor       Disable colored output
+
+Examples:
+  $ScriptName file.txt
+  $ScriptName "**/*.txt"
+  Get-Content file.txt | $ScriptName -
+"@
+    }
+
+    # Show help and exit
+    function Show-Help {
+        Show-Usage
+        exit 0
+    }
+
+    # Show version and exit
+    function Show-Version {
+        Write-Host "$ScriptName version $ScriptVersion"
+        exit 0
+    }
+
+    # Handle help/version/usage flags
+    if ($Help) { Show-Help }
+    if ($Version) { Show-Version }
+    if ($Usage) { Show-Usage; exit 0 }
+
+    # Color detection and setup
+    $SupportsColor = $false
+    if (-not $NoColor) {
+        # Check if running in a terminal that supports color
+        if ($Host.UI.RawUI.ForegroundColor) {
+            $SupportsColor = $true
+        }
+        # Also check NO_COLOR environment variable (https://no-color.org/)
+        if ($env:NO_COLOR) {
+            $SupportsColor = $false
+        }
+    }
+
+    # Color mappings for log levels
+    $Colors = @{
+        Info = "Cyan"
+        Warn = "Yellow"
+        Error = "Red"
+        Fatal = "Magenta"
+    }
+
+    # Module color mapping (hash of module name to color)
+    $ModuleColors = @{}
+    $AvailableColors = @("Green", "Blue", "Cyan", "Magenta", "Yellow", "White")
+    $ColorIndex = 0
+
+    # Get unique color for a module
+    function Get-ModuleColor {
+        param([string]$Module)
+        if (-not $ModuleColors.ContainsKey($Module)) {
+            $ModuleColors[$Module] = $AvailableColors[$ColorIndex % $AvailableColors.Length]
+            $ColorIndex++
+        }
+        return $ModuleColors[$Module]
+    }
+
+    # Logging function with timestamp, module, and level
+    function Write-Log {
+        param(
+            [Parameter(Mandatory=$true)]
+            [ValidateSet("Info", "Warn", "Error", "Fatal")]
+            [string]$Level,
+
+            [Parameter(Mandatory=$true)]
+            [string]$Message,
+
+            [string]$Module = "Main"
+        )
+
+        # Skip if quiet mode (except for errors and fatal)
+        if ($Quiet -and $Level -notin @("Error", "Fatal")) {
+            return
+        }
+
+        # Skip if verbose mode is off and level is Info
+        if (-not $Verbose -and $Level -eq "Info") {
+            return
+        }
+
+        # Format timestamp
+        $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+        # Build log message
+        $LogMessage = "[$Timestamp] [$Module] [$Level] $Message"
+
+        # Output with or without color
+        if ($SupportsColor) {
+            $LevelColor = $Colors[$Level]
+            $ModuleColor = Get-ModuleColor -Module $Module
+            Write-Host "[$Timestamp] " -NoNewline
+            Write-Host "[$Module] " -ForegroundColor $ModuleColor -NoNewline
+            Write-Host "[$Level] " -ForegroundColor $LevelColor -NoNewline
+            Write-Host $Message
+        } else {
+            Write-Host $LogMessage
+        }
+
+        # Exit on fatal
+        if ($Level -eq "Fatal") {
+            exit 1
+        }
+    }
+
+    # Config Resolution
+    if (-not $ConfigPath) {
+        if ($env:{{ project_slug | upper | replace('-', '_') }}_CONFIG) {
+            $ConfigPath = $env:{{ project_slug | upper | replace('-', '_') }}_CONFIG
+        } elseif ($IsWindows) {
+            $ConfigPath = Join-Path $env:APPDATA "{{ project_slug }}\config.json"
+        } else {
+            $xdg = if ($env:XDG_CONFIG_HOME) { $env:XDG_CONFIG_HOME } else { Join-Path $HOME ".config" }
+            $ConfigPath = Join-Path $xdg "{{ project_slug }}/config.json"
+        }
+    }
+
+    Write-Log -Level Info -Message "Config path: $ConfigPath" -Module "Config"
+
+    $results = @()
+    $filesToProcess = @()
+    $readStdin = $false
+
+    # Input Strategy
+    if (-not $Inputs -or $Inputs.Count -eq 0) {
+        if ([Console]::IsInputRedirected) {
+            $readStdin = $true
+        } else {
+            Write-Log -Level Error -Message "No inputs provided. Use '-' or piped input for stdin. Use **/*.txt for recursive globs." -Module "Input"
+            exit 1
+        }
+    } else {
+        foreach ($input in $Inputs) {
+            if ($input -eq "-") {
+                $readStdin = $true
+                continue
+            }
+
+            $matches = Get-ChildItem -Path $input -File -Recurse -ErrorAction SilentlyContinue
+            if (-not $matches) {
+                Write-Log -Level Warn -Message "No files found for pattern '$input'" -Module "Input"
+                continue
+            }
+            foreach ($m in $matches) {
+                $filesToProcess += $m.FullName
+            }
+        }
+    }
+}
+
+process {
+    try {
+        if ($PSCmdlet.Stopping) { throw "Cancelled" }
+
+        # Process stdin
+        if ($readStdin) {
+            Write-Log -Level Info -Message "Processing stdin..." -Module "Processor"
+            $stdinContent = [Console]::In.ReadToEnd()
+            $results += [PSCustomObject]@{
+                source = "stdin"
+                length = $stdinContent.Length
+                status = "processed"
+            }
+        }
+
+        # Process files
+        foreach ($file in $filesToProcess) {
+            if (-not (Test-Path $file -PathType Leaf)) {
+                Write-Log -Level Warn -Message "Skipping non-file path '$file'" -Module "Processor"
+                continue
+            }
+            Write-Log -Level Info -Message "Processing $file with config $ConfigPath..." -Module "Processor"
+            try {
+                $content = Get-Content -Path $file -Raw -ErrorAction Stop
+                $results += [PSCustomObject]@{
+                    source = $file
+                    length = $content.Length
+                    status = "processed"
+                }
+            } catch {
+                Write-Log -Level Error -Message "Error reading $file: $($_.Exception.Message)" -Module "Processor"
+            }
+        }
+    }
+    catch {
+        Write-Log -Level Fatal -Message "Processing failed: $($_.Exception.Message)" -Module "Processor"
+    }
+}
+
+end {
+    if ($Json) {
+        $results | ConvertTo-Json -Depth 4
+    } else {
+        foreach ($r in $results) {
+            if ($SupportsColor) {
+                Write-Host "✓ " -ForegroundColor Green -NoNewline
+                Write-Host "$($r.source) ($($r.length) bytes)"
+            } else {
+                Write-Host "✓ $($r.source) ($($r.length) bytes)"
+            }
+        }
+    }
+
+    Write-Log -Level Info -Message "Processing complete. $($results.Count) items processed." -Module "Main"
+}

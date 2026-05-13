@@ -1,0 +1,109 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+# Basic project information
+package_name:
+  type: str
+  help: What is the human-readable package name? (e.g., "My Awesome Library")
+  validate: |
+    {% if not package_name|regex_match('^[a-zA-Z][a-zA-Z0-9\-_\s]*$') %}
+    Package name must start with a letter and contain only letters, numbers, hyphens, underscores, and spaces.
+    {% endif %}
+
+package_slug:
+  type: str
+  help: What is the package slug for package.json? (e.g., "my-awesome-library")
+  default: "{{ package_name | lower | replace(' ', '-') | replace('_', '-') }}"
+  validate: |
+    {% if not package_slug|regex_match('^[a-z][a-z0-9-]*$') %}
+    Package slug must be lowercase, start with a letter, and use hyphens instead of spaces/underscores.
+    {% endif %}
+
+module_name:
+  type: str
+  help: What is the TypeScript module name? (e.g., "@username/my-awesome-library")
+  default: "@{{author_name | lower | replace(' ', '-') }}/{{package_slug}}"
+
+description:
+  type: str
+  help: Short description of the package
+  default: "A TypeScript package"
+
+author_name:
+  type: str
+  help: Author name
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: Author email
+  default: "your.email@example.com"
+
+license:
+  type: str
+  help: License type
+  choices:
+    - AGPL-3.0
+    - MIT
+    - Apache-2.0
+    - MPL-2.0
+  default: "AGPL-3.0"
+
+repository_url:
+  type: str
+  help: Repository URL
+  default: "https://github.com/{{author_name}}/{{package_slug}}"
+
+node_version:
+  type: str
+  help: Node.js version
+  default: "20"
+
+typescript_version:
+  type: str
+  help: TypeScript version
+  default: "5.0"
+
+# Feature flags
+include_cli:
+  type: bool
+  help: Include CLI support?
+  default: false
+
+include_http:
+  type: bool
+  help: Include HTTP server support?
+  default: false
+
+include_docker:
+  type: bool
+  help: Include Docker configuration?
+  default: true
+
+# Dependencies
+keywords:
+  type: str
+  help: Comma-separated keywords
+  default: "typescript,library"
+
+# Devbox configuration
+include_postgres:
+  type: bool
+  help: Include PostgreSQL support?
+  default: false
+
+include_redis:
+  type: bool
+  help: Include Redis support?
+  default: false
+
+include_sqlite:
+  type: bool
+  help: Include SQLite support?
+  default: false
+
+include_workspace_deps:
+  type: bool
+  help: Include workspace dependencies (for monorepo use)?
+  default: false

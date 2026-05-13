@@ -1,0 +1,243 @@
+import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+
+@Command(name = "{{ project_slug }}", mixinStandardHelpOptions = true, version = "{{ project_slug }} 1.0",
+         description = "{{ description }}")
+class {{ project_class_name }} implements Callable<Integer> {
+
+    private static final Logger logger = LoggerFactory.getLogger({{ project_class_name }}.class);
+
+    @Parameters(arity = "0..*", paramLabel = "INPUTS", description = "Input files or glob patterns. Use '-' for stdin.")
+    private List<String> inputs = new ArrayList<>();
+
+    @Option(names = {"-c", "--config"}, description = "Config file path")
+    private String config;
+
+    @Option(names = {"--json"}, description = "Output results as JSON")
+    private boolean json;
+
+    @Option(names = {"-q", "--quiet"}, description = "Suppress all output except errors")
+    private boolean quiet;
+
+    @Option(names = {"-v", "--verbose"}, description = "Enable verbose output")
+    private boolean verbose;
+
+    @Option(names = {"--usage"}, description = "Show usage information")
+    private boolean usage;
+
+    @Option(names = {"--nocolor"}, description = "Disable colored output")
+    private boolean nocolor;
+
+    private static class Result {
+        String source;
+        int length;
+        String status = "processed";
+    }
+
+    @Override
+    public Integer call() throws Exception {
+        // Handle usage flag
+        if (usage) {
+            CommandLine.usage(this, System.out);
+            return 0;
+        }
+
+        // Set up color detection and logging
+        setupLogging();
+
+        // Set module name in MDC for logging
+        MDC.put("module", "{{ project_slug }}");
+
+        logger.info("Starting {} version 1.0", "{{ project_slug }}");
+
+        if (config == null || config.isBlank()) {
+            String env = System.getenv("{{ project_slug | upper | replace('-', '_') }}_CONFIG");
+            if (env != null && !env.isBlank()) {
+                config = env;
+            } else {
+                String xdg = System.getenv("XDG_CONFIG_HOME");
+                if (xdg == null || xdg.isBlank()) {
+                    xdg = Paths.get(System.getProperty("user.home"), ".config").toString();
+                }
+                config = Paths.get(xdg, "{{ project_slug }}", "config.properties").toString();
+            }
+        }
+
+        List<Result> results = new ArrayList<>();
+        boolean readStdin = false;
+
+        if (inputs.isEmpty()) {
+            if (System.console() == null) {
+                readStdin = true;
+            } else {
+                CommandLine.usage(this, System.out);
+                return 1;
+            }
+        } else {
+            for (String inp : inputs) {
+                if ("-".equals(inp)) {
+                    readStdin = true;
+                    continue;
+                }
+                List<Path> matches = globPaths(inp);
+                if (matches.isEmpty()) {
+                    System.err.printf("Warning: No files found for pattern '%s'%n", inp);
+                }
+                for (Path p : matches) {
+                    try {
+                        String content = Files.readString(p);
+                        results.add(processContent(p.toString(), content));
+                    } catch (IOException e) {
+                        System.err.printf("Error reading %s: %s%n", p, e.getMessage());
+                    }
+                }
+            }
+        }
+
+        if (readStdin) {
+            String content = readAllStdin();
+            results.add(processContent("stdin", content));
+        }
+
+        if (json) {
+            System.out.println(toJson(results));
+        } else {
+            for (Result r : results) {
+                System.out.printf("✓ Processed %s (%d bytes)%n", r.source, r.length);
+            }
+        }
+        return 0;
+    }
+
+    private static List<Path> globPaths(String pattern) throws IOException {
+        var matcher = FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+        List<Path> matches = new ArrayList<>();
+        try (var stream = Files.walk(Paths.get("."))) {
+            stream.filter(Files::isRegularFile)
+                    .forEach(p -> {
+                        Path rel = Paths.get(".").relativize(p);
+                        if (matcher.matches(rel)) {
+                            matches.add(p.normalize());
+                        }
+                    });
+        }
+        return matches;
+    }
+
+    private static String readAllStdin() throws IOException {
+        var sb = new StringBuilder();
+        try (var reader = new BufferedReader(new InputStreamReader(System.in))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+        }
+        return sb.toString();
+    }
+
+    private static Result processContent(String source, String content) {
+        Result r = new Result();
+        r.source = source;
+        r.length = content.length();
+        return r;
+    }
+
+    private static String toJson(List<Result> results) {
+        var sb = new StringBuilder();
+        sb.append("[\n");
+        for (int i = 0; i < results.size(); i++) {
+            Result r = results.get(i);
+            sb.append("  {\"source\": \"").append(escape(r.source)).append("\", ")
+              .append("\"length\": ").append(r.length).append(", ")
+              .append("\"status\": \"").append(r.status).append("\"}");
+            if (i < results.size() - 1) sb.append(",");
+            sb.append("\n");
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static String escape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    /**
+     * Set up logging with color detection and configuration.
+     * Detects if the terminal supports color and configures logging accordingly.
+     */
+    private void setupLogging() {
+        // Detect if terminal supports color
+        boolean supportsColor = detectColorSupport();
+        boolean useColor = supportsColor && !nocolor;
+
+        // Set system property for Logback to use
+        System.setProperty("LOG_COLOR", String.valueOf(useColor));
+        System.setProperty("LOG_QUIET", String.valueOf(quiet));
+        System.setProperty("LOG_VERBOSE", String.valueOf(verbose));
+
+        if (verbose) {
+            logger.debug("Color support: {}, nocolor flag: {}, quiet: {}, verbose: {}",
+                supportsColor, nocolor, quiet, verbose);
+        }
+    }
+
+    /**
+     * Detect whether the terminal supports color output.
+     * Checks for TTY, NO_COLOR environment variable, and common terminal indicators.
+     *
+     * @return true if the terminal likely supports color
+     */
+    private boolean detectColorSupport() {
+        // Check NO_COLOR environment variable (https://no-color.org/)
+        String noColor = System.getenv("NO_COLOR");
+        if (noColor != null && !noColor.isEmpty()) {
+            return false;
+        }
+
+        // Check if stdout is a TTY
+        // On Unix-like systems, we can check if System.out is connected to a terminal
+        // This is a simplified check; in production you might use JNA or native methods
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            // Windows: check if ANSI support is available (Windows 10+)
+            // For simplicity, we'll check a common environment variable
+            String wtSession = System.getenv("WT_SESSION");
+            String term = System.getenv("TERM");
+            return wtSession != null || (term != null && !term.isEmpty());
+        } else {
+            // Unix-like: check TERM variable
+            String term = System.getenv("TERM");
+            if (term == null || term.isEmpty() || "dumb".equals(term)) {
+                return false;
+            }
+            // Check if running in a CI environment (usually no color)
+            String ci = System.getenv("CI");
+            if (ci != null && !ci.isEmpty()) {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    public static void main(String... args) {
+        int exitCode = new CommandLine(new {{ project_class_name }}()).execute(args);
+        System.exit(exitCode);
+    }
+}

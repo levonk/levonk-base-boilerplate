@@ -1,0 +1,10 @@
+import { test, expect } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
+
+// Basic smoke test to ensure the extension build output exists.
+test("extension build outputs manifest.json", async () => {
+  const distDir = process.env.EXTENSION_DIST_PATH ?? "dist";
+  const manifestPath = path.join(distDir, "manifest.json");
+  expect(fs.existsSync(manifestPath)).toBe(true);
+});

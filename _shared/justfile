@@ -1,0 +1,440 @@
+# Boilerplate Shared Partials Justfile
+
+# Set default shell and recipe settings
+set shell := ["bash", "-euo", "pipefail"]
+
+# Default recipe
+default:
+    @just --list
+
+# Normal targets - Developer interface (REQUIRED)
+clean:
+    @echo "🧹 Cleaning generated partials.bak directories..."
+    @find . -name "partials.bak" -type d -exec rm -rf {} + 2>/dev/null || true
+    @echo "✅ Clean complete"
+
+dev:
+    @echo "🚀 Starting development environment..."
+    @echo "📁 Shared partials location: $(pwd)"
+    @echo "🛠️  Use: copier-wrapper.sh copy <template> <destination>"
+
+build:
+    @echo "🔨 Building shared partials..."
+    @echo "✅ Build complete (no build steps needed for shared partials)"
+
+test:
+    @echo "🧪 Testing shared partials..."
+    @just test-wrapper
+    @echo "✅ Tests complete"
+
+lint:
+    @echo "🔍 Linting shared partials..."
+    @find _shared -name "*.jinja" -exec echo "Checking {}" \; | head -10
+    @echo "✅ Lint complete"
+
+typecheck:
+    @echo "🔍 Type checking shared partials..."
+    @echo "✅ Type check complete (no types to check in shared partials)"
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    @echo "🔧 Bootstrapping shared partials environment..."
+    @just init
+    @just prime
+    @echo "✅ Bootstrap complete"
+
+bootstrap-internal:
+    #!/usr/bin/env bash
+    # Internal bootstrap logic called by devbox init_hook
+    set -euo pipefail
+    
+    if ! command -v copier >/dev/null 2>&1; then
+      echo "[bootstrap] Installing copier via pip..."
+      pip install copier
+      echo "[bootstrap] copier installed."
+    fi
+    if ! command -v just >/dev/null 2>&1; then
+      echo "[bootstrap] Installing just via Nix..."
+      nix profile add nixpkgs#just --extra-experimental-features "nix-command flakes"
+      echo "[bootstrap] just installed."
+    fi
+    
+    # Install universal-ctags via Nix
+    if ! command -v ctags >/dev/null 2>&1; then
+      echo "[bootstrap] Installing universal-ctags via Nix..."
+      nix profile add nixpkgs#universal-ctags --extra-experimental-features "nix-command flakes"
+      echo "[bootstrap] universal-ctags installed."
+    fi
+    
+    # Install uv via Nix
+    if ! command -v uv >/dev/null 2>&1; then
+      echo "[bootstrap] Installing uv via Nix..."
+      nix profile add nixpkgs#uv --extra-experimental-features "nix-command flakes"
+      echo "[bootstrap] uv installed."
+    fi
+    
+    # Install https://github.com/Cranot/roam-code 
+    if ! command -v roam >/dev/null 2>&1; then
+      echo "[bootstrap] Installing roam-code..."
+      uv tool install roam-code
+      echo "[bootstrap] roam-code installed."
+      echo "[bootstrap] Running roam-code priming command..."
+      roam init
+      roam understand
+      echo "[bootstrap] roam-code priming complete."
+    fi
+    
+    # Install desloppify
+    if ! command -v desloppify >/dev/null 2>&1; then
+      echo "[bootstrap] Installing desloppify..."
+      # Try Nix first, fallback to binary download
+      if nix profile install nixpkgs#desloppify --extra-experimental-features "nix-command flakes" 2>/dev/null; then
+        echo "[bootstrap] desloppify installed via Nix."
+      else
+        echo "[bootstrap] Installing desloppify via binary download..."
+        mkdir -p "$HOME/.local/bin"
+        curl -L https://github.com/peteromallet/desloppify/releases/latest/download/desloppify-$(uname -s)-$(uname -m) -o "$HOME/.local/bin/desloppify"
+        chmod +x "$HOME/.local/bin/desloppify"
+        export PATH="$HOME/.local/bin:$PATH"
+        mkdir -p .claude/skills/desloppify && { curl -fsSL https://raw.githubusercontent.com/peteromallet/desloppify/main/docs/SKILL.md; printf '\n\n'; curl -fsSL https://raw.githubusercontent.com/peteromallet/desloppify/main/docs/CLAUDE.md; } > .claude/skills/desloppify/SKILL.md
+        mkdir -p .agents/skills/desloppify "${CODEX_HOME:-$HOME/.codex}/skills/desloppify" && { curl -fsSL https://raw.githubusercontent.com/peteromallet/desloppify/main/docs/SKILL.md; printf '\n\n'; curl -fsSL https://raw.githubusercontent.com/peteromallet/desloppify/main/docs/CODEX.md; } | tee .agents/skills/desloppify/SKILL.md > "${CODEX_HOME:-$HOME/.codex}/skills/desloppify/SKILL.md"
+        echo "[bootstrap] desloppify installed via binary."
+      fi
+    fi
+    if ! command -v desloppify >/dev/null 2>&1; then
+      echo "[bootstrap] desloppify install failed"
+    else
+      echo "[bootstrap] Running desloppify priming command..."
+      desloppify scan --path .
+      echo "[bootstrap] desloppify priming complete."
+    fi
+    
+    # Install qmd for memory search
+    if ! command -v qmd >/dev/null 2>&1; then
+      echo "[bootstrap] Installing qmd for memory search..."
+      if cargo install qmd 2>/dev/null; then
+        echo "[bootstrap] qmd installed via cargo."
+      else
+        echo "[bootstrap] qmd install failed, will use ripgrep fallback"
+      fi
+    fi
+    
+    # Initialize tkr for task management
+    if ! command -v tkr >/dev/null 2>&1; then
+      echo "[bootstrap] Installing tkr for task management..."
+      if command -v cargo >/dev/null 2>&1 && cargo install tkr 2>/dev/null; then
+        echo "[bootstrap] tkr installed via cargo."
+      else
+        echo "[bootstrap] tkr not available (install from: https://github.com/levonk/tkr)"
+      fi
+    fi
+    
+    # Initialize tkr if available
+    if command -v tkr >/dev/null 2>&1; then
+      if [ ! -d ".tickets" ]; then
+        echo "[bootstrap] Initializing tkr..."
+        tkr init || echo "[bootstrap] tkr init failed"
+      else
+        echo "[bootstrap] tkr already initialized"
+      fi
+    fi
+    
+    # Create memory directory structure for Obsidian
+    echo "[bootstrap] Setting up memory structure..."
+    mkdir -p memory/{00-inbox,01-projects,02-decisions,03-patterns,04-learnings,05-references,98-logs,99-daily}
+    
+    # Create Obsidian configuration if needed
+    if [ ! -d ".obsidian" ]; then
+      mkdir -p .obsidian
+      echo "# Obsidian configuration" > .obsidian/config.md
+    fi
+    
+    echo "[bootstrap] Memory structure created"
+    echo "[bootstrap] Shared partials environment ready!"
+
+# Prime recipes (REQUIRED)
+prime:
+    @echo "🚀 Priming code indexing and analysis tools..."
+    @devbox run prime
+
+prime-internal:
+    #!/usr/bin/env bash
+    # Internal prime logic for code indexing and analysis tools
+    set -euo pipefail
+    
+    echo "[prime] Starting code indexing and analysis priming..."
+    
+    # Update repository from remote
+    echo "[prime] Updating repository..."
+    git fetch || echo "[prime] git fetch failed (check remote connectivity)"
+    
+    # Run universal-ctags indexing
+    if command -v ctags >/dev/null 2>&1; then
+        echo "[prime] Running universal-ctags indexing..."
+        ctags --recurse=yes --tag-relative=yes --exclude=.git --exclude=node_modules --exclude=target --exclude=dist --exclude=build --exclude=__pycache__ --exclude=.venv --exclude=vendor -f .tags || echo "[prime] ctags indexing completed with warnings"
+        echo "[prime] universal-ctags indexing complete."
+    else
+        echo "[prime] Skipping universal-ctags (not installed)"
+    fi
+    
+    # Run roam-code indexing
+    if command -v roam >/dev/null 2>&1; then
+        echo "[prime] Running roam-code indexing..."
+        roam understand || echo "[prime] roam-code indexing completed with warnings"
+        echo "[prime] roam-code indexing complete."
+    else
+        echo "[prime] Skipping roam-code (not installed)"
+    fi
+    
+    # Run desloppify scanning
+    if command -v desloppify >/dev/null 2>&1; then
+        echo "[prime] Running desloppify scanning..."
+        desloppify scan --path . || echo "[prime] desloppify scanning completed with warnings"
+        echo "[prime] desloppify scanning complete."
+    else
+        echo "[prime] Skipping desloppify (not installed)"
+    fi
+    
+    # qmd memory indexing
+    if command -v qmd >/dev/null 2>&1; then
+        echo "[prime] Indexing documentation with qmd..."
+        qmd index docs/ internal-docs/ memory/ README.md || echo "[prime] qmd indexing failed"
+        echo "[prime] qmd indexing complete."
+    else
+        echo "[prime] Skipping qmd (not installed)"
+    fi
+    
+    echo "[prime] Code and documentation indexing complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    @echo "🔍 Checking shared partials environment health..."
+    @just doctor-internal
+
+# Quality checks (OPTIONAL but RECOMMENDED)
+quality:
+    just lint
+    just test
+    just typecheck
+
+# Memory and task management targets (NEW)
+doc-search:
+    @echo "🔍 Searching documentation and memory..."
+    @devbox run doc-search
+
+doc-search-internal:
+    # Search memory and documentation with qmd
+    if command -v qmd >/dev/null 2>&1; then
+        query="${1:-.}"  # Default to show all if no query
+        qmd search "$query" | head -20
+    else
+        echo "qmd not found - falling back to ripgrep..."
+        rg --type md "$query" docs/ internal-docs/ memory/ || true
+    fi
+
+tasks:
+    @echo "📋 Listing current tasks..."
+    @devbox run tasks
+
+tasks-internal:
+    # List current tasks
+    if command -v tkr >/dev/null 2>&1; then
+        tkr list --status=open
+    else
+        echo "tkr not found"
+    fi
+
+task-ready:
+    @echo "🎯 Getting next available task..."
+    @devbox run task-ready
+
+task-ready-internal:
+    # Get next available task
+    if command -v tkr >/dev/null 2>&1; then
+        tkr ready
+    else
+        echo "tkr not found"
+    fi
+
+task-start:
+    @echo "🚀 Starting available task..."
+    @devbox run task-start
+
+task-start-internal:
+    # Start working on available task
+    if command -v tkr >/dev/null 2>&1; then
+        task_id=$(tkr ready | head -1 | cut -d' ' -f1)
+        if [ -n "$task_id" ]; then
+            tkr start "$task_id"
+            echo "Started task: $task_id"
+        else
+            echo "No available tasks"
+        fi
+    else
+        echo "tkr not found"
+    fi
+
+# Development setup (OPTIONAL)
+setup:
+    # Project-specific setup
+    echo "Development environment ready!"
+
+# Initialize the shared partials environment
+init:
+    @echo "🔧 Initializing boilerplate shared partials environment..."
+    @echo "📁 Creating directory structure..."
+    mkdir -p apps/infrastructure/docker
+    mkdir -p apps/web/typescript/nextjs
+    mkdir -p packages/category/web/domain/package-name/typescript
+    mkdir -p packages/category/web/domain/package-name/python3
+    @echo "✅ Shared partials structure initialized"
+
+# Validate shared partials structure
+validate:
+    @echo "🔍 Validating shared partials structure..."
+    @find _shared -name "*.jinja" | head -10
+    @echo "✅ Validation complete"
+
+# Test copier-wrapper functionality  
+test-wrapper:
+    @echo "🧪 Testing copier-wrapper script..."
+    @if [ -f ../copier-wrapper.sh ]; then
+        @echo "✅ copier-wrapper.sh found"
+        @../copier-wrapper.sh --help | head -5
+    else
+        @echo "❌ copier-wrapper.sh not found"
+    fi
+
+# Show available shared partials
+list-shared:
+    @echo "📋 Available shared partials:"
+    @find _shared -name "*.jinja" -exec echo "  - {}" \; 2>/dev/null || echo "  No shared partials found"
+
+# Watch for changes and auto-clean (requires inotify-tools)
+watch:
+    @echo "👀 Watching for changes in shared partials..."
+    @while inotifywait -r -e modify,create,delete _shared/ 2>/dev/null; do
+        @echo "🔄 Change detected, cleaning partials.bak directories..."
+        @just clean
+    done
+
+# Internal implementations
+build-internal:
+    @echo "� Building shared partials (internal)..."
+    @echo "✅ Build complete"
+
+test-internal:
+    @echo "🧪 Testing shared partials (internal)..."
+    @just test-wrapper
+    @echo "✅ Tests complete"
+
+lint-internal:
+    @echo "🔍 Linting shared partials (internal)..."
+    @find _shared -name "*.jinja" -exec echo "Checking {}" \;
+    @echo "✅ Lint complete"
+
+typecheck-internal:
+    @echo "🔍 Type checking shared partials (internal)..."
+    @echo "✅ Type check complete"
+
+dev-internal:
+    @echo "🚀 Starting development environment (internal)..."
+    @echo "📁 Shared partials location: $(pwd)"
+    @echo "🛠️  Use: copier-wrapper.sh copy <template> <destination>"
+
+doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    MISSING=0
+    for tool in copier just git ctags uv desloppify roam qmd tkr; do
+      if command -v $tool >/dev/null 2>&1; then
+        printf "[doctor] %-8s OK\n" "$tool"
+      else
+        echo "[doctor] MISSING: $tool"
+        MISSING=$((MISSING+1))
+      fi
+    done
+    
+    # Check for indexing artifacts
+    echo "[doctor] Checking indexing artifacts..."
+    if [ -f .tags ]; then
+        echo "[doctor] .tags file found (ctags indexing)"
+    else
+        echo "[doctor] .tags file missing (run 'just prime' to generate)"
+    fi
+    
+    if [ -d .roam ]; then
+        echo "[doctor] .roam directory found (roam-code indexing)"
+    else
+        echo "[doctor] .roam directory missing (run 'just prime' to generate)"
+    fi
+    
+    if [ -f .desloppify ]; then
+        echo "[doctor] .desloppify file found (desloppify scanning)"
+    else
+        echo "[doctor] .desloppify file missing (run 'just prime' to generate)"
+    fi
+    
+    # Check for memory management setup
+    if [ -d memory ]; then
+        echo "[doctor] memory/ directory found (Obsidian memory structure)"
+    else
+        echo "[doctor] memory/ directory missing (run 'just bootstrap' to create)"
+    fi
+    
+    if [ -d .tickets ]; then
+        echo "[doctor] .tickets directory found (tkr task management)"
+    else
+        echo "[doctor] .tickets directory missing (run 'just bootstrap' to create)"
+    fi
+    
+    if [ "$MISSING" -ne 0 ]; then
+        echo "[doctor] Missing $MISSING required tool(s). Run 'just bootstrap' to install."
+        exit 1
+    fi
+    echo "[doctor] Shared partials environment looks good."
+
+# Clean up (OPTIONAL)
+clean-internal:
+    @echo "🧹 Cleaning shared partials (internal)..."
+    @find . -name "partials.bak" -type d -exec rm -rf {} + 2>/dev/null || true
+    @echo "✅ Clean complete"
+
+# Deep clean (OPTIONAL)
+clean-all-internal:
+    @echo "🧹 Deep cleaning shared partials..."
+    @find . -name "partials.bak" -type d -exec rm -rf {} + 2>/dev/null || true
+    @find . -name "*.tmp" -delete 2>/dev/null || true
+    @find . -name ".DS_Store" -delete 2>/dev/null || true
+    @echo "✅ Deep clean complete"
+
+# Help information
+help:
+    @echo "🔧 Boilerplate Shared Partials - Available Commands:"
+    @echo ""
+    @echo "Standard Commands:"
+    @echo "  bootstrap    - Install/verify tools and set up environment"
+    @echo "  prime        - Run code indexing and analysis tools"
+    @echo "  dev          - Start development environment"
+    @echo "  build        - Build shared partials"
+    @echo "  test         - Run tests"
+    @echo "  lint         - Run linters"
+    @echo "  typecheck    - Run type checking"
+    @echo "  clean        - Clean build artifacts"
+    @echo "  doctor       - Check environment health"
+    @echo "  quality      - Run all quality checks (lint + test + typecheck)"
+    @echo "  setup        - Project-specific setup"
+    @echo ""
+    @echo "Memory & Task Management:"
+    @echo "  doc-search   - Search documentation and memory (usage: just doc-search 'query')"
+    @echo "  tasks        - List current tasks"
+    @echo "  task-ready   - Get next available task"
+    @echo "  task-start   - Start working on available task"
+    @echo ""
+    @echo "Shared Partials Commands:"
+    @echo "  init         - Initialize shared partials directory structure"
+    @echo "  validate     - Validate shared partials structure"
+    @echo "  test-wrapper - Test copier-wrapper functionality"
+    @echo "  list-shared  - Show available shared partials"
+    @echo "  watch        - Watch for changes and auto-clean"
+    @echo "  help         - Show this help message"

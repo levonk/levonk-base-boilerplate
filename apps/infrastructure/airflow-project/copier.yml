@@ -1,0 +1,31 @@
+# Copier template: Airflow Project Boilerplate
+# Render with: copier copy ./boilerplate/apps/infrastructure/airflow-project <dest>
+
+_min_copier_version: "9.0.0"
+
+project_name:
+  type: str
+  help: "Airflow project name (folder + DAG prefix)"
+  default: "airflow-project"
+
+dag_id:
+  type: str
+  help: "Primary DAG id to scaffold"
+  default: "example_dag"
+
+ollama_base_url:
+  type: str
+  help: "Ollama base URL used by the example task"
+  default: "http://ollama:11434"
+
+ollama_model:
+  type: str
+  help: "Model name for the example task"
+  default: "llama3.1"
+
+_subdirectory: files
+_templates_suffix: .jinja
+
+_templates:
+  - package.json.jinja
+  - tsconfig.json.jinja

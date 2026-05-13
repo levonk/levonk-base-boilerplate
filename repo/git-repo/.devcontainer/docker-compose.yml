@@ -1,0 +1,41 @@
+---
+services:
+  # This is your main development container service.
+  # VS Code will connect to this one.
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Mount the shared named volumes.
+    volumes:
+      - pnpm_store:/home/developer/.pnpm-store
+      - nix_store:/nix
+      # This line mounts your source code, similar to workspaceMount.
+      - ../src:/home/developer/project:cached
+
+    # Ensure the nix sidecar starts first.
+    depends_on:
+      - nix
+
+    # Keep the container running with the sleep command.
+    command: sleep infinity
+
+  # Nix sidecar service - manages the Nix store and caching
+  nix:
+    build:
+      context: .
+      dockerfile: Dockerfile.nix
+    container_name: dev-nix-sidecar
+    privileged: true
+    restart: unless-stopped
+    volumes:
+      - nix_store:/nix
+    command: sleep infinity
+
+# Shared persistent volumes
+volumes:
+  pnpm_store:
+    name: shared-pnpm-store
+  nix_store:
+    name: shared-nix-store

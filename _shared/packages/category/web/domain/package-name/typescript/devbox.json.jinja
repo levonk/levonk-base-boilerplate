@@ -1,0 +1,15 @@
+{
+    "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+    "packages": [
+        "nodejs_{{ node_version }}",
+        "typescript",
+        "pnpm"
+    ],
+    "shell": {
+        "init_hook": [
+            "echo '🔧 TypeScript package environment initialized'",
+            "echo '📦 Package: {{ module_name }}'",
+            "echo '🛠️  Use: pnpm install && pnpm build'"
+        ]
+    }
+}

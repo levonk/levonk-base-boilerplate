@@ -1,0 +1,177 @@
+# Airflow Project Development Commands
+
+# Detect NX binary
+NX_BIN := `command -v nx || echo ""`
+NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    @echo "📦 Installing pnpm and NX..."
+    @npm install -g pnpm@latest
+    @if [ "{{ NX_AVAILABLE }}" = "false" ]; then pnpm add -g nx@latest; fi
+    @pnpm install
+    @echo "✓ Bootstrap complete"
+
+# NX Commands
+nx-build:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx build; else echo "Use just build"; fi
+
+nx-test:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx test; else echo "Use just test"; fi
+
+nx-lint:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx lint; else echo "Use just lint"; fi
+
+nx-affected:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx affected; else echo "NX not available"; fi
+
+nx-graph:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx graph; else echo "NX not available"; fi
+
+nx-clear-cache:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx reset; else echo "NX not available"; fi
+
+nx-install:
+    @pnpm add -g nx@latest
+    @echo "✓ NX installed globally"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check Airflow Project environment
+    @echo "🌪️ Airflow version:"
+    @airflow version
+    @echo ""
+    @echo "🐳 Docker version:"
+    @docker --version
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v just || echo "just not found"
+    @echo ""
+    @echo "📦 Node environment:"
+    @node --version
+    @pnpm --version
+    @echo "📊 NX: {{ if NX_AVAILABLE }}$(nx --version){{ else }}not installed{{ endif }}"
+    @echo ""
+    @echo "✅ Airflow Project environment is ready!"
+
+# Development mode
+dev:
+    @just bootstrap
+    @just airflow-init
+    @just airflow-start
+
+# Initialize Airflow
+airflow-init:
+    airflow db init
+
+# Start Airflow webserver and scheduler
+airflow-start:
+    airflow webserver --port 8080 &
+    airflow scheduler
+
+# Stop Airflow services
+airflow-stop:
+    pkill -f "airflow webserver" || echo "Webserver not running"
+    pkill -f "airflow scheduler" || echo "Scheduler not running"
+
+# Run Airflow webserver only
+webserver:
+    airflow webserver --port 8080
+
+# Run Airflow scheduler only
+scheduler:
+    airflow scheduler
+
+# Run tests
+test:
+    pytest tests/
+
+# Run tests with coverage
+test-coverage:
+    pytest --cov=dags --cov-report=html
+
+# Lint code
+lint:
+    flake8 dags/
+    black --check dags/
+    isort --check-only dags/
+
+# Format code
+format:
+    black dags/
+    isort dags/
+
+# Type checking
+typecheck:
+    mypy dags/
+
+# Build for production
+build:
+    echo "Airflow project build complete"
+
+# Clean up
+clean:
+    @just airflow-stop
+    rm -rf .pytest_cache .coverage htmlcov
+    airflow db reset --yes
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ Airflow Project development environment ready!"
+
+# Health check
+health:
+    curl -f http://localhost:8080/health || echo "Airflow not running"
+
+# Package for distribution
+package:
+    @just build
+    @just clean
+    mkdir -p dist
+    tar -czf dist/{{ project_name }}.tar.gz dags/ requirements.txt
+
+# Quality checks
+quality:
+    @just lint
+    @just test
+    @just health
+
+# Docker commands
+docker-build:
+    docker build -t {{ project_name }} .
+
+docker-run:
+    docker run -p 8080:8080 {{ project_name }}
+
+# View logs
+logs:
+    @echo "Airflow logs:"
+    @tail -f $AIRFLOW_HOME/logs/airflow-scheduler.log || echo "Scheduler logs not found"
+    @tail -f $AIRFLOW_HOME/logs/airflow-webserver.log || echo "Webserver logs not found"

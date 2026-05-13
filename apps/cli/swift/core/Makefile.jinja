@@ -1,0 +1,202 @@
+.PHONY: doctor bootstrap profile help clean clean-inner build build-inner build-release build-release-inner debug debug-inner run run-inner run-debug run-debug-inner deploy deploy-inner lint lint-inner test test-inner docker-build docker-run
+
+PROJECT_SLUG := {{ project_slug }}
+NIX := $(shell if [ -x /nix/var/nix/profiles/default/bin/nix ]; then echo /nix/var/nix/profiles/default/bin/nix; else echo nix; fi)
+NIX_DEV := $(NIX) develop -c
+
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+doctor: ## Validate prerequisites and print setup suggestions
+	@if ! $(NIX) --version >/dev/null 2>&1; then \
+		echo "Error: nix not found in PATH" >&2; \
+		echo "Suggestion: install Nix (https://nixos.org/download/)" >&2; \
+		exit 1; \
+	fi
+	@if [ ! -f flake.nix ]; then \
+		echo "Error: flake.nix not found (expected in project root)" >&2; \
+		exit 1; \
+	fi
+	@echo "OK: nix + flake.nix present"
+	@if command -v swift >/dev/null 2>&1; then \
+		echo "OK: swift found in PATH ($(shell command -v swift))"; \
+	else \
+		echo "Warning: swift not found in PATH"; \
+	fi
+	@if [ -n "$$WSL_INTEROP" ] || grep -qi microsoft /proc/version 2>/dev/null; then \
+		echo "Warning: WSL detected. Nix Swift toolchains often fail to build on some WSL2 setups."; \
+		echo "Root cause: nixpkgs may need to compile Swift from source; that build is brittle on some Linux/WSL environments."; \
+		echo "Workarounds:"; \
+		echo "- Prefer Docker: make docker-build && make docker-run ARGS=\"--help\""; \
+		echo "- Or install a Swift toolchain outside Nix and ensure 'swift' is in PATH"; \
+	fi
+	@echo "Checking Nix dev shell toolchain..."
+	@$(NIX) develop -c true >/dev/null 2>&1 && echo "OK: nix develop can start" || echo "Warning: nix develop failed to start (likely Swift toolchain build failure)"
+	@$(NIX) develop -c sh -lc 'command -v swift >/dev/null 2>&1' >/dev/null 2>&1 && echo "OK: swift is available inside nix dev shell" || echo "Warning: swift is not available inside nix dev shell"
+	@if command -v direnv >/dev/null 2>&1; then \
+		echo "OK: direnv present"; \
+		echo "Next: direnv allow"; \
+	else \
+		echo "Warning: direnv not found"; \
+		echo "Suggestion: install direnv (https://direnv.net/)"; \
+		echo "Then run: direnv allow"; \
+	fi
+	@echo "Suggestion: make bootstrap"
+	@echo "Optional: make profile (installs toolchain into user profile)"
+
+bootstrap: doctor ## Warm the Nix dev shell for this project (no user env changes)
+	@$(NIX) develop -c true >/dev/null 2>&1 || { \
+		echo "Warning: nix develop failed to start."; \
+		echo "Root cause: nixpkgs may be trying to compile Swift from source on this platform."; \
+		echo "If swift is installed in PATH, the Makefile will fall back to it."; \
+		echo "Otherwise, use Docker (make docker-build && make docker-run)."; \
+		true; \
+	}
+
+profile: doctor ## Install toolchain into user profile (optional)
+	@$(NIX) profile install nixpkgs#swift nixpkgs#gnumake nixpkgs#git >/dev/null 2>&1 || { \
+		echo "Warning: nix profile install failed."; \
+		echo "Details: attempted 'nix profile install nixpkgs#swift nixpkgs#gnumake nixpkgs#git'"; \
+		if command -v swift >/dev/null 2>&1; then \
+			echo "OK: swift is available in PATH ($(shell command -v swift))"; \
+			echo "Continuing: host swift can be used as a fallback."; \
+		else \
+			echo "Warning: swift is not available in PATH"; \
+		fi; \
+		echo "Root cause: nixpkgs may be trying to compile Swift from source on this platform, which can fail (commonly on WSL2)."; \
+		echo "Workarounds:"; \
+		echo "- Prefer Docker: make docker-build && make docker-run ARGS=\"--help\""; \
+		echo "- Or install Swift outside Nix and ensure 'swift' is in PATH"; \
+		true; \
+	}
+
+clean: doctor ## Clean build artifacts (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) clean-inner >/dev/null 2>&1 || { \
+		$(MAKE) clean-inner >/dev/null 2>&1 && true || true; \
+	}
+
+clean-inner: ## Clean build artifacts
+	rm -rf .build
+
+build: doctor bootstrap ## Build the project in release mode (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) build-inner >/dev/null 2>&1 || { \
+		if command -v swift >/dev/null 2>&1; then \
+			echo "Warning: nix dev shell unavailable; building with host swift"; \
+			$(MAKE) build-inner; \
+		else \
+			echo "Warning: skipping build because swift is unavailable."; \
+			echo "Details: nix develop failed and swift was not found in PATH."; \
+			echo "Workarounds: use Docker (make docker-build && make docker-run) or install Swift outside Nix."; \
+			true; \
+		fi; \
+	}
+
+build-inner: ## Build the project in release mode
+	swift build -c release
+
+build-release: doctor bootstrap ## Build the project in release mode (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) build-release-inner >/dev/null 2>&1 || { \
+		if command -v swift >/dev/null 2>&1; then \
+			echo "Warning: nix dev shell unavailable; building with host swift"; \
+			$(MAKE) build-release-inner; \
+		else \
+			echo "Warning: skipping build because swift is unavailable."; \
+			echo "Details: nix develop failed and swift was not found in PATH."; \
+			echo "Workarounds: use Docker (make docker-build && make docker-run) or install Swift outside Nix."; \
+			true; \
+		fi; \
+	}
+
+build-release-inner: ## Build the project in release mode
+	swift build -c release
+
+debug: doctor bootstrap ## Build the project in debug mode (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) debug-inner >/dev/null 2>&1 || { \
+		if command -v swift >/dev/null 2>&1; then \
+			echo "Warning: nix dev shell unavailable; building with host swift"; \
+			$(MAKE) debug-inner; \
+		else \
+			echo "Warning: skipping build because swift is unavailable."; \
+			echo "Details: nix develop failed and swift was not found in PATH."; \
+			echo "Workarounds: use Docker (make docker-build && make docker-run) or install Swift outside Nix."; \
+			true; \
+		fi; \
+	}
+
+debug-inner: ## Build the project in debug mode
+	swift build -c debug
+
+run-debug: doctor bootstrap ## Run the application in debug mode (use ARGS=... to pass arguments) (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) run-debug-inner ARGS="$(ARGS)" || { \
+		echo "Error: unable to run via nix dev shell (Swift toolchain missing)." >&2; \
+		echo "Suggestion: make docker-build && make docker-run ARGS=\"$(ARGS)\"" >&2; \
+		exit 1; \
+	}
+
+run-debug-inner: ## Run the application in debug mode
+	swift run -c debug {{ project_slug }} $(ARGS)
+
+deploy: doctor bootstrap ## Deploy the release binary to $${XDG_BIN_HOME:-$$HOME/.local/bin} (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) deploy-inner >/dev/null 2>&1 || { \
+		if command -v swift >/dev/null 2>&1; then \
+			echo "Warning: nix dev shell unavailable; deploying with host swift"; \
+			$(MAKE) deploy-inner; \
+		else \
+			echo "Warning: skipping deploy because swift is unavailable."; \
+			echo "Details: nix develop failed and swift was not found in PATH."; \
+			echo "Workarounds: use Docker (make docker-build && make docker-run) or install Swift outside Nix."; \
+			true; \
+		fi; \
+	}
+
+deploy-inner: ## Deploy the release binary to $${XDG_BIN_HOME:-$$HOME/.local/bin}
+	mkdir -p "${XDG_BIN_HOME:-$$HOME/.local/bin}"
+	cp .build/release/{{ project_slug }} "${XDG_BIN_HOME:-$$HOME/.local/bin}/"
+	@echo "Deployed {{ project_slug }} to ${XDG_BIN_HOME:-$$HOME/.local/bin}/{{ project_slug }}"
+
+lint: doctor bootstrap ## Lint (no-op) (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) lint-inner >/dev/null 2>&1 || { \
+		if command -v swift >/dev/null 2>&1; then \
+			echo "Warning: nix dev shell unavailable; continuing (lint is a no-op)"; \
+			$(MAKE) lint-inner; \
+		else \
+			echo "Warning: skipping lint because swift is unavailable."; \
+			echo "Details: nix develop failed and swift was not found in PATH."; \
+			true; \
+		fi; \
+	}
+
+lint-inner: ## Lint (no-op)
+	@echo "No lint configured for swift template"
+
+test: doctor bootstrap ## Run tests (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) test-inner >/dev/null 2>&1 || { \
+		if command -v swift >/dev/null 2>&1; then \
+			echo "Warning: nix dev shell unavailable; running tests with host swift"; \
+			$(MAKE) test-inner; \
+		else \
+			echo "Warning: skipping tests because swift is unavailable."; \
+			echo "Details: nix develop failed and swift was not found in PATH."; \
+			echo "Workarounds: use Docker (make docker-build && make docker-run) or install Swift outside Nix."; \
+			true; \
+		fi; \
+	}
+
+test-inner: ## Run tests
+	swift test
+
+run: doctor bootstrap ## Run the application (use ARGS=... to pass arguments) (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) run-inner ARGS="$(ARGS)" || { \
+		echo "Error: unable to run via nix dev shell (Swift toolchain missing)." >&2; \
+		echo "Suggestion: make docker-build && make docker-run ARGS=\"$(ARGS)\"" >&2; \
+		exit 1; \
+	}
+
+run-inner: ## Run the application
+	swift run {{ project_slug }} $(ARGS)
+
+docker-build: ## Build docker image
+	docker build -t $(PROJECT_SLUG):latest .
+
+docker-run: ## Run via docker
+	docker run --rm -it $(PROJECT_SLUG):latest $(ARGS)

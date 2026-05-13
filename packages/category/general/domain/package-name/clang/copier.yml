@@ -1,0 +1,20 @@
+_min_copier_version: "9.0.0"
+_templates_suffix: ".tmpl"
+
+package_name:
+  type: str
+  help: Name of the package (kebab-case)
+
+package_description:
+  type: str
+  help: Short description of the package
+
+category:
+  type: str
+  help: "Package category (features|services|core|ui|tests)"
+  default: "tests"
+
+domain:
+  type: str
+  help: "Business domain or technical capability (e.g. windhawk, devtools)"
+  default: "windhawk"

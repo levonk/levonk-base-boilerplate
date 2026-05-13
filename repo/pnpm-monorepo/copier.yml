@@ -1,0 +1,24 @@
+# Template variables
+_defaults:
+  monorepo_name: "my-monorepo"
+  description: "A pnpm-based monorepo with turbo"
+
+# Questions
+monorepo_name:
+  type: str
+  help: "What is your monorepo name?"
+
+description:
+  type: str
+  help: "Monorepo description"
+
+# Template configuration
+_templates_suffix: ".jinja"
+_ignore:
+  - "node_modules"
+  - ".next"
+  - "dist"
+  - "out"
+  - ".git"
+  - "__pycache__"
+  - "*.pyc"

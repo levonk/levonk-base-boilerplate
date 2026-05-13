@@ -1,0 +1,80 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "Project name (kebab-case)"
+  default: "my-git-repo"
+
+project_description:
+  type: str
+  help: "Short description of the project"
+  default: "A new git repository"
+
+copyright_holder:
+  type: str
+  help: "Copyright holder"
+  default: "The Authors"
+
+copyright_year:
+  type: str
+  help: "Copyright year"
+  default: "2025"
+
+create_gh_pages:
+  type: bool
+  help: "Create an empty gh-pages branch (non-destructive)"
+  default: true
+
+_tasks:
+  - |
+    bash -c '
+    # Run git-config-defaults if available
+    if [ -x ~/.local/bin/git-config-defaults.sh ]; then
+      ~/.local/bin/git-config-defaults.sh
+    fi
+
+    # Initialize devbox+direnv dev env if available
+    if command -v direnv >/dev/null 2>&1; then
+      direnv allow . || true
+      if command -v devbox >/dev/null 2>&1; then
+        devbox install || true
+      elif command -v nix >/dev/null 2>&1; then
+        # Fallback: .envrc will handle devbox install if nix is present
+        :
+      fi
+    fi
+
+    # Initialize git if not already
+    if [ ! -d .git ]; then
+      git init
+    fi
+
+    # Create gh-pages branch if requested and it doesnt exist (non-destructive)
+    create_gh_pages_normalized=$(printf "%s" "{{ create_gh_pages }}" | tr "[:upper:]" "[:lower:]")
+    if [ "$create_gh_pages_normalized" = "true" ]; then
+      if ! git rev-parse --verify gh-pages >/dev/null 2>&1; then
+        current_branch=$(git branch --show-current)
+        if [ -z "$current_branch" ]; then
+          current_branch="main"
+          git checkout -b "$current_branch" 2>/dev/null || true
+        fi
+
+        tmp_dir="$(mktemp -d)"
+        cleanup() { rm -rf "$tmp_dir"; }
+        trap cleanup EXIT
+
+        git worktree add --detach "$tmp_dir" HEAD >/dev/null 2>&1 || true
+        (
+          cd "$tmp_dir"
+          git checkout --orphan gh-pages >/dev/null 2>&1
+          git reset --hard >/dev/null 2>&1 || true
+          git clean -fdx >/dev/null 2>&1 || true
+          git commit --allow-empty -m "Initial gh-pages commit" >/dev/null 2>&1
+        )
+        git worktree remove --force "$tmp_dir" >/dev/null 2>&1 || true
+        git checkout "$current_branch" >/dev/null 2>&1 || true
+      fi
+    fi
+    '

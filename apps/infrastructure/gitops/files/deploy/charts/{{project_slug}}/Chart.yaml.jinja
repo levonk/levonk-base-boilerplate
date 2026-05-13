@@ -1,0 +1,18 @@
+apiVersion: v2
+name: {{ chart_name }}
+version: {{ chart_version }}
+appVersion: "{{ app_version }}"
+description: "{{ project_description }}"
+home: "{{ repo_url }}"
+sources:
+  - "{{ repo_url }}"
+maintainers:
+  - name: "{{ author_name }}"
+    email: "{{ author_email }}"
+keywords:
+  - {{ project_name }}
+  - kubernetes
+  - helm
+annotations:
+  category: Infrastructure
+  licenses: {{ license }}

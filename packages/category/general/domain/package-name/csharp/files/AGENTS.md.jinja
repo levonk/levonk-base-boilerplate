@@ -1,0 +1,85 @@
+# {{ package_name }} - Agent Guidelines
+
+## Project Overview
+
+{{ description }}
+
+## Development Guidelines
+
+### Core Tools
+- **Environment**: We use `mise` for environment management. You must use this tool to install and update your environment.
+- **Package Management**: Use `dotnet` CLI for package management
+- **Testing**: Use built-in .NET testing frameworks (xUnit, NUnit, MSTest)
+
+### Project Structure
+
+```
+{{ package_slug }}/
+├── src/
+│   └── {{ namespace_name }}/     # Main source code
+├── tests/
+│   └── {{ namespace_name }}.Tests/  # Test projects
+├── docs/                         # Documentation
+├── internal-docs/                # Internal documentation
+├── .envrc                        # Environment configuration
+├── devbox.json                   # Dev environment setup
+├── {{ package_slug }}.csproj     # Project file
+├── README.md                     # Project documentation
+└── AGENTS.md                     # This file
+```
+
+### Development Guidelines
+
+- **Greenfield**: Everything is greenfield. Don't make bandaids, fix root causes.
+- **Code Reuse & Creation**:
+  1. Check existing code before creating new functionality
+  2. Prefer existing NuGet packages over custom implementations
+  3. Follow C# best practices and Microsoft guidelines
+
+### Testing Workflow
+
+```bash
+# Set up environment
+mise exec -- dotnet restore
+
+# Run tests
+mise exec -- dotnet test
+
+# Run specific test project
+mise exec -- dotnet test tests/{{ namespace_name }}.Tests/
+```
+
+### Security Considerations
+
+- Follow .NET security best practices
+- Use secure defaults for configuration
+- Validate all input parameters
+- Use dependency injection for testability
+- Follow principle of least privilege
+
+## Quality Standards
+
+### Code Style
+- Follow Microsoft C# coding conventions
+- Use async/await for asynchronous operations
+- Include XML documentation for public APIs
+- Use proper exception handling
+- Follow SOLID principles
+
+### Documentation
+- Every public API must have XML documentation
+- Include usage examples in README.md
+- Document dependencies and requirements
+- Maintain architectural decision records
+
+## Contributing
+
+1. Follow the established patterns
+2. Add tests for new functionality
+3. Update documentation
+4. Ensure all tests pass
+5. Follow semantic versioning
+
+## License
+
+{{ license }}

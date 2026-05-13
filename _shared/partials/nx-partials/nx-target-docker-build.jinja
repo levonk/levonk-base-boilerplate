@@ -1,0 +1,21 @@
+    "docker:build": {
+      "executor": "@nx-tools/nx-container:build",
+      "options": {
+        "dockerfile": "{projectRoot}/Dockerfile",
+        "context": "{projectRoot}",
+        "tags": ["{{ project_name | default('service') }}:latest"],
+        "push": false
+      },
+      "cache": true
+    },
+    "docker:push": {
+      "executor": "@nx-tools/nx-container:build",
+      "options": {
+        "dockerfile": "{projectRoot}/Dockerfile",
+        "context": "{projectRoot}",
+        "tags": ["{{ project_name | default('service') }}:latest"],
+        "push": true
+      },
+      "dependsOn": ["docker:build"],
+      "cache": false
+    },

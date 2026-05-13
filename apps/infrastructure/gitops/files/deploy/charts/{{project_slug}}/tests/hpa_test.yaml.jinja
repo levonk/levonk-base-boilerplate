@@ -1,0 +1,358 @@
+suite: hpa test
+templates:
+  - hpa.yaml
+tests:
+  - it: should create hpa when autoscaling is enabled
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+    asserts:
+      - isKind:
+          of: HorizontalPodAutoscaler
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.scaleTargetRef.apiVersion
+          value: apps/v1
+      - equal:
+          path: spec.scaleTargetRef.kind
+          value: Deployment
+      - equal:
+          path: spec.scaleTargetRef.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.minReplicas
+          value: {{ .Values.autoscaling.minReplicas }}
+      - equal:
+          path: spec.maxReplicas
+          value: {{ .Values.autoscaling.maxReplicas }}
+      - isNotEmpty:
+          path: spec.metrics
+      - equal:
+          path: spec.metrics[0].type
+          value: Resource
+      - equal:
+          path: spec.metrics[0].resource.name
+          value: cpu
+      - equal:
+          path: spec.metrics[0].resource.target.type
+          value: Utilization
+      - equal:
+          path: spec.metrics[0].resource.target.averageUtilization
+          value: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+  - it: should have memory metrics when memory autoscaling is enabled
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ .Values.autoscaling.targetMemoryUtilizationPercentage }}]
+      value: 80
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[1].type
+          value: Resource
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[1].resource.name
+          value: memory
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.metrics[1].resource.target.type
+          value: Utilization
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.metrics[1].resource.target.averageUtilization
+          value: 80
+  - it: should have proper labels when autoscaling is enabled
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+    asserts:
+      - equal:
+          path: metadata.labels.app.kubernetes.io/name
+          value: {{ chart_name }}
+      - equal:
+          path: metadata.labels.app.kubernetes.io/instance
+          value: {{ chart_name }}-test
+  - it: should have proper annotations when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_hpa_annotations }}].metadata.annotations
+      value:
+        autoscaling.kubernetes.io/managed-by: "kustomize"
+        autoscaling.kubernetes.io/created-by: "platform-team"
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.annotations.autoscaling.kubernetes.io/managed-by
+          value: kustomize
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.annotations.autoscaling.kubernetes.io/created-by
+          value: platform-team
+  - it: should have custom behavior when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_behavior }}].spec.behavior
+      value:
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+          - type: Pods
+            value: 1
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+          - type: Pods
+            value: 4
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.behavior.scaleDown.stabilizationWindowSeconds
+          value: 300
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.behavior.scaleDown.policies[0].type
+          value: Pods
+      - equal:
+          path: [{{ .Values.autoscaling.enabled }}].spec.behavior.scaleDown.policies[0].value
+          value: 1
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.behavior.scaleUp.stabilizationWindowSeconds
+          value: 0
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.behavior.scaleUp.policies[0].type
+          value: Pods
+      - equal:
+          path: [{{ .Values.autoscaling.enabled }}].spec.behavior.scaleUp.policies[0].value
+          value: 4
+  - it: should have metrics when custom metrics are enabled
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_metrics }}].spec.metrics
+      value:
+        - type: Pods
+          resource:
+          name: custom_metric
+          target:
+            type: AverageValue
+            averageValue: 80
+        - type: Object
+          resource:
+          name: custom_object_metric
+          target:
+            type: AverageValue
+            averageValue: 50
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[0].type
+          value: Pods
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[0].resource.name
+          value: custom_metric
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[0].target.type
+          value: AverageValue
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[0].target.averageValue
+          value: 80
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[1].type
+          value: Object
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[1].resource.name
+          value: custom_object_metric
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.metrics[1].target.type
+          value: AverageValue
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.metrics[1].target.averageValue
+          value: 50
+  - it: should have scaleDown stabilization window when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_scale_down_stabilization }}].spec.behavior.scaleDown.stabilizationWindowSeconds
+      value: 600
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.behavior.scaleDown.stabilizationWindowSeconds
+          value: 600
+  - it: should have scaleUp stabilization window when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_scale_up_stabilization }}].spec.behavior.scaleUp.stabilizationWindowSeconds
+      value: 60
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.behavior.scaleUp.stabilizationWindowSeconds
+          value: 60
+  - it: should have scale down policies when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_scale_down_policies }}].spec.behavior.scaleDown.policies
+      value:
+        - type: Pods
+          value: 2
+        - type: Pods
+          value: 1
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.behavior.scaleDown.policies[0].type
+          value: Pods
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.behavior.scaleDown.policies[0].value
+          value: 2
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}.spec.behavior.scaleDown.policies[1].type
+          value: Pods
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.behavior.scaleDown.policies[1].value
+          value: 1
+  - it: should have scale up policies when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_scale_up_policies }}].spec.behavior.scaleUp.policies
+      value:
+        - type: Pods
+          value: 3
+        - type: Pods
+          value: 5
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.behavior.scaleUp.policies[0].type
+          value: Pods
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.behavior.scaleUp.policies[0].value
+          value: 3
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}.spec.behavior.scaleUp.policies[1].type
+          value: Pods
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.behavior.scaleUp.policies[1].value
+          value: 5
+  - it: should have custom min replicas when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_min_replicas }}].spec.minReplicas
+      value: 5
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.minReplicas
+          value: 5
+  - it: should have custom max replicas when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_max_replicas }}].spec.maxReplicas
+      value: 20
+    asserts:
+      - - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.maxReplicas
+          value: 20
+  - - equal:
+          path: $[{{ .Values.autoscaling.enabled }}.spec.maxReplicas
+          value: 20
+  - it: should have custom target CPU utilization when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_cpu_target }}].spec.metrics[0].resource.target.averageUtilization
+      value: 85
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.metrics[0].resource.target.averageUtilization
+          value: 85
+  - it: should have custom target memory utilization when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_memory_target }}].spec.metrics[1].resource.target.averageUtilization
+      value: 85
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}.spec.metrics[1].resource.target.averageUtilization
+          value: 85
+  - it: should have scale target ref when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_scale_target_ref }}].spec.scaleTargetRef
+      value:
+        apiVersion: autoscaling/v2
+        kind: CustomMetric
+        name: {{ chart_name }}-custom-metric
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].spec.scaleTargetRef.apiVersion
+          value: autoscaling/v2
+      - equal:
+          path: ${{ .Values.autoscaling.enabled }}.spec.scaleTargetRef.kind
+          value: CustomMetric
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}.spec.scaleTargetRef.name
+          value: {{ chart_name }}-custom-metric
+  - it: should have extra labels when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_extra_labels }}].metadata.labels
+      value:
+        extra-label: "extra-value"
+        team: "platform"
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.labels.extra-label
+          value: extra-value
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.labels.team
+          value: platform
+  - it: should have extra annotations when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_extra_annotations }}].metadata.annotations
+      value:
+        extra-annotation: "extra-value"
+        autoscaling.kubernetes.io/last-applied: "2023-01-01T00:00:00Z"
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.annotations.extra-annotation
+          value: extra-value
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.annotations.autoscaling.kubernetes.io/last-applied
+          value: 2023-01-01T00:00:00Z
+  - it: should have owner references when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_owner_references }}].metadata.annotations
+      value:
+        autoscaling.kubernetes.io/owner: "platform-team"
+        autoscaling.kubernetes.io/managed-by: "argocd"
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.annotations.autoscaling.kubernetes.io/owner
+          value: platform-team
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.annotations.autoscaling.kubernetes.io/managed-by
+          value: argocd
+  - it: should have custom namespace when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_namespace }}].metadata.namespace
+      value: custom-namespace
+    asserts:
+      - custom_namespace:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.namespace
+          value: custom-namespace
+  - it: should have custom labels when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_labels }}].metadata.labels
+      value:
+        custom-label: "custom-value"
+        environment: "production"
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.labels.custom-label
+          value: custom-value
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.labels.environment
+          value: production
+  - it: should have custom annotations when specified
+    set:
+      path: $[{{ .Values.autoscaling.enabled }}]
+      path: $[{{ if enable_custom_annotations }}].metadata.annotations
+      value:
+        custom-annotation: "custom-value"
+        deployment: "production"
+    asserts:
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.annotations.custom-annotation
+          value: custom-value
+      - equal:
+          path: $[{{ .Values.autoscaling.enabled }}].metadata.annotations.deployment
+          value: production

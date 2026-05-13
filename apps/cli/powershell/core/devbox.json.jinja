@@ -1,0 +1,75 @@
+{
+  "name": "{{ project_name | default('powershell-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ project_description | default('A PowerShell CLI application') }}",
+  "shell": {
+    "init": [
+      "echo '💙 Setting up {{ project_name | default('powershell-cli-app') }} development environment...'"
+    ],
+    "scripts": {
+      "build": "Invoke-Build",
+      "build-release": "Invoke-Build -Configuration Release",
+      "test": "Invoke-Pester",
+      "test-coverage": "Invoke-Pester -CodeCoverage",
+      "lint": "Invoke-ScriptAnalyzer -Path .",
+      "format": "Invoke-Formatter -Path .",
+      "format-check": "Invoke-Formatter -Path . -Check",
+      "run": "pwsh -File .\\bin\\{{ project_slug | default(project_name | lower | replace(' ', '-')) }}.ps1",
+      "dev": "pwsh -NoExit -Command \"& .\\bin\\{{ project_slug | default(project_name | lower | replace(' ', '-')) }}.ps1\"",
+      "clean": "Remove-Item -Recurse -Force .\\bin -ErrorAction SilentlyContinue",
+      "package": "Invoke-Build -Target Package",
+      "publish": "Invoke-Build -Target Publish",
+      "check": "Invoke-ScriptAnalyzer -Path . && Invoke-Pester"
+    }
+  },
+  "packages": {
+    "nixpkgs#powershell": "",
+    "nixpkgs#pwsh": "",
+    {% if include_pester %}
+    "nixpkgs#pester": "",
+    {% endif %}
+    {% if include_psscriptanalyzer %}
+    "nixpkgs#psscriptanalyzer": "",
+    {% endif %}
+    {% if include_invokebuild %}
+    "nixpkgs#invokebuild": "",
+    {% endif %}
+    {% if include_modulebuilder %}
+    "nixpkgs#modulebuilder": "",
+    {% endif %}
+    {% if include_azuread %}
+    "nixpkgs#azuread": "",
+    {% endif %}
+    {% if include_az %}
+    "nixpkgs#az": "",
+    {% endif %}
+    {% if include_exchange %}
+    "nixpkgs#exchangeonlinemanagement": "",
+    {% endif %}
+    {% if include_sharepoint %}
+    "nixpkgs#sharepointpnp": "",
+    {% endif %}
+    {% if include_graph %}
+    "nixpkgs#microsoftgraph": "",
+    {% endif %}
+  },
+  "env": {
+    "POWERSHELL_TELEMETRY_OPTOUT": "{{ powershell_telemetry_optout | default('1') }}",
+    "POWERSHELL_UPDATECHECK": "{{ powershell_updatecheck | default('Off') }}",
+    "POWERSHELL_ENABLE_EXPERIMENTAL_FEATURES": "{{ powershell_experimental | default('0') }}",
+    {% if include_development %}
+    "DEBUG": "{{ debug | default('1') }}",
+    "VERBOSE": "{{ verbose | default('1') }}",
+    {% endif %}
+    {% if include_config %}
+    "CONFIG_FILE": "{{ config_file | default('./config.json') }}",
+    {% endif %}
+    {% if include_azure %}
+    "AZURE_TENANT_ID": "{{ azure_tenant_id | default('') }}",
+    "AZURE_CLIENT_ID": "{{ azure_client_id | default('') }}",
+    {% endif %}
+    {% if include_exchange %}
+    "EXCHANGE_URL": "{{ exchange_url | default('') }}",
+    {% endif %}
+  }
+}

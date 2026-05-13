@@ -1,0 +1,43 @@
+{
+  "name": "{{ project_name | default('ruby-cli') }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "lib",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bundle install",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bundle exec rspec",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bundle exec rubocop",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bundle exec rubocop -A",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "run": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ruby bin/{{ project_name | default('ruby-cli') }}",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

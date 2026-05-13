@@ -1,0 +1,115 @@
+# Browser Extension Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    pnpm install
+    echo "Browser extension bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check browser extension development environment
+    @echo "🌐 Browser extension environment:"
+    @echo "📦 Dependencies:"
+    @pnpm list --depth=0
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v eslint || echo "eslint not found"
+    @echo ""
+    @echo "✅ Browser extension environment is ready!"
+
+# Development mode (watch and build)
+dev-mode:
+    pnpm run dev
+
+# Install dependencies
+install:
+    pnpm install
+
+# Build extension
+build-extension:
+    pnpm run build
+
+# Build for specific browser
+build-chrome:
+    pnpm run build:chrome
+
+build-firefox:
+    pnpm run build:firefox
+
+build-edge:
+    pnpm run build:edge
+
+# Run tests
+test-extension:
+    pnpm test
+
+# Run tests in watch mode
+test-watch:
+    pnpm test --watch
+
+# Lint code
+lint-code:
+    pnpm run lint
+
+# Format code
+format:
+    pnpm run format
+
+# Type checking
+typecheck-code:
+    pnpm run typecheck
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ Browser extension development environment ready!"
+
+# Package for distribution
+package:
+    @just build
+    @just clean
+    mkdir -p dist
+    cd dist && zip -r {{ package_name }}-{{ extension_version }}.zip ../build/
+
+# Create distribution zip
+zip:
+    @just clean
+    mkdir -p dist
+
+# Load extension in Chrome (development)
+load-chrome:
+    pnpm run load:chrome
+
+# Load extension in Firefox (development)
+load-firefox:
+    pnpm run load:firefox
+
+# Validate manifest
+validate:
+    pnpm run validate

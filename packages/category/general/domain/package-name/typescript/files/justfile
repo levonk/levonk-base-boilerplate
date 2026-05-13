@@ -1,0 +1,274 @@
+# Justfile for {{ package_name | default('typescript-package') }} TypeScript Package
+
+# Default target
+default: dev
+
+# Internal targets (prefixed with - to avoid showing in help)
+-bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Bootstrapping {{ package_name | default('typescript-package') }}..."
+    
+    # Install dependencies
+    if [ -f "package.json" ]; then
+        pnpm install
+    else
+        echo "⚠️  No package.json found"
+    fi
+    
+    echo "✅ Bootstrap complete"
+
+-doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Running health checks for {{ package_name | default('typescript-package') }}..."
+    
+    # Check required tools
+    echo "Checking tools:"
+    command -v node >/dev/null 2>&1 && echo "✅ node" || echo "❌ node missing"
+    command -v pnpm >/dev/null 2>&1 && echo "✅ pnpm" || echo "❌ pnpm missing"
+    command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
+    
+    # Check Node.js version
+    if command -v node >/dev/null 2>&1; then
+        echo "Node.js version: $(node --version)"
+    fi
+    
+    # Check TypeScript
+    if command -v tsc >/dev/null 2>&1; then
+        echo "TypeScript version: $(tsc --version)"
+    fi
+    
+    # Check project structure
+    echo "Checking structure:"
+    test -f package.json && echo "✅ package.json" || echo "❌ package.json missing"
+    test -f tsconfig.json && echo "✅ tsconfig.json" || echo "⚠️  tsconfig.json missing"
+    test -d src && echo "✅ src directory" || echo "⚠️  src directory missing"
+    test -d tests && echo "✅ tests directory" || echo "⚠️  tests directory missing"
+    
+    echo "🏁 Doctor complete"
+
+-clean-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧹 Cleaning {{ package_name | default('typescript-package') }}..."
+    
+    # Remove build artifacts
+    rm -rf dist/
+    rm -rf build/
+    rm -rf .nyc_output/
+    rm -rf coverage/
+    rm -rf .turbo/
+    rm -rf .next/
+    
+    # Remove cache files
+    rm -rf node_modules/.cache
+    rm -rf .eslintcache
+    rm -f *.tsbuildinfo
+    
+    # Clean pnpm
+    if command -v pnpm >/dev/null 2>&1; then
+        pnpm store prune || true
+    fi
+    
+    echo "✅ Clean complete"
+
+-build-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Building {{ package_name | default('typescript-package') }}..."
+    
+    # Build the project
+    if [ -f "package.json" ]; then
+        pnpm build
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Build complete"
+
+-dev-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting development environment for {{ package_name | default('typescript-package') }}..."
+    
+    # Start development server
+    if [ -f "package.json" ]; then
+        pnpm dev
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+
+-test-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing {{ package_name | default('typescript-package') }}..."
+    
+    # Run tests
+    if [ -f "package.json" ]; then
+        pnpm test
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Tests complete"
+
+-lint-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Linting {{ package_name | default('typescript-package') }}..."
+    
+    # Run linting
+    if [ -f "package.json" ]; then
+        pnpm lint
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Linting complete"
+
+-typecheck-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Type checking {{ package_name | default('typescript-package') }}..."
+    
+    # Run type checking
+    if [ -f "package.json" ]; then
+        pnpm typecheck
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Type checking complete"
+
+# Public targets (user-facing)
+bootstrap: bootstrap-internal
+doctor: doctor-internal
+clean: clean-internal
+build: build-internal
+dev: dev-internal
+test: test-internal
+lint: lint-internal
+typecheck: typecheck-internal
+
+# Additional TypeScript-specific targets
+test-coverage:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📊 Running tests with coverage for {{ package_name | default('typescript-package') }}..."
+    
+    # Run tests with coverage
+    if [ -f "package.json" ]; then
+        pnpm test:coverage
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "📊 Coverage report generated"
+    echo "✅ Coverage complete"
+
+test-watch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "👀 Watching tests for {{ package_name | default('typescript-package') }}..."
+    
+    # Run tests in watch mode
+    if [ -f "package.json" ]; then
+        pnpm test:watch
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+
+lint-fix:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔧 Fixing linting issues for {{ package_name | default('typescript-package') }}..."
+    
+    # Fix linting issues
+    if [ -f "package.json" ]; then
+        pnpm lint:fix
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Linting fixed"
+
+format:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🎨 Formatting {{ package_name | default('typescript-package') }}..."
+    
+    # Format code
+    if [ -f "package.json" ]; then
+        pnpm format
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Formatting complete"
+
+validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "✅ Validating {{ package_name | default('typescript-package') }}..."
+    
+    # Run all validation checks
+    just typecheck
+    just lint
+    just test
+    
+    echo "✅ Validation complete"
+
+install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing dependencies for {{ package_name | default('typescript-package') }}..."
+    
+    # Install dependencies
+    if [ -f "package.json" ]; then
+        pnpm install
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Installation complete"
+
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔄 Updating dependencies for {{ package_name | default('typescript-package') }}..."
+    
+    # Update dependencies
+    if [ -f "package.json" ]; then
+        pnpm update
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Dependencies updated"
+
+outdated:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📋 Checking outdated dependencies for {{ package_name | default('typescript-package') }}..."
+    
+    # Check outdated dependencies
+    if [ -f "package.json" ]; then
+        pnpm outdated
+    else
+        echo "⚠️  No package.json found"
+        exit 1
+    fi
+    
+    echo "✅ Outdated check complete"

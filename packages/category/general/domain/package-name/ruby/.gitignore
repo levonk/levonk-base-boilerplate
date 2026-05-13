@@ -1,0 +1,277 @@
+# Gem build artifacts
+*.gem
+Gemfile.lock
+
+# Gem packaging
+*.gemspec
+pkg/
+
+# Bundler
+.bundle/
+vendor/bundle/
+lib/bundler/man/
+
+# Ruby build artifacts
+.ruby-version
+.ruby-gemset
+
+# RSpec
+spec/reports/
+.coverage/
+.simplecov
+/tmp/
+
+# Cucumber
+.rspec_status
+rerun.txt
+
+# Documentation
+doc/
+.yardoc/
+_yardoc/
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# RubyMine
+*.iml
+
+# TextMate
+*.tmproj
+*.tmtproj
+
+# Vim
+*.swp
+*.swo
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Rubinius
+*.rbc
+
+# JRuby
+*.jar
+
+# IRB
+.irb-history
+.irbrc
+
+# Pry
+.pry_history
+.pryrc
+
+# Spring
+.spring/
+
+# Guard
+.guardfile
+
+# Byebug
+.byebug_history
+
+# Debugger
+.rdebugrc
+.rdebugrc.history
+
+# RVM
+.rvmrc
+
+# rbenv
+.ruby-version
+
+# Bundler
+.bundle/
+
+# Ruby LSP
+.ruby-lsp/
+
+# Solargraph
+.solargraph.yml
+
+# Reek
+.reek
+
+# RuboCop
+.rubocop.yml
+.rubocop_todo.yml
+
+# Brakeman
+brakeman.report
+
+# Rails
+/db/*.sqlite3
+/db/*.sqlite3-*
+/log/
+/tmp/
+/public/system
+/public/assets
+.byebug
+
+# SimpleCov
+coverage/
+
+# Yardoc
+.yardoc/
+doc/
+
+# Backup files
+*.bak
+*.backup
+
+# Test coverage
+coverage/
+.coverage
+*.coverage
+
+# Performance profiling
+*.prof
+*.profile
+
+# Memory profiling
+*.heap
+
+# Stack traces
+*.stacktrace
+
+# Dump files
+*.dump
+
+# Cache files
+.cache/
+tmp/cache/
+
+# Socket files
+*.sock
+
+# PID files
+*.pid
+
+# Lock files
+*.lock
+
+# State files
+*.state
+
+# Configuration files (keep template)
+config/database.yml
+config/secrets.yml
+config/settings.yml
+
+# Local configuration
+config/local.yml
+config/settings.local.yml
+
+# Local development
+.local/
+.local.*
+
+# Build artifacts
+build/
+dist/
+out/
+
+# Package files
+*.zip
+*.tar.gz
+*.rar
+
+# Node modules (if using Node.js tools)
+node_modules/
+
+# npm files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+bower_components/
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port

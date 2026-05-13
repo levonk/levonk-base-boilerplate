@@ -1,0 +1,19 @@
+# {{ project_name }} - Main File
+
+This is Template A's main file that uses shared partials.
+
+{% include "_partials/common-header" %}
+
+## Template A Specific Content
+
+This content is specific to Template A:
+- Environment: {{ environment }}
+- Template Type: {{ template_type }}
+
+## Configuration
+
+Here are some template-specific configurations:
+- Debug mode: {{ 'enabled' if environment == 'development' else 'disabled' }}
+- Template: {{ template_type }}
+
+{% include "_partials/common-footer" %}

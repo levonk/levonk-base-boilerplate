@@ -1,0 +1,146 @@
+#!/bin/bash
+# {{ _service_name | title }} Basic Test Suite
+# Runs comprehensive tests for the service
+
+set -euo pipefail
+
+# Configuration
+SERVICE_NAME="{{ _service_name }}"
+SERVICE_PORT="{{ _service_port }}"
+HEALTH_ENDPOINT="{{ _service_health_endpoint }}"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Counters
+PASSED=0
+FAILED=0
+
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[PASS]${NC} $1"
+    ((PASSED++))
+}
+
+log_failure() {
+    echo -e "${RED}[FAIL]${NC} $1"
+    ((FAILED++))
+}
+
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+# Test: Service is running
+test_service_running() {
+    log_info "Testing if service is running..."
+    if docker ps --format "table {{ '{{' }}.Names{{ '}}' }}" | grep -q "^${SERVICE_NAME}$"; then
+        log_success "Service is running"
+        return 0
+    else
+        log_failure "Service is not running"
+        return 1
+    fi
+}
+
+# Test: Health endpoint responds
+test_health_endpoint() {
+    log_info "Testing health endpoint..."
+    if curl -f --max-time 10 --silent "http://localhost:${SERVICE_PORT}${HEALTH_ENDPOINT}" > /dev/null 2>&1; then
+        log_success "Health endpoint responds"
+        return 0
+    else
+        log_failure "Health endpoint not responding"
+        return 1
+    fi
+}
+
+# Test: Health endpoint returns valid JSON (if applicable)
+test_health_content() {
+    log_info "Testing health endpoint content..."
+    local response
+    response=$(curl -s --max-time 10 "http://localhost:${SERVICE_PORT}${HEALTH_ENDPOINT}" 2>/dev/null || echo "")
+
+    if [[ -n "$response" ]]; then
+        # Try to parse as JSON
+        if echo "$response" | jq . >/dev/null 2>&1; then
+            log_success "Health endpoint returns valid JSON"
+            return 0
+        else
+            log_warn "Health endpoint response is not JSON: $response"
+            return 0  # Not a failure, just informational
+        fi
+    else
+        log_failure "Health endpoint returned empty response"
+        return 1
+    fi
+}
+
+# Test: Container logs don't contain errors
+test_container_logs() {
+    log_info "Testing container logs for errors..."
+    local error_count
+    error_count=$(docker logs "$SERVICE_NAME" 2>&1 | grep -i -c "error\|exception\|failed\|fatal" || true)
+
+    if [[ $error_count -eq 0 ]]; then
+        log_success "No errors found in container logs"
+        return 0
+    else
+        log_warn "Found $error_count error(s) in container logs"
+        return 0  # Not a critical failure
+    fi
+}
+
+# Test: Container resource usage is reasonable
+test_resource_usage() {
+    log_info "Testing resource usage..."
+    local cpu_usage mem_usage
+    read -r cpu_usage mem_usage <<< "$(docker stats --no-stream --format "{{ '{{' }}.CPUPerc{{ '}}' }} {{ '{{' }}.MemPerc{{ '}}' }}" "$SERVICE_NAME" 2>/dev/null | tr -d '%' || echo "0 0")"
+
+    # Basic sanity checks
+    if (( $(echo "$cpu_usage < 90" | bc -l 2>/dev/null || echo "1") )); then
+        log_success "CPU usage is reasonable ($cpu_usage%)"
+    else
+        log_warn "High CPU usage detected ($cpu_usage%)"
+    fi
+
+    if (( $(echo "$mem_usage < 90" | bc -l 2>/dev/null || echo "1") )); then
+        log_success "Memory usage is reasonable ($mem_usage%)"
+    else
+        log_warn "High memory usage detected ($mem_usage%)"
+    fi
+}
+
+# Main test function
+main() {
+    log_info "Starting test suite for ${SERVICE_NAME}"
+    echo
+
+    # Run all tests
+    test_service_running
+    test_health_endpoint
+    test_health_content
+    test_container_logs
+    test_resource_usage
+
+    echo
+    log_info "Test Results: $PASSED passed, $FAILED failed"
+
+    if [[ $FAILED -eq 0 ]]; then
+        log_success "All critical tests passed!"
+        exit 0
+    else
+        log_failure "$FAILED test(s) failed"
+        exit 1
+    fi
+}
+
+# Run main function
+main "$@"

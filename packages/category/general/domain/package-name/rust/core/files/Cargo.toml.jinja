@@ -1,0 +1,83 @@
+[package]
+name = "{{ package_slug }}"
+version = "0.1.0"
+edition = "2021"
+authors = ["{{ author_name }} <{{ author_email }}>"]
+description = "{{ description }}"
+license = "{{ license }}"
+repository = "{{ repository_url }}"
+documentation = "{{ repository_url }}/docs"
+keywords = ["rust", "library"]
+categories = ["development-tools::cargo-plugins"]
+rust-version = "1.70"
+
+[dependencies]
+# Core dependencies with version pins
+thiserror = "1.0"
+anyhow = "1.0"
+
+{% if include_async %}
+# Async dependencies
+tokio = { version = "1.35", features = ["full"] }
+tokio-util = "0.7"
+futures = "0.3"
+async-trait = "0.1"
+{% endif %}
+
+{% if include_serde %}
+# Serialization dependencies
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+toml = { version = "0.8", optional = true }
+{% endif %}
+
+{% if include_cli %}
+# CLI dependencies
+clap = { version = "4.4", features = ["derive", "env"] }
+console = "0.15"
+indicatif = "0.17"
+dialoguer = "0.11"
+{% endif %}
+
+# Security dependencies
+secrecy = { version = "0.8", optional = true }
+zeroize = { version = "1.7", optional = true }
+
+[dev-dependencies]
+# Test-only dependencies
+tokio-test = "0.4"
+tempfile = "3.8"
+assert_cmd = "2.0"
+predicates = "3.0"
+serial_test = "2.0"
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+
+{% if include_async %}
+{% if include_serde %}
+serde_test = "1.0"
+{% endif %}
+{% endif %}
+
+[features]
+default = []
+{% if include_async %}
+async = ["tokio", "tokio-util", "futures", "async-trait"]
+{% endif %}
+{% if include_serde %}
+serde = ["dep:serde", "serde/derive", "serde_json", "toml"]
+{% endif %}
+{% if include_cli %}
+cli = ["clap", "console", "indicatif", "dialoguer"]
+{% endif %}
+security = ["secrecy", "zeroize"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.dev]
+debug = true
+overflow-checks = true

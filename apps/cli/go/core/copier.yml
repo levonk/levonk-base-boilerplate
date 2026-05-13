@@ -1,0 +1,90 @@
+project_name:
+  type: str
+  help: What is the project name?
+  default: "my-cli-tool"
+
+project_slug:
+  type: str
+  help: What is the project slug? (e.g. my-tool)
+  default: "{{ project_name | lower | replace(' ', '-') }}"
+
+description:
+  type: str
+  help: Short description of the project
+  default: "A CLI tool"
+
+# Devbox configuration
+gopath:
+  type: str
+  help: GOPATH for Go development
+  default: "$HOME/go"
+
+gobin:
+  type: str
+  help: GOBIN for Go binaries
+  default: "$GOPATH/bin"
+
+cgo_enabled:
+  type: str
+  help: CGO enabled setting
+  default: "1"
+
+include_cobra:
+  type: bool
+  help: Include Cobra CLI framework?
+  default: false
+
+include_viper:
+  type: bool
+  help: Include Viper configuration?
+  default: false
+
+include_gin:
+  type: bool
+  help: Include Gin web framework?
+  default: false
+
+include_sql_driver:
+  type: bool
+  help: Include SQL driver support?
+  default: false
+
+include_libpq:
+  type: bool
+  help: Include PostgreSQL driver (libpq)?
+  default: false
+
+include_sqlite:
+  type: bool
+  help: Include SQLite support?
+  default: false
+
+include_testify:
+  type: bool
+  help: Include Testify for testing?
+  default: false
+
+include_gomock:
+  type: bool
+  help: Include GoMock for mocking?
+  default: false
+
+include_openssl:
+  type: bool
+  help: Include OpenSSL support?
+  default: false
+
+include_development:
+  type: bool
+  help: Include development environment variables?
+  default: false
+
+database_driver:
+  type: str
+  help: Default database driver
+  default: "sqlite"
+
+log_level:
+  type: str
+  help: Log level for development
+  default: "debug"

@@ -1,0 +1,30 @@
+from typer.testing import CliRunner
+from {{ project_slug }}.__main__ import app
+
+runner = CliRunner()
+
+def test_help():
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "Show this message and exit" in result.stdout
+
+def test_no_args_tty():
+    # Simulate TTY with no args -> Should show help and exit 1
+    # CliRunner by default doesn't simulate TTY perfectly for isatty(),
+    # but our logic checks inputs. If inputs empty and isatty -> help.
+    # We might need to mock sys.stdin.isatty
+    pass
+
+def test_stdin_processing():
+    result = runner.invoke(app, ["-", "--json"], input="test content")
+    assert result.exit_code == 0
+    assert "stdin" in result.stdout
+    assert "processed" in result.stdout
+
+def test_file_processing(tmp_path):
+    f = tmp_path / "test.txt"
+    f.write_text("content")
+
+    result = runner.invoke(app, [str(f), "--json"])
+    assert result.exit_code == 0
+    assert str(f) in result.stdout

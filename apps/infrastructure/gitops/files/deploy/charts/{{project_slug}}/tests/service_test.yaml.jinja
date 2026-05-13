@@ -1,0 +1,232 @@
+suite: service test
+templates:
+  - service.yaml
+tests:
+  - it: should create service
+    asserts:
+      - isKind:
+          of: Service
+      - equal:
+          path: metadata.name
+          value: {{ chart_name }}-test
+      - equal:
+          path: spec.type
+          value: ClusterIP
+      - equal:
+          path: spec.port
+          value: {{ app_port }}
+      - equal:
+          path: spec.targetPort
+          value: {{ app_port }}
+      - equal:
+          path: spec.protocol
+          value: TCP
+      - equal:
+          path: spec.ports[0].port
+          value: {{ app_port }}
+      - equal:
+          path: spec.ports[0].targetPort
+          value: {{ app_port }}
+      - equal:
+          path: spec.ports[0].protocol
+          value: TCP
+      - equal:
+          path: spec.ports[0].name
+          value: http
+  - it: should have proper labels
+    asserts:
+      - equal:
+          path: metadata.labels.app.kubernetes.io/name
+          value: {{ chart_name }}
+      - equal:
+          path: metadata.labels.app.kubernetes.io/instance
+          value: {{ chart_name }}-test
+  - it: should have proper annotations when specified
+    set:
+      path: $[{{ if enable_service_annotations }}].metadata.annotations
+      value:
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    asserts:
+      - equal:
+          path: $[{{ if enable_service_annotations }}].metadata.annotations.service.beta.kubernetes.io/aws-load-balancer-type
+          value: "nlb"
+      - equal:
+          path: $[{{ if enable_service_annotations }}].metadata.annotations.service.beta.kubernetes.io/aws-load-balancer-nlb-target-type
+          value: "ip"
+  - it: should have NodePort when type is NodePort
+    set:
+      path: spec.type
+      value: NodePort
+    asserts:
+      - equal:
+          path: spec.type
+          value: NodePort
+      - isNotEmpty:
+          path: spec.ports[0].nodePort
+      - equal:
+          path: spec.ports[0].nodePort
+          value: 300{{ app_port }}
+  - it: should have LoadBalancer when type is LoadBalancer
+    set:
+      path: spec.type
+      value: LoadBalancer
+    asserts:
+      - equal:
+          path: spec.type
+          value: LoadBalancer
+      - isNotEmpty:
+          path: spec.loadBalancerSourceRanges
+      - isNotEmpty:
+          path: spec.externalTrafficPolicy
+  - it: should have externalIPs when specified
+    set:
+      path: $[{{ if enable_external_ips }}].spec.externalIPs
+      value:
+        - 192.168.1.100
+        - 192.168.1.101
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_external_ips }}].spec.externalIPs
+      - equal:
+          path: $[{{ if enable_external_ips }}].spec.externalIPs[0]
+          value: 192.168.1.100
+  - it: should have loadBalancerIP when specified
+    set:
+      path: $[{{ if enable_load_balancer_ip }}].spec.loadBalancerIP
+      value: 192.168.1.50
+    asserts:
+      - equal:
+          path: $[{{ if enable_load_balancer_ip }}].spec.loadBalancerIP
+          value: 192.168.1.50
+  - it: should have loadBalancerSourceRanges when specified
+    set:
+      path: $[{{ if enable_load_balancer_source_ranges }}].spec.loadBalancerSourceRanges
+      value:
+        - 0.0.0.0/0
+        - ::/0
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_load_balancer_source_ranges }}].spec.loadBalancerSourceRanges
+      - equal:
+          path: $[{{ if enable_load_balancer_source_ranges }}].spec.loadBalancerSourceRanges[0]
+          value: 0.0.0.0/0
+  - it: should have externalTrafficPolicy when specified
+    set:
+      path: $[{{ if enable_external_traffic_policy }}].spec.externalTrafficPolicy
+      value: Local
+    asserts:
+      - equal:
+          path: $[{{ if enable_external_traffic_policy }}].spec.externalTrafficPolicy
+          value: Local
+  - it: should have internalTrafficPolicy when specified
+    set:
+      path: $[{{ if enable_internal_traffic_policy }}].spec.internalTrafficPolicy
+      value: Local
+    asserts:
+      - equal:
+          path: $[{{ if enable_internal_traffic_policy }}].spec.internalTrafficPolicy
+          value: Local
+  - it: should have sessionAffinity when specified
+    set:
+      path: $[{{ if enable_session_affinity }}].spec.sessionAffinity
+      value: ClientIP
+    asserts:
+      - equal:
+          path: $[{{ if enable_session_affinity }}].spec.sessionAffinity
+          value: ClientIP
+  - it: should have publishNotReadyAddresses when specified
+    set:
+      path: $[{{ if enable_publish_not_ready_addresses }}].spec.publishNotReadyAddresses
+      value: true
+    asserts:
+      - equal:
+          path: $[{{ if enable_publish_not_ready_addresses }}].spec.publishNotReadyAddresses
+          value: true
+  - it: should have IP families when specified
+    set:
+      path: $[{{ if enable_ip_families }}].spec.ipFamilies
+      value:
+        - IPv4
+        - IPv6
+    asserts:
+      - isNotEmpty:
+          path: $[{{ if enable_ip_families }}].spec.ipFamilies
+      - equal:
+          path: $[{{ if enable_ip_families }}].spec.ipFamilies[0]
+          value: IPv4
+      - equal:
+          path: $[{{ if enable_ip_families }}].spec.ipFamilies[1]
+          value: IPv6
+  - it: should have IP family policy when specified
+    set:
+      path: $[{{ if enable_ip_family_policy }}].spec.ipFamilyPolicy
+      value: PreferDualStack
+    asserts:
+      - equal:
+          path: $[{{ if enable_ip_family_policy }}].spec.ipFamilyPolicy
+          value: PreferDualStack
+  - it: should have extra labels when specified
+    set:
+      path: $[{{ if enable_extra_labels }}].metadata.labels
+      value:
+        extra-label: "extra-value"
+        team: "platform"
+    asserts:
+      - equal:
+          path: $[{{ if enable_extra_labels }}].metadata.labels.extra-label
+          value: "extra-value"
+      - equal:
+          path: $[{{ if enable_extra_labels }}].metadata.labels.team
+          value: "platform"
+  - it: should have extra annotations when specified
+    set:
+      path: $[{{ if enable_extra_annotations }}].metadata.annotations
+      value:
+        extra-annotation: "extra-value"
+        service.kubernetes.io/headless: "true"
+    asserts:
+      - equal:
+          path: $[{{ if enable_extra_annotations }}].metadata.annotations.extra-annotation
+          value: "extra-value"
+      - equal:
+          path: $[{{ if enable_extra_annotations }}].metadata.annotations.service.kubernetes.io/headless
+          value: "true"
+  - it: should have selector when specified
+    set:
+      path: $[{{ if enable_selector }}].spec.selector
+      value:
+        app: {{ chart_name }}
+        tier: frontend
+    asserts:
+      - equal:
+          path: $[{{ if enable_selector }}].spec.selector.app
+          value: {{ chart_name }}
+      - equal:
+          path: $[{{ if enable_selector }}].spec.selector.tier
+          value: frontend
+  - it: should have ports when specified
+    set:
+      path: $[{{ if enable_custom_ports }}].spec.ports
+      value:
+        - port: 8080
+          targetPort: 8080
+          protocol: TCP
+          name: http
+        - port: 8443
+          targetPort: 8443
+          protocol: TCP
+          name: https
+    asserts:
+      - equal:
+          path: $[{{ if enable_custom_ports }}].spec.ports[0].port
+          value: 8080
+      - equal:
+          path: $[{{ if enable_custom_ports }}].spec.ports[0].targetPort
+          value: 8080
+      - equal:
+          path: $[{{ if enable_custom_ports }}].spec.ports[1].port
+          value: 8443
+      - equal:
+          path: $[{{ if enable_custom_ports }}].spec.ports[1].targetPort
+          value: 8443

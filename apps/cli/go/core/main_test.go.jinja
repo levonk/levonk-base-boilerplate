@@ -1,0 +1,27 @@
+package main
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
+
+func TestHelp(t *testing.T) {
+	rootCmd.SetArgs([]string{"--help"})
+	buf := new(bytes.Buffer)
+	rootCmd.SetOut(buf)
+
+	err := rootCmd.Execute()
+	if err != nil {
+		t.Fatalf("Execute failed: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "Usage:") {
+		t.Errorf("Expected help output, got: %s", output)
+	}
+}
+
+// Note: Testing stdin/files interactively in Go tests usually involves
+// mocking os.Stdin/os.Stdout or using a more complex test harness.
+// For boilerplate simplicity, we include basic command structure tests.

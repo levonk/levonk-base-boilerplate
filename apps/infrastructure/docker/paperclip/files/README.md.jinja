@@ -1,0 +1,140 @@
+# {{ project_name }}
+
+{{ service_description }}
+
+## Overview
+
+This is a Docker-based deployment of [Paperclip](https://github.com/paperclipai/paperclip), an open-source orchestration platform for autonomous AI companies.
+
+## Quick Start
+
+### Using Docker Compose
+
+```bash
+# Build and start the service
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the service
+docker-compose down
+```
+
+### Accessing Paperclip
+
+Once the service is running, access the Paperclip web interface at:
+- **URL**: http://localhost:{{ service_port }}
+- **API**: http://localhost:{{ service_port }}/api
+
+## Configuration
+
+### Environment Variables
+
+- `NODE_ENV`: Node.js environment (default: production)
+- `PORT`: Port for the Paperclip API server (default: {{ service_port }})
+{% if include_postgres %}
+- `DATABASE_URL`: PostgreSQL connection string
+{% endif %}
+- `PAPERCLIP_BIND`: Bind address for the server (default: 0.0.0.0)
+
+See `.env.example` for a complete list of environment variables.
+
+### Database
+
+{% if include_postgres %}
+This deployment includes a PostgreSQL container. The database is initialized with:
+- **Database**: paperclip
+- **User**: paperclip
+- **Password**: paperclip
+
+**Important**: Change the default credentials in production by setting the `DATABASE_URL` environment variable.
+{% else %}
+This deployment uses Paperclip's embedded PostgreSQL database. For production use, configure an external PostgreSQL database by setting the `DATABASE_URL` environment variable.
+{% endif %}
+
+## Development
+
+### Building the Image
+
+```bash
+docker build -t {{ project_name }}:latest .
+```
+
+### Running the Container
+
+```bash
+docker run -d \
+  --name {{ service_name }} \
+  -p {{ service_port }}:{{ service_port }} \
+{% if include_postgres %}
+  -e DATABASE_URL=postgresql://user:pass@host:{{ postgres_port }}/db \
+{% endif %}
+  {{ project_name }}:latest
+```
+
+## Maintenance
+
+### Updating Paperclip
+
+```bash
+# Pull latest changes
+git pull
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
+### Backup
+
+{% if include_postgres %}
+```bash
+# Backup PostgreSQL database
+docker-compose exec postgres pg_dump -U paperclip paperclip > backup.sql
+
+# Restore from backup
+docker-compose exec -T postgres psql -U paperclip paperclip < backup.sql
+```
+{% else %}
+```bash
+# Backup embedded database
+docker-compose exec paperclip cp -r /app/data ./backup
+```
+{% endif %}
+
+## Troubleshooting
+
+### Container won't start
+
+Check the logs:
+```bash
+docker-compose logs paperclip
+```
+
+### Database connection issues
+
+{% if include_postgres %}
+Ensure the PostgreSQL container is healthy:
+```bash
+docker-compose ps postgres
+```
+{% else %}
+Ensure the embedded database directory is writable:
+```bash
+docker-compose exec paperclip ls -la /app/data
+```
+{% endif %}
+
+### Health check failing
+
+The health check expects the Paperclip API to respond at `/health`. Ensure the service is fully started before checking health.
+
+## Resources
+
+- [Paperclip GitHub](https://github.com/paperclipai/paperclip)
+- [Paperclip Documentation](https://github.com/paperclipai/paperclip/blob/master/doc/DEVELOPING.md)
+- [Docker Compose Documentation](https://docs.docker.com/compose/)
+
+## License
+
+This deployment follows the license of the Paperclip project.

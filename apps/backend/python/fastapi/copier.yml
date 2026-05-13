@@ -1,0 +1,33 @@
+_defaults:
+  service_name: "my-fastapi-service"
+  description: "A FastAPI backend service"
+  python_version: "3.11"
+  port: 8000
+
+_templates_suffix: ".tmpl"
+
+service_name:
+  type: str
+  help: "Service name (kebab-case; used for container, logs, and Docker service name)"
+
+description:
+  type: str
+  help: "Short description of the service"
+
+python_version:
+  type: str
+  help: "Minimum Python version (e.g., 3.11)"
+  default: "3.11"
+
+port:
+  type: int
+  help: "Internal HTTP port the service binds to"
+  default: 8000
+
+_ignore:
+  - "__pycache__"
+  - "*.pyc"
+  - ".venv"
+  - "dist"
+  - "build"
+  - ".git"

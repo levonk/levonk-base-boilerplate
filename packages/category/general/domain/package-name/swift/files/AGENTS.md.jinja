@@ -1,0 +1,126 @@
+# AI Agent Instructions for {{ package_name }}
+
+## Overview
+
+This document provides instructions for AI agents working with the {{ package_name }} Swift package.
+
+## Project Context
+
+- **Package Name**: {{ package_name }}
+- **Description**: {{ package_description }}
+- **Category**: {{ category }}
+- **Domain**: {{ domain }}
+- **Swift Version**: {{ swift_version }}
+- **Author**: {{ author_name }} <{{ author_email }}>
+- **License**: {{ license }}
+
+## Development Guidelines
+
+### Swift-Specific Rules
+
+1. **Swift Style**: Follow Swift API design guidelines and naming conventions
+2. **Error Handling**: Use Swift's error handling with `do-catch` and `Result` types
+3. **Optionals**: Use optionals properly; avoid force unwrapping unless absolutely safe
+4. **Memory Management**: Understand ARC (Automatic Reference Counting) and avoid retain cycles
+5. **Protocol-Oriented**: Prefer protocol-oriented programming over inheritance where appropriate
+
+### Package Structure
+
+```
+Sources/
+├── {{ package_name }}/
+│   ├── {{ package_name }}.swift      # Main module entry point
+│   ├── Models/                       # Data models and structures
+│   ├── Services/                     # Business logic services
+│   └── Extensions/                   # Swift extensions
+├── {{ package_name }}Tests/
+│   ├── {{ package_name }}Tests.swift  # Main test file
+│   ├── Mocks/                        # Test mocks and stubs
+│   └── Fixtures/                     # Test data fixtures
+```
+
+### Testing Requirements
+
+{% if include_tests %}
+- Use XCTest framework for unit testing
+- Test all public APIs and critical business logic
+- Include both positive and negative test cases
+- Use mocks for external dependencies
+- Maintain test coverage above 80%
+{% endif %}
+
+### Build and Development
+
+```bash
+# Resolve dependencies
+swift package resolve
+
+# Build the package
+swift build
+
+# Run tests
+swift test
+
+# Generate documentation
+swift package generate-documentation
+
+# Build with specific configuration
+swift build -c release
+```
+
+### Dependencies Management
+
+- Add dependencies in `Package.swift` using proper version requirements
+- Use exact versions for critical dependencies
+- Document why each dependency is needed
+- Keep dependencies to a minimum
+
+## Code Quality Standards
+
+1. **Documentation**: Add documentation comments to all public APIs
+2. **Type Safety**: Leverage Swift's type system for compile-time safety
+3. **Performance**: Consider performance implications of algorithms and data structures
+4. **Security**: Follow secure coding practices, especially for input validation
+5. **Accessibility**: Consider accessibility in UI-related code
+
+## Common Tasks
+
+### Adding a New Feature
+
+1. Create feature branch from main
+2. Implement feature in appropriate module
+3. Add comprehensive tests
+4. Update documentation
+5. Submit pull request for review
+
+### Debugging
+
+- Use `swift test --filter` to run specific tests
+- Use `swift build --debug` for debug builds
+- Leverage Xcode's debugging tools when available
+- Add logging statements with proper log levels
+
+### Release Process
+
+1. Update version in `Package.swift`
+2. Update CHANGELOG.md
+3. Run full test suite
+4. Tag release in git
+5. Publish to appropriate registry if applicable
+
+## Agent-Specific Instructions
+
+When working with this package:
+
+1. **Read existing code** before making changes to understand patterns
+2. **Maintain consistency** with existing code style and architecture
+3. **Add tests** for any new functionality
+4. **Update documentation** when changing APIs
+5. **Consider Swift version compatibility** (minimum {{ swift_version }})
+
+## Getting Help
+
+- Check Swift documentation: https://swift.org/documentation/
+- Review Swift Package Manager: https://swift.org/package-manager/
+- Consult existing test files for usage patterns
+- Review similar packages in the monorepo for consistency

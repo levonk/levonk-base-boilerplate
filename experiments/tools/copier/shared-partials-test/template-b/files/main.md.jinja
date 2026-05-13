@@ -1,0 +1,20 @@
+# {{ project_name }} - API Service
+
+This is Template B's main file that also uses shared partials.
+
+{% include "_partials/common-header" %}
+
+## Template B Specific Content
+
+This content is specific to Template B:
+- Environment: {{ environment }}
+- Service Type: {{ template_type }}
+
+## API Configuration
+
+API-specific settings:
+- Production mode: {{ 'enabled' if environment == 'production' else 'disabled' }}
+- Service type: {{ template_type }}
+- API endpoints: RESTful
+
+{% include "_partials/common-footer" %}

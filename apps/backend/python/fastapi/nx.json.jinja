@@ -1,0 +1,38 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "cli": {
+    "packageManager": "pnpm"
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default",
+      "!{projectRoot}/tests/**",
+      "!{projectRoot}/.venv/**"
+    ]
+  },
+  "targetDefaults": {
+    "serve": {
+      "cache": false
+    },
+    "test": {
+      "cache": true
+    },
+    "lint": {
+      "cache": true
+    }
+  },
+  "plugins": [
+    "@nxlv/python"
+  ],
+  "generators": {
+    "@nxlv/python:project": {
+      "projectType": "application",
+      "packageManager": "uv"
+    }
+  },
+  "parallel": 4,
+  "cacheDirectory": ".nx/cache",
+  "useDaemonProcess": true,
+  "defaultBase": "main"
+}

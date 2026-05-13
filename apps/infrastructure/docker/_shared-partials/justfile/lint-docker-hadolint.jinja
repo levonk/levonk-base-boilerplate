@@ -1,0 +1,8 @@
+lint-docker:
+    #!/usr/bin/env bash
+    if [ -f "{{ DOCKERFILE_PATH }}" ]; then
+        echo BLUE + "Running hadolint on {{ DOCKERFILE_PATH }}..." + NC
+        docker run --rm -v {{ WORKDIR }}:/workspace -w /workspace --security-opt=no-new-privileges {{ HADOLINT_IMAGE }} {{ DOCKERFILE_PATH }}
+    else
+        echo YELLOW + "⚠ No Dockerfile found at {{ DOCKERFILE_PATH }}; skipping hadolint" + NC
+    fi

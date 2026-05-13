@@ -1,0 +1,58 @@
+# flake8: noqa
+from __future__ import annotations
+
+import json
+import os
+from datetime import datetime
+
+import requests
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+
+OLLAMA_BASE = os.getenv("OLLAMA_BASE_URL", "{{ ollama_base_url }}")
+MODEL = os.getenv("OLLAMA_MODEL", "llama3.1")
+PROMPT = os.getenv("OLLAMA_PROMPT", "Say hello from Airflow.")
+
+
+def call_ollama(**context):
+    url = f"{OLLAMA_BASE}/api/generate"
+    payload = {
+        "model": MODEL,
+        "prompt": PROMPT,
+        "stream": False,
+        "options": {"temperature": 0.2},
+    }
+    resp = requests.post(url, json=payload, timeout=60)
+    resp.raise_for_status()
+    data = resp.json()
+    text = data.get("response", "")
+    print("OLLAMA RESPONSE:\n", text)
+
+
+def _dag_args():
+    return {
+        "owner": "airflow",
+        "start_date": datetime(2024, 1, 1),
+        "catchup": False,
+        "tags": ["ollama", "ai"],
+    }
+
+
+def _schedule():
+    return None  # manual trigger
+
+
+def build_dag():
+    with DAG(
+        dag_id="ollama_example",
+        default_args=_dag_args(),
+        schedule_interval=_schedule(),
+    ) as dag:
+        PythonOperator(
+            task_id="call_ollama",
+            python_callable=call_ollama,
+        )
+    return dag
+
+
+globals()["ollama_example"] = build_dag()

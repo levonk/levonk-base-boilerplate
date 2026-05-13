@@ -1,0 +1,109 @@
+#!/usr/bin/env bats
+
+setup() {
+  TMPDIR="$(mktemp -d)"
+  export TMPDIR
+}
+
+teardown() {
+  rm -rf "$TMPDIR"
+}
+
+@test "shows help" {
+  run bash {{ project_slug }}.sh --help
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "Usage:" ]]
+}
+
+@test "shows version" {
+  run bash {{ project_slug }}.sh --version
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "{{ project_slug }}" ]]
+  [[ "$output" =~ "1.0.0" ]]
+}
+
+@test "shows usage" {
+  run bash {{ project_slug }}.sh --usage
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "Usage:" ]]
+}
+
+@test "quiet mode suppresses output" {
+  mkdir -p "$TMPDIR"
+  echo "test" > "$TMPDIR/test.txt"
+  run bash {{ project_slug }}.sh --quiet "$TMPDIR/test.txt"
+  [ "$status" -eq 0 ]
+  # In quiet mode, only errors should appear, not info logs
+  [[ ! "$output" =~ "Processing" ]]
+}
+
+@test "verbose mode enables debug output" {
+  mkdir -p "$TMPDIR"
+  echo "test" > "$TMPDIR/test.txt"
+  run bash {{ project_slug }}.sh --verbose "$TMPDIR/test.txt"
+  [ "$status" -eq 0 ]
+  # In verbose mode, debug logs should appear
+  [[ "$output" =~ "DEBUG" ]] || [[ "$output" =~ "Starting" ]]
+}
+
+@test "nocolor disables color output" {
+  mkdir -p "$TMPDIR"
+  echo "test" > "$TMPDIR/test.txt"
+  run bash {{ project_slug }}.sh --nocolor "$TMPDIR/test.txt"
+  [ "$status" -eq 0 ]
+  # Should not contain ANSI color codes
+  [[ ! "$output" =~ $'\033' ]]
+}
+
+@test "logging includes timestamp" {
+  mkdir -p "$TMPDIR"
+  echo "test" > "$TMPDIR/test.txt"
+  run bash {{ project_slug }}.sh "$TMPDIR/test.txt"
+  [ "$status" -eq 0 ]
+  # Log output should contain timestamp pattern (YYYY-MM-DD HH:MM:SS)
+  [[ "$output" =~ [0-9]{4}-[0-9]{2}-[0-9]{2} ]]
+}
+
+@test "logging includes module name" {
+  mkdir -p "$TMPDIR"
+  echo "test" > "$TMPDIR/test.txt"
+  run bash {{ project_slug }}.sh "$TMPDIR/test.txt"
+  [ "$status" -eq 0 ]
+  # Log output should contain module name in brackets
+  [[ "$output" =~ "\[main\]" ]]
+}
+
+@test "logging includes log level" {
+  mkdir -p "$TMPDIR"
+  echo "test" > "$TMPDIR/test.txt"
+  run bash {{ project_slug }}.sh "$TMPDIR/test.txt"
+  [ "$status" -eq 0 ]
+  # Log output should contain log level in brackets (INFO, WARN, ERROR, etc.)
+  [[ "$output" =~ "\[INFO\]" ]] || [[ "$output" =~ "\[WARN\]" ]] || [[ "$output" =~ "\[ERROR\]" ]]
+}
+
+@test "processes stdin" {
+  run bash -c 'printf "hello\n" | bash ./{{ project_slug }}.sh --json -'
+  [ "$status" -eq 0 ]
+  if ! [[ "$output" =~ "source" ]] || ! [[ "$output" =~ "-" ]]; then
+    echo "stdout/stderr was:" >&3
+    echo "$output" >&3
+    return 1
+  fi
+}
+
+@test "processes glob input" {
+  mkdir -p "$TMPDIR/nested"
+  echo "a" > "$TMPDIR/nested/test1.txt"
+  echo "b" > "$TMPDIR/nested/test2.txt"
+  run bash {{ project_slug }}.sh --json "$TMPDIR/**/*.txt"
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ "test1.txt" ]]
+  [[ "$output" =~ "test2.txt" ]]
+}
+
+@test "handles unknown option" {
+  run bash {{ project_slug }}.sh --unknown-option
+  [ "$status" -eq 1 ]
+  [[ "$output" =~ "Unknown option" ]] || [[ "$output" =~ "error" ]]
+}

@@ -1,0 +1,42 @@
+# Development overrides for docker-compose
+# This file is automatically merged with docker-compose.yml in development
+
+version: '3.8'
+
+services:
+  {{ _service_name_slug }}:
+    # Development-specific environment variables
+    environment:
+      - NODE_ENV=development
+      - DEBUG=1
+      - LOG_LEVEL=debug
+    # Mount source code for hot reloading
+    volumes:
+      - .:/app
+      - /app/node_modules
+    # Override command for development
+    command: npm run dev
+    # Expose additional debug ports
+    ports:
+      - "{{ _service_port }}:{{ _service_port }}"
+      - "9229:9229"  # Node.js debugger
+{% if _include_ui %}
+  {{ _service_name_slug }}-ui:
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:{{ _service_port }}
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+    command: npm start
+    ports:
+      - "{{ _ui_port }}:{{ _ui_port }}"
+      - "9228:9228"  # UI debugger
+{% endif %}
+
+# Development-specific networks
+networks:
+  {{ _service_name_slug }}-network:
+    driver: bridge
+    # Allow external access for debugging
+    internal: false

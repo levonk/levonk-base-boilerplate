@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "cli": {
+    "packageManager": "pnpm"
+  },
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "sharedGlobals"],
+    "production": [
+      "default"
+    ]
+  },
+  "targetDefaults": {
+    "docker:build": {
+      "cache": true
+    },
+    "docker:up": {
+      "dependsOn": ["docker:build"]
+    }
+  },
+  "plugins": [
+    "@nx-tools/nx-container"
+  ],
+  "parallel": 4,
+  "cacheDirectory": ".nx/cache",
+  "useDaemonProcess": true,
+  "defaultBase": "main"
+}

@@ -1,0 +1,91 @@
+---
+# {{ _service_name | title }} Docker Compose Configuration
+# Generated secure docker-compose configuration for {{ _service_description | lower }}
+
+# Default logging configuration - use json-file with rotation
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+    tag: "{{ _service_name_slug }}"
+    labels: "service"
+
+
+services:
+  localnet-app-{{ _service_name_slug }}:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: localnet-app-{{ _service_name_slug }}
+    image: {{ _service_name_slug }}:latest
+    restart: unless-stopped
+    logging: *default-logging
+    user: "${{{ _env_prefix }}_PUID:-1000}:${{{ _env_prefix }}_PGID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${{{ _env_prefix }}_HOST_IP:-0.0.0.0}:${{{ _env_prefix }}_HOST_PORT:-{{ _service_port }}}:${{{ _env_prefix }}_CONTAINER_IP:-0.0.0.0}:${{{ _env_prefix }}_CONTAINER_PORT:-{{ _service_port }}}"
+    environment:
+{% include "_partials/docker-compose/env-core.jinja" %}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ _service_port }}{{ _service_health_endpoint }}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - {{ _service_name_slug }}-network
+    labels:
+{% include "_partials/docker-compose/labels-core.jinja" %}
+{% if _enable_monitoring %}
+{% include "_partials/docker-compose/labels-metrics.jinja" %}
+{% endif %}
+{% if _use_traefik %}
+{% include "_partials/docker-compose/labels-traefik.jinja" %}
+{% endif %}
+{% if _include_ui %}
+    depends_on:
+      localnet-app-{{ _service_name_slug }}-ui:
+        condition: service_healthy
+
+  {{ _service_name_slug }}-ui:
+    build:
+      context: ./ui
+      dockerfile: docker/Dockerfile
+    container_name: localnet-app-{{ _service_name_slug }}-ui
+    restart: unless-stopped
+    ports:
+      - "{{ _ui_port }}:{{ _ui_port }}"
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://{{ _service_name_slug }}:{{ _service_port }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ _ui_port }}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - {{ _service_name_slug }}-network
+{% endif %}
+
+  {{ _service_name_slug }}-debug:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: debug
+    logging: *default-logging
+{% include "_partials/shared/docker-compose-debug-common.jinja" %}
+
+networks:
+  {{ _service_name_slug }}-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

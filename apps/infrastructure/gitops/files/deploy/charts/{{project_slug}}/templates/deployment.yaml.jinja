@@ -1,0 +1,179 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "{{ chart_name }}.fullname" . }}
+  labels:
+    {{- include "{{ chart_name }}.labels" . | nindent 4 }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.podAnnotations }}
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "{{ chart_name }}.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "{{ chart_name }}.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        checksum/config: {{ include (print $.Chart.Name "-configmap") . | sha256sum }}
+        checksum/secret: {{ include (print $.Chart.Name "-secret") . | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "{{ chart_name }}.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      initContainers:
+        {{- toYaml .Values.initContainers | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          livenessProbe:
+            {{- if .Values.healthCheck.enabled }}
+            httpGet:
+              path: {{ .Values.healthCheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.healthCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.healthCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.healthCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.healthCheck.failureThreshold }}
+            successThreshold: {{ .Values.healthCheck.successThreshold }}
+            {{- else }}
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.readinessCheck.enabled }}
+            httpGet:
+              path: {{ .Values.readinessCheck.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.readinessCheck.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessCheck.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessCheck.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessCheck.failureThreshold }}
+            successThreshold: {{ .Values.readinessCheck.successThreshold }}
+            {{- else }}
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            {{- if .Values.logging.enabled }}
+            - name: LOG_LEVEL
+              value: {{ .Values.logging.level }}
+            - name: LOG_FORMAT
+              value: {{ .Values.logging.format }}
+            {{- end }}
+            {{- if .Values.tracing.enabled }}
+            - name: JAEGER_ENDPOINT
+              value: {{ .Values.tracing.jaeger.endpoint }}
+            - name: JAEGER_SERVICE_NAME
+              value: {{ .Values.tracing.jaeger.service }}
+            {{- end }}
+            {{- if .Values.database.enabled }}
+            - name: DATABASE_HOST
+              value: {{ .Values.database.host }}
+            - name: DATABASE_PORT
+              value: {{ .Values.database.port | quote }}
+            - name: DATABASE_NAME
+              value: {{ .Values.database.name }}
+            - name: DATABASE_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "{{ chart_name }}.fullname" . }}-database
+                  key: username
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "{{ chart_name }}.fullname" . }}-database
+                  key: password
+            - name: DATABASE_SSL_MODE
+              value: {{ .Values.database.sslMode }}
+            {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.securityContext.readOnlyRootFilesystem }}
+            - name: tmp
+              mountPath: /tmp
+            - name: var-tmp
+              mountPath: /var/tmp
+            - name: var-run
+              mountPath: /var/run
+            {{- end }}
+      {{- with .Values.sidecars }}
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.securityContext.readOnlyRootFilesystem }}
+        - name: tmp
+          emptyDir: {}
+        - name: var-tmp
+          emptyDir: {}
+        - name: var-run
+          emptyDir: {}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

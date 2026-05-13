@@ -1,0 +1,77 @@
+// ==WindhawkMod==
+// @id              {{ plugin_id }}
+// @name            {{ plugin_name }}
+// @description     {{ plugin_description }}
+// @version         {{ plugin_version }}
+// @author          {{ author_name }}
+{% if author_github %}
+// @github          {{ author_github }}
+{% endif %}
+{% if author_twitter %}
+// @twitter         {{ author_twitter }}
+{% endif %}
+{% if author_homepage %}
+// @homepage        {{ author_homepage }}
+{% endif %}
+// @include         {{ target_process }}
+{% if compiler_options %}
+// @compilerOptions {{ compiler_options }}
+{% endif %}
+// ==/WindhawkMod==
+
+// ==WindhawkModReadme==
+/*
+# {{ plugin_name }}
+{{ plugin_description }}
+
+# Getting started
+Check out the documentation
+[here](https://github.com/ramensoftware/windhawk/wiki/Creating-a-new-mod).
+*/
+// ==/WindhawkModReadme==
+
+// // ==WindhawkModSettings==
+/*
+# Here you can define settings, in YAML format, that the mod users will be able
+# to configure. Metadata values such as $name and $description are optional.
+# Check out the documentation for more information:
+# https://github.com/ramensoftware/windhawk/wiki/Creating-a-new-mod#settings
+# - example: true
+#   $name: Example setting
+#   $description: Description for the example setting.
+*/
+// // ==/WindhawkModSettings==
+
+#include <windhawk_utils.h>
+
+struct {
+    // bool example;
+} settings;
+
+void LoadSettings() {
+    // settings.example = Wh_GetIntSetting(L"example");
+}
+
+// The mod is being initialized, load settings, hook functions, and do other
+// initialization stuff if required.
+BOOL Wh_ModInit() {
+    Wh_Log(L"Init {{ plugin_name }}");
+
+    LoadSettings();
+
+    // Wh_SetFunctionHook((void*)TargetFunc, (void*)HookFunc, (void**)&OriginalFunc);
+
+    return TRUE;
+}
+
+// The mod is being unloaded, free all allocated resources.
+void Wh_ModUninit() {
+    Wh_Log(L"Uninit {{ plugin_name }}");
+}
+
+// The mod setting were changed, reload them.
+void Wh_ModSettingsChanged() {
+    Wh_Log(L"SettingsChanged");
+
+    LoadSettings();
+}

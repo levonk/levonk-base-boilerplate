@@ -1,0 +1,45 @@
+package {{ group_id }}.{{ project_slug | replace('-', '_') }}
+
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import com.github.ajalt.clikt.testing.test
+import kotlin.test.BeforeTest
+import kotlin.test.AfterTest
+
+class MainTest {
+    private val main = Main()
+
+    @BeforeTest
+    fun setup() {
+        // Setup before each test
+    }
+
+    @AfterTest
+    fun tearDown() {
+        unmockkAll()
+    }
+
+    @Test
+    fun `test default count`() {
+        val result = main.test("")
+        assertEquals(0, result.statusCode)
+        assertEquals("{{ project_name }} - {{ description }}\nRunning 1 time(s)\nIteration 1\n", result.output)
+    }
+
+    @Test
+    fun `test custom count`() {
+        val result = main.test("--count", "3")
+        assertEquals(0, result.statusCode)
+        assertEquals("{{ project_name }} - {{ description }}\nRunning 3 time(s)\nIteration 1\nIteration 2\nIteration 3\n", result.output)
+    }
+
+    @Test
+    fun `test short option`() {
+        val result = main.test("-c", "2")
+        assertEquals(0, result.statusCode)
+        assertEquals("{{ project_name }} - {{ description }}\nRunning 2 time(s)\nIteration 1\nIteration 2\n", result.output)
+    }
+}

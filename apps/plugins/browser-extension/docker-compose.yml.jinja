@@ -1,0 +1,15 @@
+---
+
+services:
+  {{ package_name | replace(" ", "-") | lower }}-tests:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-America/Los_Angeles}
+      - NODE_ENV=development
+      - STAGEHAND_API_KEY=${STAGEHAND_API_KEY:-}
+    # Container runs tests once and exits; no ports are exposed by default.
+    restart: "no"

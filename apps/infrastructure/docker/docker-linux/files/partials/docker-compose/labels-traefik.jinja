@@ -1,0 +1,8 @@
+      - "traefik.enable=true"
+      - "traefik.http.routers.{{ _service_name_slug | default(_service_name) }}.rule=Host(`{{ _service_name_slug | default(_service_name) }}.{{ _domain }}`)"
+      - "traefik.http.routers.{{ _service_name_slug | default(_service_name) }}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.{{ _service_name_slug | default(_service_name) }}.loadbalancer.server.port={{ _service_port }}"
+{% if _enable_monitoring %}
+      - "traefik.http.middlewares.{{ _service_name_slug | default(_service_name) }}-metrics.forwardauth.address=http://prometheus:9090"
+      - "traefik.http.routers.{{ _service_name_slug | default(_service_name) }}-metrics.rule=Host(`metrics.{{ _domain }}`)"
+{% endif %}

@@ -1,0 +1,219 @@
+# Default values for {{ chart_name }}
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Image configuration
+image:
+  registry: ""
+  repository: {{ app_image }}
+  tag: "{{ app_version }}"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Replica configuration
+replicaCount: 1
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: {{ app_port }}
+  targetPort: {{ app_port }}
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: {{ 'true' if enable_ingress else 'false' }}
+  className: {{ ingress_class }}
+  annotations: {}
+    {% if enable_cert_manager %}
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    {% endif %}
+  hosts:
+    - host: {{ project_name }}.{{ ingress_domain }}
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+    {% if enable_cert_manager %}
+    - secretName: {{ project_name }}-tls
+      hosts:
+        - {{ project_name }}.{{ ingress_domain }}
+    {% endif %}
+
+# Resource configuration
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Autoscaling configuration
+autoscaling:
+  enabled: {{ 'true' if enable_autoscaling else 'false' }}
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: # uncomment and set if needed
+
+# Node selector and tolerations
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+podLabels: {}
+
+# Security context
+{% if enable_security_context %}
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+{% else %}
+securityContext: {}
+{% endif %}
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod security policy
+podSecurityPolicy:
+  enabled: {{ 'true' if enable_pod_security_policy else 'false' }}
+
+# Network policies
+networkPolicy:
+  enabled: {{ 'true' if enable_network_policies else 'false' }}
+  ingress: []
+  egress: []
+
+# Monitoring configuration
+monitoring:
+  enabled: {{ 'true' if enable_monitoring else 'false' }}
+  serviceMonitor:
+    enabled: {{ 'true' if enable_monitoring else 'false' }}
+    interval: 30s
+    scrapeTimeout: 10s
+  prometheusRule:
+    enabled: false
+  grafanaDashboard:
+    enabled: false
+
+# Logging configuration
+logging:
+  enabled: {{ 'true' if enable_logging else 'false' }}
+  level: info
+  format: json
+
+# Tracing configuration
+tracing:
+  enabled: {{ 'true' if enable_tracing else 'false' }}
+  jaeger:
+    endpoint: ""
+    service: {{ project_name }}
+
+# Health checks
+healthCheck:
+  enabled: true
+  path: /health
+  port: {{ app_port }}
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+# Readiness check
+readinessCheck:
+  enabled: true
+  path: /ready
+  port: {{ app_port }}
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+  successThreshold: 1
+
+# Database configuration (if applicable)
+{% if has_database %}
+database:
+  type: {{ database_type }}
+  host: ""
+  port: 5432
+  name: {{ project_name }}
+  user: ""
+  password: ""
+  sslMode: require
+{% endif %}
+
+# Environment variables
+env: []
+  # - name: ENV_VAR
+  #   value: "value"
+  # - name: SECRET_VAR
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: secret-name
+  #       key: key-name
+
+# ConfigMaps
+configMaps: {}
+  # configMapName:
+  #   data:
+  #     key: value
+
+# Secrets
+secrets: {}
+  # secretName:
+  #   data:
+  #     key: base64-encoded-value
+
+# Volumes
+volumes: []
+volumeMounts: []
+persistentVolumes: []
+
+# Init containers
+initContainers: []
+
+# Sidecar containers
+sidecars: []
+
+# Additional labels and annotations
+commonLabels: {}
+commonAnnotations: {}
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  maxUnavailable: ""
+
+# Priority class
+priorityClassName: ""
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 25%
+    maxSurge: 25%
+
+# Additional manifests
+extraManifests: []
+
+# Tests
+tests:
+  enabled: {{ 'true' if enable_tests else 'false' }}

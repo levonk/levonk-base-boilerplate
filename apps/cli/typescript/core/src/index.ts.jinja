@@ -1,0 +1,100 @@
+#!/usr/bin/env node
+import { Command } from 'commander';
+import process from 'process';
+import { glob } from 'glob';
+import fs from 'fs/promises';
+import { createLogger, LoggerOptions } from './logger.js';
+
+// Handle Ctrl+C
+process.on('SIGINT', () => {
+    process.stderr.write('\nOperation cancelled.\n');
+    process.exit(130);
+});
+
+const program = new Command();
+
+program
+  .name('{{ project_slug }}')
+  .description('{{ description }}')
+  .version('1.0.0', '-v, --version', 'Output the version number')
+  .helpOption('-h, --help', 'Display help for command')
+  .addHelpText('after', 'Use "{{ project_slug }} help <command>" for more information on a command.')
+  .argument('[inputs...]', 'Input files or glob patterns. Use "-" for stdin.')
+  .option('-q, --quiet', 'Suppress all output except errors')
+  .option('--verbose', 'Enable verbose output with extra details')
+  .option('--usage', 'Display usage information')
+  .option('--nocolor', 'Disable colored output')
+  .option('-c, --config <path>', 'Config file path', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
+  .option('--json', 'Output results as JSON')
+  .action(async (inputs: string[], options) => {
+      // Handle --usage flag
+      if (options.usage) {
+          program.helpInformation();
+          process.exit(0);
+      }
+      // Create logger with options
+      const loggerOptions: LoggerOptions = {
+          quiet: options.quiet,
+          verbose: options.verbose,
+          noColor: options.nocolor,
+          module: '{{ project_slug }}',
+      };
+      const logger = createLogger(loggerOptions);
+
+      // Input Processing
+      const filesToProcess: string[] = [];
+      let readStdin = false;
+
+      if (inputs.length === 0) {
+          // Check if stdin is a TTY
+          if (process.stdin.isTTY) {
+              program.help();
+              process.exit(1);
+          } else {
+              readStdin = true;
+          }
+      } else {
+          for (const input of inputs) {
+              if (input === '-') {
+                  readStdin = true;
+              } else {
+                  // Globbing
+                  const matches = await glob(input, { nodir: true });
+                  if (matches.length === 0) {
+                      logger.warn(`No files found for pattern '${input}'`);
+                  }
+                  filesToProcess.push(...matches);
+              }
+          }
+      }
+
+      const results: any[] = [];
+
+      if (readStdin) {
+          logger.info('Processing stdin...');
+          const chunks = [];
+          for await (const chunk of process.stdin) {
+              chunks.push(chunk);
+          }
+          const content = Buffer.concat(chunks).toString('utf-8');
+          results.push({ source: 'stdin', length: content.length });
+      }
+
+      for (const file of filesToProcess) {
+          try {
+              logger.info(`Processing ${file}...`);
+              const content = await fs.readFile(file, 'utf-8');
+              results.push({ source: file, length: content.length });
+          } catch (error) {
+              logger.error(`Error processing ${file}: ${error}`);
+          }
+      }
+
+      if (options.json) {
+          console.log(JSON.stringify(results, null, 2));
+      } else {
+          logger.info(`Processed ${results.length} inputs.`);
+      }
+  });
+
+program.parse();

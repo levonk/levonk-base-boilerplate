@@ -1,0 +1,16 @@
+{
+  "name": "{{ project_name | default('airflow-task') }}",
+  "version": "1.0.0",
+  "description": "Airflow Node task container with NX monorepo support",
+  "scripts": {
+    "build": "docker build -t {{ project_name | default('airflow-task') }} .",
+    "docker:build": "docker build -t {{ project_name | default('airflow-task') }} .",
+    "docker:push": "docker push {{ project_name | default('airflow-task') }}"
+  },
+  "devDependencies": {
+    "@nx-tools/nx-container": "^5.0.0",
+    "@nx/js": "^19.0.0",
+    "nx": "^19.0.0"
+  },
+  "packageManager": "pnpm@*"
+}

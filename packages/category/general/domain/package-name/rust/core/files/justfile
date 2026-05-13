@@ -1,0 +1,344 @@
+# Justfile for {{ package_name | default('rust-package') }} Rust Package
+
+# Default target
+default: dev
+
+# Internal targets (prefixed with - to avoid showing in help)
+-bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Bootstrapping {{ package_name | default('rust-package') }}..."
+    
+    # Check Rust toolchain
+    if ! command -v cargo >/dev/null 2>&1; then
+        echo "❌ cargo not found"
+        exit 1
+    fi
+    
+    # Install rust-analyzer if not available
+    if ! command -v rust-analyzer >/dev/null 2>&1; then
+        echo "⚠️  rust-analyzer not available"
+    fi
+    
+    echo "✅ Bootstrap complete"
+
+-doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Running health checks for {{ package_name | default('rust-package') }}..."
+    
+    # Check required tools
+    echo "Checking tools:"
+    command -v rustc >/dev/null 2>&1 && echo "✅ rustc" || echo "❌ rustc missing"
+    command -v cargo >/dev/null 2>&1 && echo "✅ cargo" || echo "❌ cargo missing"
+    command -v rust-analyzer >/dev/null 2>&1 && echo "✅ rust-analyzer" || echo "⚠️  rust-analyzer missing"
+    command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
+    
+    # Check Rust version
+    if command -v rustc >/dev/null 2>&1; then
+        echo "Rust version: $(rustc --version)"
+    fi
+    
+    # Check project structure
+    echo "Checking structure:"
+    test -f Cargo.toml && echo "✅ Cargo.toml" || echo "❌ Cargo.toml missing"
+    test -d src && echo "✅ src directory" || echo "❌ src directory missing"
+    test -f src/main.rs && echo "✅ src/main.rs" || echo "⚠️  src/main.rs missing (library package)"
+    test -f src/lib.rs && echo "✅ src/lib.rs" || echo "⚠️  src/lib.rs missing (binary package)"
+    
+    echo "🏁 Doctor complete"
+
+-clean-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧹 Cleaning {{ package_name | default('rust-package') }}..."
+    
+    # Clean cargo artifacts
+    cargo clean
+    
+    # Remove additional artifacts
+    rm -rf target/
+    rm -rf Cargo.lock
+    
+    echo "✅ Clean complete"
+
+-build-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Building {{ package_name | default('rust-package') }}..."
+    
+    # Build the project
+    cargo build
+    
+    echo "✅ Build complete"
+
+-dev-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting development environment for {{ package_name | default('rust-package') }}..."
+    
+    # Watch for changes and run tests
+    if command -v cargo-watch >/dev/null 2>&1; then
+        cargo watch -x test
+    else
+        echo "👀 Watching for changes... (Ctrl+C to stop)"
+        echo "🛠️  Available commands:"
+        echo "   just test    - Run tests"
+        echo "   just lint    - Run linting"
+        echo "   just build   - Build project"
+        echo "   just run     - Run project"
+        
+        # Simple watch loop
+        while true; do
+            sleep 5
+            # Check if any Rust files changed
+            if find . -name "*.rs" -newer /tmp/last-check 2>/dev/null | grep -q .; then
+                touch /tmp/last-check
+                echo "🔄 Rust files changed, consider rebuilding"
+            fi
+        done
+    fi
+
+-test-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing {{ package_name | default('rust-package') }}..."
+    
+    # Run tests
+    cargo test
+    
+    echo "✅ Tests complete"
+
+-lint-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Linting {{ package_name | default('rust-package') }}..."
+    
+    # Run clippy
+    if command -v cargo-clippy >/dev/null 2>&1; then
+        cargo clippy -- -D warnings
+    else
+        echo "⚠️  clippy not available"
+    fi
+    
+    echo "✅ Linting complete"
+
+-typecheck-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Type checking {{ package_name | default('rust-package') }}..."
+    
+    # Run cargo check
+    cargo check
+    
+    echo "✅ Type checking complete"
+
+# Public targets (user-facing)
+bootstrap: bootstrap-internal
+doctor: doctor-internal
+clean: clean-internal
+build: build-internal
+dev: dev-internal
+test: test-internal
+lint: lint-internal
+typecheck: typecheck-internal
+release: release-internal
+
+# Additional Rust-specific targets
+build-release:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Building {{ package_name | default('rust-package') }} in release mode..."
+    
+    cargo build --release
+    
+    echo "✅ Release build complete"
+
+release-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting release pipeline for {{ package_name | default('rust-package') }}..."
+    
+    # Run all quality checks and build
+    just typecheck-internal
+    just lint-internal
+    just test-internal
+    just build-release
+    
+    echo "✅ Release complete! Binary available at target/release/{{ package_name | default('rust-package') }}"
+
+run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Running {{ package_name | default('rust-package') }}..."
+    
+    # Run the project
+    if [ -f "src/main.rs" ]; then
+        cargo run
+    elif [ -f "src/lib.rs" ]; then
+        echo "⚠️  This is a library package, no main.rs found"
+        echo "Try: cargo test or cargo run --example <example>"
+    else
+        echo "❌ No src/main.rs or src/lib.rs found"
+        exit 1
+    fi
+
+test-coverage:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📊 Running tests with coverage for {{ package_name | default('rust-package') }}..."
+    
+    # Run tests with coverage if tarpaulin is available
+    if command -v cargo-tarpaulin >/dev/null 2>&1; then
+        cargo tarpaulin --out Html
+        echo "📊 Coverage report generated: tarpaulin-report/html/index.html"
+    else
+        echo "⚠️  cargo-tarpaulin not available"
+        echo "Install with: cargo install cargo-tarpaulin"
+        cargo test
+    fi
+    
+    echo "✅ Coverage complete"
+
+format:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🎨 Formatting {{ package_name | default('rust-package') }}..."
+    
+    # Format code with rustfmt
+    if command -v cargo-fmt >/dev/null 2>&1; then
+        cargo fmt
+    else
+        echo "⚠️  rustfmt not available"
+    fi
+    
+    echo "✅ Formatting complete"
+
+format-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Checking format for {{ package_name | default('rust-package') }}..."
+    
+    # Check code format with rustfmt
+    if command -v cargo-fmt >/dev/null 2>&1; then
+        cargo fmt -- --check
+    else
+        echo "⚠️  rustfmt not available"
+    fi
+    
+    echo "✅ Format check complete"
+
+doc:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📚 Generating documentation for {{ package_name | default('rust-package') }}..."
+    
+    # Generate documentation
+    cargo doc --open
+    
+    echo "📚 Documentation generated and opened"
+
+doc-no-open:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📚 Generating documentation for {{ package_name | default('rust-package') }}..."
+    
+    # Generate documentation without opening
+    cargo doc
+    
+    echo "📚 Documentation generated: target/doc/"
+
+audit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Auditing dependencies for {{ package_name | default('rust-package') }}..."
+    
+    # Audit dependencies
+    if command -v cargo-audit >/dev/null 2>&1; then
+        cargo audit
+    else
+        echo "⚠️  cargo-audit not available"
+        echo "Install with: cargo install cargo-audit"
+    fi
+    
+    echo "✅ Audit complete"
+
+publish-dry-run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Dry run publish for {{ package_name | default('rust-package') }}..."
+    
+    # Dry run publish
+    cargo publish --dry-run
+    
+    echo "✅ Dry run complete"
+
+publish:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Publishing {{ package_name | default('rust-package') }}..."
+    
+    # Publish to crates.io
+    cargo publish
+    
+    echo "✅ Published to crates.io"
+
+check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Checking {{ package_name | default('rust-package') }}..."
+    
+    # Run cargo check
+    cargo check
+    
+    echo "✅ Check complete"
+
+validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "✅ Validating {{ package_name | default('rust-package') }}..."
+    
+    # Run all validation checks
+    just typecheck
+    just lint
+    just test
+    
+    echo "✅ Validation complete"
+
+bench:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "⚡ Running benchmarks for {{ package_name | default('rust-package') }}..."
+    
+    # Run benchmarks
+    cargo bench
+    
+    echo "✅ Benchmarks complete"
+
+install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing {{ package_name | default('rust-package') }}..."
+    
+    # Install the binary
+    if [ -f "src/main.rs" ]; then
+        cargo install --path .
+        echo "✅ Installed to ~/.cargo/bin/"
+    else
+        echo "⚠️  This is a library package, no binary to install"
+    fi
+
+uninstall:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🗑️  Uninstalling {{ package_name | default('rust-package') }}..."
+    
+    # Uninstall the binary
+    if [ -f "src/main.rs" ]; then
+        cargo uninstall {{ package_name | default('rust-package') }}
+        echo "🗑️  Uninstalled from ~/.cargo/bin/"
+    else
+        echo "⚠️  This is a library package, no binary to uninstall"
+    fi
+    
+    echo "✅ Uninstallation complete"

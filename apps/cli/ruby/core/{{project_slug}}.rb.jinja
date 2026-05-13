@@ -1,0 +1,202 @@
+#!/usr/bin/env ruby
+require 'thor'
+require 'xdg'
+require 'json'
+require 'colorize'
+require 'time'
+
+# Smart logging module with color detection and module-based coloring
+module SmartLogger
+  # Log levels with their colors and priorities
+  LEVELS = {
+    fatal: { color: :red, priority: 0 },
+    error: { color: :light_red, priority: 1 },
+    warn:  { color: :yellow, priority: 2 },
+    info:  { color: :green, priority: 3 },
+    debug: { color: :light_blue, priority: 4 }
+  }.freeze
+
+  # Unique colors for different modules
+  MODULE_COLORS = [
+    :cyan, :magenta, :blue, :light_blue, :light_magenta,
+    :light_cyan, :white, :light_black
+  ].freeze
+
+  class << self
+    attr_accessor :quiet, :verbose, :nocolor, :log_level
+    attr_reader :module_colors
+
+    def configure(quiet: false, verbose: false, nocolor: false, log_level: :info)
+      @quiet = quiet
+      @verbose = verbose
+      @nocolor = nocolor
+      @log_level = log_level
+      @module_colors = {}
+      Colorize.enabled = !nocolor && color_supported?
+    end
+
+    def color_supported?
+      return false if @nocolor
+      # Check if we're in a TTY
+      return false unless $stdout.tty?
+      # Check for common terminal environment variables
+      return true if ENV['TERM'] && !ENV['TERM'].empty?
+      # Check for Windows conhost/terminal
+      return true if ENV['WT_SESSION'] || ENV['ConEmuANSI']
+      false
+    end
+
+    def get_module_color(module_name)
+      @module_colors ||= {}
+      @module_colors[module_name] ||= MODULE_COLORS[@module_colors.size % MODULE_COLORS.size]
+    end
+
+    def log(level, module_name, message)
+      return if @quiet && level != :fatal
+      return if LEVELS[level][:priority] > LEVELS[@log_level][:priority]
+
+      timestamp = Time.now.utc.strftime('%Y-%m-%dT%H:%M:%S.%3NZ')
+      level_str = level.to_s.upcase.rjust(5)
+      module_str = module_name.ljust(15)
+
+      if Colorize.enabled
+        level_color = LEVELS[level][:color]
+        module_color = get_module_color(module_name)
+        output = "[#{timestamp}] [#{level_str.colorize(level_color)}] [#{module_str.colorize(module_color)}] #{message}"
+      else
+        output = "[#{timestamp}] [#{level_str}] [#{module_str}] #{message}"
+      end
+
+      $stderr.puts(output)
+    end
+
+    def fatal(module_name, message)
+      log(:fatal, module_name, message)
+    end
+
+    def error(module_name, message)
+      log(:error, module_name, message)
+    end
+
+    def warn(module_name, message)
+      log(:warn, module_name, message)
+    end
+
+    def info(module_name, message)
+      log(:info, module_name, message)
+    end
+
+    def debug(module_name, message)
+      log(:debug, module_name, message)
+    end
+  end
+end
+
+class {{ project_class_name }} < Thor
+  def self.exit_on_failure?; true; end
+
+  class_option :quiet, type: :boolean, desc: "Suppress all output except fatal errors"
+  class_option :verbose, type: :boolean, desc: "Enable verbose output (debug level)"
+  class_option :nocolor, type: :boolean, desc: "Disable colored output"
+  class_option :version, type: :boolean, desc: "Show version information"
+
+  def self.version
+    "{{ version | default('0.1.0') }}"
+  end
+
+  desc "version", "Show version information"
+  def version
+    puts "{{ project_class_name }} #{self.version}"
+  end
+
+  desc "usage", "Show usage information"
+  def usage
+    help("process")
+  end
+
+  desc "process [INPUTS]", "Process input files or glob patterns (use '-' for stdin)"
+  option :config, :aliases => "-c", :desc => "Config file path"
+  option :json, :type => :boolean, :desc => "Output results as JSON"
+
+  def process(*inputs)
+    # Configure logger based on options
+    log_level = options[:verbose] ? :info : :warn
+    SmartLogger.configure(
+      quiet: options[:quiet],
+      verbose: options[:verbose],
+      nocolor: options[:nocolor],
+      log_level: log_level
+    )
+
+    # Handle version flag
+    if options[:version]
+      version
+      exit(0)
+    end
+
+    trap("SIGINT") { SmartLogger.fatal("{{ project_slug }}", "Aborted by user"); exit(130) }
+
+    config_path = options[:config] || ENV["{{ project_slug | upper | replace('-', '_') }}_CONFIG"]
+    unless config_path
+      xdg = XDG::Config.new
+      config_path = File.join(xdg.home, "{{ project_slug }}", "config.yml")
+    end
+    SmartLogger.info("{{ project_slug }}", "Using config: #{config_path}")
+
+    results = []
+    files_to_process = []
+    read_stdin = false
+
+    if inputs.empty?
+      if $stdin.tty?
+        help("process")
+        exit(1)
+      else
+        read_stdin = true
+      end
+    else
+      inputs.each do |input|
+        if input == "-"
+          read_stdin = true
+          next
+        end
+
+        matches = Dir.glob(input)
+        SmartLogger.warn("{{ project_slug }}", "No files found for pattern '#{input}'") if matches.empty?
+        files_to_process.concat(matches)
+      end
+    end
+
+    if read_stdin
+      SmartLogger.info("{{ project_slug }}", "Processing stdin...")
+      content = $stdin.read
+      results << { source: "stdin", length: content.length, status: "processed" }
+    end
+
+    files_to_process.each do |file|
+      SmartLogger.info("{{ project_slug }}", "Processing #{file}...")
+      begin
+        content = File.read(file)
+        results << { source: file, length: content.length, status: "processed" }
+        SmartLogger.debug("{{ project_slug }}", "Successfully processed #{file} (#{content.length} bytes)") if options[:verbose]
+      rescue => e
+        SmartLogger.error("{{ project_slug }}", "Error reading #{file}: #{e.message}")
+      end
+    end
+
+    if options[:json]
+      puts JSON.pretty_generate(results)
+    else
+      results.each { |res| puts "✓ Processed #{res[:source]} (#{res[:length]} bytes)" }
+      SmartLogger.info("{{ project_slug }}", "Processed #{results.size} item(s)")
+    end
+  rescue StandardError => e
+    SmartLogger.fatal("{{ project_slug }}", "Error: #{e.message}")
+    SmartLogger.fatal("{{ project_slug }}", e.backtrace.join("\n")) if options[:verbose]
+    exit(1)
+  end
+
+  default_task :process
+end
+
+{{ project_class_name }}.start(ARGV)

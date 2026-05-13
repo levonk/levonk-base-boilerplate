@@ -1,0 +1,15 @@
+export function getExtensionDisplayName(): string {
+  return "{{ display_name }}"
+}
+
+// Basic background script wiring for MV3-style extensions.
+// This uses the `chrome` API when available, but does not require it for tests.
+if (typeof chrome !== "undefined" && chrome.runtime && chrome.action) {
+  chrome.runtime.onInstalled.addListener(() => {
+    console.log("{{ display_name }} installed")
+  })
+
+  chrome.action.onClicked.addListener((tab) => {
+    console.log("Toolbar button clicked", tab?.id)
+  })
+}

@@ -1,0 +1,8 @@
+    "test": {
+      "executor": "@nx/vite:test",
+      "options": {
+        "config": "vitest.config.mts"
+      },
+      "dependsOn": ["^build"],
+      "cache": true
+    },

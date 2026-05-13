@@ -1,0 +1,13 @@
+bootstrap: ## Install dependencies and setup environment (Nix + direnv)
+	@echo "$(BLUE)Bootstrapping environment...$(NC)"
+	@if ! command -v nix >/dev/null; then echo "$(YELLOW)Installing Nix...$(NC)"; curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install; fi
+	@if ! command -v direnv >/dev/null; then echo "$(YELLOW)Installing direnv...$(NC)"; nix profile install nixpkgs#direnv; fi
+	@direnv allow
+	@echo "$(GREEN)✓ Environment bootstrapped. Run 'direnv allow' if prompted again.$(NC)"
+
+doctor: ## Check health of the dev environment
+	@echo "$(BLUE)Checking environment health...$(NC)"
+	@command -v nix >/dev/null && echo "$(GREEN)✓ Nix installed$(NC)" || echo "$(RED)✗ Nix missing$(NC)"
+	@command -v direnv >/dev/null && echo "$(GREEN)✓ direnv installed$(NC)" || echo "$(RED)✗ direnv missing$(NC)"
+	@command -v docker >/dev/null && echo "$(GREEN)✓ Docker installed$(NC)" || echo "$(RED)✗ Docker missing$(NC)"
+	@command -v docker compose >/dev/null 2>&1 || docker-compose version >/dev/null 2>&1 && echo "$(GREEN)✓ Docker Compose installed$(NC)" || echo "$(RED)✗ Docker Compose missing$(NC)"

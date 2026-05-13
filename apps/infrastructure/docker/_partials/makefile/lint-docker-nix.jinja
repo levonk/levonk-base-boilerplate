@@ -1,0 +1,6 @@
+lint-docker:
+	@if [ -f "$(WORKDIR)/$(DOCKERFILE)" ]; then \
+		echo "$(BLUE)Hadolint is handled via docker-linux boilerplate; skipping$(NC)"; \
+	else \
+		echo "$(YELLOW)No Dockerfile present; skipping$(NC)"; \
+	fi

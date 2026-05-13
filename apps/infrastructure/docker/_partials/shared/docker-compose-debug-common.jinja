@@ -1,0 +1,13 @@
+{#
+ Common debug service settings for docker-compose templates.
+ Intended to be included inside a service definition with 4-space indentation.
+#}
+    restart: unless-stopped
+    profiles: ["debug"]
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]
+    environment:
+{% include "_partials/docker-compose/env-core.jinja" %}
+    networks:
+      - {{ _service_name_slug }}-network

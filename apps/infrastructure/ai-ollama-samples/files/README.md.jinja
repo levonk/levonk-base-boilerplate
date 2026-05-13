@@ -1,0 +1,11 @@
+# {{ project_name }}
+
+This sample includes:
+- Airflow DAG `airflow/dags/ollama_example.py` that queries the Ollama HTTP API.
+
+Ollama base URL: `{{ ollama_base_url }}`
+
+Run:
+- Ensure localnet stack is running and `ollama` is reachable.
+- In your Airflow environment, place the DAG under `dags/`.
+- Trigger the `ollama_example` DAG from the UI or CLI.

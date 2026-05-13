@@ -1,0 +1,7 @@
+  {{ _service_name_slug }}-debug:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: debug
+    logging: *default-logging
+{% include "partials.bak/shared/docker-compose-debug-common.jinja" %}

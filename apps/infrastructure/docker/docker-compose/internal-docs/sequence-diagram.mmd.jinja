@@ -1,0 +1,38 @@
+sequenceDiagram
+    participant Client as Client
+{% if _use_traefik %}
+    participant Proxy as Traefik proxy
+{% endif %}
+{% if _include_ui %}
+    participant UI as {{ _service_name }}-ui
+{% endif %}
+    participant Service as {{ _service_name }}
+    participant Dependency as External dependency
+    participant Observability as Observability pipeline
+{% if _enable_monitoring %}
+    participant Metrics as Metrics collector
+{% endif %}
+
+{% if _use_traefik and _include_ui %}
+    Client->>Proxy: HTTPS request for UI asset
+    Proxy->>UI: Forward UI request
+    UI-->>Client: Rendered UI
+    UI->>Proxy: API request (/api/...)
+    Proxy->>Service: Forwarded API request
+{% elif _use_traefik %}
+    Client->>Proxy: HTTPS request
+    Proxy->>Service: Routed request
+{% elif _include_ui %}
+    Client->>UI: HTTP request
+    UI->>Service: API request
+{% else %}
+    Client->>Service: Request
+{% endif %}
+    Service->>Dependency: Query/command
+    Dependency-->>Service: Result
+    Service-->>Client: Response payload
+    Service--)Observability: Log/trace event
+{% if _enable_monitoring %}
+    Metrics->>Service: Scrape /metrics
+    Service-->>Metrics: Metrics data
+{% endif %}

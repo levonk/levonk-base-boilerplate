@@ -1,0 +1,31 @@
+module {{ module_name }}
+
+go {{ go_version }}
+
+require (
+	github.com/stretchr/testify v1.8.4
+{% if include_cli %}
+	github.com/spf13/cobra v1.8.0
+{% endif %}
+{% if include_http %}
+	github.com/gorilla/mux v1.8.0
+{% endif %}
+{% if include_postgres %}
+	github.com/lib/pq v1.10.9
+{% endif %}
+{% if include_redis %}
+	github.com/go-redis/redis/v8 v8.11.5
+{% endif %}
+{% if include_sqlite %}
+	github.com/mattn/go-sqlite3 v1.14.17
+{% endif %}
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spf13/pflag v1.0.5 // indirect
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)

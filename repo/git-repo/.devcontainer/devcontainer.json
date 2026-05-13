@@ -1,0 +1,31 @@
+{
+  "name": "Compose-Powered Devbox Container",
+
+  // --- Core Compose Configuration ---
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/home/developer/project",
+
+  // --- Lifecycle Hook ---
+  // This command runs perfectly, executed inside the 'app' service
+  // after it has been created by docker-compose.
+  "postCreateCommand": "bash ./.devcontainer/post-create.sh",
+
+  // --- Other Settings ---
+  "remoteUser": "developer",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "devbox",
+        "terminal.integrated.profiles.linux": {
+          "devbox": {
+            "path": "/home/developer/.local/bin/devbox",
+            "args": ["shell"],
+            "icon": "terminal"
+          }
+        }
+      },
+      "extensions": ["ms-vscode-remote.remote-containers", "ms-azuretools.vscode-docker"]
+    }
+  }
+}

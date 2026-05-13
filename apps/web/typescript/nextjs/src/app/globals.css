@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global resets and defaults for the App Router template */
+html, body, #__next {
+  height: 100%;
+}
+
+:root {
+  color-scheme: light dark;
+}

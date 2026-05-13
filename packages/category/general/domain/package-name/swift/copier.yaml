@@ -1,0 +1,140 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+# Basic project information
+package_name:
+  type: str
+  help: What is the human-readable package name? (e.g., "My Awesome Library")
+  validate: |
+    {% if not package_name|regex_match('^[a-zA-Z][a-zA-Z0-9\-_\s]*$') %}
+    Package name must start with a letter and contain only letters, numbers, hyphens, underscores, and spaces.
+    {% endif %}
+
+package_slug:
+  type: str
+  help: What is the package slug for Package.swift? (e.g., "my-awesome-library")
+  default: "{{ package_name | lower | replace(' ', '-') | replace('_', '-') }}"
+  validate: |
+    {% if not package_slug|regex_match('^[a-z][a-z0-9-]*$') %}
+    Package slug must be lowercase, start with a letter, and use hyphens instead of spaces/underscores.
+    {% endif %}
+
+module_name:
+  type: str
+  help: What is the Swift module name? (e.g., "MyAwesomeLibrary")
+  default: "{{ package_name | replace(' ', '') | replace('-', '') | replace('_', '') | capitalize }}"
+  validate: |
+    {% if not module_name|regex_match('^[A-Z][a-zA-Z0-9]*$') %}
+    Module name must start with a capital letter and use PascalCase.
+    {% endif %}
+
+description:
+  type: str
+  help: Short description of the package
+  default: "A Swift package for {{ package_name | lower }}"
+
+author_name:
+  type: str
+  help: Author name
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: Author email
+  default: "your.email@example.com"
+
+license:
+  type: str
+  help: License type
+  choices:
+    - AGPL-3.0
+    - MIT
+    - Apache-2.0
+    - MPL-2.0
+  default: "MIT"
+
+repository_url:
+  type: str
+  help: Repository URL
+  default: "https://github.com/{{ author_name | lower | replace(' ', '-') }}/{{ package_slug }}"
+
+# Swift-specific configuration
+swift_version:
+  type: str
+  help: Swift version requirement
+  default: "5.9"
+  validate: |
+    {% if not swift_version|regex_match('^[0-9]+\.[0-9]+(\.[0-9]+)?$') %}
+    Swift version must be in format X.Y or X.Y.Z
+    {% endif %}
+
+platforms:
+  type: str
+  help: Supported platforms (comma-separated)
+  default: "macOS, iOS, tvOS, watchOS"
+
+# Feature flags
+include_tests:
+  type: bool
+  help: Include test framework setup?
+  default: true
+
+include_ci:
+  type: bool
+  help: Include CI/CD configuration?
+  default: true
+
+include_docker:
+  type: bool
+  help: Include Docker configuration?
+  default: true
+
+# Package dependencies
+use_swift_log:
+  type: bool
+  help: Include SwiftLog for logging?
+  default: true
+
+use_swift_argument_parser:
+  type: bool
+  help: Include Swift Argument Parser for CLI tools?
+  default: false
+
+use_async:
+  type: bool
+  help: Include async/await support?
+  default: false
+
+# Documentation
+include_docs:
+  type: bool
+  help: Include documentation structure?
+  default: true
+
+include_examples:
+  type: bool
+  help: Include usage examples?
+  default: true
+
+# Development environment
+use_devbox:
+  type: bool
+  help: Include Devbox configuration?
+  default: true
+
+use_direnv:
+  type: bool
+  help: Include direnv configuration?
+  default: true
+
+# Dependencies
+keywords:
+  type: str
+  help: Comma-separated keywords
+  default: "swift,library,{{ package_slug }}"
+
+categories:
+  type: str
+  help: Comma-separated categories
+  default: "library"

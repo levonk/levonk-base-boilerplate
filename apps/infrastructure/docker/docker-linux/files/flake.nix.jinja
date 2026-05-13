@@ -1,0 +1,78 @@
+{
+  description = "{{ _service_name | title }} - Daemonless Nix Environment";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    flake-utils.url = "github:numtide/flake-utils";
+{% if _inherits_from_nix_sidecar %}
+    nix-sidecar.url = "path:../nix-sidecar/assets/static/nix-sidecar";
+{% endif %}
+  };
+
+  outputs = { self, nixpkgs, flake-utils{% if _inherits_from_nix_sidecar %}, nix-sidecar{% endif %} }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+      in
+      {
+        devShells.default = pkgs.mkShell {
+{% if _inherits_from_nix_sidecar %}
+          # Inherit core packages from nix-sidecar
+          inputsFrom = [ nix-sidecar.devShells.default ];
+
+          # Add service-specific packages
+          packages = with pkgs; [
+{% if _include_ui %}
+            # UI/Development tools
+            nodejs
+            pnpm
+{% endif %}
+{% if _include_dev_tools %}
+            # Development utilities
+            git
+            vim
+            jq
+            curl
+{% endif %}
+          ];
+{% else %}
+          # Standalone service packages
+          packages = with pkgs; [
+            # Core utilities
+            shadow
+            gosu
+            busybox
+{% if _include_maintenance %}
+            # Maintenance tools (for sidecar-like services)
+            supercronic
+{% endif %}
+{% if _include_ui %}
+            # Node.js support
+            nodejs
+            pnpm
+{% endif %}
+{% if _include_dev_tools %}
+            # Development utilities
+            git
+            vim
+            jq
+            curl
+{% endif %}
+          ];
+{% endif %}
+
+          shellHook = ''
+            echo "🛠️  {{ _service_name | title }} Nix Environment Loaded"
+            echo "   - Service: {{ _service_name_slug }}"
+            echo "   - Mode: Daemonless Nix"
+{% if _inherits_from_nix_sidecar %}
+            echo "   - Base: Inherited from nix-sidecar"
+{% endif %}
+{% if _include_ui %}
+            echo "   - Node.js: $(node --version)"
+            echo "   - pnpm: $(pnpm --version)"
+{% endif %}
+          '';
+        };
+      });
+}

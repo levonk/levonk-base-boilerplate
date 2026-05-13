@@ -1,0 +1,27 @@
+# Source files
+src/**
+__tests__/**
+*.ts
+tsconfig.json
+vitest.config.ts
+
+# Build files
+.vscode/**
+.vscode-test/**
+BUILD.bazel
+
+# Dependencies
+node_modules/**
+
+# Documentation
+docs/**
+
+# Config files
+.eslintrc.json
+.gitignore
+.vscodeignore
+
+# Misc
+*.map
+*.log
+.DS_Store

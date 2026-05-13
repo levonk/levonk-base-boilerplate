@@ -1,0 +1,25 @@
+# Copier template for AI Ollama samples (Airflow DAG + docs)
+# Render with: copier copy ./boilerplate/apps/infrastructure/ai-ollama-samples <destination>
+
+_min_copier_version: "9.0.0"
+
+# Questions for template
+project_name:
+  type: str
+  help: "Project/directory name for the generated samples"
+  default: "ai-ollama-samples"
+
+ollama_base_url:
+  type: str
+  help: "Base URL for Ollama service"
+  default: "http://ollama:11434"
+
+license:
+  type: str
+  help: "License header line (optional)"
+  default: ""
+
+# Files to render
+_subdirectory: files
+
+_templates_suffix: .jinja

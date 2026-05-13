@@ -1,0 +1,9 @@
+# Default recipe
+default:
+    @just --list
+
+help: ## Show justfile usage and available commands
+    @echo BLUE + "{{ _service_name | title }} - Build System" + NC
+    @echo ""
+    @just --list
+    @echo ""

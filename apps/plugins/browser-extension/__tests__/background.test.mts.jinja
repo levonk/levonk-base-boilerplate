@@ -1,0 +1,8 @@
+import { describe, it, expect } from "vitest"
+import { getExtensionDisplayName } from "../src/background.mts"
+
+describe("getExtensionDisplayName", () => {
+  it("returns the configured display name", () => {
+    expect(getExtensionDisplayName()).toBe("{{ display_name }}")
+  })
+})

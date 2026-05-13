@@ -1,0 +1,51 @@
+import { chromium } from "@playwright/test";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import fs from "node:fs";
+
+// This script launches Chrome with the extension loaded for manual development.
+// It uses Playwright to locate and launch the browser, so you don't need manual path config.
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = path.resolve(__dirname, "..");
+const DIST_DIR = path.resolve(ROOT_DIR, "dist");
+const MANIFEST_PATH = path.resolve(ROOT_DIR, "manifest.json");
+
+// 1. Ensure manifest is in dist/ (copy it if needed, or just rely on build)
+// For this boilerplater, the manifest is in root, but Chrome usually expects it
+// in the same folder as assets if we load that folder.
+// HOWEVER, our tsconfig outDir is dist/, so we usually need to copy manifest to dist/
+// OR load the root folder if dist is inside it.
+// Best practice: build everything to dist/ including manifest.
+// For now, we'll assume the user wants to load the ROOT folder if manifest is there,
+// BUT this causes issues with "dist/" paths in manifest if they are relative.
+//
+// Let's stick to the standard: Load the ROOT directory.
+// IF manifest.json is in root, and it points to "dist/background.js", that works fine.
+
+const EXTENSION_DIR = ROOT_DIR;
+
+if (!fs.existsSync(path.join(EXTENSION_DIR, "manifest.json"))) {
+  console.error(`Error: manifest.json not found in ${EXTENSION_DIR}`);
+  process.exit(1);
+}
+
+console.log(`Starting Chrome with extension from: ${EXTENSION_DIR}`);
+
+const browserContext = await chromium.launchPersistentContext("", {
+  headless: false,
+  args: [
+    `--disable-extensions-except=${EXTENSION_DIR}`,
+    `--load-extension=${EXTENSION_DIR}`,
+    "--no-sandbox" // Sometimes needed in container-like envs, usually fine to omit locally
+  ],
+  ignoreDefaultArgs: ["--enable-automation"], // Hides "Chrome is being controlled by automated software" bar
+});
+
+console.log("Browser launched. Close the browser window to exit this script.");
+
+// Keep script running until browser is closed
+browserContext.on("close", () => {
+  console.log("Browser closed.");
+  process.exit(0);
+});

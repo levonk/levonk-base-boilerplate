@@ -1,0 +1,201 @@
+# {{ package_name | capitalize | replace(' ', '') | replace('-', '') | replace('_', '') }}
+
+{{ package_description }}
+
+## Features
+
+- **Logging**: Structured logging with OSLog
+- **Context Processing**: Handle data with context-aware operations
+- **Error Handling**: Comprehensive error handling with custom error types
+- **Type Safety**: Full type safety with Swift's strong typing system
+- **Memory Safety**: Automatic memory management with ARC
+- **Factory Pattern**: Convenient factory functions for object creation
+{% if include_tests %}
+- **Comprehensive Testing**: Full test suite with XCTest
+{% endif %}
+{% if include_ci %}
+- **CI/CD Ready**: GitHub Actions workflows for testing and deployment
+{% endif %}
+
+## Prerequisites
+
+- Swift {{ swift_version }} or higher
+- Xcode 14.0+ (for iOS/macOS development)
+- Swift Package Manager
+{% if include_tests %}
+- XCTest (included with Swift toolchain)
+{% endif %}
+
+## Installation
+
+### Option 1: Swift Package Manager
+
+Add to your `Package.swift` dependencies:
+
+```swift
+dependencies: [
+    .package(url: "{{ repository_url }}", from: "1.0.0")
+]
+```
+
+### Option 2: Xcode Project
+
+1. Open your Xcode project
+2. Go to File → Add Package Dependencies
+3. Enter the repository URL
+4. Add the package to your target
+
+## Usage
+
+### Basic Usage
+
+```swift
+import {{ module_name }}
+
+// Using the service class
+let service = createService()
+
+do {
+    let result = try service.process("hello", context: "test-context")
+    print(result)  // Output: HELLO
+
+    let doubled = service.multiplyByTwo(5)
+    print(doubled)  // Output: 10
+} catch ProcessingError.failed {
+    print("Processing failed")
+}
+
+// Using convenience functions
+do {
+    let result = try process("hello", context: "test-context")
+    print(result)  // Output: HELLO
+
+    let doubled = multiplyByTwo(5)
+    print(doubled)  // Output: 10
+} catch {
+    print("Error: \(error)")
+}
+```
+
+### Logging Configuration
+
+```swift
+import os.log
+
+// The logger is automatically configured with subsystem and category
+// Logs will appear in Console.app and Xcode console
+```
+
+## Development
+
+### Project Structure
+
+```text
+Sources/
+└── {{ module_name }}/
+    └── Service.swift
+{% if include_tests %}
+Tests/
+└── {{ module_name }}Tests/
+    └── ServiceTests.swift
+{% endif %}
+README.md
+Package.swift
+{% if include_ci %}
+.github/
+└── workflows/
+    ├── ci.yml
+    └── release.yml
+{% endif %}
+```
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone {{ repository_url }}
+cd {{ package_name }}
+
+# Install dependencies (if using devbox)
+devbox install
+
+# Run tests
+swift test
+
+# Run tests with verbose output
+swift test --verbose
+
+# Build the package
+swift build
+
+# Build for release
+swift build -c release
+```
+
+### Testing
+
+{% if include_tests %}
+```bash
+# Run all tests
+swift test
+
+# Run specific test
+swift test --filter ServiceTests
+
+# Generate test coverage
+swift test --enable-code-coverage
+
+# Run tests in parallel
+swift test --parallel
+```
+{% else %}
+Testing framework not included in this configuration.
+{% endif %}
+
+## API Reference
+
+### Service Class
+
+- `init()` - Initialize a new service instance
+- `process(_:context:)` - Process input string with context
+- `multiplyByTwo(_:)` - Multiply integer by two
+
+### Factory Functions
+
+- `createService()` - Create a new Service instance
+- `process(_:context:)` - Convenience function for processing
+- `multiplyByTwo(_:)` - Convenience function for multiplication
+
+### Error Types
+
+- `ProcessingError.failed` - Processing operation failed
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+{% if include_tests %}
+4. Add tests for new functionality
+5. Run all tests and ensure they pass
+{% endif %}
+6. Submit a pull request
+
+### Development Guidelines
+
+- Follow Swift API design guidelines
+- Maintain test coverage above 80%
+- Add documentation for all public APIs
+- Use semantic versioning for releases
+
+## License
+
+{{ license }}
+
+## Author
+
+{{ author_name }} <{{ author_email }}>
+
+## Repository
+
+{{ repository_url }}

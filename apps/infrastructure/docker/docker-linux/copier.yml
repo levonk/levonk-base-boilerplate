@@ -1,0 +1,118 @@
+# Docker Service Boilerplate - Linux (base-debian/base-alpine)
+# Generates secure, production-ready Docker services using standardized base images
+# Updated for daemonless Nix architecture with service-specific directories
+# See: /internal-docs/adr/adr-20260109001-nix-container-architecture.md
+
+base_os:
+  type: str
+  choices:
+    - debian
+    - alpine
+    - nixpkgs
+  default: alpine
+  help: Base OS family for the service image (mapped to base-debian/base-alpine).
+
+_subdirectory: files
+_templates_suffix: .jinja
+
+_service_name:
+  type: str
+  help: Name of the service (used for container names, directories, etc.)
+  default: my-service
+
+_service_name_slug:
+  type: str
+  default: "{{ _service_name | lower | replace(' ', '-') }}"
+  help: Slug of service name used in directory and resource naming.
+
+_service_description:
+  type: str
+  help: Brief description of what this service does
+  default: "A secure Docker service"
+
+_service_port:
+  type: str
+  help: Primary port the service listens on (e.g., "3880")
+  default: "3880"
+
+_env_prefix:
+  type: str
+  help: Environment variable prefix in CATEGORY_SERVICE_SUB form (e.g., SECURITY_TUGTAINER_MAIN)
+  default: "CATEGORY_SERVICE_SUB"
+
+_service_health_endpoint:
+  type: str
+  help: Health check endpoint path (e.g., "/health", "/status")
+  default: "/health"
+
+_include_tests:
+  type: bool
+  help: Include test scripts and test targets in justfile
+  default: true
+
+_include_ui:
+  type: bool
+  help: Include web UI component (additional container)
+  default: false
+
+_ui_port:
+  type: str
+  help: Port for web UI (only used if include_ui is true)
+  default: "3000"
+
+# Nix-specific options
+_inherits_from_nix_sidecar:
+  type: bool
+  help: Inherit core packages from nix-sidecar (for services extending nix-sidecar)
+  default: false
+
+_include_maintenance:
+  type: bool
+  help: Include maintenance tools like supercronic (for sidecar-like services)
+  default: false
+
+_include_dev_tools:
+  type: bool
+  help: Include development utilities (git, vim, jq, curl)
+  default: true
+
+# Nix daemon mode (deprecated - always daemonless now)
+_use_nix_daemon:
+  type: bool
+  help: "DEPRECATED: All containers use daemonless Nix mode per ADR-20260109001"
+  default: false
+
+# Build stage options
+_build_stage:
+  type: bool
+  help: "Enable multi-stage build with separate build and runtime stages"
+  default: false
+
+_build_language:
+  type: str
+  choices:
+    - go
+    - rust
+    - node
+    - python
+    - java
+  help: "Programming language for build stage (only used if build_stage is enabled)"
+  default: "go"
+
+_subdirectory: files
+_templates_suffix: .jinja
+
+_templates:
+  README.md.jinja: README.md
+  package.json.jinja: package.json
+  Dockerfile.{{ _service_name_slug }}.jinja: "Dockerfile.{{ _service_name_slug }}"
+  docker-compose.yml.jinja: docker-compose.yml
+  .dockerignore.jinja: .dockerignore
+  .envrc.jinja: .envrc
+  flake.nix.jinja: flake.nix
+  justfile.jinja: justfile
+  assets/: assets/
+  healthcheck/: healthcheck/
+  internal-docs/: internal-docs/
+  scripts/: scripts/
+  tests/: tests/

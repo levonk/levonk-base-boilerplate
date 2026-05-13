@@ -1,0 +1,14 @@
+lint: lint-yaml lint-md lint-docker lint-iac ## Run all linters (YAML, Markdown, Dockerfile, IaC)
+
+lint-yaml:
+    @echo BLUE + "Running yamllint..." + NC
+    @docker run --rm -v {{ WORKDIR }}:/workspace -w /workspace --security-opt=no-new-privileges {{ YAMLLINT_IMAGE }} {{ COMPOSE_FILE }}
+
+lint-md:
+    @echo BLUE + "Running markdownlint..." + NC
+    @docker run --rm -v {{ WORKDIR }}:/workspace -w /workspace --security-opt=no-new-privileges {{ MARKDOWNLINT_IMAGE }} {{ MARKDOWN_LINT_TARGETS }} --ignore node_modules --ignore .git
+
+lint-iac:
+    @echo BLUE + "Running Checkov IaC scan..." + NC
+    @mkdir -p {{ CHECKOV_CACHE_DIR }}
+    @docker run --rm -v {{ WORKDIR }}:/project -v {{ CHECKOV_CACHE_DIR }}:/home/checkov/.cache -w /project --security-opt=no-new-privileges {{ CHECKOV_IMAGE }} -d /project
