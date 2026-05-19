@@ -119,7 +119,7 @@ mise_languages:
   type: yaml
   multiline: true
   default: []
-  help: Languages for mise (e.g. "python 3.11", "nodejs 18"). One per line.
+  help: Languages for devbox (e.g. "python 3.11", "nodejs 18"). One per line.
 
 
 agent_os_repository:

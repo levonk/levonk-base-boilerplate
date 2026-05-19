@@ -29,7 +29,6 @@ RUN groupadd -g ${GID} ${GROUP} \
 USER ${USER}
 WORKDIR /home/${USER}/app
 
-# Environment for mise (if used)
 ENV PATH="/home/${USER}/.local/bin:${PATH}"
 
 # Copy artifacts produced at build-time (exists due to build stage placeholder)

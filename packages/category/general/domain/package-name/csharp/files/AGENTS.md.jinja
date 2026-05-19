@@ -40,13 +40,13 @@
 
 ```bash
 # Set up environment
-mise exec -- dotnet restore
+devbox run -- dotnet restore
 
 # Run tests
-mise exec -- dotnet test
+devbox run -- dotnet test
 
 # Run specific test project
-mise exec -- dotnet test tests/{{ namespace_name }}.Tests/
+devbox run -- dotnet test tests/{{ namespace_name }}.Tests/
 ```
 
 ### Security Considerations
