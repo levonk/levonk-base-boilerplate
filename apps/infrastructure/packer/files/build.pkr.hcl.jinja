@@ -1,0 +1,11 @@
+build {
+  sources = ["sources.{{ builder }}.{{ image_name }}"]
+
+  provisioner "shell" {
+    inline = [
+      "echo 'Provisioning {{ image_name }}'",
+      "sudo apt-get update",
+      "sudo apt-get install -y ca-certificates curl",
+    ]
+  }
+}

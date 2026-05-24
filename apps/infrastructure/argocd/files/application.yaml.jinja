@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ app_name }}
+  namespace: argocd
+spec:
+  project: {{ project_name }}
+  source:
+    repoURL: {{ repo_url }}
+    targetRevision: HEAD
+    path: apps/{{ app_name }}/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ app_name }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

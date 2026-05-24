@@ -1,0 +1,12 @@
+replicaCount: 1
+
+image:
+  repository: {{ project_name }}
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources: {}

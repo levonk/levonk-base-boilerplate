@@ -1,0 +1,35 @@
+variable "vcenter_server" {
+  type    = string
+  default = ""
+}
+
+variable "vcenter_username" {
+  type    = string
+  default = ""
+}
+
+variable "vcenter_password" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "datacenter" {
+  type    = string
+  default = ""
+}
+
+variable "datastore" {
+  type    = string
+  default = ""
+}
+
+variable "cluster" {
+  type    = string
+  default = ""
+}
+
+variable "folder" {
+  type    = string
+  default = ""
+}

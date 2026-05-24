@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ '{{ include "' }}{{ project_name }}{{ '.fullname" . }}' }}
+spec:
+  replicas: {{ '{{ .Values.replicaCount }}' }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ '{{ include "' }}{{ project_name }}{{ '.fullname" . }}' }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ '{{ include "' }}{{ project_name }}{{ '.fullname" . }}' }}
+    spec:
+      containers:
+        - name: app
+          image: {{ '{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}' }}
+          ports:
+            - containerPort: 8080

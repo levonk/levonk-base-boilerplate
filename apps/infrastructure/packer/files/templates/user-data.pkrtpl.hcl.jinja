@@ -1,0 +1,6 @@
+#cloud-config
+users:
+  - name: ubuntu
+    ssh-authorized-keys:
+      - {{ `'{{ .SSHPublicKey }}'` }}
+    sudo: ALL=(ALL) NOPASSWD:ALL

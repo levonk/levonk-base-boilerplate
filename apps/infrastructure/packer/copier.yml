@@ -1,0 +1,38 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "Packer project name (kebab-case)"
+  default: "my-packer-project"
+
+image_name:
+  type: str
+  help: "Output image name"
+  default: "my-image"
+
+description:
+  type: str
+  help: "Short description"
+  default: "Packer image build project"
+
+builder:
+  type: str
+  help: "Builder type"
+  choices:
+    - qemu
+    - docker
+    - amazon-ebs
+    - vsphere-iso
+  default: "qemu"
+
+author_name:
+  type: str
+  help: "Author name"
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: "Author email"
+  default: "your.email@example.com"

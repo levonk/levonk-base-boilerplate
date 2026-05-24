@@ -1,0 +1,28 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "Bootc project name (kebab-case)"
+  default: "my-bootc-image"
+
+base_image:
+  type: str
+  help: "Base bootc image"
+  default: "quay.io/centos-bootc/centos-bootc:stream9"
+
+description:
+  type: str
+  help: "Short description"
+  default: "bootc (bootable container) image build"
+
+author_name:
+  type: str
+  help: "Author name"
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: "Author email"
+  default: "your.email@example.com"

@@ -1,0 +1,33 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "ArgoCD project name (kebab-case)"
+  default: "my-argocd-apps"
+
+app_name:
+  type: str
+  help: "Application name"
+  default: "myapp"
+
+repo_url:
+  type: str
+  help: "Git repository URL"
+  default: "https://github.com/myorg/gitops"
+
+description:
+  type: str
+  help: "Short description"
+  default: "ArgoCD Application manifests"
+
+author_name:
+  type: str
+  help: "Author name"
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: "Author email"
+  default: "your.email@example.com"

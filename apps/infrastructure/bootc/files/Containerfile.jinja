@@ -1,0 +1,10 @@
+FROM {{ base_image }}
+
+RUN dnf install -y \
+    vim \
+    curl \
+    && dnf clean all
+
+LABEL org.opencontainers.image.title="{{ project_name }}"
+LABEL org.opencontainers.image.description="{{ description }}"
+LABEL org.opencontainers.image.authors="{{ author_name }} <{{ author_email }}>"

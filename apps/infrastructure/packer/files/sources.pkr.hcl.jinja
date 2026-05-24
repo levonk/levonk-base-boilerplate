@@ -1,0 +1,39 @@
+source "{{ builder }}" "{{ image_name }}" {
+  {% if builder == "qemu" %}
+  iso_url          = "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+  iso_checksum     = "file:https://cloud-images.ubuntu.com/jammy/current/SHA256SUMS"
+  output_directory = "output/{{ image_name }}"
+  disk_size        = "10G"
+  memory           = 2048
+  cpus             = 2
+  accelerator      = "kvm"
+  {% elif builder == "docker" %}
+  image       = "ubuntu:22.04"
+  export_path = "output/{{ image_name }}.tar"
+  {% elif builder == "amazon-ebs" %}
+  ami_name      = "{{ image_name }}-{{ timestamp }}"
+  instance_type = "t3.micro"
+  source_ami_filter {
+    filters = {
+      name                = "ubuntu/images/*ubuntu-jammy-22.04-amd64-server-*"
+      root-device-type    = "ebs"
+      virtualization-type = "hvm"
+    }
+    most_recent = true
+    owners      = ["099720109477"]
+  }
+  {% elif builder == "vsphere-iso" %}
+  vcenter_server = var.vcenter_server
+  username       = var.vcenter_username
+  password       = var.vcenter_password
+  datacenter     = var.datacenter
+  datastore      = var.datastore
+  cluster        = var.cluster
+  folder         = var.folder
+  vm_name        = "{{ image_name }}-{{ timestamp }}"
+  guest_os_type  = "ubuntu64Guest"
+  {% endif %}
+
+  ssh_username = "ubuntu"
+  ssh_timeout  = "20m"
+}

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": [
+    "act",
+    "ast-grep",
+    "devbox",
+    "direnv",
+    "git",
+    "gh",
+    "glab",
+    "just",
+    "nodejs_24",
+    "pnpm",
+    "typescript",
+    "tsx",
+    "eslint",
+    "prettier"
+  ],
+  "shell": {
+    "init_hook": [
+    ]
+  },
+  "scripts": {
+    "build":         "tsc",
+    "build-watch":   "tsc --watch",
+    "build-release": "tsc && npm pkg fix",
+    "test":          "vitest",
+    "test-coverage": "vitest --coverage",
+    "lint":          "eslint . --ext .ts,.js",
+    "format":        "prettier --write .",
+    "format-check":  "prettier --check .",
+    "run":           "node dist/index.js",
+    "dev":           "tsx watch src/index.ts",
+    "clean":         "rm -rf dist/",
+    "type-check":    "tsc --noEmit",
+    "check":         "eslint . --ext .ts,.js && tsc --noEmit"  
+  }
+}
+

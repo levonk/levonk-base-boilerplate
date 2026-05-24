@@ -1,0 +1,33 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "GitOps project name (kebab-case)"
+  default: "my-gitops-project"
+
+cluster_name:
+  type: str
+  help: "Cluster name"
+  default: "mycluster"
+
+app_name:
+  type: str
+  help: "Application name (kebab-case)"
+  default: "myapp"
+
+description:
+  type: str
+  help: "Short description"
+  default: "Kustomize-based GitOps deployment"
+
+author_name:
+  type: str
+  help: "Author name"
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: "Author email"
+  default: "your.email@example.com"

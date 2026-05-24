@@ -1,0 +1,33 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+project_name:
+  type: str
+  help: "Helm chart name (kebab-case)"
+  default: "my-helm-chart"
+
+chart_version:
+  type: str
+  help: "Chart version (semver)"
+  default: "0.1.0"
+
+app_version:
+  type: str
+  help: "Application version"
+  default: "1.0.0"
+
+description:
+  type: str
+  help: "Short description"
+  default: "A Helm chart for Kubernetes"
+
+author_name:
+  type: str
+  help: "Author name"
+  default: "Your Name"
+
+author_email:
+  type: str
+  help: "Author email"
+  default: "your.email@example.com"
