@@ -32,27 +32,29 @@ bootstrap:
     devbox run bootstrap
 
 bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
     # Install dependencies and initialize memory management
     echo "🦀 Rust CLI bootstrap complete for {{ project_name | default('rust-cli-app') }}!"
-    
+
     # Initialize tkr for task management
     if command -v tkr >/dev/null 2>&1; then
-      if [ ! -d ".tickets" ]; then
-        echo "[bootstrap] Initializing tkr..."
-        tkr init || echo "[bootstrap] tkr init failed"
-      else
-        echo "[bootstrap] tkr already initialized"
-      fi
+        if [ ! -d ".tickets" ]; then
+            echo "[bootstrap] Initializing tkr..."
+            tkr init || echo "[bootstrap] tkr init failed"
+        else
+            echo "[bootstrap] tkr already initialized"
+        fi
     fi
-    
+
     # Create memory directory structure for Obsidian
     echo "[bootstrap] Setting up memory structure..."
     mkdir -p memory/{00-inbox,01-projects,02-decisions,03-patterns,04-learnings,05-references,98-logs,99-daily}
-    
+
     # Create Obsidian configuration if needed
     if [ ! -d ".obsidian" ]; then
-      mkdir -p .obsidian
-      echo "# Obsidian configuration" > .obsidian/config.md
+        mkdir -p .obsidian
+        echo "# Obsidian configuration" > .obsidian/config.md
     fi
 
 # Prime recipes (REQUIRED)
@@ -61,10 +63,12 @@ prime:
     @devbox run prime
 
 prime-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
     # Update repository and index documentation
     echo "[prime] Updating repository..."
     git fetch || echo "[prime] git fetch failed (check remote connectivity)"
-    
+
     # qmd memory indexing
     if command -v qmd >/dev/null 2>&1; then
         echo "[prime] Indexing documentation with qmd..."
@@ -73,7 +77,7 @@ prime-internal:
     else
         echo "[prime] Skipping qmd (not installed)"
     fi
-    
+
     echo "[prime] Rust CLI priming complete!"
 
 # Health and diagnostics (REQUIRED)
@@ -81,44 +85,46 @@ doctor:
     devbox run doctor
 
 doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
     # Check Rust CLI environment
     echo "🔍 Checking {{ project_name | default('rust-cli-app') }} development environment..."
-    @if ! cargo --version >/dev/null 2>&1; then \
-        echo "❌ Error: cargo not found" >&2; \
-        echo "💡 Suggestion: Ensure Rust toolchain is installed" >&2; \
-        exit 1; \
+    if ! cargo --version >/dev/null 2>&1; then
+        echo "❌ Error: cargo not found" >&2
+        echo "💡 Suggestion: Ensure Rust toolchain is installed" >&2
+        exit 1
     fi
-    @if ! just --version >/dev/null 2>&1; then \
-        echo "❌ Error: just not found" >&2; \
-        echo "💡 Suggestion: Ensure just is installed" >&2; \
-        exit 1; \
+    if ! just --version >/dev/null 2>&1; then
+        echo "❌ Error: just not found" >&2
+        echo "💡 Suggestion: Ensure just is installed" >&2
+        exit 1
     fi
-    @if [ ! -f Cargo.toml ]; then \
-        echo "❌ Error: Cargo.toml not found (expected in project root)" >&2; \
-        exit 1; \
+    if [ ! -f Cargo.toml ]; then
+        echo "❌ Error: Cargo.toml not found (expected in project root)" >&2
+        exit 1
     fi
     echo "✅ OK: Rust toolchain + just + Cargo.toml present"
-    
+
     # Check for memory management tools
     if command -v qmd >/dev/null 2>&1; then
         echo "✅ OK: qmd available for memory search"
     else
         echo "⚠️  WARNING: qmd not found (install with: cargo install qmd)"
     fi
-    
+
     if command -v tkr >/dev/null 2>&1; then
         echo "✅ OK: tkr available for task management"
     else
         echo "⚠️  WARNING: tkr not found (install from: https://github.com/levonk/tkr)"
     fi
-    
+
     # Check for memory structure
     if [ -d memory ]; then
         echo "✅ OK: memory/ directory found"
     else
         echo "⚠️  WARNING: memory/ directory missing (run 'just bootstrap' to create)"
     fi
-    
+
     echo "🚀 Ready to develop {{ project_name | default('rust-cli-app') }}!"
 
 # Quality checks (OPTIONAL but RECOMMENDED)
@@ -133,6 +139,8 @@ doc-search:
     @devbox run doc-search
 
 doc-search-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
     # Search memory and documentation with qmd
     if command -v qmd >/dev/null 2>&1; then
         query="${1:-.}"  # Default to show all if no query
@@ -147,6 +155,8 @@ tasks:
     @devbox run tasks
 
 tasks-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
     # List current tasks
     if command -v tkr >/dev/null 2>&1; then
         tkr list --status=open
@@ -159,6 +169,8 @@ task-ready:
     @devbox run task-ready
 
 task-ready-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
     # Get next available task
     if command -v tkr >/dev/null 2>&1; then
         tkr ready
@@ -171,6 +183,8 @@ task-start:
     @devbox run task-start
 
 task-start-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
     # Start working on available task
     if command -v tkr >/dev/null 2>&1; then
         task_id=$(tkr ready | head -1 | cut -d' ' -f1)

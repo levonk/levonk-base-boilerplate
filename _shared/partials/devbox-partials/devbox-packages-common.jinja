@@ -6,6 +6,7 @@
     "bash",
     "zsh",
     "direnv",
+    "eza",
 
     # Version Control & Git Tools
     "git",
@@ -32,6 +33,22 @@
     # Code Search & Refactoring
     "ast-grep",
     "comby",
+    "src-cli",
+    "universal-ctags",
+    "github:tobi/qmd",
+
+    # Agent Code Intelligence Tools (ADR-20260520001)
+    # Text Search: ripgrep (exact), xgrep (indexed)
+    "ripgrep",
+    # Filename Search: fd (fast, .gitignore-aware)
+    "fd",
+    # Fuzzy Search: fzf (interactive), skim (alternative)
+    "fzf",
+    "skim",
+    # AST Tools: tree-sitter CLI for language-aware queries
+    "tree-sitter",
+    # System-wide filename index (stale but fast)
+    "plocate",
 
     # Project Templating
     "copier",
@@ -63,6 +80,5 @@
     # qmd: R package for memory search (installed via Nix)
     # tkr: Rust CLI for task management (installed via cargo in bootstrap)
     # obsidian: Markdown-based knowledge management (installed via Nix)
-    "rPackages.qmd",
     "obsidian",
     "github:levonk/tkr",
