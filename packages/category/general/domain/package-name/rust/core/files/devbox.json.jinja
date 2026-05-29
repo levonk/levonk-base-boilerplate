@@ -1,5 +1,5 @@
 {"$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json"}
 ,"packages": ["rustc", "cargo", "rust-analyzer", "clippy", "rustfmt", "cargo-watch", "cargo-tarpaulin", "cargo-audit", "pkg-config", "just"]
 ,"shell": {"init_hook": ["echo '🦀 Rust environment initialized'", "echo '📦 Project: {{ package_name | default(rust-package) }}'", "echo '🛠️  Use: just test && just lint'"], "scripts": {"bootstrap": "just bootstrap-internal", "doctor": "just doctor-internal", "clean": "just clean-internal", "build": "just build-internal", "test": "just test-internal", "lint": "just lint-internal", "typecheck": "just typecheck-internal", "dev": "just dev-internal", "release": "just release-internal"}}
-,"env": {"RUST_LOG": "{{ rust_log_level | default(info) }}", "RUST_BACKTRACE": "{{ rust_backtrace | default(1) }}", "PACKAGE_NAME": "{{ package_name | default(rust-package) }}"}
+,"env": {"RUST_LOG": "{{ rust_log_level | default(info) }}", "RUST_BACKTRACE": "{{ rust_backtrace | default(1) }}", "PACKAGE_NAME": "{{ package_name | default(rust-package) }}"},{% include "partials.bak/partials/devbox-partials/devbox-hooks-rust.jinja" %}
 }

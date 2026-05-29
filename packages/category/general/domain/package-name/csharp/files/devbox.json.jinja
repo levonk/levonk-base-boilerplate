@@ -37,5 +37,6 @@
         {% endif %},
         "PACKAGE_NAME": "{{ package_name | default('csharp-package') }}",
         "NAMESPACE_NAME": "{{ namespace_name | default('CSharpPackage') }}"
-    }
+    },
+    {% include "partials.bak/partials/devbox-partials/devbox-hooks-dotnet.jinja" %}
 }

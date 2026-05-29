@@ -12,5 +12,6 @@
       "echo '\ud83d\udce6 Project: {{ project_name }}'",
       "echo '\ud83d\udee0\ufe0f  Use: uv sync && just dev'"
     ]
-  }
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-python.jinja" %>
 }

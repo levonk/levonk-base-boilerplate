@@ -54,6 +54,7 @@
     "nixpkgs#nodePackages.jsonSchema": "",
     {% endif %}
   },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %},
   "env": {
     "NODE_ENV": "{{ node_env | default('development') }}",
     "TS_NODE_PROJECT": "{{ ts_node_project | default('./tsconfig.json') }}",

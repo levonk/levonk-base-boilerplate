@@ -9,7 +9,8 @@
         "init_hook": [
             "echo '🔧 TypeScript package environment initialized'",
             "echo '📦 Package: {{ module_name }}'",
-            "echo '🛠️  Use: pnpm install && pnpm build'"
+            "echo '🛠️  Use: pnpm build'"
         ]
-    }
+    },
+    {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
 }

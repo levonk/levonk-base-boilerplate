@@ -26,5 +26,6 @@
     "typecheck": "just typecheck-internal",
     "clean": "just clean-internal",
     "doctor": "just doctor-internal"
-  }
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-python.jinja" %}
 }

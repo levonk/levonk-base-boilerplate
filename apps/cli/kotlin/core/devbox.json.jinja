@@ -36,5 +36,6 @@
     {% if include_sqlite %}
     "DATABASE_URL": "jdbc:sqlite:./{{ project_name | default('kotlin-cli-app') }}.db",
     {% endif %}
-  }
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-kotlin.jinja" %}
 }

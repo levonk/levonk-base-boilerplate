@@ -49,5 +49,6 @@
     {% if include_sqlite %}
     "DATABASE_URL": "sqlite:./{{ project_name | default('rust-cli-app') }}.db",
     {% endif %}
-  }
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-rust.jinja" %}
 }

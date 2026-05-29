@@ -27,5 +27,6 @@
     "lint": "just lint-internal",
     "clean": "just clean-internal",
     "doctor": "just doctor-internal"
-  }
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
 }

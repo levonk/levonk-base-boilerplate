@@ -13,5 +13,6 @@
       "echo '\ud83d\udce6 Project: {{ project_name }}'",
       "echo '\ud83d\udee0\ufe0f  Use: pnpm install && just dev'"
     ]
-  }
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
 }

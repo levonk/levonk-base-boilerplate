@@ -20,6 +20,7 @@
     "init_hook": [
     ]
   },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %},
   "scripts": {
     "build":         "tsc",
     "build-watch":   "tsc --watch",

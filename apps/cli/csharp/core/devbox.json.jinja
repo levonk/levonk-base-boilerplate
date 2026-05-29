@@ -68,5 +68,6 @@
     "LOG_LEVEL": "{{ log_level | default('Information') }}",
     "DEBUG": "{{ debug | default('false') }}",
     {% endif %}
-  }
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-dotnet.jinja" %}
 }

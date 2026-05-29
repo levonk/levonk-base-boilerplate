@@ -14,5 +14,6 @@
       "echo '\ud83c\udd94 Package: {{ package_name }}'",
       "echo '\ud83d\udee0\ufe0f  Use: pnpm install && just dev'"
     ]
-  }
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
 }
