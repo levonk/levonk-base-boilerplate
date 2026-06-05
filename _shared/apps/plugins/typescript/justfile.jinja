@@ -1,0 +1,87 @@
+# TypeScript Plugin Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    # Install dependencies in background if not present
+    [ -d node_modules/ ] || pnpm install &
+
+    echo "TypeScript plugin bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check TypeScript plugin development environment
+    @echo "🔌 TypeScript plugin environment:"
+    @echo "📦 Dependencies:"
+    @pnpm list --depth=0
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v eslint || echo "eslint not found"
+    @echo ""
+    @echo "✅ TypeScript plugin environment is ready!"
+
+# Development mode
+dev-mode:
+    pnpm run dev
+
+# Install dependencies
+install:
+    pnpm install
+
+# Build plugin
+build-plugin:
+    pnpm run build
+
+# Run tests
+test-plugin:
+    pnpm test
+
+# Run tests in watch mode
+test-watch:
+    pnpm test --watch
+
+# Lint code
+lint-code:
+    pnpm run lint
+
+# Format code
+format:
+    pnpm run format
+
+# Type checking
+typecheck-code:
+    pnpm run typecheck
+
+# Clean build artifacts
+clean-artifacts:
+    rm -rf dist/ out/
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ TypeScript plugin development environment ready!"

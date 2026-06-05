@@ -289,7 +289,30 @@ Each generated project includes:
 
 ---
 
-## How Templates Work: Copier + Jinja2
+## Template File Organization
+
+**All templates MUST use a `files/` subdirectory.** This is non-negotiable — it keeps template metadata (`copier.yml`, `README.md`) separate from the generated project content and ensures Copier behaves predictably.
+
+### What Goes Where
+
+| Location | Contents |
+|----------|----------|
+| **Template root** | `copier.yml` / `copier.yaml`, template `README.md` (describes the template itself), `partials.bak/` (wrapper-managed shared partials) |
+| **`files/`** | Everything that Copier copies to the generated project: `.jinja` templates, static assets, `src/`, `docs/`, `tests/`, `.gitignore`, `.envrc.jinja`, etc. |
+
+**Never place generated-project files at the template root.** If a file belongs in the scaffolded output, it belongs in `files/`.
+
+### Enforcement
+
+Every `copier.yml` must include:
+
+```yaml
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+```
+
+Missing `_subdirectory: files` means Copier will treat the template root as the source directory, which breaks the separation of concerns and can cause orphaned files.
 
 ### Template Files
 
@@ -313,7 +336,7 @@ files/
 Each template has a `copier.yaml` that defines:
 - Input prompts (what questions to ask the user)
 - Template suffix (`.jinja` by default)
-- Subdirectory where template files live (`files/` by default)
+- Subdirectory where template files live (`files/` — **mandatory**)
 
 **Example:**
 ```yaml

@@ -1,0 +1,92 @@
+# TypeScript Package Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    # Install dependencies in background if not present
+    [ -d node_modules/ ] || pnpm install &
+
+    echo "TypeScript package bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check TypeScript package development environment
+    @echo "📦 TypeScript package environment:"
+    @echo "📦 Dependencies:"
+    @pnpm list --depth=0
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v eslint || echo "eslint not found"
+    @command -v vitest || echo "vitest not found"
+    @echo ""
+    @echo "✅ TypeScript package environment is ready!"
+
+# Install dependencies
+install:
+    pnpm install
+
+# Build package
+build-package:
+    pnpm run build
+
+# Run tests
+test-package:
+    pnpm test
+
+# Run tests in watch mode
+test-watch:
+    pnpm test:watch
+
+# Lint code
+lint-code:
+    pnpm run lint
+
+# Lint and fix
+lint-fix:
+    pnpm run lint:fix
+
+# Format code
+format:
+    pnpm run format
+
+# Type checking
+typecheck-code:
+    pnpm run typecheck
+
+# Clean build artifacts
+clean-artifacts:
+    rm -rf dist/
+
+# Clean hard (includes node_modules)
+clean-hard:
+    rm -rf dist/ node_modules/
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ TypeScript package development environment ready!"

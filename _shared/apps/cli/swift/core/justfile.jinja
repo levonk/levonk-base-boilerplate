@@ -1,0 +1,96 @@
+# Swift CLI Development Commands
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    # Resolve Swift packages in background if not present
+    [ -d .build ] || swift package resolve &
+
+    echo "Swift CLI bootstrap complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check Swift CLI development environment
+    @echo "🦉 Swift CLI environment:"
+    @echo "📦 Swift version:"
+    @swift --version
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v swiftlint || echo "swiftlint not found"
+    @command -v swiftformat || echo "swiftformat not found"
+    @echo ""
+    @echo "✅ Swift CLI environment is ready!"
+
+# Install dependencies (Swift package resolve)
+resolve:
+    swift package resolve
+
+# Build debug
+build-debug:
+    swift build
+
+# Build release
+build-release:
+    swift build -c release
+
+# Run tests
+test-swift:
+    swift test
+
+# Run tests with coverage
+test-coverage:
+    swift test --enable-code-coverage
+
+# Lint code
+lint-code:
+    swiftlint
+
+# Format code
+format:
+    swiftformat .
+
+# Format check
+format-check:
+    swiftformat --lint .
+
+# Clean build artifacts
+clean-artifacts:
+    swift package clean
+
+# Run application
+run:
+    swift run
+
+# Update dependencies
+update:
+    swift package update
+
+# Development setup
+setup:
+    @just bootstrap
+    echo "✅ Swift CLI development environment ready!"

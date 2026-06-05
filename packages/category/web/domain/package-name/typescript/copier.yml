@@ -1,4 +1,6 @@
 _subdirectory: "{{category}}/web/{{domain}}/{{package_name}}/typescript/"
+_templates_suffix: ".jinja"
+
 package_name:
   type: str
   help: Name of the package (kebab-case)

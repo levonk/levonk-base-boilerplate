@@ -1,4 +1,5 @@
 project_name:
+_subdirectory: files
   type: str
   help: What is the project name?
   default: "my-cli-tool"

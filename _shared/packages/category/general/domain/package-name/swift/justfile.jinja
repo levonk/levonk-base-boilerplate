@@ -1,0 +1,147 @@
+# Justfile for {{ package_name | default('swift-package') }} Swift Package
+
+# Default target
+default: dev
+
+# Internal targets (prefixed with - to avoid showing in help)
+-bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Bootstrapping {{ package_name | default('swift-package') }}..."
+
+    # Resolve Swift packages in background if not present
+    [ -d .build ] || swift package resolve &
+
+    # Check Swift toolchain
+    if ! command -v swift >/dev/null 2>&1; then
+        echo "❌ swift not found"
+        exit 1
+    fi
+
+    # Install swiftlint if not available
+    if ! command -v swiftlint >/dev/null 2>&1; then
+        echo "⚠️  swiftlint not available"
+    fi
+
+    # Install swiftformat if not available
+    if ! command -v swiftformat >/dev/null 2>&1; then
+        echo "⚠️  swiftformat not available"
+    fi
+
+    echo "✅ Bootstrap complete"
+
+-doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Running health checks for {{ package_name | default('swift-package') }}..."
+
+    # Check required tools
+    echo "Checking tools:"
+    command -v swift >/dev/null 2>&1 && echo "✅ swift" || echo "❌ swift missing"
+    command -v swiftlint >/dev/null 2>&1 && echo "✅ swiftlint" || echo "⚠️  swiftlint missing"
+    command -v swiftformat >/dev/null 2>&1 && echo "✅ swiftformat" || echo "⚠️  swiftformat missing"
+    command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
+
+    # Check Swift version
+    if command -v swift >/dev/null 2>&1; then
+        echo "Swift version: $(swift --version)"
+    fi
+
+    # Check project structure
+    echo "Checking structure:"
+    test -f Package.swift && echo "✅ Package.swift" || echo "❌ Package.swift missing"
+    test -d Sources && echo "✅ Sources directory" || echo "❌ Sources directory missing"
+
+    echo "🏁 Doctor complete"
+
+-clean-internal:
+    swift package clean
+
+-build-internal:
+    swift build
+
+-test-internal:
+    swift test
+
+-lint-internal:
+    @echo "Running SwiftLint..."
+    swiftlint
+
+-typecheck-internal:
+    swift build
+
+-dev-internal:
+    @echo "🚀 Starting development mode..."
+    swift run
+
+# Public targets
+bootstrap:
+    @just -f {{ justfile() }} -bootstrap-internal
+
+doctor:
+    @just -f {{ justfile() }} -doctor-internal
+
+clean:
+    @just -f {{ justfile() }} -clean-internal
+
+build:
+    @just -f {{ justfile() }} -build-internal
+
+test:
+    @just -f {{ justfile() }} -test-internal
+
+lint:
+    @just -f {{ justfile() }} -lint-internal
+
+typecheck:
+    @just -f {{ justfile() }} -typecheck-internal
+
+dev:
+    @just -f {{ justfile() }} -dev-internal
+
+# Additional utility targets
+build-release:
+    swift build -c release
+
+test-coverage:
+    swift test --enable-code-coverage
+
+format:
+    swiftformat .
+
+format-check:
+    swiftformat --lint .
+
+doc:
+    swift package generate-documentation
+
+resolve:
+    swift package resolve
+
+update:
+    swift package update
+
+reset:
+    swift package reset
+
+# Quality checks
+quality:
+    @just lint
+    @just test
+    @just build
+
+# Package for distribution
+package:
+    @just build-release
+    @just clean
+    mkdir -p dist
+    cp -r .build/release/{{ module_name | default('SwiftPackage') }} dist/
+
+# Docker commands (if included)
+{% if include_docker %}
+docker-build:
+    docker build -t {{ package_slug | default('swift-package') }} .
+
+docker-run:
+    docker run --rm {{ package_slug | default('swift-package') }}
+{% endif %}

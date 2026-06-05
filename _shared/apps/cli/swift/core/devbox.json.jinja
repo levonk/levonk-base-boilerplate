@@ -1,0 +1,86 @@
+{
+  "name": "{{ project_name | default('swift-cli-app') }}",
+  "version": "0.1.0",
+  "description": "{{ project_description | default('A Swift CLI application') }}",
+  "shell": {
+    "init": [
+      "echo '🦉 Setting up {{ project_name | default('swift-cli-app') }} development environment...'"
+    ],
+    "scripts": {
+      "build": "swift build",
+      "build-release": "swift build -c release",
+      "test": "swift test",
+      "test-coverage": "swift test --enable-code-coverage",
+      "lint": "swiftlint",
+      "format": "swiftformat .",
+      "format-check": "swiftformat --lint .",
+      "run": "swift run {{ project_name | default('SwiftCliApp') }}",
+      "dev": "swift run {{ project_name | default('SwiftCliApp') }} --debug",
+      "clean": "swift package clean",
+      "package": "swift package",
+      "resolve": "swift package resolve",
+      "update": "swift package update",
+      "check": "swift build && swift test && swiftlint"
+    }
+  },
+  "packages": {
+    "nixpkgs#just": "",
+    "nixpkgs#swift": "",
+    "nixpkgs#swiftPackages.swiftlint": "",
+    "nixpkgs#swiftPackages.swiftformat": "",
+    {% if include_swiftargumentparser %}
+    "nixpkgs#swiftPackages.SwiftArgumentParser": "",
+    {% endif %}
+    {% if include_vapor %}
+    "nixpkgs#swiftPackages.Vapor": "",
+    {% endif %}
+    {% if include_swiftlog %}
+    "nixpkgs#swiftPackages.SwiftLog": "",
+    {% endif %}
+    {% if include_swiftmetrics %}
+    "nixpkgs#swiftPackages.SwiftMetrics": "",
+    {% endif %}
+    {% if include_swifttracing %}
+    "nixpkgs#swiftPackages.SwiftTracing": "",
+    {% endif %}
+    {% if include_async %}
+    "nixpkgs#swiftPackages.Async": "",
+    {% endif %}
+    {% if include_nio %}
+    "nixpkgs#swiftPackages.SwiftNIO": "",
+    {% endif %}
+    {% if include_postgres %}
+    "nixpkgs#swiftPackages.PostgresNIO": "",
+    "nixpkgs#postgresql": "",
+    {% endif %}
+    {% if include_mysql %}
+    "nixpkgs#swiftPackages.MySQLNIO": "",
+    "nixpkgs#mysql": "",
+    {% endif %}
+    {% if include_redis %}
+    "nixpkgs#swiftPackages.RedisNIO": "",
+    {% endif %}
+  },
+  "env": {
+    "SWIFT_VERSION": "{{ swift_version | default('5.9') }}",
+    "SWIFT_PLATFORM": "{{ swift_platform | default('linux') }}",
+    "SWIFT_BUILD_PATH": "{{ swift_build_path | default('./.build') }}",
+    {% if include_development %}
+    "SWIFT_LOG_LEVEL": "{{ swift_log_level | default('debug') }}",
+    "XTRACE": "{{ xtrace | default('1') }}",
+    {% endif %}
+    {% if include_vapor %}
+    "VAPOR_ENV": "{{ vapor_env | default('development') }}",
+    {% endif %}
+    {% if include_postgres %}
+    "DATABASE_URL": "postgresql://localhost/{{ project_name | default('swift-cli-app') }}",
+    {% endif %}
+    {% if include_mysql %}
+    "DATABASE_URL": "mysql://localhost/{{ project_name | default('swift-cli-app') }}",
+    {% endif %}
+    {% if include_redis %}
+    "REDIS_URL": "{{ redis_url | default('redis://localhost:6379') }}",
+    {% endif %}
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-swift.jinja" %}
+}

@@ -5,6 +5,7 @@ _defaults:
   port: 8000
 
 _templates_suffix: ".tmpl"
+_subdirectory: files
 
 service_name:
   type: str

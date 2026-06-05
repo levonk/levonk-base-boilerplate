@@ -34,5 +34,6 @@ _templates_suffix: ".jinja"
 
 _templates:
   - justfile
+  - devbox.json.jinja
   - package.json.jinja
   - tsconfig.json.jinja

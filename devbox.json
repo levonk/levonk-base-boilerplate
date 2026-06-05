@@ -1,0 +1,12 @@
+{
+  "name": "levonk-base-boilerplate",
+  "description": "Development environment for boilerplate scaffolding",
+  "packages": [
+    "copier",
+    "python3",
+    "jinja2"
+  ],
+  "shell": {
+    "init_hook": []
+  }
+}

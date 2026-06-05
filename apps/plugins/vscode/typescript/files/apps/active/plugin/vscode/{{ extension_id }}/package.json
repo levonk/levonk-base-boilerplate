@@ -1,0 +1,85 @@
+{
+  "name": "{{ extension_id }}",
+  "displayName": "{{ extension_name }}",
+  "description": "{{ description }}",
+  "version": "0.0.1",
+  "publisher": "{{ publisher }}",
+  "private": true,
+  "author": {
+    "name": "{{ author_name }}",
+    "email": "{{ author_email }}"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "{{ repository_url }}"
+  },
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": "*",
+    "pnpm": "*"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "vscode",
+    "extension",
+    "plugin"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "{{ extension_id }}.helloWorld",
+        "title": "Hello World"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run build",
+    "build": "turbo run build",
+    "compile": "tsc -p tsconfig.json",
+    "watch": "tsc -watch -p tsconfig.json",
+    "pretest": "pnpm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext ts",
+    "lint:fix": "eslint src --ext ts --fix",
+    "package": "vsce package",
+    "publish:ms": "vsce publish",
+    "publish:ovsx": "ovsx publish",
+    "clean": "rm -rf out dist",
+    "clean:hard": "rm -rf out dist node_modules",
+    "typecheck": "tsc --noEmit",
+    "preinstall": "npx only-allow pnpm"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "@job-aide/tools-lint-eslint-config": "workspace:*",
+    "eslint": "^8.56.0",
+    "fallow": "*",
+    "typescript": "^5.3.0",
+    "tsup": "^8.0.0",
+    "vitest": "^1.0.0",
+    "@vscode/vsce": "^2.15.0",
+    "ovsx": "^0.8.0",
+    "@antfu/ni": "^0.21.0"
+  },
+  "modeline": "/* vim: set ft=json: */",
+  "packageManager": "pnpm@*",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "*"
+    },
+    "packageManager": {
+      "version": "*",
+      "name": "pnpm"
+    }
+  }
+}

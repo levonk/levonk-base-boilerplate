@@ -79,7 +79,9 @@ config_path:
   help: Configuration file path
   default: "./config.json"
 
+_subdirectory: files
 _templates:
   - nx.json.jinja
   - justfile.jinja
+  - devbox.json.jinja
   - tsconfig.json.jinja

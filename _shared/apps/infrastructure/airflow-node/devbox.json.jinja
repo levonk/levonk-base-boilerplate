@@ -1,0 +1,29 @@
+{
+  "_bug_note": "DEVBOX SCRIPT GENERATION BUG: devbox run <script> may fail with 'command not found' error. This is a known devbox regression in v0.14.x+. See issues: https://github.com/jetify-com/devbox/issues/2517, https://github.com/jetify-com/devbox/issues/2108, https://github.com/jetify-com/devbox/issues/2607. Use 'just <command>' or 'devbox shell' then 'just <command>-internal' instead. See ADR-20260131001 for details.",
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": [
+    "docker",
+    "nodejs_24",
+    "pnpm",
+    "just"
+  ],
+  "shell": {
+    "init_hook": [
+      "echo '🐳 Airflow Node environment initialized'",
+      "echo '📦 Project: {{ project_name }}'",
+      "echo '🛠️  Use: just build && just test'",
+      "just bootstrap-internal"
+    ]
+  },
+  "scripts": {
+    "bootstrap": "just bootstrap-internal",
+    "dev": "just dev-internal",
+    "build": "just build-internal",
+    "test": "just test-internal",
+    "lint": "just lint-internal",
+    "typecheck": "just typecheck-internal",
+    "clean": "just clean-internal",
+    "doctor": "just doctor-internal"
+  },
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
+}

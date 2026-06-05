@@ -1,0 +1,52 @@
+{
+  "name": "{{ package_name }}",
+  "version": "{{ extension_version }}",
+  "private": true,
+  "description": "{{ description }}",
+  "type": "module",
+  "author": {
+    "name": "{{ author_name }}",
+    "email": "{{ author_email }}"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "{{ repository_url }}"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --watch --project tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "pnpm run build && playwright test",
+    "dev:chrome": "pnpm run build && tsx scripts/launch-chrome.mts",
+    "dev:firefox": "pnpm run build && web-ext run --source-dir . --start-url about:debugging",
+    "zip": "bestzip extension.zip dist/*",
+    "zip:firefox": "bestzip extension-firefox.zip dist/*",
+    "build:firefox": "pnpm run build && cp src/manifest.firefox.json dist/manifest.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "clean": "rm -rf dist",
+    "clean:hard": "rm -rf dist node_modules"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "*",
+    "@types/chrome": "*",
+    "@job-aide/tools-lint-eslint-config": "workspace:*",
+    "typescript": "*",
+    "eslint": "*",
+    "fallow": "*",
+    "vitest": "*",
+    "@antfu/ni": "*",
+    "@playwright/test": "*",
+    "@browserbasehq/stagehand": "*",
+    "tsx": "*",
+    "web-ext": "*",
+    "bestzip": "*",
+    "copyfiles": "*"
+  },
+  "packageManager": "pnpm@*",
+  "modeline": "/* vim: set ft=json: */"
+}

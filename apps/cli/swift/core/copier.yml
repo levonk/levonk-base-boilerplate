@@ -17,3 +17,6 @@ version:
   type: str
   help: Initial version of the project
   default: "0.1.0"
+
+_subdirectory: files
+_templates_suffix: ".jinja"

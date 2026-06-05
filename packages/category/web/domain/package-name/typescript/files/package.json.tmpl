@@ -1,0 +1,50 @@
+{
+  "name": "@{{category}}/{{domain}}-{{package_name}}",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@*",
+  "description": "{{package_description}}",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "clean:hard": "rm -rf dist node_modules",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:superlint": "docker run --rm -e RUN_LOCAL=true -e GITHUB_TOKEN=dummy -v ${PWD}:/tmp/lint -w /tmp/lint super-linter/super-linter:latest",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@antfu/ni": "*",
+    "@job-aide/tools-lint-eslint-config": "workspace:*",
+    "@job-aide/tools-playwright-config": "workspace:*",
+    "@playwright/test": "*",
+    "@types/node": "*",
+    "eslint": "*",
+    "fallow": "*",
+	"prettier": "*",
+    "typescript": "*",
+    "vitest": "*"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "eslint --cache",
+      "prettier --write"
+    ],
+    "*.{md,json}": "prettier --write"
+  }
+  "modeline": "vim: set ft=json:"
+}

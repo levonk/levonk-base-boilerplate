@@ -1,5 +1,5 @@
 # Template variables
-_subdirectory: "template"
+_subdirectory: "files"
 
 extension_name:
   type: str
@@ -32,6 +32,8 @@ author_email:
 repository_url:
   type: str
   help: "Repository URL"
+
+_templates_suffix: ".jinja"
 
 # File exclusions
 _exclude:

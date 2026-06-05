@@ -1,0 +1,63 @@
+{
+  "name": "{{ project_slug }}",
+  "version": "1.0.0",
+  "description": "{{ description }}",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "{{ project_slug }}": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "vitest run",
+    "lint": "eslint src/**/*.ts",
+    "preinstall": "npx -y only-allow pnpm"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "glob": "^10.0.0",
+    "supports-color": "^9.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@nx/esbuild": "^19.0.0",
+    "@nx/js": "^19.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "fallow": "^9.0.0",
+    "modern-errors": "^9.0.0",
+    "modern-errors-beautiful": "^9.0.0",
+    "modern-errors-bugs": "^9.0.0",
+    "modern-errors-clean": "^9.0.0",
+    "modern-errors-cli": "^9.0.0",
+    "modern-errors-process": "^9.0.0",
+    "modern-errors-serialize": "^9.0.0",
+    "modern-errors-winston": "^9.0.0",
+    "nx": "^19.0.0",
+    "skillman": "*",
+    "skills-detector": "*",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "packageManager": "pnpm@*",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "*"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "*"
+    }
+  },
+  "engines": {
+    "node": "*",
+    "pnpm: "*"
+  }
+}

@@ -1,0 +1,81 @@
+# Airflow Node Development Commands
+
+# Detect NX binary
+NX_BIN := `command -v nx || echo ""`
+NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    @echo "📦 Bootstrapping..."
+    # Install dependencies in background if not present
+    [ -d node_modules/ ] || pnpm install &
+
+    @echo "📦 Installing pnpm and NX..."
+    @npm install -g pnpm@latest
+    @if [ "{{ NX_AVAILABLE }}" = "false" ]; then pnpm add -g nx@latest; fi
+    @echo "✓ Bootstrap complete"
+
+# NX Commands
+nx-build:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx docker:build; else docker build -t airflow-task .; fi
+
+nx-up:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx docker:up; else echo "Use docker compose directly"; fi
+
+nx-down:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx docker:down; else echo "Use docker compose directly"; fi
+
+nx-affected:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx affected; else echo "NX not available"; fi
+
+nx-graph:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx graph; else echo "NX not available"; fi
+
+nx-clear-cache:
+    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx reset; else echo "NX not available"; fi
+
+nx-install:
+    @pnpm add -g nx@latest
+    @echo "✓ NX installed globally"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    # Check Airflow Node environment
+    @echo "🐳 Docker version:"
+    @docker --version
+    @echo ""
+    @echo "🛠️  Development tools:"
+    @command -v just || echo "just not found"
+    @echo ""
+    @echo "📦 Node environment:"
+    @node --version
+    @pnpm --version
+    @echo "📊 NX: {{ if NX_AVAILABLE }}$(nx --version){{ else }}not installed{{ endif }}"
+    @echo ""
+    @echo "✅ Airflow Node environment is ready!"

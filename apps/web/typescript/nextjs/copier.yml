@@ -13,6 +13,7 @@ description:
   help: "Project description"
 
 # Template configuration
+_subdirectory: files
 _templates_suffix: ".jinja"
 _ignore:
   - "node_modules"
