@@ -1,0 +1,308 @@
+use anyhow::{Context, Result};
+use std::env;
+use std::io::IsTerminal;
+use tracing::{Level, Subscriber};
+use tracing_subscriber::{
+    fmt::{self, format::FmtSpan},
+    layer::SubscriberExt,
+    util::SubscriberInitExt,
+    EnvFilter,
+};
+
+// Module name for environment variable prefix
+const ENV_PREFIX: &str = "{{ project_slug | upper }}";
+
+/// Log format options
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LogFormat {
+    /// Pretty human-readable output for TTY
+    Pretty,
+    /// JSON output for non-TTY/log aggregation
+    Json,
+}
+
+impl LogFormat {
+    /// Auto-detect format based on TTY detection
+    pub fn auto_detect() -> Self {
+        if std::io::stderr().is_terminal() {
+            LogFormat::Pretty
+        } else {
+            LogFormat::Json
+        }
+    }
+
+    /// Parse from environment variable or string
+    pub fn from_env() -> Option<Self> {
+        env::var(format!("{}_LOG_FORMAT", ENV_PREFIX))
+            .ok()
+            .and_then(|s| match s.to_lowercase().as_str() {
+                "json" => Some(LogFormat::Json),
+                "pretty" => Some(LogFormat::Pretty),
+                "auto" => Some(LogFormat::auto_detect()),
+                _ => None,
+            })
+    }
+}
+
+/// Resolve log level with full precedence:
+/// RUST_LOG > custom env vars > CLI flags > config > defaults
+pub fn resolve_log_level_with_rustlog(
+    cli_level: Level,
+    config_level: Option<Level>,
+) -> Level {
+    // 1. Check RUST_LOG first (highest precedence - standard Rust convention)
+    if let Ok(rust_log) = env::var("RUST_LOG") {
+        if let Ok(level) = rust_log.parse::<Level>() {
+            return level;
+        }
+        // RUST_LOG can also be a filter directive like "my_crate=debug"
+        if rust_log.contains('=') {
+            // Let EnvFilter handle complex directives
+            return Level::TRACE; // Max level, filter will refine
+        }
+    }
+
+    // 2. Check custom env vars (second precedence)
+    if let Ok(env_level) = env::var(format!("{}_LOG", ENV_PREFIX)) {
+        if let Ok(level) = env_level.parse::<Level>() {
+            return level;
+        }
+    }
+
+    if let Ok(env_debug) = env::var(format!("{}_DEBUG", ENV_PREFIX)) {
+        if env_debug == "1" || env_debug.to_lowercase() == "true" {
+            return Level::DEBUG;
+        }
+    }
+
+    if let Ok(env_verbose) = env::var(format!("{}_VERBOSE", ENV_PREFIX)) {
+        if env_verbose == "1" || env_verbose.to_lowercase() == "true" {
+            return Level::DEBUG;
+        }
+    }
+
+    if let Ok(env_quiet) = env::var(format!("{}_QUIET", ENV_PREFIX)) {
+        if env_quiet == "1" || env_quiet.to_lowercase() == "true" {
+            return Level::ERROR;
+        }
+    }
+
+    // 3. Use CLI flags if no env vars
+    // 4. Fall back to config if CLI is INFO
+    if cli_level == Level::INFO {
+        if let Some(config) = config_level {
+            return config;
+        }
+    }
+
+    // 5. Default to CLI level
+    cli_level
+}
+
+/// Initialize structured logging with format auto-detection
+pub fn init_structured_logging(
+    cli_level: Level,
+    config_level: Option<Level>,
+    quiet: bool,
+) -> Result<()> {
+    let effective_level = if quiet {
+        Level::ERROR
+    } else {
+        resolve_log_level_with_rustlog(cli_level, config_level)
+    };
+
+    // Determine log format
+    let log_format = LogFormat::from_env().unwrap_or_else(LogFormat::auto_detect);
+
+    // Build environment filter with RUST_LOG support
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(effective_level.to_string()));
+
+    // Create subscriber based on format
+    let subscriber = tracing_subscriber::registry().with(env_filter);
+
+    match log_format {
+        LogFormat::Json => {
+            // JSON format for non-TTY/log aggregation
+            subscriber
+                .with(
+                    fmt::layer()
+                        .json()
+                        .with_writer(std::io::stderr)
+                        .with_target(true)
+                        .with_level(true)
+                        .with_span_events(FmtSpan::CLOSE)
+                        .with_current_span(true)
+                        .with_thread_ids(true)
+                        .with_thread_names(true)
+                        .with_file(true)
+                        .with_line_number(true)
+                )
+                .init();
+        }
+        LogFormat::Pretty => {
+            // Pretty format for TTY
+            let use_ansi = atty::is(atty::Stream::Stderr) && env::var("NO_COLOR").is_err();
+            subscriber
+                .with(
+                    fmt::layer()
+                        .pretty()
+                        .with_writer(std::io::stderr)
+                        .with_target(true)
+                        .with_level(true)
+                        .with_span_events(FmtSpan::CLOSE)
+                        .with_thread_ids(false) // Cleaner output
+                        .with_file(true)
+                        .with_line_number(true)
+                        .with_ansi(use_ansi)
+                )
+                .init();
+        }
+    }
+
+    tracing::info!(
+        level = %effective_level,
+        format = ?log_format,
+        "Structured logging initialized"
+    );
+
+    Ok(())
+}
+
+/// Initialize structured logging with explicit format override
+pub fn init_structured_logging_with_format(
+    cli_level: Level,
+    config_level: Option<Level>,
+    quiet: bool,
+    format: LogFormat,
+) -> Result<()> {
+    let effective_level = if quiet {
+        Level::ERROR
+    } else {
+        resolve_log_level_with_rustlog(cli_level, config_level)
+    };
+
+    // Build environment filter with RUST_LOG support
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(effective_level.to_string()));
+
+    // Create subscriber based on format
+    let subscriber = tracing_subscriber::registry().with(env_filter);
+
+    match format {
+        LogFormat::Json => {
+            subscriber
+                .with(
+                    fmt::layer()
+                        .json()
+                        .with_writer(std::io::stderr)
+                        .with_target(true)
+                        .with_level(true)
+                        .with_span_events(FmtSpan::CLOSE)
+                        .with_current_span(true)
+                        .with_thread_ids(true)
+                        .with_thread_names(true)
+                        .with_file(true)
+                        .with_line_number(true)
+                )
+                .init();
+        }
+        LogFormat::Pretty => {
+            let use_ansi = atty::is(atty::Stream::Stderr) && env::var("NO_COLOR").is_err();
+            subscriber
+                .with(
+                    fmt::layer()
+                        .pretty()
+                        .with_writer(std::io::stderr)
+                        .with_target(true)
+                        .with_level(true)
+                        .with_span_events(FmtSpan::CLOSE)
+                        .with_thread_ids(false)
+                        .with_file(true)
+                        .with_line_number(true)
+                        .with_ansi(use_ansi)
+                )
+                .init();
+        }
+    }
+
+    tracing::info!(
+        level = %effective_level,
+        format = ?format,
+        "Structured logging initialized with explicit format"
+    );
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_format_auto_detect_tty() {
+        // This test verifies the auto-detection logic
+        // In a real TTY environment, it would return Pretty
+        let format = LogFormat::auto_detect();
+        // We can't assert the exact value since it depends on the test environment
+        // but we can verify it returns a valid format
+        match format {
+            LogFormat::Pretty | LogFormat::Json => (),
+        }
+    }
+
+    #[test]
+    fn test_log_format_from_env() {
+        env::set_var(format!("{}_LOG_FORMAT", ENV_PREFIX), "json");
+        assert_eq!(LogFormat::from_env(), Some(LogFormat::Json));
+        env::remove_var(format!("{}_LOG_FORMAT", ENV_PREFIX));
+
+        env::set_var(format!("{}_LOG_FORMAT", ENV_PREFIX), "pretty");
+        assert_eq!(LogFormat::from_env(), Some(LogFormat::Pretty));
+        env::remove_var(format!("{}_LOG_FORMAT", ENV_PREFIX));
+
+        env::set_var(format!("{}_LOG_FORMAT", ENV_PREFIX), "auto");
+        let format = LogFormat::from_env();
+        assert!(format.is_some());
+        env::remove_var(format!("{}_LOG_FORMAT", ENV_PREFIX));
+    }
+
+    #[test]
+    fn test_resolve_log_level_rustlog_precedence() {
+        // RUST_LOG should take highest precedence
+        env::set_var("RUST_LOG", "debug");
+        let result = resolve_log_level_with_rustlog(Level::ERROR, Some(Level::INFO));
+        assert_eq!(result, Level::DEBUG);
+        env::remove_var("RUST_LOG");
+    }
+
+    #[test]
+    fn test_resolve_log_level_custom_env_precedence() {
+        // Custom env vars should take precedence over CLI
+        env::set_var(format!("{}_DEBUG", ENV_PREFIX), "1");
+        let result = resolve_log_level_with_rustlog(Level::ERROR, Some(Level::INFO));
+        assert_eq!(result, Level::DEBUG);
+        env::remove_var(format!("{}_DEBUG", ENV_PREFIX));
+    }
+
+    #[test]
+    fn test_resolve_log_level_cli_precedence() {
+        // CLI should take precedence over config when not INFO
+        let result = resolve_log_level_with_rustlog(Level::DEBUG, Some(Level::INFO));
+        assert_eq!(result, Level::DEBUG);
+    }
+
+    #[test]
+    fn test_resolve_log_level_config_fallback() {
+        // Config should be used when CLI is INFO
+        let result = resolve_log_level_with_rustlog(Level::INFO, Some(Level::DEBUG));
+        assert_eq!(result, Level::DEBUG);
+    }
+
+    #[test]
+    fn test_resolve_log_level_default() {
+        // Should default to CLI level when nothing else is set
+        let result = resolve_log_level_with_rustlog(Level::WARN, None);
+        assert_eq!(result, Level::WARN);
+    }
+}

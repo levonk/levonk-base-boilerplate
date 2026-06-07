@@ -10,6 +10,9 @@ use tracing_subscriber::{
     EnvFilter,
 };
 
+mod structured_log;
+pub use structured_log::{init_structured_logging, init_structured_logging_with_format, LogFormat};
+
 // Module name for environment variable prefix
 const MODULE_NAME: &str = "{{ project_slug }}";
 const ENV_PREFIX: &str = "{{ project_slug | upper }}";
@@ -106,34 +109,16 @@ pub fn resolve_log_level(cli_verbosity: Verbosity, config_level: Option<Level>) 
     cli_level
 }
 
-/// Initialize the logging system
+/// Initialize the logging system with structured logging
 pub fn init_logging(verbosity: Verbosity, config_level: Option<Level>, quiet: bool) -> Result<()> {
-    let effective_level = if quiet {
+    let cli_level = if quiet {
         Level::ERROR
     } else {
-        resolve_log_level(verbosity, config_level)
+        verbosity.to_level()
     };
 
-    // Build environment filter with precedence
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(effective_level.to_string()));
-
-    // Create subscriber with custom formatter
-    let subscriber = tracing_subscriber::registry()
-        .with(env_filter)
-        .with(
-            fmt::layer()
-                .with_writer(std::io::stderr)
-                .with_target(true)
-                .with_level(true)
-                .with_ansi(atty::is(atty::Stream::Stderr) && env::var("NO_COLOR").is_err())
-        );
-
-    subscriber.init();
-
-    tracing::info!("Logging initialized at level: {}", effective_level);
-
-    Ok(())
+    // Use structured logging with format auto-detection
+    init_structured_logging(cli_level, config_level, quiet)
 }
 
 /// Check if shutdown has been requested

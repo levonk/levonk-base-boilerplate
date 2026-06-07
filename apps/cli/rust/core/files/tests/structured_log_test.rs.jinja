@@ -1,0 +1,203 @@
+use anyhow::Result;
+use std::env;
+use std::io::{self, Write};
+use tempfile::NamedTempFile;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_format_auto_detect() {
+        // Test auto-detection logic
+        let format = crate::structured_log::LogFormat::auto_detect();
+        // We can't assert exact value since it depends on test environment
+        // but we can verify it returns a valid format
+        match format {
+            crate::structured_log::LogFormat::Pretty | crate::structured_log::LogFormat::Json => (),
+        }
+    }
+
+    #[test]
+    fn test_log_format_from_env_json() {
+        env::set_var("{{ project_slug | upper }}_LOG_FORMAT", "json");
+        let format = crate::structured_log::LogFormat::from_env();
+        assert_eq!(format, Some(crate::structured_log::LogFormat::Json));
+        env::remove_var("{{ project_slug | upper }}_LOG_FORMAT");
+    }
+
+    #[test]
+    fn test_log_format_from_env_pretty() {
+        env::set_var("{{ project_slug | upper }}_LOG_FORMAT", "pretty");
+        let format = crate::structured_log::LogFormat::from_env();
+        assert_eq!(format, Some(crate::structured_log::LogFormat::Pretty));
+        env::remove_var("{{ project_slug | upper }}_LOG_FORMAT");
+    }
+
+    #[test]
+    fn test_log_format_from_env_auto() {
+        env::set_var("{{ project_slug | upper }}_LOG_FORMAT", "auto");
+        let format = crate::structured_log::LogFormat::from_env();
+        assert!(format.is_some());
+        env::remove_var("{{ project_slug | upper }}_LOG_FORMAT");
+    }
+
+    #[test]
+    fn test_log_format_from_env_invalid() {
+        env::set_var("{{ project_slug | upper }}_LOG_FORMAT", "invalid");
+        let format = crate::structured_log::LogFormat::from_env();
+        assert!(format.is_none());
+        env::remove_var("{{ project_slug | upper }}_LOG_FORMAT");
+    }
+
+    #[test]
+    fn test_resolve_log_level_rustlog_highest_precedence() {
+        // RUST_LOG should take highest precedence
+        env::set_var("RUST_LOG", "debug");
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::ERROR,
+            Some(tracing::Level::INFO),
+        );
+        assert_eq!(result, tracing::Level::DEBUG);
+        env::remove_var("RUST_LOG");
+    }
+
+    #[test]
+    fn test_resolve_log_level_rustlog_filter_directive() {
+        // RUST_LOG with filter directive should return TRACE (max level)
+        env::set_var("RUST_LOG", "{{ project_slug }}=debug");
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::ERROR,
+            Some(tracing::Level::INFO),
+        );
+        assert_eq!(result, tracing::Level::TRACE);
+        env::remove_var("RUST_LOG");
+    }
+
+    #[test]
+    fn test_resolve_log_level_custom_env_precedence() {
+        // Custom env vars should take precedence over CLI
+        env::set_var("{{ project_slug | upper }}_DEBUG", "1");
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::ERROR,
+            Some(tracing::Level::INFO),
+        );
+        assert_eq!(result, tracing::Level::DEBUG);
+        env::remove_var("{{ project_slug | upper }}_DEBUG");
+    }
+
+    #[test]
+    fn test_resolve_log_level_custom_env_verbose() {
+        env::set_var("{{ project_slug | upper }}_VERBOSE", "1");
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::ERROR,
+            Some(tracing::Level::INFO),
+        );
+        assert_eq!(result, tracing::Level::DEBUG);
+        env::remove_var("{{ project_slug | upper }}_VERBOSE");
+    }
+
+    #[test]
+    fn test_resolve_log_level_custom_env_quiet() {
+        env::set_var("{{ project_slug | upper }}_QUIET", "1");
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::INFO,
+            Some(tracing::Level::DEBUG),
+        );
+        assert_eq!(result, tracing::Level::ERROR);
+        env::remove_var("{{ project_slug | upper }}_QUIET");
+    }
+
+    #[test]
+    fn test_resolve_log_level_custom_env_log_level() {
+        env::set_var("{{ project_slug | upper }}_LOG", "warn");
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::ERROR,
+            Some(tracing::Level::INFO),
+        );
+        assert_eq!(result, tracing::Level::WARN);
+        env::remove_var("{{ project_slug | upper }}_LOG");
+    }
+
+    #[test]
+    fn test_resolve_log_level_cli_precedence() {
+        // CLI should take precedence over config when not INFO
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::DEBUG,
+            Some(tracing::Level::INFO),
+        );
+        assert_eq!(result, tracing::Level::DEBUG);
+    }
+
+    #[test]
+    fn test_resolve_log_level_config_fallback() {
+        // Config should be used when CLI is INFO
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::INFO,
+            Some(tracing::Level::DEBUG),
+        );
+        assert_eq!(result, tracing::Level::DEBUG);
+    }
+
+    #[test]
+    fn test_resolve_log_level_default() {
+        // Should default to CLI level when nothing else is set
+        let result = crate::structured_log::resolve_log_level_with_rustlog(
+            tracing::Level::WARN,
+            None,
+        );
+        assert_eq!(result, tracing::Level::WARN);
+    }
+
+    #[test]
+    fn test_init_structured_logging_json() -> Result<()> {
+        // Test JSON format initialization
+        let result = crate::structured_log::init_structured_logging_with_format(
+            tracing::Level::INFO,
+            None,
+            false,
+            crate::structured_log::LogFormat::Json,
+        );
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_init_structured_logging_pretty() -> Result<()> {
+        // Test pretty format initialization
+        let result = crate::structured_log::init_structured_logging_with_format(
+            tracing::Level::INFO,
+            None,
+            false,
+            crate::structured_log::LogFormat::Pretty,
+        );
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_init_structured_logging_quiet() -> Result<()> {
+        // Test quiet mode
+        let result = crate::structured_log::init_structured_logging_with_format(
+            tracing::Level::INFO,
+            None,
+            true,
+            crate::structured_log::LogFormat::Json,
+        );
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_init_structured_logging_with_config() -> Result<()> {
+        // Test with config level
+        let result = crate::structured_log::init_structured_logging_with_format(
+            tracing::Level::INFO,
+            Some(tracing::Level::DEBUG),
+            false,
+            crate::structured_log::LogFormat::Json,
+        );
+        assert!(result.is_ok());
+        Ok(())
+    }
+}
