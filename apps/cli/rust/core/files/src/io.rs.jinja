@@ -1,0 +1,389 @@
+use anyhow::{Context, Result};
+use glob::Pattern;
+use std::fs::{self, File};
+use std::io::{self, BufRead, BufReader, Read, Write, IsTerminal};
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use serde::Serialize;
+use tracing::{debug, info, warn};
+
+/// Color mode for output
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorMode {
+    Auto,
+    Always,
+    Never,
+}
+
+impl ColorMode {
+    /// Parse color mode from string
+    pub fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "always" => ColorMode::Always,
+            "never" => ColorMode::Never,
+            "auto" | _ => ColorMode::Auto,
+        }
+    }
+
+    /// Resolve the actual color mode based on TTY detection
+    pub fn resolve(&self) -> bool {
+        match self {
+            ColorMode::Always => true,
+            ColorMode::Never => false,
+            ColorMode::Auto => {
+                // Check NO_COLOR environment variable first
+                if std::env::var("NO_COLOR").is_ok() {
+                    debug!("NO_COLOR environment variable set, disabling colors");
+                    return false;
+                }
+                // Check if stdout is a TTY
+                std::io::stdout().is_terminal()
+            }
+        }
+    }
+}
+
+/// Input source for the CLI
+#[derive(Debug, Clone)]
+pub enum InputSource {
+    Files(Vec<PathBuf>),
+    Stdin,
+}
+
+/// File reference format
+#[derive(Debug, Clone)]
+pub enum FileReferenceFormat {
+    VSCode,    // file:///absolute/path:line:column
+    Standard,  // file:line:column
+}
+
+impl FileReferenceFormat {
+    /// Format a file reference
+    pub fn format(&self, path: &Path, line: Option<usize>, column: Option<usize>) -> String {
+        match self {
+            FileReferenceFormat::VSCode => {
+                let abs_path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+                let url = format!("file://{}", abs_path.display());
+                if let Some(line) = line {
+                    if let Some(col) = column {
+                        format!("{}:{}:{}", url, line, col)
+                    } else {
+                        format!("{}:{}", url, line)
+                    }
+                } else {
+                    url
+                }
+            }
+            FileReferenceFormat::Standard => {
+                if let Some(line) = line {
+                    if let Some(col) = column {
+                        format!("{}:{}:{}", path.display(), line, col)
+                    } else {
+                        format!("{}:{}", path.display(), line)
+                    }
+                } else {
+                    format!("{}", path.display())
+                }
+            }
+        }
+    }
+
+    /// Format as browser-compatible URL
+    pub fn format_url(&self, path: &Path, line: Option<usize>, column: Option<usize>) -> String {
+        let formatted = self.format(path, line, column);
+        urlencoding::encode(&formatted).to_string()
+    }
+}
+
+/// Output handler for the CLI
+pub struct OutputHandler {
+    json_mode: bool,
+    color_mode: ColorMode,
+    quiet: bool,
+    pager_enabled: bool,
+    file_reference_format: FileReferenceFormat,
+}
+
+impl OutputHandler {
+    /// Create a new output handler
+    pub fn new(
+        json_mode: bool,
+        color_mode: ColorMode,
+        quiet: bool,
+        no_pager: bool,
+        file_reference_format: FileReferenceFormat,
+    ) -> Self {
+        let pager_enabled = if no_pager {
+            false
+        } else {
+            // Check if we should use a pager
+            Self::should_use_pager()
+        };
+
+        OutputHandler {
+            json_mode,
+            color_mode,
+            quiet,
+            pager_enabled,
+            file_reference_format,
+        }
+    }
+
+    /// Determine if we should use a pager
+    fn should_use_pager() -> bool {
+        // Don't use pager if not a TTY
+        if !std::io::stdout().is_terminal() {
+            return false;
+        }
+
+        // Check for NO_PAGER environment variable
+        if std::env::var("NO_PAGER").is_ok() {
+            return false;
+        }
+
+        // Check if PAGER is set
+        if std::env::var("PAGER").is_ok() {
+            return true;
+        }
+
+        // Default to less if available
+        Command::new("which")
+            .arg("less")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
+    }
+
+    /// Get the pager command
+    fn get_pager_command(&self) -> Option<Command> {
+        if !self.pager_enabled {
+            return None;
+        }
+
+        let pager = std::env::var("PAGER").unwrap_or_else(|_| "less".to_string());
+        let mut cmd = Command::new(&pager);
+        
+        // Add common less flags for better behavior
+        if pager.contains("less") {
+            cmd.args(["-R", "-F", "-X"]);  // -R: raw control chars, -F: quit if one screen, -X: don't clear screen
+        }
+        
+        Some(cmd)
+    }
+
+    /// Output text
+    pub fn output(&self, text: &str) -> Result<()> {
+        if self.quiet {
+            return Ok(());
+        }
+
+        if let Some(mut pager_cmd) = self.get_pager_command() {
+            // Use pager
+            let mut child = pager_cmd
+                .stdin(Stdio::piped())
+                .spawn()
+                .context("Failed to spawn pager")?;
+
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin.write_all(text.as_bytes())?;
+                stdin.flush()?;
+            }
+
+            child.wait()?;
+        } else {
+            // Direct output
+            print!("{}", text);
+        }
+
+        Ok(())
+    }
+
+    /// Output JSON
+    pub fn output_json<T: Serialize>(&self, data: &T) -> Result<()> {
+        if self.quiet {
+            return Ok(());
+        }
+
+        let json = serde_json::to_string_pretty(data)?;
+        self.output(&json)
+    }
+
+    /// Output error
+    pub fn error(&self, text: &str) -> Result<()> {
+        eprintln!("{}", text);
+        Ok(())
+    }
+
+    /// Format a file reference
+    pub fn format_file_reference(&self, path: &Path, line: Option<usize>, column: Option<usize>) -> String {
+        self.file_reference_format.format(path, line, column)
+    }
+
+    /// Format a file reference as URL
+    pub fn format_file_reference_url(&self, path: &Path, line: Option<usize>, column: Option<usize>) -> String {
+        self.file_reference_format.format_url(path, line, column)
+    }
+
+    /// Check if colors should be used
+    pub fn use_colors(&self) -> bool {
+        self.color_mode.resolve()
+    }
+}
+
+/// Input handler for the CLI
+pub struct InputHandler {
+    sources: Vec<InputSource>,
+}
+
+impl InputHandler {
+    /// Create a new input handler from CLI arguments
+    pub fn from_args(inputs: &[String]) -> Self {
+        let sources = if inputs.is_empty() || (inputs.len() == 1 && inputs[0] == "-") {
+            vec![InputSource::Stdin]
+        } else {
+            let files = inputs
+                .iter()
+                .filter_map(|input| {
+                    if input == "-" {
+                        None  // stdin handled separately
+                    } else {
+                        Some(PathBuf::from(input))
+                    }
+                })
+                .collect();
+            vec![InputSource::Files(files)]
+        };
+
+        InputHandler { sources }
+    }
+
+    /// Expand glob patterns in file paths
+    pub fn expand_globs(&self, pattern: &str) -> Result<Vec<PathBuf>> {
+        let pattern_obj = Pattern::new(pattern)
+            .with_context(|| format!("Invalid glob pattern: {}", pattern))?;
+
+        let current_dir = std::env::current_dir()?;
+        let mut matches = Vec::new();
+
+        for entry in walkdir::WalkDir::new(&current_dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let path = entry.path();
+            if let Ok(rel_path) = path.strip_prefix(&current_dir) {
+                let rel_str = rel_path.to_str().unwrap_or("");
+                if pattern_obj.matches(rel_str) {
+                    matches.push(path.to_path_buf());
+                }
+            }
+        }
+
+        Ok(matches)
+    }
+
+    /// Read input from all sources
+    pub fn read_all(&self) -> Result<Vec<String>> {
+        let mut contents = Vec::new();
+
+        for source in &self.sources {
+            match source {
+                InputSource::Files(files) => {
+                    for file in files {
+                        if file.exists() {
+                            let content = fs::read_to_string(file)
+                                .with_context(|| format!("Failed to read file: {:?}", file))?;
+                            contents.push(content);
+                        } else {
+                            // Try glob expansion
+                            let pattern = file.to_str().unwrap_or("");
+                            if pattern.contains('*') || pattern.contains('?') {
+                                let expanded = self.expand_globs(pattern)?;
+                                for expanded_file in expanded {
+                                    let content = fs::read_to_string(&expanded_file)
+                                        .with_context(|| format!("Failed to read expanded file: {:?}", expanded_file))?;
+                                    contents.push(content);
+                                }
+                            } else {
+                                warn!("File not found: {:?}", file);
+                            }
+                        }
+                    }
+                }
+                InputSource::Stdin => {
+                    let content = self.read_stdin()?;
+                    contents.push(content);
+                }
+            }
+        }
+
+        Ok(contents)
+    }
+
+    /// Read from stdin
+    fn read_stdin(&self) -> Result<String> {
+        let stdin = io::stdin();
+        let mut reader = stdin.lock();
+        let mut content = String::new();
+        reader.read_to_string(&mut content)?;
+        Ok(content)
+    }
+
+    /// Check if input is from stdin
+    pub fn is_stdin(&self) -> bool {
+        self.sources.iter().any(|s| matches!(s, InputSource::Stdin))
+    }
+
+    /// Get all file paths from sources
+    pub fn get_file_paths(&self) -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+
+        for source in &self.sources {
+            if let InputSource::Files(files) = source {
+                paths.extend(files.clone());
+            }
+        }
+
+        paths
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_color_mode_from_str() {
+        assert_eq!(ColorMode::from_str("always"), ColorMode::Always);
+        assert_eq!(ColorMode::from_str("never"), ColorMode::Never);
+        assert_eq!(ColorMode::from_str("auto"), ColorMode::Auto);
+        assert_eq!(ColorMode::from_str("AUTO"), ColorMode::Auto);
+        assert_eq!(ColorMode::from_str("invalid"), ColorMode::Auto);
+    }
+
+    #[test]
+    fn test_file_reference_format() {
+        let path = PathBuf::from("/tmp/test.txt");
+        
+        let vscode = FileReferenceFormat::VSCode;
+        let standard = FileReferenceFormat::Standard;
+
+        assert!(vscode.format(&path, Some(10), Some(5)).contains("file://"));
+        assert_eq!(standard.format(&path, Some(10), Some(5)), "/tmp/test.txt:10:5");
+        assert_eq!(standard.format(&path, Some(10), None), "/tmp/test.txt:10");
+        assert_eq!(standard.format(&path, None, None), "/tmp/test.txt");
+    }
+
+    #[test]
+    fn test_input_handler_from_args() {
+        let handler = InputHandler::from_args(&[]);
+        assert!(handler.is_stdin());
+
+        let handler = InputHandler::from_args(&["-".to_string()]);
+        assert!(handler.is_stdin());
+
+        let handler = InputHandler::from_args(&["file.txt".to_string()]);
+        assert!(!handler.is_stdin());
+    }
+}

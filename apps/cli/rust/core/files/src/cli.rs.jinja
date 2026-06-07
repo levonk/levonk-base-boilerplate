@@ -30,9 +30,17 @@ pub struct Cli {
     #[arg(long)]
     pub usage: bool,
 
-    /// Disable colored output
+    /// Color mode: auto, always, never (default: auto)
+    #[arg(long, value_name = "MODE")]
+    pub color: Option<String>,
+
+    /// Disable colored output (deprecated: use --color=never)
     #[arg(long)]
     pub nocolor: bool,
+
+    /// Disable pager
+    #[arg(long)]
+    pub no_pager: bool,
 
     /// Log file path (for file-based logging)
     #[arg(long)]

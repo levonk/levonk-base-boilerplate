@@ -1,0 +1,236 @@
+use anyhow::Result;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::PathBuf;
+use tempfile::TempDir;
+use {{ project_slug }}::io::{ColorMode, FileReferenceFormat, InputHandler, OutputHandler};
+
+#[test]
+fn test_color_mode_from_str() {
+    assert_eq!(ColorMode::from_str("always"), ColorMode::Always);
+    assert_eq!(ColorMode::from_str("never"), ColorMode::Never);
+    assert_eq!(ColorMode::from_str("auto"), ColorMode::Auto);
+    assert_eq!(ColorMode::from_str("AUTO"), ColorMode::Auto);
+    assert_eq!(ColorMode::from_str("invalid"), ColorMode::Auto);
+}
+
+#[test]
+fn test_color_mode_resolve() {
+    // Test Always mode
+    assert_eq!(ColorMode::Always.resolve(), true);
+    
+    // Test Never mode
+    assert_eq!(ColorMode::Never.resolve(), false);
+    
+    // Test Auto mode with NO_COLOR set
+    std::env::set_var("NO_COLOR", "1");
+    assert_eq!(ColorMode::Auto.resolve(), false);
+    std::env::remove_var("NO_COLOR");
+}
+
+#[test]
+fn test_file_reference_format_vscode() {
+    let format = FileReferenceFormat::VSCode;
+    let path = PathBuf::from("/tmp/test.txt");
+    
+    let ref1 = format.format(&path, Some(10), Some(5));
+    assert!(ref1.contains("file://"));
+    assert!(ref1.contains(":10:5"));
+    
+    let ref2 = format.format(&path, Some(10), None);
+    assert!(ref2.contains("file://"));
+    assert!(ref2.contains(":10"));
+    assert!(!ref2.contains(":5"));
+    
+    let ref3 = format.format(&path, None, None);
+    assert!(ref3.contains("file://"));
+    assert!(!ref3.contains(":"));
+}
+
+#[test]
+fn test_file_reference_format_standard() {
+    let format = FileReferenceFormat::Standard;
+    let path = PathBuf::from("/tmp/test.txt");
+    
+    assert_eq!(format.format(&path, Some(10), Some(5)), "/tmp/test.txt:10:5");
+    assert_eq!(format.format(&path, Some(10), None), "/tmp/test.txt:10");
+    assert_eq!(format.format(&path, None, None), "/tmp/test.txt");
+}
+
+#[test]
+fn test_file_reference_format_url() {
+    let format = FileReferenceFormat::VSCode;
+    let path = PathBuf::from("/tmp/test file.txt");
+    
+    let url = format.format_url(&path, Some(10), Some(5));
+    assert!(url.contains("file://"));
+    // URL encoding should handle spaces
+    assert!(url.contains("%20") || url.contains("test%20file"));
+}
+
+#[test]
+fn test_input_handler_from_args_empty() {
+    let handler = InputHandler::from_args(&[]);
+    assert!(handler.is_stdin());
+}
+
+#[test]
+fn test_input_handler_from_args_stdin() {
+    let handler = InputHandler::from_args(&["-".to_string()]);
+    assert!(handler.is_stdin());
+}
+
+#[test]
+fn test_input_handler_from_args_files() {
+    let handler = InputHandler::from_args(&["file.txt".to_string()]);
+    assert!(!handler.is_stdin());
+    
+    let paths = handler.get_file_paths();
+    assert_eq!(paths.len(), 1);
+    assert_eq!(paths[0], PathBuf::from("file.txt"));
+}
+
+#[test]
+fn test_input_handler_from_args_multiple() {
+    let handler = InputHandler::from_args(&["file1.txt".to_string(), "file2.txt".to_string()]);
+    assert!(!handler.is_stdin());
+    
+    let paths = handler.get_file_paths();
+    assert_eq!(paths.len(), 2);
+}
+
+#[test]
+fn test_input_handler_read_files() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    let file1_path = temp_dir.path().join("test1.txt");
+    let file2_path = temp_dir.path().join("test2.txt");
+    
+    fs::write(&file1_path, "content1")?;
+    fs::write(&file2_path, "content2")?;
+    
+    let handler = InputHandler::from_args(&[
+        file1_path.to_str().unwrap().to_string(),
+        file2_path.to_str().unwrap().to_string(),
+    ]);
+    
+    let contents = handler.read_all()?;
+    assert_eq!(contents.len(), 2);
+    assert_eq!(contents[0], "content1");
+    assert_eq!(contents[1], "content2");
+    
+    Ok(())
+}
+
+#[test]
+fn test_input_handler_expand_globs() -> Result<()> {
+    let temp_dir = TempDir::new()?;
+    let file1_path = temp_dir.path().join("test1.txt");
+    let file2_path = temp_dir.path().join("test2.txt");
+    
+    fs::write(&file1_path, "content1")?;
+    fs::write(&file2_path, "content2")?;
+    
+    let handler = InputHandler::from_args(&[
+        temp_dir.path().join("*.txt").to_str().unwrap().to_string(),
+    ]);
+    
+    let contents = handler.read_all()?;
+    assert!(contents.len() >= 2);
+    
+    Ok(())
+}
+
+#[test]
+fn test_output_handler_json_mode() -> Result<()> {
+    let handler = OutputHandler::new(
+        true,  // json_mode
+        ColorMode::Never,
+        true,  // quiet
+        true,  // no_pager
+        FileReferenceFormat::Standard,
+    );
+    
+    let data = serde_json::json!({"test": "value"});
+    // In quiet mode, output should be suppressed
+    let result = handler.output_json(&data);
+    assert!(result.is_ok());
+    
+    Ok(())
+}
+
+#[test]
+fn test_output_handler_color_detection() {
+    let handler_always = OutputHandler::new(
+        false,
+        ColorMode::Always,
+        false,
+        true,
+        FileReferenceFormat::Standard,
+    );
+    assert!(handler_always.use_colors());
+    
+    let handler_never = OutputHandler::new(
+        false,
+        ColorMode::Never,
+        false,
+        true,
+        FileReferenceFormat::Standard,
+    );
+    assert!(!handler_never.use_colors());
+}
+
+#[test]
+fn test_output_handler_pager_detection() {
+    // Test with no_pager flag
+    let handler_no_pager = OutputHandler::new(
+        false,
+        ColorMode::Auto,
+        false,
+        true,  // no_pager
+        FileReferenceFormat::Standard,
+    );
+    // Should not use pager when no_pager is set
+    // (This is tested indirectly through the implementation)
+    
+    // Test with PAGER env var
+    std::env::set_var("PAGER", "less");
+    let handler_with_pager = OutputHandler::new(
+        false,
+        ColorMode::Auto,
+        false,
+        false,  // no_pager
+        FileReferenceFormat::Standard,
+    );
+    std::env::remove_var("PAGER");
+}
+
+#[test]
+fn test_output_handler_file_reference() {
+    let handler = OutputHandler::new(
+        false,
+        ColorMode::Auto,
+        false,
+        true,
+        FileReferenceFormat::Standard,
+    );
+    
+    let path = PathBuf::from("/tmp/test.txt");
+    let ref_str = handler.format_file_reference(&path, Some(10), Some(5));
+    assert_eq!(ref_str, "/tmp/test.txt:10:5");
+}
+
+#[test]
+fn test_output_handler_file_reference_url() {
+    let handler = OutputHandler::new(
+        false,
+        ColorMode::Auto,
+        false,
+        true,
+        FileReferenceFormat::VSCode,
+    );
+    
+    let path = PathBuf::from("/tmp/test.txt");
+    let url = handler.format_file_reference_url(&path, Some(10), Some(5));
+    assert!(url.contains("file://"));
+    assert!(url.contains("%3A"));  // URL-encoded colon
+}

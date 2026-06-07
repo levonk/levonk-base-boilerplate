@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod io;
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
@@ -12,6 +13,7 @@ use ansi_term::{Colour, Style};
 use once_cell::sync::Lazy;
 use cli::Cli;
 use config::ConfigManager;
+use io::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
 
 // Module name for logging
 const MODULE_NAME: &str = "{{ project_slug }}";
@@ -126,11 +128,6 @@ fn init_logging(cli: &Cli) -> Result<()> {
         log_level
     };
 
-    // Handle nocolor flag
-    if cli.nocolor {
-        std::env::set_var("NO_COLOR", "1");
-    }
-
     // Build the subscriber
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new(effective_level.to_string()));
@@ -207,6 +204,22 @@ fn main() -> Result<()> {
     // Load configuration
     let mut config_manager = ConfigManager::new();
     config_manager.load()?;
+
+    // Handle color mode
+    let color_mode = if cli.nocolor {
+        ColorMode::Never
+    } else if let Some(color_str) = &cli.color {
+        ColorMode::from_str(color_str)
+    } else {
+        // Load from config
+        let config_color = config_manager.get_config().color.clone();
+        ColorMode::from_str(&config_color)
+    };
+
+    // Set NO_COLOR if needed
+    if color_mode == ColorMode::Never {
+        std::env::set_var("NO_COLOR", "1");
+    }
     
     // Validate configuration
     config_manager.validate()?;
@@ -218,55 +231,36 @@ fn main() -> Result<()> {
         info!("Using loaded configuration from {} sources", config_manager.sources().len());
     }
 
-    let inputs = cli.inputs.clone();
+    // Create output handler
+    let output_handler = OutputHandler::new(
+        cli.json,
+        color_mode,
+        cli.quiet,
+        cli.no_pager,
+        FileReferenceFormat::Standard,
+    );
 
-    // Check for implicit stdin
-    if inputs.is_empty() {
-        if !atty::is(atty::Stream::Stdin) {
-            let mut buffer = String::new();
-            io::stdin().read_to_string(&mut buffer)?;
+    // Create input handler
+    let input_handler = InputHandler::from_args(&cli.inputs);
 
-            if buffer.trim_end().is_empty() {
-                cli.print_usage()?;
-                std::process::exit(1);
-            }
+    // Process all inputs
+    let contents = input_handler.read_all()?;
 
-            process_content("stdin", &buffer)?;
-
-            if cli.json {
-                {% raw %}println!("{{ \"status\": \"ok\" }}");{% endraw %}
-            }
-
-            return Ok(());
-        }
-
-        cli.print_usage()?;
-        std::process::exit(1);
-    }
-
-    for input in inputs {
-        if input == "-" {
-            let mut buffer = String::new();
-            io::stdin().read_to_string(&mut buffer)?;
-            process_content("stdin", &buffer)?;
+    for (i, content) in contents.iter().enumerate() {
+        let source = if input_handler.is_stdin() {
+            "stdin".to_string()
         } else {
-            // Globbing
-            let paths = glob(&input).context("Failed to read glob pattern")?;
-            for entry in paths {
-                match entry {
-                    Ok(path) => {
-                        let content = std::fs::read_to_string(&path)
-                            .with_context(|| format!("Failed to read file {path:?}"))?;
-                        process_content(path.to_string_lossy().as_ref(), &content)?;
-                    },
-                    Err(e) => error!("Error matching glob: {e:?}"),
-                }
-            }
-        }
+            input_handler.get_file_paths()
+                .get(i)
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| format!("input_{}", i))
+        };
+
+        process_content(&source, content)?;
     }
 
     if cli.json {
-        {% raw %}println!("{{ \"status\": \"ok\" }}");{% endraw %}
+        output_handler.output_json(&serde_json::json!({"status": "ok"}))?;
     }
 
     info!("Completed successfully");

@@ -21,9 +21,9 @@ pub struct Config {
     #[serde(default = "default_log_level")]
     pub log_level: String,
     
-    /// Enable colored output
+    /// Color mode: auto, always, never
     #[serde(default = "default_color")]
-    pub color: bool,
+    pub color: String,
     
     /// Output format (text, json)
     #[serde(default = "default_output_format")]
@@ -54,8 +54,8 @@ fn default_log_level() -> String {
     "info".to_string()
 }
 
-fn default_color() -> bool {
-    true
+fn default_color() -> String {
+    "auto".to_string()
 }
 
 fn default_output_format() -> String {
@@ -179,7 +179,7 @@ impl ConfigManager {
         }
         
         if let Ok(color) = std::env::var(format!("{}COLOR", env_prefix)) {
-            self.config.color = color.parse().unwrap_or(self.config.color);
+            self.config.color = color;
             debug!("Loaded color from environment");
         }
         
@@ -250,6 +250,9 @@ impl ConfigManager {
         // Only override if the new value is not the default
         if new_config.log_level != default_log_level() {
             self.config.log_level = new_config.log_level;
+        }
+        if new_config.color != default_color() {
+            self.config.color = new_config.color;
         }
         if new_config.color != default_color() {
             self.config.color = new_config.color;
