@@ -1,0 +1,58 @@
+# {{ project_name }}
+
+{{ description }}
+
+## Quick Start
+
+```bash
+# Build the project
+just build
+
+# Run tests
+just test
+
+# Run linting
+just lint
+
+# Run in development mode
+just dev
+```
+
+## Development
+
+This project uses **devbox** for environment management and **just** for task running.
+
+### Prerequisites
+
+- [devbox](https://www.jetify.com/devbox)
+- [just](https://github.com/casey/just)
+
+### Setup
+
+```bash
+# Enter the devbox shell
+devbox shell
+
+# Or run commands directly
+devbox run just build
+```
+
+## Project Structure
+
+```
+.
+├── src/
+│   └── main.rs          # CLI entry point
+├── tests/
+│   └── cli_tests.rs     # Integration tests
+├── docs/                # Documentation
+├── internal-docs/       # Architecture decisions and specs
+├── Cargo.toml           # Rust dependencies
+├── devbox.json          # Development environment
+├── justfile             # Task runner
+└── README.md            # This file
+```
+
+## License
+
+[MIT](LICENSE)
