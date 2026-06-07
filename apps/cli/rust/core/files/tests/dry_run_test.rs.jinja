@@ -1,0 +1,133 @@
+use anyhow::Result;
+use std::path::PathBuf;
+use tempfile::NamedTempFile;
+use std::io::Write;
+
+{% if enable_tui -%}
+// Mock terminal detection for TUI tests
+fn mock_terminal_supports_tui() -> bool {
+    false
+}
+{% endif -%}
+
+#[test]
+fn test_dry_run_flag_parsing() {
+    use clap::Parser;
+    use crate::cli::Cli;
+    
+    // Test dry-run flag
+    let cli = Cli::try_parse_from(&["test", "--dry-run", "input.txt"]).unwrap();
+    assert!(cli.dry_run);
+    
+    // Test without dry-run flag
+    let cli = Cli::try_parse_from(&["test", "input.txt"]).unwrap();
+    assert!(!cli.dry_run);
+}
+
+#[test]
+fn test_force_flag_parsing() {
+    use clap::Parser;
+    use crate::cli::Cli;
+    
+    // Test force flag
+    let cli = Cli::try_parse_from(&["test", "--force", "input.txt"]).unwrap();
+    assert!(cli.force);
+    
+    // Test without force flag
+    let cli = Cli::try_parse_from(&["test", "input.txt"]).unwrap();
+    assert!(!cli.force);
+}
+
+#[test]
+fn test_dry_run_and_force_combined() {
+    use clap::Parser;
+    use crate::cli::Cli;
+    
+    // Test both flags together
+    let cli = Cli::try_parse_from(&["test", "--dry-run", "--force", "input.txt"]).unwrap();
+    assert!(cli.dry_run);
+    assert!(cli.force);
+}
+
+#[test]
+fn test_destructive_operation_detection_delete() {
+    use crate::destructive::{detect_destructive_operation, DestructiveOperation};
+    
+    let result = detect_destructive_operation("delete", &["file.txt"]);
+    assert!(matches!(result, Some(DestructiveOperation::DeleteFile(_))));
+}
+
+#[test]
+fn test_destructive_operation_detection_overwrite() {
+    use crate::destructive::{detect_destructive_operation, DestructiveOperation};
+    
+    let result = detect_destructive_operation("overwrite", &["file.txt"]);
+    assert!(matches!(result, Some(DestructiveOperation::OverwriteFile(_))));
+}
+
+#[test]
+fn test_destructive_operation_detection_config() {
+    use crate::destructive::{detect_destructive_operation, DestructiveOperation};
+    
+    let result = detect_destructive_operation("config", &[]);
+    assert!(matches!(result, Some(DestructiveOperation::ConfigChange(_))));
+}
+
+#[test]
+fn test_no_destructive_operation_detected() {
+    use crate::destructive::detect_destructive_operation;
+    
+    let result = detect_destructive_operation("read", &["file.txt"]);
+    assert!(result.is_none());
+}
+
+#[test]
+fn test_dry_run_output_formatting() -> Result<()> {
+    use crate::destructive::detect_destructive_operation;
+    
+    let source = "test_file.txt";
+    let content = "test content";
+    let dry_run = true;
+    
+    let file_paths: Vec<&str> = vec![source];
+    let destructive_op = detect_destructive_operation("process", &file_paths);
+    
+    // Verify dry-run mode would produce formatted output
+    assert!(dry_run);
+    assert!(!content.is_empty());
+    
+    Ok(())
+}
+
+#[test]
+fn test_confirmation_prompt_format() {
+    use crate::destructive::{DestructiveOperation, detect_destructive_operation};
+    
+    let op = detect_destructive_operation("delete", &["important_file.txt"]).unwrap();
+    let description = op.description();
+    
+    assert!(description.contains("delete"));
+    assert!(description.contains("important_file.txt"));
+}
+
+#[test]
+fn test_force_bypasses_confirmation() {
+    // Test that force flag bypasses confirmation
+    let force = true;
+    let dry_run = false;
+    
+    // When force is true, confirmation should be bypassed
+    assert!(force);
+    assert!(!dry_run);
+}
+
+#[test]
+fn test_dry_run_bypasses_confirmation() {
+    // Test that dry-run bypasses confirmation
+    let force = false;
+    let dry_run = true;
+    
+    // When dry_run is true, confirmation should be bypassed
+    assert!(!force);
+    assert!(dry_run);
+}

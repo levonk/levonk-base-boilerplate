@@ -58,6 +58,14 @@ pub struct Cli {
     /// Launch a terminal UI to configure arguments before execution
     #[arg(long, alias = "tui", help = "Launch interactive TUI mode for argument configuration")]
     pub interactive: bool,
+
+    /// Dry run mode - preview changes without execution
+    #[arg(long, help = "Preview changes without executing them")]
+    pub dry_run: bool,
+
+    /// Force mode - bypass confirmation prompts for destructive operations
+    #[arg(long, help = "Bypass confirmation prompts for destructive operations")]
+    pub force: bool,
 }
 
 impl Cli {

@@ -3,6 +3,7 @@ mod config;
 mod io;
 mod logging;
 mod signals;
+mod destructive;
 
 {% if enable_tui -%}
 mod tui;
@@ -21,6 +22,7 @@ use config::ConfigManager;
 use io::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
 use logging::{init_logging, setup_signal_handlers, Verbosity, exit_success, exit_error, exit_usage};
 use signals::SignalHandler;
+use destructive::{DestructiveOperation, detect_destructive_operation};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -28,8 +30,51 @@ use tui::{init_tui_mode, terminal_supports_tui};
 
 const MODULE_NAME: &str = "{{ project_slug }}";
 
-fn process_content(source: &str, content: &str) -> Result<()> {
-    info!("Processing content from {} ({} bytes)", source, content.len());
+/// Prompt user for confirmation before destructive operation
+fn prompt_confirmation(operation: &DestructiveOperation) -> Result<bool> {
+    use std::io::{self, Write};
+    
+    print!("⚠️  {} [y/N]: ", operation.description());
+    io::stdout().flush()?;
+    
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    
+    let response = input.trim().to_lowercase();
+    Ok(response == "y" || response == "yes")
+}
+
+fn process_content(source: &str, content: &str, dry_run: bool, force: bool) -> Result<()> {
+    // Check for destructive operations
+    let file_paths: Vec<&str> = if source == "stdin" {
+        vec![]
+    } else {
+        vec![source]
+    };
+    
+    if let Some(destructive_op) = detect_destructive_operation("process", &file_paths) {
+        if !force && !dry_run {
+            // Prompt for confirmation
+            if !prompt_confirmation(&destructive_op)? {
+                println!("Operation cancelled by user");
+                std::process::exit(0);
+            }
+        }
+    }
+    
+    if dry_run {
+        info!("DRY RUN: Would process content from {} ({} bytes)", source, content.len());
+        println!("🔍 DRY RUN MODE");
+        println!("   Source: {}", source);
+        println!("   Size: {} bytes", content.len());
+        println!("   Operation: Process content");
+        if let Some(destructive_op) = detect_destructive_operation("process", &file_paths) {
+            println!("   ⚠️  Destructive: {}", destructive_op.description());
+        }
+        println!("   Status: Would execute (no changes made)");
+    } else {
+        info!("Processing content from {} ({} bytes)", source, content.len());
+    }
     Ok(())
 }
 
@@ -187,7 +232,7 @@ async fn main() -> Result<()> {
                 .unwrap_or_else(|| format!("input_{}", i))
         };
 
-        process_content(&source, content)?;
+        process_content(&source, content, cli.dry_run, cli.force)?;
     }
 
     if cli.json {

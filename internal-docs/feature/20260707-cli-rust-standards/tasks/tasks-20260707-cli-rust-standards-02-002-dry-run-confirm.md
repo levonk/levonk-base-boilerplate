@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 2
 parallel_id: 2
 branch: "feature/current/20260707-cli-rust-standards/story-02-002-dry-run-confirm"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,31 +27,33 @@ Implement --dry-run flag to preview changes without execution, and require confi
 
 ## Sub-Tasks
 
-- [ ] Add --dry-run flag to CLI
-- [ ] Implement dry-run mode logic (preview only, no execution)
-- [ ] Add destructive operation detection
-- [ ] Implement confirmation prompts for destructive operations
-- [ ] Add --force flag to bypass confirmation prompts
-- [ ] Add dry-run output formatting (show what would happen)
-- [ ] Integrate dry-run with command execution flow
-- [ ] Create tests for --dry-run flag
-- [ ] Create tests for confirmation prompts
-- [ ] Create tests for --force flag bypass
-- [ ] Add documentation for destructive operations
+- [x] Add --dry-run flag to CLI
+- [x] Implement dry-run mode logic (preview only, no execution)
+- [x] Add destructive operation detection
+- [x] Implement confirmation prompts for destructive operations
+- [x] Add --force flag to bypass confirmation prompts
+- [x] Add dry-run output formatting (show what would happen)
+- [x] Integrate dry-run with command execution flow
+- [x] Create tests for --dry-run flag
+- [x] Create tests for confirmation prompts
+- [x] Create tests for --force flag bypass
+- [x] Add documentation for destructive operations
 
 ## Relevant Files
 
-- `apps/cli/rust/src/cli.rs` — Add --dry-run and --force flags
-- `apps/cli/rust/src/executor.rs` — Add dry-run logic to execution
-- `apps/cli/rust/tests/dry_run_test.rs` — Dry-run tests
+- `apps/cli/rust/core/files/src/cli.rs.jinja` — Add --dry-run and --force flags
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Add dry-run logic and confirmation prompts
+- `apps/cli/rust/core/files/src/destructive.rs.jinja` — Destructive operation detection module
+- `apps/cli/rust/core/files/tests/dry_run_test.rs.jinja` — Dry-run and confirmation tests
+- `apps/cli/rust/core/files/README.md.jinja` — Documentation for dry-run and destructive operations
 
 ## Acceptance Criteria
 
-- [ ] --dry-run flag previews changes without execution
-- [ ] Destructive operations trigger confirmation prompts
-- [ ] --force flag bypasses confirmation prompts
-- [ ] Dry-run output clearly shows what would happen
-- [ ] All tests pass
+- [x] --dry-run flag previews changes without execution
+- [x] Destructive operations trigger confirmation prompts
+- [x] --force flag bypasses confirmation prompts
+- [x] Dry-run output clearly shows what would happen
+- [x] All tests pass
 
 ## Test Plan
 

@@ -18,6 +18,57 @@ just lint
 just dev
 ```
 
+## Usage
+
+### Dry Run Mode
+
+Preview changes without executing them:
+
+```bash
+{{ project_slug }} --dry-run input.txt
+```
+
+Dry run mode shows what would happen without making any changes. Output includes:
+- Source file information
+- Operation details
+- Destructive operation warnings (if applicable)
+- Status indicating no changes were made
+
+### Destructive Operations
+
+The CLI detects potentially destructive operations and prompts for confirmation before executing them. Destructive operations include:
+- File deletion
+- Directory deletion
+- File overwrites
+- Configuration changes
+- Database operations
+
+#### Confirmation Prompts
+
+When a destructive operation is detected, you'll see:
+
+```
+⚠️  Delete file: important_file.txt [y/N]:
+```
+
+#### Bypassing Confirmation
+
+Use the `--force` flag to bypass confirmation prompts:
+
+```bash
+{{ project_slug }} --force delete important_file.txt
+```
+
+**Note:** Use `--force` with caution, especially in automation scripts.
+
+#### Safe Mode
+
+Dry run mode automatically bypasses confirmation prompts since no changes are made:
+
+```bash
+{{ project_slug }} --dry-run delete important_file.txt
+```
+
 ## Development
 
 This project uses **devbox** for environment management and **just** for task running.

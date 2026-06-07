@@ -1,0 +1,138 @@
+use std::path::Path;
+
+/// Destructive operation types
+#[derive(Debug, Clone, PartialEq)]
+pub enum DestructiveOperation {
+    /// File deletion
+    DeleteFile(String),
+    /// Directory deletion
+    DeleteDirectory(String),
+    /// File overwrite
+    OverwriteFile(String),
+    /// Configuration change
+    ConfigChange(String),
+    /// Database operation
+    DatabaseOperation(String),
+    /// Other destructive operation
+    Other(String),
+}
+
+impl DestructiveOperation {
+    /// Get a human-readable description
+    pub fn description(&self) -> String {
+        match self {
+            DestructiveOperation::DeleteFile(path) => format!("Delete file: {}", path),
+            DestructiveOperation::DeleteDirectory(path) => format!("Delete directory: {}", path),
+            DestructiveOperation::OverwriteFile(path) => format!("Overwrite file: {}", path),
+            DestructiveOperation::ConfigChange(key) => format!("Change configuration: {}", key),
+            DestructiveOperation::DatabaseOperation(op) => format!("Database operation: {}", op),
+            DestructiveOperation::Other(desc) => format!("Destructive operation: {}", desc),
+        }
+    }
+}
+
+/// Detect if an operation is destructive based on file paths and operation type
+pub fn detect_destructive_operation(
+    operation: &str,
+    paths: &[impl AsRef<Path>],
+) -> Option<DestructiveOperation> {
+    let op_lower = operation.to_lowercase();
+    
+    // Check for deletion operations
+    if op_lower.contains("delete") || op_lower.contains("remove") || op_lower.contains("rm") {
+        if paths.is_empty() {
+            return Some(DestructiveOperation::Other(operation.to_string()));
+        }
+        
+        for path in paths {
+            let path_str = path.as_ref().display().to_string();
+            if path_str.contains("/") || path_str.contains("\\") {
+                // Likely a directory
+                return Some(DestructiveOperation::DeleteDirectory(path_str));
+            } else {
+                return Some(DestructiveOperation::DeleteFile(path_str));
+            }
+        }
+    }
+    
+    // Check for overwrite operations
+    if op_lower.contains("overwrite") || op_lower.contains("replace") || op_lower.contains("write") {
+        if let Some(path) = paths.first() {
+            return Some(DestructiveOperation::OverwriteFile(path.as_ref().display().to_string()));
+        }
+    }
+    
+    // Check for configuration changes
+    if op_lower.contains("config") || op_lower.contains("setting") || op_lower.contains("preference") {
+        return Some(DestructiveOperation::ConfigChange(operation.to_string()));
+    }
+    
+    // Check for database operations
+    if op_lower.contains("drop") || op_lower.contains("truncate") || op_lower.contains("delete from") {
+        return Some(DestructiveOperation::DatabaseOperation(operation.to_string()));
+    }
+    
+    None
+}
+
+/// Check if any of the input paths suggest destructive operations
+pub fn check_paths_for_destructive(paths: &[impl AsRef<Path>]) -> Vec<DestructiveOperation> {
+    let mut operations = Vec::new();
+    
+    for path in paths {
+        let path_str = path.as_ref().display().to_string();
+        
+        // Check for dangerous patterns in paths
+        if path_str.contains("delete") || path_str.contains("remove") || path_str.contains("rm") {
+            operations.push(DestructiveOperation::DeleteFile(path_str));
+        }
+        
+        // Check for system directories
+        if path_str.starts_with("/etc/") || path_str.starts_with("/usr/") || path_str.starts_with("/var/") {
+            operations.push(DestructiveOperation::Other(format!("System path modification: {}", path_str)));
+        }
+    }
+    
+    operations
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detect_delete_file() {
+        let result = detect_destructive_operation("delete", &["file.txt"]);
+        assert!(matches!(result, Some(DestructiveOperation::DeleteFile(_))));
+    }
+
+    #[test]
+    fn test_detect_delete_directory() {
+        let result = detect_destructive_operation("delete", &["/path/to/dir"]);
+        assert!(matches!(result, Some(DestructiveOperation::DeleteDirectory(_))));
+    }
+
+    #[test]
+    fn test_detect_overwrite() {
+        let result = detect_destructive_operation("overwrite", &["file.txt"]);
+        assert!(matches!(result, Some(DestructiveOperation::OverwriteFile(_))));
+    }
+
+    #[test]
+    fn test_detect_config_change() {
+        let result = detect_destructive_operation("config", &[]);
+        assert!(matches!(result, Some(DestructiveOperation::ConfigChange(_))));
+    }
+
+    #[test]
+    fn test_detect_database_operation() {
+        let result = detect_destructive_operation("drop table", &[]);
+        assert!(matches!(result, Some(DestructiveOperation::DatabaseOperation(_))));
+    }
+
+    #[test]
+    fn test_no_destructive_operation() {
+        let result = detect_destructive_operation("read", &["file.txt"]);
+        assert!(result.is_none());
+    }
+}
