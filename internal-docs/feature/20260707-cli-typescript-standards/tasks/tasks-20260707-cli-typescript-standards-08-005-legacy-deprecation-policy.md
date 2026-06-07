@@ -1,0 +1,99 @@
+---
+story_id: "08-005"
+story_title: "Legacy Deprecation Policy"
+story_name: "legacy-deprecation-policy"
+prd_name: "20260707-cli-typescript-standards"
+prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
+phase: 8
+parallel_id: 5
+branch: "feature/current/20260707-cli-typescript-standards/story-08-005-legacy-deprecation-policy"
+status: "todo"
+assignee: ""
+reviewer: ""
+dependencies: []
+parallel_safe: true
+modules: ["config/", "deprecation/"]
+priority: "SHOULD"
+risk_level: "low"
+tags: ["feat", "cli", "maintenance"]
+due: "2026-09-01"
+created_at: "2026-07-07"
+updated_at: "2026-07-07"
+---
+
+## Summary
+
+Implement legacy deprecation policy with clear end-of-support dates (minimum 6 months from announcement). Log deprecation warnings to stderr during deprecation period and remove legacy support only after specified date. This implements CLI Tool Standards ADR requirement #35.
+
+## Sub-Tasks
+
+- [ ] Create deprecation module for managing legacy features
+- [ ] Implement deprecation warning system
+- [ ] Add end-of-support date tracking
+- [ ] Implement deprecation warning logging to stderr
+- [ ] Add deprecation configuration
+- [ ] Implement legacy feature detection
+- [ ] Add deprecation status reporting
+- [ ] Implement legacy support removal logic
+- [ ] Add unit tests for deprecation warnings
+- [ ] Add unit tests for end-of-support enforcement
+- [ ] Add integration tests for deprecation workflow
+- [ ] Update help text to document deprecation policy
+- [ ] Add deprecation policy documentation
+
+## Relevant Files
+
+- `apps/cli/typescript/core/files/src/deprecation.ts.jinja` - New deprecation module (to be created)
+- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config with deprecation settings
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with deprecation checks
+- `apps/cli/typescript/core/files/src/deprecation.test.ts.jinja` - Unit tests for deprecation (to be created)
+- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for deprecation
+
+## Acceptance Criteria
+
+- [ ] Deprecation warnings are logged to stderr
+- [ ] End-of-support dates are clearly specified
+- [ ] Minimum 6-month deprecation period is enforced
+- [ ] Legacy features are detected correctly
+- [ ] Deprecation status is reported
+- [ ] Legacy support is removed after specified date
+- [ ] Deprecation timeline is documented
+- [ ] Deprecation warnings are user-friendly
+
+## Test Plan
+
+- Unit: `vitest run src/deprecation.test.ts` - Test deprecation logic
+- Integration: `vitest run src/index.test.ts` - Test deprecation workflow
+- Manual: Test deprecation warnings for legacy features
+- Manual: Verify legacy support removal after end-of-support date
+
+## Observability
+
+- Deprecation warnings inform users of upcoming changes
+- Track deprecation status for analytics
+- Add metrics for legacy feature usage
+
+## Compliance
+
+- Follows CLI Tool Standards ADR requirement #35 (Legacy Deprecation Policy)
+- Provides clear migration path for users
+
+## Risks & Mitigations
+
+- Risk: Deprecation period is too short
+  - Mitigation: Enforce minimum 6-month period, document clearly
+- Risk: Users miss deprecation warnings
+  - Mitigation: Prominent warnings, multiple notification points
+- Risk: Legacy removal breaks existing workflows
+  - Mitigation: Clear communication, migration guides, extended support if needed
+
+## Dependencies
+
+- None - this can be developed in parallel with other Phase 8 stories
+
+## Notes
+
+- Deprecation warnings should be prominent but not annoying
+- Consider using semantic versioning for deprecation
+- Document migration paths clearly
+- Provide grace period after end-of-support date
