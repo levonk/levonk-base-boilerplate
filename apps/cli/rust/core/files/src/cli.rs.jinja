@@ -26,6 +26,10 @@ pub struct Cli {
     #[arg(long, short = 'v', action = clap::ArgAction::Count)]
     pub verbose: u8,
 
+    /// Debug mode - enable debug-level logging
+    #[arg(long, short = 'd')]
+    pub debug: bool,
+
     /// Show usage information
     #[arg(long)]
     pub usage: bool,
@@ -41,10 +45,6 @@ pub struct Cli {
     /// Disable pager
     #[arg(long)]
     pub no_pager: bool,
-
-    /// Log file path (for file-based logging)
-    #[arg(long)]
-    pub log_file: Option<PathBuf>,
 
     /// Install shell completions and initialize config
     #[arg(long)]

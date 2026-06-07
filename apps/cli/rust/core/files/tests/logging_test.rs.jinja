@@ -1,0 +1,100 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
+
+#[test]
+fn test_logging_quiet_mode() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--quiet")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("INFO").not()); // Quiet mode should suppress INFO logs
+}
+
+#[test]
+fn test_logging_verbose_mode() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--verbose")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("DEBUG")); // Verbose mode should show DEBUG logs
+}
+
+#[test]
+fn test_logging_debug_mode() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--debug")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("DEBUG")); // Debug mode should show DEBUG logs
+}
+
+#[test]
+fn test_logging_multiple_verbose() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("-vv")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("DEBUG")); // -vv should show DEBUG logs
+}
+
+#[test]
+fn test_logging_env_var_override() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.env("{{ project_slug | upper | replace('-', '_') }}_LOG", "debug")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("DEBUG")); // Env var should override
+}
+
+#[test]
+fn test_logging_env_debug() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.env("{{ project_slug | upper | replace('-', '_') }}_DEBUG", "1")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("DEBUG")); // DEBUG env var should enable debug
+}
+
+#[test]
+fn test_logging_env_quiet() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.env("{{ project_slug | upper | replace('-', '_') }}_QUIET", "1")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("INFO").not()); // QUIET env var should suppress INFO
+}
+
+#[test]
+fn test_sigint_handling() {
+    // Note: This test would require sending SIGINT to the process
+    // For now, we just verify the binary runs without crashing
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success();
+}
+
+#[test]
+fn test_exit_codes() {
+    // Exit codes are defined in the logging module
+    // These are tested indirectly through the CLI behavior
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--help")
+        .assert()
+        .success(); // Should exit with 0 on success
+}

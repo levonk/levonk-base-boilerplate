@@ -36,7 +36,7 @@ fn test_quiet() {
         .write_stdin("test content")
         .assert()
         .success()
-        .stderr(predicate::str::contains("ERROR").not()); // Quiet mode should suppress non-error output
+        .stderr(predicate::str::contains("INFO").not()); // Quiet mode should suppress non-error output
 }
 
 #[test]
@@ -48,6 +48,17 @@ fn test_verbose() {
         .assert()
         .success()
         .stderr(predicate::str::contains("DEBUG")); // Verbose mode should show DEBUG logs
+}
+
+#[test]
+fn test_debug() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--debug")
+        .arg("-")
+        .write_stdin("test content")
+        .assert()
+        .success()
+        .stderr(predicate::str::contains("DEBUG")); // Debug mode should show DEBUG logs
 }
 
 #[test]

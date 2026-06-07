@@ -1,0 +1,289 @@
+use anyhow::{Context, Result};
+use std::env;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tracing::{Level, Subscriber};
+use tracing_subscriber::{
+    fmt,
+    layer::SubscriberExt,
+    util::SubscriberInitExt,
+    EnvFilter,
+};
+
+// Module name for environment variable prefix
+const MODULE_NAME: &str = "{{ project_slug }}";
+const ENV_PREFIX: &str = "{{ project_slug | upper }}";
+
+// Standard exit codes
+pub const EXIT_SUCCESS: i32 = 0;
+pub const EXIT_ERROR: i32 = 1;
+pub const EXIT_USAGE: i32 = 2;
+pub const EXIT_SIGINT: i32 = 130;
+pub const EXIT_CONFIG: i32 = 3;
+pub const EXIT_NETWORK: i32 = 4;
+pub const EXIT_PERMISSION: i32 = 5;
+pub const EXIT_TIMEOUT: i32 = 124;
+
+// Global flag for graceful shutdown
+static SHUTDOWN_REQUESTED: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+
+/// Logging verbosity levels
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Verbosity {
+    Quiet = 0,
+    Normal = 1,
+    Verbose = 2,
+    Debug = 3,
+    Trace = 4,
+}
+
+impl Verbosity {
+    pub fn from_count(count: u8, quiet: bool, debug: bool) -> Self {
+        if quiet {
+            Verbosity::Quiet
+        } else if debug {
+            Verbosity::Debug
+        } else {
+            match count {
+                0 => Verbosity::Normal,
+                1 => Verbosity::Verbose,
+                2 => Verbosity::Debug,
+                _ => Verbosity::Trace,
+            }
+        }
+    }
+
+    pub fn to_level(self) -> Level {
+        match self {
+            Verbosity::Quiet => Level::ERROR,
+            Verbosity::Normal => Level::INFO,
+            Verbosity::Verbose => Level::DEBUG,
+            Verbosity::Debug => Level::DEBUG,
+            Verbosity::Trace => Level::TRACE,
+        }
+    }
+}
+
+/// Resolve log level from environment variables, CLI flags, config, and defaults
+/// Precedence: env vars > CLI flags > config > defaults
+pub fn resolve_log_level(cli_verbosity: Verbosity, config_level: Option<Level>) -> Level {
+    // 1. Check environment variables first (highest precedence)
+    if let Ok(env_level) = env::var(format!("{}_LOG", ENV_PREFIX)) {
+        if let Ok(level) = env_level.parse::<Level>() {
+            return level;
+        }
+    }
+
+    if let Ok(env_debug) = env::var(format!("{}_DEBUG", ENV_PREFIX)) {
+        if env_debug == "1" || env_debug.to_lowercase() == "true" {
+            return Level::DEBUG;
+        }
+    }
+
+    if let Ok(env_verbose) = env::var(format!("{}_VERBOSE", ENV_PREFIX)) {
+        if env_verbose == "1" || env_verbose.to_lowercase() == "true" {
+            return Level::DEBUG;
+        }
+    }
+
+    if let Ok(env_quiet) = env::var(format!("{}_QUIET", ENV_PREFIX)) {
+        if env_quiet == "1" || env_quiet.to_lowercase() == "true" {
+            return Level::ERROR;
+        }
+    }
+
+    // 2. Use CLI flags if no env vars
+    let cli_level = cli_verbosity.to_level();
+
+    // 3. Fall back to config if CLI is normal
+    if cli_level == Level::INFO {
+        if let Some(config) = config_level {
+            return config;
+        }
+    }
+
+    // 4. Default to CLI level
+    cli_level
+}
+
+/// Initialize the logging system
+pub fn init_logging(verbosity: Verbosity, config_level: Option<Level>, quiet: bool) -> Result<()> {
+    let effective_level = if quiet {
+        Level::ERROR
+    } else {
+        resolve_log_level(verbosity, config_level)
+    };
+
+    // Build environment filter with precedence
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(effective_level.to_string()));
+
+    // Create subscriber with custom formatter
+    let subscriber = tracing_subscriber::registry()
+        .with(env_filter)
+        .with(
+            fmt::layer()
+                .with_writer(std::io::stderr)
+                .with_target(true)
+                .with_level(true)
+                .with_ansi(atty::is(atty::Stream::Stderr) && env::var("NO_COLOR").is_err())
+        );
+
+    subscriber.init();
+
+    tracing::info!("Logging initialized at level: {}", effective_level);
+
+    Ok(())
+}
+
+/// Check if shutdown has been requested
+pub fn is_shutdown_requested() -> bool {
+    SHUTDOWN_REQUESTED.load(Ordering::Relaxed)
+}
+
+/// Request graceful shutdown
+pub fn request_shutdown() {
+    SHUTDOWN_REQUESTED.store(true, Ordering::Relaxed);
+}
+
+/// Set up signal handlers for graceful shutdown
+#[cfg(unix)]
+pub fn setup_signal_handlers() -> Result<()> {
+    use signal_hook::consts::signal::*;
+    use signal_hook_tokio::Signals;
+
+    let shutdown = Arc::clone(&SHUTDOWN_REQUESTED);
+
+    tokio::spawn(async move {
+        let mut signals = Signals::new([SIGINT, SIGTERM])
+            .expect("Failed to register signal handler");
+
+        while let Some(signal) = signals.next().await {
+            match signal {
+                SIGINT => {
+                    tracing::error!("Received SIGINT, initiating graceful shutdown...");
+                    shutdown.store(true, Ordering::Relaxed);
+                    std::process::exit(EXIT_SIGINT);
+                }
+                SIGTERM => {
+                    tracing::error!("Received SIGTERM, initiating graceful shutdown...");
+                    shutdown.store(true, Ordering::Relaxed);
+                    std::process::exit(EXIT_SIGINT);
+                }
+                _ => {}
+            }
+        }
+    });
+
+    Ok(())
+}
+
+/// Set up signal handlers for graceful shutdown (Windows fallback)
+#[cfg(windows)]
+pub fn setup_signal_handlers() -> Result<()> {
+    use ctrlc;
+
+    let shutdown = Arc::clone(&SHUTDOWN_REQUESTED);
+
+    ctrlc::set_handler(move || {
+        tracing::error!("Received Ctrl+C, initiating graceful shutdown...");
+        shutdown.store(true, Ordering::Relaxed);
+        std::process::exit(EXIT_SIGINT);
+    }).context("Failed to set Ctrl+C handler")?;
+
+    Ok(())
+}
+
+/// Exit with a specific exit code
+pub fn exit_with_code(code: i32) -> ! {
+    std::process::exit(code)
+}
+
+/// Exit successfully
+pub fn exit_success() -> ! {
+    exit_with_code(EXIT_SUCCESS)
+}
+
+/// Exit with generic error
+pub fn exit_error() -> ! {
+    exit_with_code(EXIT_ERROR)
+}
+
+/// Exit with usage error
+pub fn exit_usage() -> ! {
+    exit_with_code(EXIT_USAGE)
+}
+
+/// Exit with config error
+pub fn exit_config() -> ! {
+    exit_with_code(EXIT_CONFIG)
+}
+
+/// Exit with network error
+pub fn exit_network() -> ! {
+    exit_with_code(EXIT_NETWORK)
+}
+
+/// Exit with permission error
+pub fn exit_permission() -> ! {
+    exit_with_code(EXIT_PERMISSION)
+}
+
+/// Exit with timeout error
+pub fn exit_timeout() -> ! {
+    exit_with_code(EXIT_TIMEOUT)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_verbosity_from_count() {
+        assert_eq!(Verbosity::from_count(0, false, false), Verbosity::Normal);
+        assert_eq!(Verbosity::from_count(1, false, false), Verbosity::Verbose);
+        assert_eq!(Verbosity::from_count(2, false, false), Verbosity::Debug);
+        assert_eq!(Verbosity::from_count(3, false, false), Verbosity::Trace);
+        assert_eq!(Verbosity::from_count(0, true, false), Verbosity::Quiet);
+        assert_eq!(Verbosity::from_count(5, true, false), Verbosity::Quiet);
+        assert_eq!(Verbosity::from_count(0, false, true), Verbosity::Debug);
+        assert_eq!(Verbosity::from_count(5, false, true), Verbosity::Debug);
+    }
+
+    #[test]
+    fn test_verbosity_to_level() {
+        assert_eq!(Verbosity::Quiet.to_level(), Level::ERROR);
+        assert_eq!(Verbosity::Normal.to_level(), Level::INFO);
+        assert_eq!(Verbosity::Verbose.to_level(), Level::DEBUG);
+        assert_eq!(Verbosity::Debug.to_level(), Level::DEBUG);
+        assert_eq!(Verbosity::Trace.to_level(), Level::TRACE);
+    }
+
+    #[test]
+    fn test_resolve_log_level_cli_precedence() {
+        // CLI flags should take precedence over config
+        let result = resolve_log_level(Verbosity::Debug, Some(Level::INFO));
+        assert_eq!(result, Level::DEBUG);
+    }
+
+    #[test]
+    fn test_resolve_log_level_config_fallback() {
+        // Config should be used when CLI is normal
+        let result = resolve_log_level(Verbosity::Normal, Some(Level::WARN));
+        assert_eq!(result, Level::WARN);
+    }
+
+    #[test]
+    fn test_resolve_log_level_default() {
+        // Default when no config
+        let result = resolve_log_level(Verbosity::Normal, None);
+        assert_eq!(result, Level::INFO);
+    }
+
+    #[test]
+    fn test_shutdown_flag() {
+        assert!(!is_shutdown_requested());
+        request_shutdown();
+        assert!(is_shutdown_requested());
+    }
+}

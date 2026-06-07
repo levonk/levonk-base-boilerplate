@@ -19,7 +19,7 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 | 01-001 | Standard Arguments Implementation | [x] Done | feature/current/20260707-cli-rust-standards/story-01-001-standard-arguments | None | Parallel-safe: true | cli.rs |
 | 01-002 | Configuration Management System | [x] Done | feature/current/20260707-cli-rust-standards/story-01-002-config-management | None | Parallel-safe: true | config.rs |
 | 01-003 | Input/Output Handling | [x] Done | feature/current/20260707-cli-rust-standards/story-01-003-input-output | None | Parallel-safe: true | io.rs |
-| 01-004 | Logging and Signal Handling | [ ] Todo | feature/current/20260707-cli-rust-standards/story-01-004-logging-signals | None | Parallel-safe: true | logging.rs |
+| 01-004 | Logging and Signal Handling | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-01-004-logging-signals | None | Parallel-safe: true | logging.rs |
 | 01-005 | Structured Logging with Format Auto-Detection | [ ] Todo | feature/current/20260707-cli-rust-standards/story-01-005-structured-logging | 01-004 | Parallel-safe: true | structured_log.rs |
 | 01-006 | Signal-Based Config Reload | [ ] Todo | feature/current/20260707-cli-rust-standards/story-01-006-config-reload | 01-002, 01-004 | Parallel-safe: true | signals.rs |
 
