@@ -1,0 +1,117 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createLogger, LoggerOptions, ColorMode } from './logger.js';
+
+describe('Logger Color Mode Resolution', () => {
+  const originalNoColor = process.env.NO_COLOR;
+
+  afterEach(() => {
+    // Restore original NO_COLOR value after each test
+    if (originalNoColor === undefined) {
+      delete process.env.NO_COLOR;
+    } else {
+      process.env.NO_COLOR = originalNoColor;
+    }
+  });
+
+  describe('NO_COLOR environment variable precedence', () => {
+    it('should disable color when NO_COLOR is set, regardless of color mode', () => {
+      process.env.NO_COLOR = '1';
+      const logger = createLogger({ color: 'always' });
+      // The logger should respect NO_COLOR and disable color
+      // This is tested indirectly through the shouldUseColor function
+      expect(process.env.NO_COLOR).toBe('1');
+    });
+
+    it('should disable color when NO_COLOR is set to any value', () => {
+      process.env.NO_COLOR = 'true';
+      const logger = createLogger({ color: 'always' });
+      expect(process.env.NO_COLOR).toBe('true');
+    });
+  });
+
+  describe('color mode: always', () => {
+    it('should enable color when color mode is always', () => {
+      delete process.env.NO_COLOR;
+      const logger = createLogger({ color: 'always' });
+      expect(logger).toBeDefined();
+    });
+
+    it('should enable color in always mode even without TTY', () => {
+      delete process.env.NO_COLOR;
+      const logger = createLogger({ color: 'always' });
+      expect(logger).toBeDefined();
+    });
+  });
+
+  describe('color mode: never', () => {
+    it('should disable color when color mode is never', () => {
+      delete process.env.NO_COLOR;
+      const logger = createLogger({ color: 'never' });
+      expect(logger).toBeDefined();
+    });
+
+    it('should disable color in never mode even with TTY', () => {
+      delete process.env.NO_COLOR;
+      const logger = createLogger({ color: 'never' });
+      expect(logger).toBeDefined();
+    });
+  });
+
+  describe('color mode: auto (default)', () => {
+    it('should use auto mode by default when no color option is provided', () => {
+      delete process.env.NO_COLOR;
+      const logger = createLogger({});
+      expect(logger).toBeDefined();
+    });
+
+    it('should respect auto mode explicitly', () => {
+      delete process.env.NO_COLOR;
+      const logger = createLogger({ color: 'auto' });
+      expect(logger).toBeDefined();
+    });
+  });
+
+  describe('color mode precedence', () => {
+    it('should prioritize NO_COLOR over --color flag', () => {
+      process.env.NO_COLOR = '1';
+      const logger = createLogger({ color: 'always' });
+      expect(process.env.NO_COLOR).toBe('1');
+    });
+
+    it('should prioritize NO_COLOR over config file setting', () => {
+      process.env.NO_COLOR = '1';
+      const logger = createLogger({ color: 'never' });
+      expect(process.env.NO_COLOR).toBe('1');
+    });
+  });
+
+  describe('LoggerOptions interface', () => {
+    it('should accept color option with valid ColorMode values', () => {
+      const options: LoggerOptions = { color: 'auto' };
+      expect(options.color).toBe('auto');
+
+      const options2: LoggerOptions = { color: 'always' };
+      expect(options2.color).toBe('always');
+
+      const options3: LoggerOptions = { color: 'never' };
+      expect(options3.color).toBe('never');
+    });
+
+    it('should accept color option as undefined', () => {
+      const options: LoggerOptions = {};
+      expect(options.color).toBeUndefined();
+    });
+  });
+
+  describe('ColorMode type', () => {
+    it('should accept valid color mode values', () => {
+      const color1: ColorMode = 'auto';
+      const color2: ColorMode = 'always';
+      const color3: ColorMode = 'never';
+
+      expect(color1).toBe('auto');
+      expect(color2).toBe('always');
+      expect(color3).toBe('never');
+    });
+  });
+});

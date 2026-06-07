@@ -23,7 +23,7 @@ program
   .option('-q, --quiet', 'Suppress all output except errors')
   .option('--verbose', 'Enable verbose output with extra details')
   .option('--usage', 'Display usage information')
-  .option('--nocolor', 'Disable colored output')
+  .option('--color <mode>', 'Color mode: auto, always, or never', 'auto')
   .option('-c, --config <path>', 'Config file path', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
   .option('--json', 'Output results as JSON')
   .action(async (inputs: string[], options) => {
@@ -36,7 +36,7 @@ program
       const loggerOptions: LoggerOptions = {
           quiet: options.quiet,
           verbose: options.verbose,
-          noColor: options.nocolor,
+          color: options.color,
           module: '{{ project_slug }}',
       };
       const logger = createLogger(loggerOptions);

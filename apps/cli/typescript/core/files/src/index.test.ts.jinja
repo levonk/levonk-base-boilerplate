@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { exec } from 'child_process';
 import util from 'util';
 
@@ -10,5 +10,52 @@ describe('CLI', () => {
         expect(stdout).toContain('Usage:');
     });
 
-    // More integration tests would require building or mocking process
+    describe('--color flag', () => {
+        it('should accept --color=auto', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --color=auto --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should accept --color=always', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --color=always --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should accept --color=never', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --color=never --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should default to auto mode when no --color flag is provided', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should show color option in help text', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            expect(stdout).toContain('--color');
+        });
+    });
+
+    describe('NO_COLOR environment variable', () => {
+        const originalNoColor = process.env.NO_COLOR;
+
+        afterEach(() => {
+            if (originalNoColor === undefined) {
+                delete process.env.NO_COLOR;
+            } else {
+                process.env.NO_COLOR = originalNoColor;
+            }
+        });
+
+        it('should respect NO_COLOR environment variable', async () => {
+            const { stdout } = await execAsync('NO_COLOR=1 npx ts-node src/index.ts --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should prioritize NO_COLOR over --color flag', async () => {
+            const { stdout } = await execAsync('NO_COLOR=1 npx ts-node src/index.ts --color=always --help');
+            expect(stdout).toContain('Usage:');
+        });
+    });
 });

@@ -3,11 +3,12 @@ import supportsColor from 'supports-color';
 import process from 'process';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'fatal';
+export type ColorMode = 'auto' | 'always' | 'never';
 
 export interface LoggerOptions {
   quiet?: boolean;
   verbose?: boolean;
-  noColor?: boolean;
+  color?: ColorMode;
   module?: string;
 }
 
@@ -48,9 +49,22 @@ function formatTimestamp(): string {
 }
 
 function shouldUseColor(options: LoggerOptions): boolean {
-  if (options.noColor) return false;
+  // NO_COLOR environment variable takes highest precedence
   if (process.env.NO_COLOR) return false;
-  return supportsColor.stdout !== false;
+
+  // Use the color mode from options (from --color flag or config file)
+  const colorMode = options.color || 'auto';
+
+  switch (colorMode) {
+    case 'always':
+      return true;
+    case 'never':
+      return false;
+    case 'auto':
+    default:
+      // Auto mode: use supports-color library for TTY detection
+      return supportsColor.stdout !== false;
+  }
 }
 
 export class Logger {
@@ -60,7 +74,7 @@ export class Logger {
     this.options = {
       quiet: false,
       verbose: false,
-      noColor: false,
+      color: 'auto',
       module: '{{ project_slug }}',
       ...options,
     };

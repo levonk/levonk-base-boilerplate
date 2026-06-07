@@ -1,0 +1,366 @@
+# vim: set ft=python :
+"""
+Configuration management module with initialization, validation, and auto-migration.
+
+Supports configuration precedence: CLI args > env vars > local config > user config > system config > defaults.
+"""
+import os
+import shutil
+from pathlib import Path
+from typing import Optional, Dict, Any, List, Tuple
+from dataclasses import dataclass, field
+from enum import IntEnum
+import tomli
+import tomli_w
+from pydantic import BaseModel, Field, validator, ValidationError
+from platformdirs import user_config_dir, site_config_dir
+
+from {{ project_slug }}.logging import get_logger
+
+logger = get_logger()
+
+# Configuration version for migration tracking
+CONFIG_VERSION = 1
+PROJECT_SLUG = "{{ project_slug }}"
+PROJECT_NAME = "{{ project_name }}"
+
+
+class ConfigSource(IntEnum):
+    """Configuration source for precedence tracking."""
+    DEFAULT = 0
+    SYSTEM = 1
+    USER = 2
+    LOCAL = 3
+    ENVIRONMENT = 4
+    COMMAND_LINE = 5
+
+
+class ConfigModel(BaseModel):
+    """Configuration model with validation."""
+    version: int = Field(default=CONFIG_VERSION, description="Configuration version for migration tracking")
+    
+    # Logging settings
+    log_level: str = Field(default="info", description="Log level: error, warn, info, debug")
+    quiet: bool = Field(default=False, description="Suppress non-error output")
+    
+    # Color settings
+    color: str = Field(default="auto", description="Color mode: auto, always, never")
+    
+    # Output settings
+    output_format: str = Field(default="text", description="Output format: text, json")
+    
+    # Performance settings
+    max_concurrent: int = Field(default=4, description="Maximum number of concurrent operations")
+    timeout: int = Field(default=30, description="Timeout in seconds for operations")
+    
+    # Feature flags
+    experimental: bool = Field(default=False, description="Enable experimental features")
+    
+    @validator('log_level')
+    def validate_log_level(cls, v):
+        valid_levels = ['error', 'warn', 'info', 'debug']
+        if v not in valid_levels:
+            raise ValueError(f"Invalid log_level: {v}. Must be one of: {', '.join(valid_levels)}")
+        return v
+    
+    @validator('color')
+    def validate_color(cls, v):
+        valid_modes = ['auto', 'always', 'never']
+        if v not in valid_modes:
+            raise ValueError(f"Invalid color mode: {v}. Must be one of: {', '.join(valid_modes)}")
+        return v
+    
+    @validator('output_format')
+    def validate_output_format(cls, v):
+        valid_formats = ['text', 'json']
+        if v not in valid_formats:
+            raise ValueError(f"Invalid output_format: {v}. Must be one of: {', '.join(valid_formats)}")
+        return v
+    
+    @validator('max_concurrent')
+    def validate_max_concurrent(cls, v):
+        if v <= 0:
+            raise ValueError(f"max_concurrent must be greater than 0, got {v}")
+        return v
+    
+    @validator('timeout')
+    def validate_timeout(cls, v):
+        if v <= 0:
+            raise ValueError(f"timeout must be greater than 0, got {v}")
+        return v
+
+
+@dataclass
+class ConfigManager:
+    """Configuration manager with precedence support and auto-migration."""
+    config: ConfigModel = field(default_factory=ConfigModel)
+    sources: List[Tuple[ConfigSource, Path]] = field(default_factory=list)
+    
+    def __post_init__(self):
+        """Initialize logger after dataclass creation."""
+        self.logger = get_logger()
+    
+    def load(self) -> 'ConfigManager':
+        """Load configuration from all sources with precedence."""
+        # Load in order of precedence (lowest to highest)
+        self._load_defaults()
+        self._load_system_config()
+        self._load_user_config()
+        self._load_local_config()
+        self._load_environment()
+        
+        self.logger.info(f"Configuration loaded from {len(self.sources)} sources", module="config")
+        return self
+    
+    def _load_defaults(self):
+        """Load default configuration."""
+        self.config = ConfigModel()
+        self.logger.debug("Loaded default configuration", module="config")
+    
+    def _load_system_config(self):
+        """Load system-wide configuration."""
+        system_config = Path("/etc") / PROJECT_SLUG / "config.toml"
+        if system_config.exists():
+            self._load_from_file(system_config, ConfigSource.SYSTEM)
+    
+    def _load_user_config(self):
+        """Load user configuration from XDG config directory."""
+        user_config_dir = user_config_dir(PROJECT_SLUG)
+        if user_config_dir:
+            user_config = Path(user_config_dir) / "config.toml"
+            if user_config.exists():
+                self._load_from_file(user_config, ConfigSource.USER)
+    
+    def _load_local_config(self):
+        """Load local project configuration."""
+        local_config = Path(".config") / PROJECT_SLUG / "config.toml"
+        if local_config.exists():
+            self._load_from_file(local_config, ConfigSource.LOCAL)
+    
+    def _load_environment(self):
+        """Load configuration from environment variables."""
+        env_prefix = PROJECT_SLUG.upper().replace("-", "_")
+        
+        env_mappings = {
+            f"{env_prefix}_LOG_LEVEL": "log_level",
+            f"{env_prefix}_COLOR": "color",
+            f"{env_prefix}_OUTPUT_FORMAT": "output_format",
+            f"{env_prefix}_QUIET": "quiet",
+            f"{env_prefix}_MAX_CONCURRENT": "max_concurrent",
+            f"{env_prefix}_TIMEOUT": "timeout",
+            f"{env_prefix}_EXPERIMENTAL": "experimental",
+        }
+        
+        for env_var, config_key in env_mappings.items():
+            value = os.environ.get(env_var)
+            if value is not None:
+                # Convert string to appropriate type
+                if config_key in ['quiet', 'experimental']:
+                    value = value.lower() in ('true', '1', 'yes', 'on')
+                elif config_key in ['max_concurrent', 'timeout']:
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        self.logger.warn(f"Invalid integer value for {env_var}: {value}", module="config")
+                        continue
+                
+                setattr(self.config, config_key, value)
+                self.logger.debug(f"Loaded {config_key} from environment", module="config")
+    
+    def _load_from_file(self, path: Path, source: ConfigSource):
+        """Load configuration from a file with validation and migration."""
+        try:
+            content = path.read_text(encoding='utf-8')
+            file_config = self._parse_config(content, path)
+            
+            # Check for version mismatch and migrate if needed
+            if file_config.version < CONFIG_VERSION:
+                self.logger.warn(
+                    f"Config version {file_config.version} is outdated, migrating to {CONFIG_VERSION}",
+                    module="config"
+                )
+                self._migrate_config(path, file_config)
+            elif file_config.version > CONFIG_VERSION:
+                self.logger.warn(
+                    f"Config version {file_config.version} is newer than expected {CONFIG_VERSION}, using with caution",
+                    module="config"
+                )
+            
+            # Merge configuration (higher precedence overrides)
+            self._merge_config(file_config, source)
+            self.sources.append((source, path))
+            
+            self.logger.info(f"Loaded configuration from {path} (source: {source.name})", module="config")
+        except Exception as e:
+            self.logger.error(f"Failed to load config from {path}: {e}", module="config")
+            raise
+    
+    def _parse_config(self, content: str, path: Path) -> ConfigModel:
+        """Parse configuration based on file extension."""
+        extension = path.suffix.lstrip('.')
+        
+        try:
+            if extension == 'toml':
+                data = tomli.loads(content)
+            elif extension in ['yaml', 'yml']:
+                import yaml
+                data = yaml.safe_load(content) or {}
+            elif extension == 'json':
+                import json
+                data = json.loads(content)
+            else:
+                raise ValueError(f"Unsupported config format: {extension}")
+            
+            # Validate with pydantic
+            return ConfigModel(**data)
+        except ValidationError as e:
+            # Provide detailed error messages with line numbers
+            error_lines = []
+            for error in e.errors():
+                loc = ' -> '.join(str(x) for x in error['loc'])
+                msg = error['msg']
+                error_lines.append(f"  - {loc}: {msg}")
+            
+            error_msg = f"Config validation error in {path}:\n" + "\n".join(error_lines)
+            raise ValueError(error_msg) from e
+        except Exception as e:
+            raise ValueError(f"Failed to parse config from {path}: {e}") from e
+    
+    def _merge_config(self, new_config: ConfigModel, source: ConfigSource):
+        """Merge configuration with precedence (only override non-default values)."""
+        # Only override if the new value is not the default
+        defaults = ConfigModel()
+        
+        if new_config.log_level != defaults.log_level:
+            self.config.log_level = new_config.log_level
+        if new_config.color != defaults.color:
+            self.config.color = new_config.color
+        if new_config.output_format != defaults.output_format:
+            self.config.output_format = new_config.output_format
+        if new_config.quiet != defaults.quiet:
+            self.config.quiet = new_config.quiet
+        if new_config.max_concurrent != defaults.max_concurrent:
+            self.config.max_concurrent = new_config.max_concurrent
+        if new_config.timeout != defaults.timeout:
+            self.config.timeout = new_config.timeout
+        if new_config.experimental != defaults.experimental:
+            self.config.experimental = new_config.experimental
+    
+    def _migrate_config(self, path: Path, old_config: ConfigModel):
+        """Migrate configuration to new version with backup."""
+        # Create backup
+        backup_path = path.with_suffix(f"{path.suffix}.bak")
+        try:
+            shutil.copy2(path, backup_path)
+            self.logger.info(f"Created config backup at {backup_path}", module="config")
+        except Exception as e:
+            self.logger.error(f"Failed to create backup: {e}", module="config")
+            raise
+        
+        # Merge old config with new defaults
+        new_config = ConfigModel()
+        self._merge_config(old_config, ConfigSource.USER)
+        
+        # Write migrated config
+        self._write_config_to_file(new_config, path)
+        
+        self.logger.info(
+            f"Migrated config from version {old_config.version} to {CONFIG_VERSION}",
+            module="config"
+        )
+    
+    def initialize_config(self) -> Path:
+        """Initialize configuration file with default commented settings."""
+        user_config_dir = user_config_dir(PROJECT_SLUG)
+        if not user_config_dir:
+            raise RuntimeError("Failed to determine config directory")
+        
+        config_dir = Path(user_config_dir)
+        config_dir.mkdir(parents=True, exist_ok=True)
+        
+        config_path = config_dir / "config.toml"
+        
+        if not config_path.exists():
+            default_config = ConfigModel()
+            self._write_config_to_file(default_config, config_path)
+            self.logger.info(f"Initialized config at {config_path}", module="config")
+        
+        return config_path
+    
+    def _write_config_to_file(self, config: ConfigModel, path: Path):
+        """Write configuration to file with comments."""
+        # Convert to dict for TOML serialization
+        config_dict = config.dict()
+        
+        # Write with comments
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(f"# {PROJECT_NAME} Configuration File\n")
+            f.write("# This file is auto-generated with default values\n")
+            f.write("# Modify as needed for your setup\n")
+            f.write("\n")
+            
+            # Write version
+            f.write(f"# Configuration version (do not modify)\n")
+            f.write(f"version = {config_dict['version']}\n")
+            f.write("\n")
+            
+            # Write logging settings
+            f.write(f"# Logging settings\n")
+            f.write(f"# Valid log levels: error, warn, info, debug\n")
+            f.write(f"log_level = \"{config_dict['log_level']}\"\n")
+            f.write(f"quiet = {str(config_dict['quiet']).lower()}\n")
+            f.write("\n")
+            
+            # Write color settings
+            f.write(f"# Color mode: auto, always, never\n")
+            f.write(f"color = \"{config_dict['color']}\"\n")
+            f.write("\n")
+            
+            # Write output settings
+            f.write(f"# Output format: text, json\n")
+            f.write(f"output_format = \"{config_dict['output_format']}\"\n")
+            f.write("\n")
+            
+            # Write performance settings
+            f.write(f"# Performance settings\n")
+            f.write(f"max_concurrent = {config_dict['max_concurrent']}\n")
+            f.write(f"timeout = {config_dict['timeout']}\n")
+            f.write("\n")
+            
+            # Write feature flags
+            f.write(f"# Feature flags\n")
+            f.write(f"experimental = {str(config_dict['experimental']).lower()}\n")
+        
+        # Set file permissions to user-readable only (Unix)
+        try:
+            path.chmod(0o600)
+        except Exception:
+            # Permission setting may fail on some systems, log but don't fail
+            self.logger.debug(f"Could not set file permissions on {path}", module="config")
+    
+    def validate(self) -> List[str]:
+        """Validate configuration and return list of errors."""
+        errors = []
+        try:
+            ConfigModel(**self.config.dict())
+        except ValidationError as e:
+            for error in e.errors():
+                loc = ' -> '.join(str(x) for x in error['loc'])
+                msg = error['msg']
+                errors.append(f"{loc}: {msg}")
+        return errors
+    
+    def get_config(self) -> ConfigModel:
+        """Get the current configuration."""
+        return self.config
+    
+    def get_sources(self) -> List[Tuple[ConfigSource, Path]]:
+        """Get configuration sources."""
+        return self.sources
+
+
+def get_config_manager() -> ConfigManager:
+    """Get or create the global configuration manager instance."""
+    manager = ConfigManager()
+    manager.load()
+    return manager

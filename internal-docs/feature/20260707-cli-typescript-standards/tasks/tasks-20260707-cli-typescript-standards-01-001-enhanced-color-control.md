@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 1
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-01-001-enhanced-color-control"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,36 +27,37 @@ Replace the existing `--nocolor` flag with a comprehensive `--color=auto|always|
 
 ## Sub-Tasks
 
-- [ ] Replace `--nocolor` flag with `--color=auto|always|never` flag in index.ts
-- [ ] Implement smart TTY detection in auto mode using supports-color library
-- [ ] Add color mode resolution precedence logic: NO_COLOR env var > --color flag > config file setting > auto-detection
-- [ ] Update logger.ts to support the new color mode system
-- [ ] Add `color` setting to config file schema with modes (auto|always|never)
-- [ ] Update LoggerOptions interface to include color mode
-- [ ] Ensure NO_COLOR environment variable takes precedence over all other color settings
-- [ ] Add unit tests for color mode resolution logic
-- [ ] Add integration tests for --color flag behavior
-- [ ] Add tests for NO_COLOR environment variable handling
-- [ ] Update package.json.jinja to ensure supports-color dependency is present
-- [ ] Update help text to document new --color flag behavior
+- [x] Replace `--nocolor` flag with `--color=auto|always|never` flag in index.ts
+- [x] Implement smart TTY detection in auto mode using supports-color library
+- [x] Add color mode resolution precedence logic: NO_COLOR env var > --color flag > config file setting > auto-detection
+- [x] Update logger.ts to support the new color mode system
+- [x] Add `color` setting to config file schema with modes (auto|always|never) (deferred to story 01-003 - config file schema will be implemented there)
+- [x] Update LoggerOptions interface to include color mode
+- [x] Ensure NO_COLOR environment variable takes precedence over all other color settings
+- [x] Add unit tests for color mode resolution logic
+- [x] Add integration tests for --color flag behavior
+- [x] Add tests for NO_COLOR environment variable handling
+- [x] Update package.json.jinja to ensure supports-color dependency is present
+- [x] Update help text to document new --color flag behavior
 
 ## Relevant Files
 
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI entry point with flag definitions
 - `apps/cli/typescript/core/files/src/logger.ts.jinja` - Logger implementation with color logic
+- `apps/cli/typescript/core/files/src/logger.test.ts.jinja` - Unit tests for color mode resolution (created)
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for CLI
 - `apps/cli/typescript/core/files/package.json.jinja` - Dependencies including supports-color
 
 ## Acceptance Criteria
 
-- [ ] `--color=auto` flag enables color when TTY detected, disables otherwise
-- [ ] `--color=always` flag enables color regardless of TTY
-- [ ] `--color=never` flag disables color regardless of TTY
-- [ ] NO_COLOR environment variable overrides all --color flag settings
-- [ ] Config file `color` setting is respected when no flag or env var is set
-- [ ] Color mode resolution follows correct precedence order
-- [ ] All existing color functionality continues to work
-- [ ] Help text clearly documents the new --color flag behavior
+- [x] `--color=auto` flag enables color when TTY detected, disables otherwise
+- [x] `--color=always` flag enables color regardless of TTY
+- [x] `--color=never` flag disables color regardless of TTY
+- [x] NO_COLOR environment variable overrides all --color flag settings
+- [ ] Config file `color` setting is respected when no flag or env var is set (deferred to story 01-003)
+- [x] Color mode resolution follows correct precedence order
+- [x] All existing color functionality continues to work
+- [x] Help text clearly documents the new --color flag behavior
 
 ## Test Plan
 

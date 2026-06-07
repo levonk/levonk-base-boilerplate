@@ -11,6 +11,12 @@ python = "^3.9"
 typer = {extras = ["all"], version = "^0.9.0"}
 rich = "^13.0.0"
 platformdirs = "^3.0.0"
+{% if include_advanced_config %}
+pydantic = "^2.0.0"
+tomli = "^2.0.0"
+tomli-w = "^1.0.0"
+pyyaml = "^6.0.0"
+{% endif %}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0.0"
