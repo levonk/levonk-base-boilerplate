@@ -37,6 +37,14 @@ pub struct Cli {
     /// Log file path (for file-based logging)
     #[arg(long)]
     pub log_file: Option<PathBuf>,
+
+    /// Install shell completions and initialize config
+    #[arg(long)]
+    pub install: bool,
+
+    /// Uninstall and cleanup
+    #[arg(long)]
+    pub uninstall: bool,
 }
 
 impl Cli {

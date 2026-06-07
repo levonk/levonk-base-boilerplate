@@ -1,4 +1,5 @@
 mod cli;
+mod config;
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
@@ -10,6 +11,7 @@ use tracing_subscriber::{fmt, EnvFilter, prelude::*};
 use ansi_term::{Colour, Style};
 use once_cell::sync::Lazy;
 use cli::Cli;
+use config::ConfigManager;
 
 // Module name for logging
 const MODULE_NAME: &str = "{{ project_slug }}";
@@ -176,6 +178,21 @@ fn main() -> Result<()> {
         std::process::exit(0);
     }
 
+    // Handle install flag
+    if cli.install {
+        let config_manager = ConfigManager::new();
+        let config_path = config_manager.initialize_config()?;
+        println!("Configuration initialized at: {:?}", config_path);
+        println!("Shell completions can be generated using: {} --generate-completion <shell>", "{{ project_slug }}");
+        std::process::exit(0);
+    }
+
+    // Handle uninstall flag
+    if cli.uninstall {
+        println!("Uninstall functionality - remove config files and clean up");
+        std::process::exit(0);
+    }
+
     // Initialize logging
     init_logging(&cli)?;
 
@@ -187,14 +204,18 @@ fn main() -> Result<()> {
 
     info!("Starting {}", MODULE_NAME);
 
-    // XDG Config Resolution
-    let config_path = cli.config.or_else(|| {
-        ProjectDirs::from("com", "myorg", "{{ project_slug }}")
-            .map(|proj| proj.config_dir().join("config.toml"))
-    });
-
-    if let Some(path) = config_path {
-        info!("Using config: {path:?}");
+    // Load configuration
+    let mut config_manager = ConfigManager::new();
+    config_manager.load()?;
+    
+    // Validate configuration
+    config_manager.validate()?;
+    
+    // Override with CLI config path if specified
+    if let Some(cli_config) = &cli.config {
+        info!("Using custom config: {:?}", cli_config);
+    } else {
+        info!("Using loaded configuration from {} sources", config_manager.sources().len());
     }
 
     let inputs = cli.inputs.clone();
