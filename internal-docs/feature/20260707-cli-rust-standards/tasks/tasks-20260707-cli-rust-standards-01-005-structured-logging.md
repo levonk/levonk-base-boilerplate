@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 1
 parallel_id: 5
 branch: "feature/current/20260707-cli-rust-standards/story-01-005-structured-logging"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-004"]

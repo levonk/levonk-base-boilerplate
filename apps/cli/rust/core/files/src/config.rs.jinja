@@ -362,7 +362,13 @@ impl ConfigManager {
     pub fn config(&self) -> &Config {
         &self.config
     }
-    
+
+    /// Get mutable reference to the current configuration (for testing)
+    #[cfg(test)]
+    pub fn config_mut(&mut self) -> &mut Config {
+        &mut self.config
+    }
+
     /// Get configuration sources
     pub fn sources(&self) -> &[(ConfigSource, PathBuf)] {
         &self.sources
@@ -373,28 +379,42 @@ impl ConfigManager {
         // Validate log level
         match self.config.log_level.as_str() {
             "error" | "warn" | "info" | "debug" | "trace" => {},
-            _ => anyhow::bail!("Invalid log_level: {}. Must be one of: error, warn, info, debug, trace", 
+            _ => anyhow::bail!("Invalid log_level: {}. Must be one of: error, warn, info, debug, trace",
                              self.config.log_level),
         }
-        
+
+        // Validate color mode
+        match self.config.color.as_str() {
+            "auto" | "always" | "never" => {},
+            _ => anyhow::bail!("Invalid color: {}. Must be one of: auto, always, never",
+                             self.config.color),
+        }
+
         // Validate output format
         match self.config.output_format.as_str() {
             "text" | "json" => {},
-            _ => anyhow::bail!("Invalid output_format: {}. Must be one of: text, json", 
+            _ => anyhow::bail!("Invalid output_format: {}. Must be one of: text, json",
                              self.config.output_format),
         }
-        
+
         // Validate max_concurrent
         if self.config.max_concurrent == 0 {
             anyhow::bail!("max_concurrent must be greater than 0");
         }
-        
+
         // Validate timeout
         if self.config.timeout == 0 {
             anyhow::bail!("timeout must be greater than 0");
         }
-        
+
         Ok(())
+    }
+
+    /// Reload configuration from all sources (for hot-reload)
+    pub fn reload(&mut self) -> Result<()> {
+        info!("Reloading configuration from all sources");
+        self.sources.clear();
+        self.load()
     }
 }
 
@@ -408,7 +428,7 @@ mod tests {
         let config = Config::default();
         assert_eq!(config.version, CONFIG_VERSION);
         assert_eq!(config.log_level, "info");
-        assert_eq!(config.color, true);
+        assert_eq!(config.color, "auto");
         assert_eq!(config.output_format, "text");
         assert_eq!(config.quiet, false);
     }
@@ -440,14 +460,14 @@ mod tests {
         let toml_content = r#"
 version = 1
 log_level = "debug"
-color = false
+color = "never"
 output_format = "json"
 quiet = true
 "#;
-        
+
         let config: Config = toml::from_str(toml_content).unwrap();
         assert_eq!(config.log_level, "debug");
-        assert_eq!(config.color, false);
+        assert_eq!(config.color, "never");
         assert_eq!(config.output_format, "json");
         assert_eq!(config.quiet, true);
     }

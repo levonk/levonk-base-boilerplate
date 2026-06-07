@@ -2,24 +2,31 @@ mod cli;
 mod config;
 mod io;
 mod logging;
+mod signals;
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::io::{self, Read};
+use std::sync::Arc;
 use directories::ProjectDirs;
 use glob::glob;
+use tokio::sync::Mutex;
 use tracing::info;
 use cli::Cli;
 use config::ConfigManager;
 use io::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
 use logging::{init_logging, setup_signal_handlers, Verbosity, exit_success, exit_error, exit_usage};
+use signals::SignalHandler;
+
+const MODULE_NAME: &str = "{{ project_slug }}";
 
 fn process_content(source: &str, content: &str) -> Result<()> {
     info!("Processing content from {} ({} bytes)", source, content.len());
     Ok(())
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     // Parse CLI args first
     let cli = Cli::parse();
 
@@ -44,6 +51,10 @@ fn main() -> Result<()> {
         std::process::exit(0);
     }
 
+    // Load configuration
+    let mut config_manager = ConfigManager::new();
+    config_manager.load()?;
+
     // Initialize logging
     let verbosity = Verbosity::from_count(cli.verbose, cli.quiet, cli.debug);
     let config_level = config_manager.get_config().get_log_level();
@@ -52,11 +63,18 @@ fn main() -> Result<()> {
     // Set up signal handlers for graceful shutdown
     setup_signal_handlers()?;
 
+    // Start signal handler for config reload
+    let config_manager_arc = Arc::new(Mutex::new(config_manager));
+    let signal_handler = SignalHandler::new(config_manager_arc.clone());
+    signal_handler.run().await?;
+
     info!("Starting {}", MODULE_NAME);
 
-    // Load configuration
-    let mut config_manager = ConfigManager::new();
-    config_manager.load()?;
+    // Get config from Arc for read operations
+    let config = {
+        let manager = config_manager_arc.lock().await;
+        manager.config().clone()
+    };
 
     // Handle color mode
     let color_mode = if cli.nocolor {
@@ -65,7 +83,7 @@ fn main() -> Result<()> {
         ColorMode::from_str(color_str)
     } else {
         // Load from config
-        let config_color = config_manager.get_config().color.clone();
+        let config_color = config.color.clone();
         ColorMode::from_str(&config_color)
     };
 
@@ -73,15 +91,19 @@ fn main() -> Result<()> {
     if color_mode == ColorMode::Never {
         std::env::set_var("NO_COLOR", "1");
     }
-    
+
     // Validate configuration
-    config_manager.validate()?;
-    
+    {
+        let manager = config_manager_arc.lock().await;
+        manager.validate()?;
+    }
+
     // Override with CLI config path if specified
     if let Some(cli_config) = &cli.config {
         info!("Using custom config: {:?}", cli_config);
     } else {
-        info!("Using loaded configuration from {} sources", config_manager.sources().len());
+        let manager = config_manager_arc.lock().await;
+        info!("Using loaded configuration from {} sources", manager.sources().len());
     }
 
     // Create output handler

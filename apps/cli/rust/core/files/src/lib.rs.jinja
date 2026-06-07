@@ -1,4 +1,5 @@
 pub mod logging;
+pub mod signals;
 
 pub use logging::{
     Verbosity, resolve_log_level, is_shutdown_requested, request_shutdown,
@@ -7,3 +8,5 @@ pub use logging::{
     exit_with_code, exit_success, exit_error, exit_usage,
     exit_config, exit_network, exit_permission, exit_timeout,
 };
+
+pub use signals::SignalHandler;

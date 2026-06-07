@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 1
 parallel_id: 6
 branch: "feature/current/20260707-cli-rust-standards/story-01-006-config-reload"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002", "01-004"]
@@ -27,36 +27,36 @@ Implement SIGHUP signal handler to reload configuration files without process re
 
 ## Sub-Tasks
 
-- [ ] Add signal-hook or tokio::signal dependency to Cargo.toml
-- [ ] Create signals.rs module for signal handling
-- [ ] Implement SIGHUP signal handler registration
-- [ ] Add config reload function that re-reads config files
-- [ ] Implement config validation before applying new config
-- [ ] Add logging for config reload events (success/failure)
-- [ ] Implement graceful error handling (keep old config on validation failure)
-- [ ] Add config hot-reload integration with existing config system
-- [ ] Create tests for SIGHUP signal handling
-- [ ] Create tests for config reload logic
-- [ ] Create tests for config validation on reload
-- [ ] Create tests for error handling (old config retention)
+- [x] Add signal-hook or tokio::signal dependency to Cargo.toml
+- [x] Create signals.rs module for signal handling
+- [x] Implement SIGHUP signal handler registration
+- [x] Add config reload function that re-reads config files
+- [x] Implement config validation before applying new config
+- [x] Add logging for config reload events (success/failure)
+- [x] Implement graceful error handling (keep old config on validation failure)
+- [x] Add config hot-reload integration with existing config system
+- [x] Create tests for SIGHUP signal handling
+- [x] Create tests for config reload logic
+- [x] Create tests for config validation on reload
+- [x] Create tests for error handling (old config retention)
 
 ## Relevant Files
 
-- `apps/cli/rust/src/signals.rs` — Signal handling module
-- `apps/cli/rust/src/config.rs` — Add reload support
-- `apps/cli/rust/src/logging.rs` — Log reload events
-- `apps/cli/rust/Cargo.toml` — Signal handling dependencies
-- `apps/cli/rust/tests/signals_test.rs` — Signal handling tests
+- `apps/cli/rust/core/files/src/signals.rs.jinja` — Signal handling module (NEW)
+- `apps/cli/rust/core/files/src/config.rs.jinja` — Added reload support and color validation
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Integrated signal handler with async runtime
+- `apps/cli/rust/core/files/src/lib.rs.jinja` — Exported SignalHandler
+- `apps/cli/rust/core/files/tests/signals_test.rs.jinja` — Signal handling tests (NEW)
 
 ## Acceptance Criteria
 
-- [ ] SIGHUP signal triggers config reload
-- [ ] Config re-read from file on reload
-- [ ] New config validated before applying
-- [ ] Validation failures logged and old config kept active
-- [ ] Successful reloads logged
-- [ ] No process restart required
-- [ ] All tests pass
+- [x] SIGHUP signal triggers config reload
+- [x] Config re-read from file on reload
+- [x] New config validated before applying
+- [x] Validation failures logged and old config kept active
+- [x] Successful reloads logged
+- [x] No process restart required
+- [x] All tests pass
 
 ## Test Plan
 
