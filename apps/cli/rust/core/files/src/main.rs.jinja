@@ -1,4 +1,5 @@
-use clap::Parser;
+mod cli;
+
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::io::{self, Read};
@@ -8,6 +9,7 @@ use tracing::{Level, info, warn, error};
 use tracing_subscriber::{fmt, EnvFilter, prelude::*};
 use ansi_term::{Colour, Style};
 use once_cell::sync::Lazy;
+use cli::Cli;
 
 // Module name for logging
 const MODULE_NAME: &str = "{{ project_slug }}";
@@ -102,42 +104,6 @@ impl tracing_subscriber::fmt::FormatEvent<'_, tracing_subscriber::fmt::FormatFie
     }
 }
 
-#[derive(Parser)]
-#[command(name = "{{ project_slug }}", version, about = "{{ description }}")]
-struct Cli {
-    /// Input files or glob patterns. Use "-" for stdin.
-    #[arg(value_name = "INPUTS")]
-    inputs: Vec<String>,
-
-    /// Override config file
-    #[arg(long, env = "{{ project_slug | upper | replace('-', '_') }}_CONFIG")]
-    config: Option<PathBuf>,
-
-    /// Output as JSON
-    #[arg(long)]
-    json: bool,
-
-    /// Quiet mode - suppress all output except errors
-    #[arg(long, short = 'q')]
-    quiet: bool,
-
-    /// Verbose mode - increase logging verbosity (can be used multiple times)
-    #[arg(long, short = 'v', action = clap::ArgAction::Count)]
-    verbose: u8,
-
-    /// Show usage information
-    #[arg(long)]
-    usage: bool,
-
-    /// Disable colored output
-    #[arg(long)]
-    nocolor: bool,
-
-    /// Log file path (for file-based logging)
-    #[arg(long)]
-    log_file: Option<PathBuf>,
-}
-
 fn process_content(source: &str, content: &str) -> Result<()> {
     info!("Processing content from {} ({} bytes)", source, content.len());
     Ok(())
@@ -206,8 +172,7 @@ fn main() -> Result<()> {
 
     // Handle usage flag
     if cli.usage {
-        use clap::CommandFactory;
-        Cli::command().print_help()?;
+        cli.print_usage()?;
         std::process::exit(0);
     }
 
@@ -241,8 +206,7 @@ fn main() -> Result<()> {
             io::stdin().read_to_string(&mut buffer)?;
 
             if buffer.trim_end().is_empty() {
-                use clap::CommandFactory;
-                Cli::command().print_help()?;
+                cli.print_usage()?;
                 std::process::exit(1);
             }
 
@@ -255,8 +219,7 @@ fn main() -> Result<()> {
             return Ok(());
         }
 
-        use clap::CommandFactory;
-        Cli::command().print_help()?;
+        cli.print_usage()?;
         std::process::exit(1);
     }
 

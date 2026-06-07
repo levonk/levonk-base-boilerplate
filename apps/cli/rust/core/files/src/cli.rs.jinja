@@ -1,0 +1,56 @@
+use clap::Parser;
+use anyhow::Result;
+use std::path::PathBuf;
+
+/// {{ description }}
+#[derive(Parser)]
+#[command(name = "{{ project_slug }}", version, about = "{{ description }}")]
+pub struct Cli {
+    /// Input files or glob patterns. Use "-" for stdin.
+    #[arg(value_name = "INPUTS")]
+    pub inputs: Vec<String>,
+
+    /// Override config file
+    #[arg(long, env = "{{ project_slug | upper | replace('-', '_') }}_CONFIG")]
+    pub config: Option<PathBuf>,
+
+    /// Output as JSON
+    #[arg(long)]
+    pub json: bool,
+
+    /// Quiet mode - suppress all output except errors
+    #[arg(long, short = 'q')]
+    pub quiet: bool,
+
+    /// Verbose mode - increase logging verbosity (can be used multiple times)
+    #[arg(long, short = 'v', action = clap::ArgAction::Count)]
+    pub verbose: u8,
+
+    /// Show usage information
+    #[arg(long)]
+    pub usage: bool,
+
+    /// Disable colored output
+    #[arg(long)]
+    pub nocolor: bool,
+
+    /// Log file path (for file-based logging)
+    #[arg(long)]
+    pub log_file: Option<PathBuf>,
+}
+
+impl Cli {
+    /// Print usage information
+    pub fn print_usage(&self) -> Result<()> {
+        use clap::CommandFactory;
+        Self::command().print_help()?;
+        Ok(())
+    }
+
+    /// Print version information
+    pub fn print_version(&self) -> Result<()> {
+        use clap::CommandFactory;
+        println!("{} {}", Self::command().get_name().to_string(), Self::command().get_version().to_string());
+        Ok(())
+    }
+}
