@@ -21,7 +21,7 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 | 01-003 | Input/Output Handling | [x] Done | feature/current/20260707-cli-rust-standards/story-01-003-input-output | None | Parallel-safe: true | io.rs |
 | 01-004 | Logging and Signal Handling | [x] Done | feature/current/20260707-cli-rust-standards/story-01-004-logging-signals | None | Parallel-safe: true | logging.rs |
 | 01-005 | Structured Logging with Format Auto-Detection | [x] Done | feature/current/20260707-cli-rust-standards/story-01-005-structured-logging | 01-004 | Parallel-safe: true | structured_log.rs |
-| 01-006 | Signal-Based Config Reload | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-01-006-config-reload | 01-002, 01-004 | Parallel-safe: true | signals.rs |
+| 01-006 | Signal-Based Config Reload | [x] Done | feature/current/20260707-cli-rust-standards/story-01-006-config-reload | 01-002, 01-004 | Parallel-safe: true | signals.rs |
 
 **Phase 1 Milestone:** Core CLI functionality complete and tested
 
@@ -29,7 +29,7 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 
 | Story ID | Story Title | Status | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------ | ------------ | ------------- | ------- |
-| 02-001 | TUI Mode Implementation | [ ] Todo | feature/current/20260707-cli-rust-standards/story-02-001-tui-mode | 01-001, 01-002 | Parallel-safe: true | tui.rs |
+| 02-001 | TUI Mode Implementation | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-02-001-tui-mode | 01-001, 01-002 | Parallel-safe: true | tui.rs |
 | 02-002 | Dry-Run and Confirmation Prompts | [ ] Todo | feature/current/20260707-cli-rust-standards/story-02-002-dry-run-confirm | 01-001 | Parallel-safe: true | cli.rs |
 | 02-003 | Progress Indicators | [ ] Todo | feature/current/20260707-cli-rust-standards/story-02-003-progress-indicators | 01-004 | Parallel-safe: true | cli.rs |
 | 02-004 | Daemon Process Support | [ ] Todo | feature/current/20260707-cli-rust-standards/story-02-004-daemon-support | 01-002, 01-004 | Parallel-safe: true | daemon.rs |

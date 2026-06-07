@@ -1,6 +1,10 @@
 pub mod logging;
 pub mod signals;
 
+{% if enable_tui -%}
+pub mod tui;
+{% endif -%}
+
 pub use logging::{
     Verbosity, resolve_log_level, is_shutdown_requested, request_shutdown,
     EXIT_SUCCESS, EXIT_ERROR, EXIT_USAGE, EXIT_SIGINT,
@@ -10,3 +14,7 @@ pub use logging::{
 };
 
 pub use signals::SignalHandler;
+
+{% if enable_tui -%}
+pub use tui::{TuiConfig, TuiHandler, TuiError, init_tui_mode, terminal_supports_tui};
+{% endif -%}

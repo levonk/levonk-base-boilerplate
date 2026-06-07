@@ -1,0 +1,243 @@
+{% if enable_tui -%}
+use anyhow::{Context, Result};
+use ratatui::backend::Backend;
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Span, Text};
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use ratatui::Frame;
+use std::collections::HashMap;
+use std::io;
+
+/// TUI mode configuration
+#[derive(Debug, Clone)]
+pub struct TuiConfig {
+    /// Whether TUI mode is enabled
+    pub enabled: bool,
+    /// Arguments to display and modify
+    pub arguments: HashMap<String, String>,
+    /// Whether to show confirmation dialog
+    pub show_confirmation: bool,
+}
+
+impl Default for TuiConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            arguments: HashMap::new(),
+            show_confirmation: true,
+        }
+    }
+}
+
+/// TUI mode handler
+pub struct TuiHandler {
+    config: TuiConfig,
+    current_index: usize,
+}
+
+impl TuiHandler {
+    /// Create a new TUI handler
+    pub fn new(config: TuiConfig) -> Self {
+        Self {
+            config,
+            current_index: 0,
+        }
+    }
+
+    /// Check if TUI mode should be activated
+    pub fn should_activate(&self) -> bool {
+        self.config.enabled
+    }
+
+    /// Run the TUI interface (simplified for template)
+    pub fn run(&mut self) -> Result<HashMap<String, String>> {
+        if !self.should_activate() {
+            return Ok(self.config.arguments.clone());
+        }
+
+        // For the template, we'll return the arguments as-is
+        // In a real implementation, this would use ratatui's Terminal
+        Ok(self.config.arguments.clone())
+    }
+
+    /// Render the TUI interface
+    pub fn render<B: Backend>(&self, f: &mut Frame<B>) {
+        let size = f.size();
+        
+        // Create main layout
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints(
+                [
+                    Constraint::Length(3),  // Header
+                    Constraint::Min(0),     // Content
+                    Constraint::Length(3),  // Footer
+                ]
+                .as_ref(),
+            )
+            .split(size);
+
+        // Render header
+        self.render_header(f, chunks[0]);
+
+        // Render content (arguments)
+        self.render_content(f, chunks[1]);
+
+        // Render footer
+        self.render_footer(f, chunks[2]);
+    }
+
+    /// Render the header section
+    fn render_header<B: Backend>(&self, f: &mut Frame<B>, area: Rect) {
+        let header = Paragraph::new(vec![
+            Span::styled(
+                "{{ project_name | title }} Configuration",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+        ])
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::ALL));
+
+        f.render_widget(header, area);
+    }
+
+    /// Render the content section with arguments
+    fn render_content<B: Backend>(&self, f: &mut Frame<B>, area: Rect) {
+        let mut text = Text::default();
+        
+        for (i, (key, value)) in self.config.arguments.iter().enumerate() {
+            let prefix = if i == self.current_index { "> " } else { "  " };
+            let line = format!("{}{}: {}", prefix, key, value);
+            text.push_line(Span::from(line));
+        }
+
+        let paragraph = Paragraph::new(text)
+            .wrap(Wrap { trim: true })
+            .block(Block::default().borders(Borders::ALL).title("Arguments"));
+
+        f.render_widget(paragraph, area);
+    }
+
+    /// Render the footer section
+    fn render_footer<B: Backend>(&self, f: &mut Frame<B>, area: Rect) {
+        let footer_text = if self.config.show_confirmation {
+            "↑/↓: Navigate | Enter: Confirm | Esc: Cancel"
+        } else {
+            "↑/↓: Navigate | Enter: Edit | Esc: Exit"
+        };
+
+        let footer = Paragraph::new(footer_text)
+            .alignment(Alignment::Center)
+            .block(Block::default().borders(Borders::ALL));
+
+        f.render_widget(footer, area);
+    }
+
+    /// Validate arguments
+    pub fn validate_arguments(&self, arguments: &HashMap<String, String>) -> Result<()> {
+        // Basic validation - can be extended with custom validation logic
+        for (key, value) in arguments {
+            if value.is_empty() {
+                return Err(TuiError::ValidationFailed(format!(
+                    "Argument '{}' cannot be empty",
+                    key
+                ))
+                .into());
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Check if terminal supports TUI
+pub fn terminal_supports_tui() -> bool {
+    // Check if we're in a TTY
+    atty::is(atty::Stream::Stdout)
+}
+
+/// Initialize TUI mode with given arguments
+pub fn init_tui_mode(arguments: HashMap<String, String>) -> Result<TuiHandler> {
+    if !terminal_supports_tui() {
+        return Err(TuiError::TerminalNotSupported.into());
+    }
+
+    let config = TuiConfig {
+        enabled: true,
+        arguments,
+        show_confirmation: true,
+    };
+
+    Ok(TuiHandler::new(config))
+}
+
+/// TUI-specific error types
+#[derive(Debug, thiserror::Error)]
+pub enum TuiError {
+    #[error("Terminal does not support TUI mode")]
+    TerminalNotSupported,
+    
+    #[error("TUI initialization failed: {0}")]
+    InitializationFailed(String),
+    
+    #[error("Argument validation failed: {0}")]
+    ValidationFailed(String),
+    
+    #[error("User cancelled TUI operation")]
+    UserCancelled,
+    
+    #[error("TUI rendering error: {0}")]
+    RenderError(String),
+}
+
+impl From<TuiError> for anyhow::Error {
+    fn from(err: TuiError) -> Self {
+        anyhow::anyhow!(err)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tui_config_default() {
+        let config = TuiConfig::default();
+        assert!(!config.enabled);
+        assert!(config.arguments.is_empty());
+        assert!(config.show_confirmation);
+    }
+
+    #[test]
+    fn test_tui_handler_creation() {
+        let config = TuiConfig::default();
+        let handler = TuiHandler::new(config);
+        assert!(!handler.should_activate());
+    }
+
+    #[test]
+    fn test_argument_validation_empty() {
+        let handler = TuiHandler::new(TuiConfig::default());
+        let mut args = HashMap::new();
+        args.insert("test".to_string(), "".to_string());
+        
+        let result = handler.validate_arguments(&args);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_argument_validation_valid() {
+        let handler = TuiHandler::new(TuiConfig::default());
+        let mut args = HashMap::new();
+        args.insert("test".to_string(), "value".to_string());
+        
+        let result = handler.validate_arguments(&args);
+        assert!(result.is_ok());
+    }
+}
+{% else -%}
+// TUI module disabled - enable with --enable-tui feature flag
+{% endif %}

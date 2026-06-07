@@ -4,6 +4,10 @@ mod io;
 mod logging;
 mod signals;
 
+{% if enable_tui -%}
+mod tui;
+{% endif -%}
+
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::io::{self, Read};
@@ -17,6 +21,10 @@ use config::ConfigManager;
 use io::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
 use logging::{init_logging, setup_signal_handlers, Verbosity, exit_success, exit_error, exit_usage};
 use signals::SignalHandler;
+
+{% if enable_tui -%}
+use tui::{init_tui_mode, terminal_supports_tui};
+{% endif -%}
 
 const MODULE_NAME: &str = "{{ project_slug }}";
 
@@ -50,6 +58,54 @@ async fn main() -> Result<()> {
         println!("Uninstall functionality - remove config files and clean up");
         std::process::exit(0);
     }
+
+    {% if enable_tui -%}
+    // Handle TUI mode
+    if cli.interactive {
+        if !terminal_supports_tui() {
+            eprintln!("Error: Terminal does not support TUI mode. Please run in a TTY or omit --interactive flag.");
+            std::process::exit(1);
+        }
+        
+        // Collect current arguments for TUI display
+        let mut tui_args = std::collections::HashMap::new();
+        tui_args.insert("inputs".to_string(), cli.inputs.join(", "));
+        if let Some(config_path) = &cli.config {
+            tui_args.insert("config".to_string(), config_path.display().to_string());
+        }
+        tui_args.insert("json".to_string(), cli.json.to_string());
+        tui_args.insert("quiet".to_string(), cli.quiet.to_string());
+        tui_args.insert("verbose".to_string(), cli.verbose.to_string());
+        tui_args.insert("debug".to_string(), cli.debug.to_string());
+        if let Some(color) = &cli.color {
+            tui_args.insert("color".to_string(), color.clone());
+        }
+        tui_args.insert("nocolor".to_string(), cli.nocolor.to_string());
+        tui_args.insert("no_pager".to_string(), cli.no_pager.to_string());
+        
+        // Initialize and run TUI
+        match init_tui_mode(tui_args) {
+            Ok(mut handler) => {
+                info!("TUI mode activated");
+                match handler.run() {
+                    Ok(modified_args) => {
+                        info!("TUI completed with modified arguments");
+                        // In a real implementation, we would use modified_args here
+                        // For the template, we just log and continue
+                    }
+                    Err(e) => {
+                        eprintln!("TUI error: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to initialize TUI mode: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+    {% endif -%}
 
     // Load configuration
     let mut config_manager = ConfigManager::new();

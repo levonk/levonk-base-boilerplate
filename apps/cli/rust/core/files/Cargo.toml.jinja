@@ -30,6 +30,12 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 {% if include_sqlite -%}
 rusqlite = { version = "0.31", features = ["bundled"] }
 {% endif %}
+ratatui = { version = "0.26", optional = true }
+cursive = { version = "0.21", optional = true }
+
+[features]
+default = []
+tui = ["dep:ratatui", "dep:cursive"]
 
 [build-dependencies]
 vergen = { version = "8.0", features = ["build", "git", "gitcl"] }

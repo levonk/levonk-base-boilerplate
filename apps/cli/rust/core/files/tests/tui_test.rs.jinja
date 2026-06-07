@@ -1,0 +1,205 @@
+{% if enable_tui -%}
+use anyhow::Result;
+use std::collections::HashMap;
+
+{% if use_lib -%}
+use {{ project_slug }}::tui::{init_tui_mode, TuiConfig, TuiHandler, TuiError, terminal_supports_tui};
+{% else -%}
+// For template testing, we'll test the module directly
+// In actual usage, this would import from the lib
+{% endif -%}
+
+#[test]
+fn test_tui_config_default() {
+    let config = TuiConfig::default();
+    assert!(!config.enabled);
+    assert!(config.arguments.is_empty());
+    assert!(config.show_confirmation);
+}
+
+#[test]
+fn test_tui_config_with_arguments() {
+    let mut config = TuiConfig::default();
+    config.enabled = true;
+    config.arguments.insert("test".to_string(), "value".to_string());
+    
+    assert!(config.enabled);
+    assert_eq!(config.arguments.len(), 1);
+    assert!(config.show_confirmation);
+}
+
+#[test]
+fn test_tui_handler_creation() {
+    let config = TuiConfig::default();
+    let handler = TuiHandler::new(config);
+    assert!(!handler.should_activate());
+}
+
+#[test]
+fn test_tui_handler_with_enabled_config() {
+    let mut config = TuiConfig::default();
+    config.enabled = true;
+    let handler = TuiHandler::new(config);
+    assert!(handler.should_activate());
+}
+
+#[test]
+fn test_argument_validation_empty() {
+    let handler = TuiHandler::new(TuiConfig::default());
+    let mut args = HashMap::new();
+    args.insert("test".to_string(), "".to_string());
+    
+    let result = handler.validate_arguments(&args);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("cannot be empty"));
+}
+
+#[test]
+fn test_argument_validation_valid() {
+    let handler = TuiHandler::new(TuiConfig::default());
+    let mut args = HashMap::new();
+    args.insert("test".to_string(), "value".to_string());
+    
+    let result = handler.validate_arguments(&args);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_argument_validation_multiple() {
+    let handler = TuiHandler::new(TuiConfig::default());
+    let mut args = HashMap::new();
+    args.insert("arg1".to_string(), "value1".to_string());
+    args.insert("arg2".to_string(), "value2".to_string());
+    args.insert("arg3".to_string(), "value3".to_string());
+    
+    let result = handler.validate_arguments(&args);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_argument_validation_one_empty() {
+    let handler = TuiHandler::new(TuiConfig::default());
+    let mut args = HashMap::new();
+    args.insert("arg1".to_string(), "value1".to_string());
+    args.insert("arg2".to_string(), "".to_string());
+    args.insert("arg3".to_string(), "value3".to_string());
+    
+    let result = handler.validate_arguments(&args);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_tui_handler_run_disabled() {
+    let config = TuiConfig::default();
+    let mut handler = TuiHandler::new(config);
+    
+    let result = handler.run();
+    assert!(result.is_ok());
+    assert!(result.unwrap().is_empty());
+}
+
+#[test]
+fn test_tui_handler_run_enabled() {
+    let mut config = TuiConfig::default();
+    config.enabled = true;
+    config.arguments.insert("test".to_string(), "value".to_string());
+    let mut handler = TuiHandler::new(config);
+    
+    let result = handler.run();
+    assert!(result.is_ok());
+    let args = result.unwrap();
+    assert_eq!(args.len(), 1);
+    assert_eq!(args.get("test"), Some(&"value".to_string()));
+}
+
+#[test]
+fn test_terminal_supports_tui() {
+    // This test will pass if we're in a TTY, fail otherwise
+    // In CI, this will typically be false
+    let supports = terminal_supports_tui();
+    // We don't assert a specific value since it depends on the environment
+    // We just verify the function doesn't panic
+    let _ = supports;
+}
+
+#[test]
+fn test_init_tui_mode_success() {
+    let mut args = HashMap::new();
+    args.insert("test".to_string(), "value".to_string());
+    
+    // This test may fail in non-TTY environments
+    let result = init_tui_mode(args);
+    
+    // In non-TTY environments, this should fail
+    // In TTY environments, it should succeed
+    // We just verify it returns a Result
+    let _ = result;
+}
+
+#[test]
+fn test_tui_config_show_confirmation() {
+    let mut config = TuiConfig::default();
+    config.show_confirmation = false;
+    
+    assert!(!config.show_confirmation);
+}
+
+#[test]
+fn test_tui_handler_with_confirmation() {
+    let mut config = TuiConfig::default();
+    config.enabled = true;
+    config.show_confirmation = true;
+    let handler = TuiHandler::new(config);
+    
+    assert!(handler.should_activate());
+}
+
+#[test]
+fn test_tui_handler_without_confirmation() {
+    let mut config = TuiConfig::default();
+    config.enabled = true;
+    config.show_confirmation = false;
+    let handler = TuiHandler::new(config);
+    
+    assert!(handler.should_activate());
+}
+
+#[test]
+fn test_tui_error_terminal_not_supported() {
+    let error = TuiError::TerminalNotSupported;
+    assert!(error.to_string().contains("Terminal does not support TUI mode"));
+}
+
+#[test]
+fn test_tui_error_initialization_failed() {
+    let error = TuiError::InitializationFailed("test error".to_string());
+    assert!(error.to_string().contains("test error"));
+}
+
+#[test]
+fn test_tui_error_validation_failed() {
+    let error = TuiError::ValidationFailed("arg1 cannot be empty".to_string());
+    assert!(error.to_string().contains("arg1 cannot be empty"));
+}
+
+#[test]
+fn test_tui_error_user_cancelled() {
+    let error = TuiError::UserCancelled;
+    assert!(error.to_string().contains("User cancelled TUI operation"));
+}
+
+#[test]
+fn test_tui_error_render_error() {
+    let error = TuiError::RenderError("render failed".to_string());
+    assert!(error.to_string().contains("render failed"));
+}
+
+#[test]
+fn test_tui_error_conversion() {
+    let error = TuiError::TerminalNotSupported;
+    let anyhow_error: anyhow::Error = error.into();
+    assert!(anyhow_error.to_string().contains("Terminal does not support TUI mode"));
+}
+{% else -%}
+// TUI tests disabled - enable with --enable-tui feature flag
+{% endif %}

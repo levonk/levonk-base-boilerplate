@@ -53,6 +53,11 @@ pub struct Cli {
     /// Uninstall and cleanup
     #[arg(long)]
     pub uninstall: bool,
+
+    /// Interactive TUI mode (alias: --tui)
+    /// Launch a terminal UI to configure arguments before execution
+    #[arg(long, alias = "tui", help = "Launch interactive TUI mode for argument configuration")]
+    pub interactive: bool,
 }
 
 impl Cli {
