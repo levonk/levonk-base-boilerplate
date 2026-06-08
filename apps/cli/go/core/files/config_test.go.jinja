@@ -260,4 +260,113 @@ func TestConfigPrecedenceOrder(t *testing.T) {
 	// 6. Verifying final values follow precedence
 }
 
+func TestValidateConfigInvalidType(t *testing.T) {
+	// Test that validation catches invalid types
+	config := map[string]interface{}{
+		"quiet": "true", // Should be bool, not string
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	os.WriteFile(configPath, []byte("quiet: true"), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should catch invalid type for quiet")
+	}
+}
+
+func TestValidateConfigInvalidEnumValue(t *testing.T) {
+	// Test that validation catches invalid enum values
+	config := map[string]interface{}{
+		"color": "invalid", // Should be auto, always, or never
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	os.WriteFile(configPath, []byte("color: invalid"), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should catch invalid enum value for color")
+	}
+}
+
+func TestValidateConfigLineNumber(t *testing.T) {
+	// Test that validation provides line numbers
+	config := map[string]interface{}{
+		"quiet": "true",
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: true\nverbose: false"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should catch invalid type")
+	}
+	if errors[0].LineNumber == 0 {
+		t.Errorf("ValidateConfig should provide line number, got 0")
+	}
+}
+
+func TestValidateConfigSuggestion(t *testing.T) {
+	// Test that validation provides suggestions
+	config := map[string]interface{}{
+		"quiet": "true",
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	os.WriteFile(configPath, []byte("quiet: true"), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should catch invalid type")
+	}
+	if errors[0].Suggestion == "" {
+		t.Errorf("ValidateConfig should provide suggestion")
+	}
+}
+
+func TestValidateConfigValid(t *testing.T) {
+	// Test that validation allows valid config
+	config := map[string]interface{}{
+		"quiet":   false,
+		"verbose": true,
+		"color":   "auto",
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: false\nverbose: true\ncolor: auto"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) != 0 {
+		t.Errorf("ValidateConfig should not error on valid config, got %d errors", len(errors))
+	}
+}
+
+func TestConfigSchema(t *testing.T) {
+	schema := GetConfigSchema()
+
+	// Test that schema has expected fields
+	expectedFields := []string{"quiet", "verbose", "debug", "color", "json"}
+	for _, field := range expectedFields {
+		if _, ok := schema.Fields[field]; !ok {
+			t.Errorf("ConfigSchema missing field: %s", field)
+		}
+	}
+
+	// Test that color field has correct enum values
+	colorField := schema.Fields["color"]
+	if colorField.Type != "enum" {
+		t.Errorf("color field should be enum type, got %s", colorField.Type)
+	}
+	expectedValues := []string{"auto", "always", "never"}
+	for i, val := range colorField.AllowedValues {
+		if val != expectedValues[i] {
+			t.Errorf("color field allowed value %d should be %s, got %s", i, expectedValues[i], val)
+		}
+	}
+}
+
 {# vim: set ft=go: #}

@@ -226,6 +226,17 @@ func initConfig() {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to read config file: %v\n", err)
 		}
+	} else {
+		// Validate the loaded configuration
+		config := viper.AllSettings()
+		validationErrors := ValidateConfig(config, configPath)
+		if len(validationErrors) > 0 {
+			fmt.Fprintf(os.Stderr, "Configuration validation errors:\n")
+			for _, validationErr := range validationErrors {
+				fmt.Fprintf(os.Stderr, "  - %s\n", validationErr.Error())
+			}
+			os.Exit(1)
+		}
 	}
 
 	// Set hardcoded defaults

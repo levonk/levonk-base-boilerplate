@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // IsFirstRun checks if this is the first run by detecting if the config file exists
@@ -183,6 +184,174 @@ func GetHardcodedDefaults() map[string]interface{} {
 		"color":   "auto",
 		"json":    false,
 	}
+}
+
+// ConfigValidationError represents a configuration validation error with context
+type ConfigValidationError struct {
+	Field       string
+	LineNumber  int
+	Description string
+	Suggestion  string
+}
+
+func (e ConfigValidationError) Error() string {
+	return fmt.Sprintf("config error at line %d: %s (field: %s). Suggestion: %s", e.LineNumber, e.Description, e.Field, e.Suggestion)
+}
+
+// ConfigSchema defines the validation rules for configuration fields
+type ConfigSchema struct {
+	Fields map[string]FieldSchema
+}
+
+// FieldSchema defines validation rules for a single field
+type FieldSchema struct {
+	Type         string   // "bool", "string", "int", "enum"
+	Required     bool
+	AllowedValues []string // For enum types
+	DefaultValue interface{}
+}
+
+// GetConfigSchema returns the configuration schema
+func GetConfigSchema() ConfigSchema {
+	return ConfigSchema{
+		Fields: map[string]FieldSchema{
+			"quiet": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+			"verbose": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+			"debug": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+			"color": {
+				Type:         "enum",
+				Required:     false,
+				AllowedValues: []string{"auto", "always", "never"},
+				DefaultValue: "auto",
+			},
+			"json": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+		},
+	}
+}
+
+// ValidateConfig validates a configuration map against the schema
+func ValidateConfig(config map[string]interface{}, configPath string) []ConfigValidationError {
+	var errors []ConfigValidationError
+	schema := GetConfigSchema()
+
+	// Read config file to get line numbers
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		// If we can't read the file, we can't provide line numbers
+		// Still validate the values, just without line numbers
+		for field, value := range config {
+			if fieldSchema, ok := schema.Fields[field]; ok {
+				if err := validateField(field, value, fieldSchema); err != nil {
+					errors = append(errors, ConfigValidationError{
+						Field:       field,
+						LineNumber:  0,
+						Description: err.Error(),
+						Suggestion:  getErrorSuggestion(field, err),
+					})
+				}
+			}
+		}
+		return errors
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	// Validate each field
+	for field, value := range config {
+		if fieldSchema, ok := schema.Fields[field]; ok {
+			lineNumber := findLineNumber(lines, field)
+			if err := validateField(field, value, fieldSchema); err != nil {
+				errors = append(errors, ConfigValidationError{
+					Field:       field,
+					LineNumber:  lineNumber,
+					Description: err.Error(),
+					Suggestion:  getErrorSuggestion(field, err),
+				})
+			}
+		}
+	}
+
+	return errors
+}
+
+// validateField validates a single field against its schema
+func validateField(field string, value interface{}, schema FieldSchema) error {
+	switch schema.Type {
+	case "bool":
+		if _, ok := value.(bool); !ok {
+			return fmt.Errorf("expected boolean, got %T", value)
+		}
+	case "string":
+		if _, ok := value.(string); !ok {
+			return fmt.Errorf("expected string, got %T", value)
+		}
+	case "int":
+		if _, ok := value.(int); !ok {
+			return fmt.Errorf("expected integer, got %T", value)
+		}
+	case "enum":
+		strValue, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("expected string for enum, got %T", value)
+		}
+		valid := false
+		for _, allowed := range schema.AllowedValues {
+			if strValue == allowed {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("invalid value '%s', allowed values: %v", strValue, schema.AllowedValues)
+		}
+	}
+	return nil
+}
+
+// findLineNumber finds the line number where a field is defined
+func findLineNumber(lines []string, field string) int {
+	for i, line := range lines {
+		if strings.Contains(line, field+":") {
+			return i + 1 // Line numbers are 1-indexed
+		}
+	}
+	return 0
+}
+
+// getErrorSuggestion provides a suggestion for fixing a validation error
+func getErrorSuggestion(field string, err error) string {
+	errMsg := err.Error()
+
+	if strings.Contains(errMsg, "expected boolean") {
+		return fmt.Sprintf("Set %s to true or false", field)
+	}
+	if strings.Contains(errMsg, "expected string") {
+		return fmt.Sprintf("Set %s to a string value", field)
+	}
+	if strings.Contains(errMsg, "expected integer") {
+		return fmt.Sprintf("Set %s to an integer value", field)
+	}
+	if strings.Contains(errMsg, "invalid value") {
+		return fmt.Sprintf("Check the allowed values for %s in the config schema", field)
+	}
+
+	return fmt.Sprintf("Review the configuration for field %s", field)
 }
 
 {# vim: set ft=go: #}
