@@ -26,14 +26,14 @@ Implement `--interactive` or `--tui` flag for Terminal User Interface mode using
 
 ## Sub-Tasks
 
-- [ ] Add textual library dependency
-- [ ] Implement TUI mode with --interactive flag
-- [ ] Implement TUI mode with --tui flag (alias)
-- [ ] Add interactive configuration UI
-- [ ] Add argument viewing and modification
-- [ ] Add confirmation before execution
-- [ ] Add tests for TUI mode
-- [ ] Update documentation
+- [x] Add textual library dependency
+- [x] Implement TUI mode with --interactive flag
+- [x] Implement TUI mode with --tui flag (alias)
+- [x] Add interactive configuration UI
+- [x] Add argument viewing and modification
+- [x] Add confirmation before execution
+- [x] Add tests for TUI mode
+- [x] Update documentation
 
 ## Relevant Files
 

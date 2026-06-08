@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -193,10 +194,18 @@ func TestPromptForDelete(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.input != "" {
-				r := strings.NewReader(tt.input)
+				r, w, _ := os.Pipe()
 				oldStdin := os.Stdin
 				os.Stdin = r
-				defer func() { os.Stdin = oldStdin }()
+				defer func() {
+					r.Close()
+					os.Stdin = oldStdin
+				}()
+
+				go func() {
+					w.Write([]byte(tt.input))
+					w.Close()
+				}()
 			}
 
 			result := PromptForDelete(tt.target, tt.force, tt.quiet)
@@ -227,10 +236,18 @@ func TestPromptForOverwrite(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.input != "" {
-				r := strings.NewReader(tt.input)
+				r, w, _ := os.Pipe()
 				oldStdin := os.Stdin
 				os.Stdin = r
-				defer func() { os.Stdin = oldStdin }()
+				defer func() {
+					r.Close()
+					os.Stdin = oldStdin
+				}()
+
+				go func() {
+					w.Write([]byte(tt.input))
+					w.Close()
+				}()
 			}
 
 			result := PromptForOverwrite(tt.target, tt.force, tt.quiet)
@@ -262,10 +279,18 @@ func TestPromptForDestructive(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.input != "" {
-				r := strings.NewReader(tt.input)
+				r, w, _ := os.Pipe()
 				oldStdin := os.Stdin
 				os.Stdin = r
-				defer func() { os.Stdin = oldStdin }()
+				defer func() {
+					r.Close()
+					os.Stdin = oldStdin
+				}()
+
+				go func() {
+					w.Write([]byte(tt.input))
+					w.Close()
+				}()
 			}
 
 			result := PromptForDestructive(tt.operation, tt.target, tt.force, tt.quiet)
@@ -291,17 +316,28 @@ func TestPromptFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := strings.NewReader("n\n")
+			r, w, _ := os.Pipe()
 			oldStdin := os.Stdin
 			os.Stdin = r
-			defer func() { os.Stdin = oldStdin }()
+			defer func() {
+				r.Close()
+				os.Stdin = oldStdin
+			}()
+
+			go func() {
+				w.Write([]byte("n\n"))
+				w.Close()
+			}()
 
 			// Capture stdout
 			oldStdout := os.Stdout
 			var buf bytes.Buffer
 			rOut, wOut, _ := os.Pipe()
 			os.Stdout = wOut
-			defer func() { os.Stdout = oldStdout }()
+			defer func() {
+				wOut.Close()
+				os.Stdout = oldStdout
+			}()
 
 			cfg := PromptConfig{
 				Message:  tt.message,
@@ -314,7 +350,7 @@ func TestPromptFormat(t *testing.T) {
 
 			wOut.Close()
 			os.Stdout = oldStdout
-			buf.ReadFrom(rOut)
+			io.Copy(&buf, rOut)
 
 			output := buf.String()
 			if !strings.Contains(output, tt.expected) {
