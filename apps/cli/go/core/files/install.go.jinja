@@ -16,6 +16,7 @@ func RunInstall(cmd *cobra.Command) error {
 	if DryRunCheck(ctx, "install") {
 		DryRunLog(ctx, "Would install {{ project_slug }}")
 		DryRunLog(ctx, "Would generate and install shell completions")
+		DryRunLog(ctx, "Would generate and install man page")
 		DryRunLog(ctx, "Would initialize config file")
 		printInstallInstructions()
 		return nil
@@ -26,6 +27,11 @@ func RunInstall(cmd *cobra.Command) error {
 	// Generate and install shell completions
 	if err := installCompletions(ctx, cmd); err != nil {
 		return fmt.Errorf("failed to install completions: %w", err)
+	}
+
+	// Generate and install man page
+	if err := installManPage(ctx, cmd); err != nil {
+		return fmt.Errorf("failed to install man page: %w", err)
 	}
 
 	// Initialize config file
@@ -51,6 +57,7 @@ func RunUninstall(cmd *cobra.Command) error {
 	if DryRunCheck(ctx, "uninstall") {
 		DryRunLog(ctx, "Would uninstall {{ project_slug }}")
 		DryRunLog(ctx, "Would remove shell completions")
+		DryRunLog(ctx, "Would remove man page")
 		DryRunLog(ctx, "Would remove config file")
 		fmt.Println("Uninstall complete.")
 		return nil
@@ -61,6 +68,11 @@ func RunUninstall(cmd *cobra.Command) error {
 	// Remove shell completions
 	if err := uninstallCompletions(ctx); err != nil {
 		return fmt.Errorf("failed to uninstall completions: %w", err)
+	}
+
+	// Remove man page
+	if err := uninstallManPage(ctx); err != nil {
+		return fmt.Errorf("failed to uninstall man page: %w", err)
 	}
 
 	// Remove config file
@@ -160,6 +172,47 @@ func uninstallCompletions(ctx context.Context) error {
 	return nil
 }
 
+// installManPage generates and installs the man page
+func installManPage(ctx context.Context, cmd *cobra.Command) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	// Standard man page directory
+	manDir := filepath.Join(homeDir, ".local", "share", "man", "man1")
+	DryRunFileOp(ctx, "create directory", manDir)
+	if err := os.MkdirAll(manDir, 0755); err != nil {
+		return err
+	}
+
+	// Generate man page file
+	if err := GenManToFile(cmd, manDir); err != nil {
+		return err
+	}
+
+	manFile := filepath.Join(manDir, "{{ project_slug }}.1")
+	fmt.Printf("Installed man page to %s\n", manFile)
+	return nil
+}
+
+// uninstallManPage removes the man page
+func uninstallManPage(ctx context.Context) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	manFile := filepath.Join(homeDir, ".local", "share", "man", "man1", "{{ project_slug }}.1")
+	DryRunFileOp(ctx, "remove", manFile)
+	if err := os.Remove(manFile); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	fmt.Printf("Removed man page from %s\n", manFile)
+
+	return nil
+}
+
 // printInstallInstructions displays post-installation instructions
 func printInstallInstructions() {
 	fmt.Println("\nInstallation complete!")
@@ -171,6 +224,8 @@ func printInstallInstructions() {
 	fmt.Println("  autoload -U compinit && compinit")
 	fmt.Println("\nFor fish:")
 	fmt.Println("  Completions are automatically loaded from ~/.local/share/fish/completions/")
+	fmt.Println("\nMan page installed at: ~/.local/share/man/man1/{{ project_slug }}.1")
+	fmt.Println("View with: man {{ project_slug }}")
 	fmt.Println("\nConfig file initialized at: ~/.config/{{ project_slug }}/config.yaml")
 }
 {# vim: set ft=go: #}

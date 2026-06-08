@@ -1,0 +1,53 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/spf13/cobra"
+)
+
+// RunGenMan generates and displays the man page
+func RunGenMan(cmd *cobra.Command) error {
+	// Generate man page to stdout
+	header := &cobra.GenManHeader{
+		Title:   "{{ project_name }}",
+		Section: "1",
+		Date:    "{{ date | default(date(now), '2006-01-02') }}",
+		Source:  "{{ project_name }}",
+		Manual:  "User Commands",
+	}
+
+	// Generate man page for root command
+	if err := cmd.GenMan(header, os.Stdout); err != nil {
+		return fmt.Errorf("failed to generate man page: %w", err)
+	}
+
+	return nil
+}
+
+// GenManToFile generates a man page file for installation
+func GenManToFile(cmd *cobra.Command, destDir string) error {
+	header := &cobra.GenManHeader{
+		Title:   "{{ project_name }}",
+		Section: "1",
+		Date:    "{{ date | default(date(now), '2006-01-02') }}",
+		Source:  "{{ project_name }}",
+		Manual:  "User Commands",
+	}
+
+	// Ensure destination directory exists
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return fmt.Errorf("failed to create man page directory: %w", err)
+	}
+
+	// Generate man page file
+	manFile := filepath.Join(destDir, "{{ project_slug }}.1")
+	if err := cmd.GenManFile(header, manFile); err != nil {
+		return fmt.Errorf("failed to generate man page file: %w", err)
+	}
+
+	return nil
+}
+{# vim: set ft=go: #}

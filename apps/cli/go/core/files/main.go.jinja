@@ -24,6 +24,7 @@ var (
 	colorMode string
 	installFlag bool
 	uninstallFlag bool
+	manFlag bool
 	dryRun bool
 	force bool
 	logger *Logger
@@ -50,6 +51,11 @@ Examples:
 			// Handle --uninstall flag
 			if uninstallFlag {
 				return RunUninstall(cmd)
+			}
+
+			// Handle --man flag
+			if manFlag {
+				return RunGenMan(cmd)
 			}
 
 			// Handle --usage flag
@@ -298,6 +304,7 @@ func init() {
 	rootCmd.Flags().Bool("usage", false, "Show usage information")
 	rootCmd.Flags().BoolVar(&installFlag, "install", false, "Install shell completions and initialize config")
 	rootCmd.Flags().BoolVar(&uninstallFlag, "uninstall", false, "Remove shell completions and config files")
+	rootCmd.Flags().BoolVar(&manFlag, "man", false, "Generate and display man page")
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without executing them")
 	rootCmd.Flags().BoolVarP(&force, "force", "f", false, "Bypass confirmation prompts for destructive operations")
 
