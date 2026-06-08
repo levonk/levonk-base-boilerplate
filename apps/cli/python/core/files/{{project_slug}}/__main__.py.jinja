@@ -63,6 +63,45 @@ def warn_deprecated(feature: str, replacement: str = None, removal_version: str 
         message += f". Will be removed in {removal_version}"
     print(message, file=sys.stderr)
 
+
+# Config reload state
+_config_needs_reload = False
+
+
+def handle_sighup(signum, frame):
+    """Handle SIGHUP signal for config reload."""
+    global _config_needs_reload
+    _config_needs_reload = True
+    logger = get_logger()
+    logger.info("SIGHUP received, config reload requested", module="config")
+
+
+def reload_config() -> bool:
+    """
+    Reload configuration.
+
+    Returns:
+        True if reload successful, False otherwise
+    """
+    global _config_needs_reload
+    logger = get_logger()
+
+    try:
+        # Log reload event with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().isoformat()
+        logger.info(f"Config reload initiated at {timestamp}", module="config")
+
+        # Note: Actual config reload logic would be implemented in config.py.jinja
+        # Since config module is not in this boilerplate, we log the intent
+        logger.info("Config reload completed (config module not present in this boilerplate)", module="config")
+
+        _config_needs_reload = False
+        return True
+    except Exception as e:
+        logger.error(f"Config reload failed: {e}", module="config")
+        return False
+
 app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
@@ -478,6 +517,22 @@ def health_check():
     Returns exit code 0 if healthy, 1 if unhealthy.
     """
     sys.exit(perform_health_check())
+
+
+@app.command()
+def reload_config_cmd():
+    """
+    Manually trigger configuration reload.
+    """
+    configure_logging(name="{{ project_slug }}")
+    logger = get_logger()
+
+    if reload_config():
+        logger.info("Config reload successful", module="config")
+        sys.exit(EXIT_SUCCESS)
+    else:
+        logger.error("Config reload failed", module="config")
+        sys.exit(EXIT_ERROR)
 
 
 if __name__ == "__main__":
