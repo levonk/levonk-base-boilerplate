@@ -33,7 +33,7 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 | 02-002 | Dry-Run and Confirmation Prompts | [x] Done | feature/current/20260707-cli-rust-standards/story-02-002-dry-run-confirm | 01-001 | Parallel-safe: true | cli.rs |
 | 02-003 | Progress Indicators | [x] Done | feature/current/20260707-cli-rust-standards/story-02-003-progress-indicators | 01-004 | Parallel-safe: true | cli.rs |
 | 02-004 | Daemon Process Support | [x] Done | feature/current/20260707-cli-rust-standards/story-02-004-daemon-support | 01-002, 01-004 | Parallel-safe: true | daemon.rs |
-| 02-005 | Command Organization and Terminal Awareness | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-02-005-command-organization | 01-001 | Parallel-safe: true | cli.rs |
+| 02-005 | Command Organization and Terminal Awareness | [x] Done | feature/current/20260707-cli-rust-standards/story-02-005-command-organization | 01-001 | Parallel-safe: true | cli.rs |
 
 **Phase 2 Milestone:** All advanced CLI features complete and tested
 
@@ -41,7 +41,7 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 
 | Story ID | Story Title | Status | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------ | ------------ | ------------- | ------- |
-| 03-001 | Shell Completion Scripts | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-001-shell-completion | 01-001 | Parallel-safe: true | completion.rs |
+| 03-001 | Shell Completion Scripts | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-03-001-shell-completion | 01-001 | Parallel-safe: true | completion.rs |
 | 03-002 | Man Pages Generation | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-002-man-pages | 01-001 | Parallel-safe: true | docs/ |
 | 03-003 | Cross-Platform Path Handling | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-003-cross-platform-paths | 01-003 | Parallel-safe: true | io.rs |
 | 03-004 | Security Features Implementation | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-004-security-features | 01-002 | Parallel-safe: true | config.rs |

@@ -6,6 +6,7 @@ mod signals;
 mod destructive;
 mod daemon;
 mod terminal;
+mod completion;
 
 {% if enable_tui -%}
 mod tui;
@@ -27,6 +28,7 @@ use signals::SignalHandler;
 use destructive::{DestructiveOperation, detect_destructive_operation};
 use daemon::{DaemonManager, DaemonConfig, JobStatus};
 use terminal::{TerminalInfo, ResizeHandler};
+use completion::{generate_completion, install_completion, get_completion_path};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -90,6 +92,84 @@ async fn main() -> Result<()> {
     // Handle subcommands
     if let Some(command) = cli.command {
         handle_subcommand(command, &cli).await?;
+        std::process::exit(0);
+    }
+
+    // Handle --install flag
+    if cli.install {
+        use clap::CommandFactory;
+        let mut cmd = Cli::command();
+        
+        // Initialize config
+        let config_manager = ConfigManager::new();
+        match config_manager.initialize_config() {
+            Ok(config_path) => {
+                println!("Configuration initialized at: {:?}", config_path);
+            }
+            Err(e) => {
+                eprintln!("Failed to initialize configuration: {}", e);
+                std::process::exit(1);
+            }
+        }
+
+        // Detect shell and install completions
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "bash".to_string());
+        let shell_name = if shell.contains("zsh") {
+            "zsh"
+        } else if shell.contains("fish") {
+            "fish"
+        } else if shell.contains("elvish") {
+            "elvish"
+        } else if shell.contains("pwsh") || shell.contains("powershell") {
+            "powershell"
+        } else {
+            "bash"
+        };
+
+        println!("Installing completions for shell: {}", shell_name);
+        match completion::install_completion(&mut cmd, shell_name) {
+            Ok(_) => {
+                println!("Installation complete!");
+                println!("You may need to restart your shell or run: source ~/.bashrc (or equivalent)");
+            }
+            Err(e) => {
+                eprintln!("Failed to install completions: {}", e);
+                std::process::exit(1);
+            }
+        }
+        std::process::exit(0);
+    }
+
+    // Handle --uninstall flag
+    if cli.uninstall {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "bash".to_string());
+        let shell_name = if shell.contains("zsh") {
+            "zsh"
+        } else if shell.contains("fish") {
+            "fish"
+        } else if shell.contains("elvish") {
+            "elvish"
+        } else if shell.contains("pwsh") || shell.contains("powershell") {
+            "powershell"
+        } else {
+            "bash"
+        };
+
+        if let Some(path) = completion::get_completion_path(shell_name) {
+            match std::fs::remove_file(&path) {
+                Ok(_) => {
+                    println!("Removed completion script: {}", path);
+                    println!("You may need to restart your shell or run: source ~/.bashrc (or equivalent)");
+                }
+                Err(e) => {
+                    eprintln!("Failed to remove completion script: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        } else {
+            eprintln!("Could not determine completion path for shell: {}", shell_name);
+            std::process::exit(1);
+        }
         std::process::exit(0);
     }
 
@@ -399,24 +479,10 @@ async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
         Commands::Completion { shell } => {
             use clap::CommandFactory;
             let mut cmd = Cli::command();
-            match shell.as_str() {
-                "bash" => {
-                    println!("{}", cmd.generate_to(clap::Shell::Bash)?);
-                }
-                "zsh" => {
-                    println!("{}", cmd.generate_to(clap::Shell::Zsh)?);
-                }
-                "fish" => {
-                    println!("{}", cmd.generate_to(clap::Shell::Fish)?);
-                }
-                "elvish" => {
-                    println!("{}", cmd.generate_to(clap::Shell::Elvish)?);
-                }
-                "powershell" => {
-                    println!("{}", cmd.generate_to(clap::Shell::PowerShell)?);
-                }
-                _ => {
-                    eprintln!("Unsupported shell: {}. Supported: bash, zsh, fish, elvish, powershell", shell);
+            match generate_completion(&mut cmd, &shell, &mut std::io::stdout()) {
+                Ok(_) => (),
+                Err(e) => {
+                    eprintln!("Failed to generate completion: {}", e);
                     std::process::exit(1);
                 }
             }

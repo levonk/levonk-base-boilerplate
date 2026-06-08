@@ -69,6 +69,14 @@ pub struct Cli {
     #[arg(long)]
     pub no_pager: bool,
 
+    /// Install shell completions and initialize config
+    #[arg(long, help = "Install shell completion scripts and initialize configuration")]
+    pub install: bool,
+
+    /// Uninstall shell completions
+    #[arg(long, help = "Remove shell completion scripts")]
+    pub uninstall: bool,
+
     /// Interactive TUI mode (alias: --tui)
     /// Launch a terminal UI to configure arguments before execution
     #[arg(long, alias = "tui", help = "Launch interactive TUI mode for argument configuration")]

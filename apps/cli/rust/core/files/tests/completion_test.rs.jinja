@@ -1,0 +1,67 @@
+use anyhow::Result;
+use assert_cmd::Command;
+use predicates::str::contains;
+
+#[test]
+fn test_completion_bash() -> Result<()> {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}")?;
+    cmd.arg("completion").arg("bash");
+    cmd.assert().success().stdout(contains("complete"));
+    Ok(())
+}
+
+#[test]
+fn test_completion_zsh() -> Result<()> {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}")?;
+    cmd.arg("completion").arg("zsh");
+    cmd.assert().success().stdout(contains("#compdef"));
+    Ok(())
+}
+
+#[test]
+fn test_completion_fish() -> Result<()> {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}")?;
+    cmd.arg("completion").arg("fish");
+    cmd.assert().success().stdout(contains("complete"));
+    Ok(())
+}
+
+#[test]
+fn test_completion_elvish() -> Result<()> {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}")?;
+    cmd.arg("completion").arg("elvish");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
+fn test_completion_powershell() -> Result<()> {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}")?;
+    cmd.arg("completion").arg("powershell");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
+fn test_completion_pwsh_alias() -> Result<()> {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}")?;
+    cmd.arg("completion").arg("pwsh");
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
+fn test_completion_unsupported_shell() -> Result<()> {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}")?;
+    cmd.arg("completion").arg("unknown");
+    cmd.assert().failure().stderr(contains("Unsupported shell"));
+    Ok(())
+}
+
+#[test]
+fn test_completion_help() -> Result<()> {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}")?;
+    cmd.arg("completion").arg("--help");
+    cmd.assert().success().stdout(contains("Generate shell completion scripts"));
+    Ok(())
+}
