@@ -4,6 +4,7 @@ use signal_hook_tokio::Signals;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{info, warn, error, debug};
+use futures_util::stream::StreamExt;
 use crate::config::ConfigManager;
 
 /// Signal handler for configuration reload
@@ -105,15 +106,15 @@ mod tests {
     use super::*;
     use std::sync::Arc;
 
-    #[test]
-    fn test_signal_handler_creation() {
+    #[tokio::test]
+    async fn test_signal_handler_creation() {
         let config_manager = Arc::new(Mutex::new(ConfigManager::new()));
         let handler = SignalHandler::new(config_manager);
         assert_eq!(handler.reload_count().await, 0);
     }
 
-    #[test]
-    fn test_reload_count() {
+    #[tokio::test]
+    async fn test_reload_count() {
         let config_manager = Arc::new(Mutex::new(ConfigManager::new()));
         let handler = SignalHandler::new(config_manager);
 

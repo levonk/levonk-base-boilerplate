@@ -2,13 +2,14 @@ use anyhow::{Context, Result};
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tracing::{Level, Subscriber};
+use tracing::Level;
 use tracing_subscriber::{
     fmt,
     layer::SubscriberExt,
     util::SubscriberInitExt,
     EnvFilter,
 };
+use futures_util::stream::StreamExt;
 
 mod structured_log;
 pub use structured_log::{init_structured_logging, init_structured_logging_with_format, LogFormat};
@@ -28,7 +29,7 @@ pub const EXIT_PERMISSION: i32 = 5;
 pub const EXIT_TIMEOUT: i32 = 124;
 
 // Global flag for graceful shutdown
-static SHUTDOWN_REQUESTED: Arc<AtomicBool> = Arc::new(AtomicBool::new(false));
+static SHUTDOWN_REQUESTED: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
 
 /// Logging verbosity levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -123,12 +124,14 @@ pub fn init_logging(verbosity: Verbosity, config_level: Option<Level>, quiet: bo
 
 /// Check if shutdown has been requested
 pub fn is_shutdown_requested() -> bool {
-    SHUTDOWN_REQUESTED.load(Ordering::Relaxed)
+    let flag = SHUTDOWN_REQUESTED.get_or_init(|| Arc::new(AtomicBool::new(false)));
+    flag.load(Ordering::Relaxed)
 }
 
 /// Request graceful shutdown
 pub fn request_shutdown() {
-    SHUTDOWN_REQUESTED.store(true, Ordering::Relaxed);
+    let flag = SHUTDOWN_REQUESTED.get_or_init(|| Arc::new(AtomicBool::new(false)));
+    flag.store(true, Ordering::Relaxed);
 }
 
 /// Set up signal handlers for graceful shutdown
@@ -137,7 +140,8 @@ pub fn setup_signal_handlers() -> Result<()> {
     use signal_hook::consts::signal::*;
     use signal_hook_tokio::Signals;
 
-    let shutdown = Arc::clone(&SHUTDOWN_REQUESTED);
+    let shutdown = SHUTDOWN_REQUESTED.get_or_init(|| Arc::new(AtomicBool::new(false)));
+    let shutdown = Arc::clone(shutdown);
 
     tokio::spawn(async move {
         let mut signals = Signals::new([SIGINT, SIGTERM])

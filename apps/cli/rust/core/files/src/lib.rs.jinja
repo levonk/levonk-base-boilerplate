@@ -1,6 +1,7 @@
 pub mod logging;
 pub mod signals;
 pub mod daemon;
+pub mod health;
 pub mod terminal;
 pub mod completion;
 pub mod man;
@@ -22,6 +23,7 @@ pub use logging::{
 
 pub use signals::SignalHandler;
 pub use daemon::{DaemonManager, DaemonConfig, Job, JobStatus};
+pub use health::{HealthManager, HealthConfig, HealthStatus, HealthResponse, HealthCheck, ConfigValidation};
 pub use terminal::{TerminalInfo, TerminalSize, ResizeHandler, get_terminal_size};
 pub use completion::{generate_completion, get_completion_path, install_completion};
 pub use man::ManHandler;

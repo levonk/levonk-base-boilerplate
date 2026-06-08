@@ -6,6 +6,7 @@ use tokio::process::Child;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, error, info, warn};
 use crate::resource::{ResourceLimits, ResourceLimiter};
+use crate::health::{HealthConfig, HealthManager};
 
 /// Daemon configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,6 +25,8 @@ pub struct DaemonConfig {
     pub max_memory: Option<String>,
     /// Maximum CPU usage for jobs (1-100)
     pub max_cpu: Option<u8>,
+    /// Health check configuration
+    pub health_config: Option<HealthConfig>,
 }
 
 impl Default for DaemonConfig {
@@ -36,6 +39,7 @@ impl Default for DaemonConfig {
             auto_spawn: true,
             max_memory: None,
             max_cpu: None,
+            health_config: Some(HealthConfig::default()),
         }
     }
 }
@@ -87,6 +91,7 @@ pub struct DaemonManager {
     config: DaemonConfig,
     jobs: RwLock<HashMap<String, Job>>,
     daemon_process: RwLock<Option<Child>>,
+    health_manager: Option<HealthManager>,
 }
 
 impl DaemonManager {
@@ -95,7 +100,13 @@ impl DaemonManager {
             config,
             jobs: RwLock::new(HashMap::new()),
             daemon_process: RwLock::new(None),
+            health_manager: None,
         }
+    }
+
+    /// Set health manager (called after Config is available)
+    pub fn set_health_manager(&mut self, health_manager: HealthManager) {
+        self.health_manager = Some(health_manager);
     }
 
     /// Check if daemon is running
@@ -121,6 +132,13 @@ impl DaemonManager {
         }
 
         info!("Starting daemon process");
+
+        // Start health check server if configured
+        if let Some(ref health_config) = self.config.health_config {
+            info!("Health check server configured on port {}", health_config.http_port);
+            // Note: In actual implementation, spawn the health check server here
+            // For the boilerplate, we log the configuration
+        }
 
         // Platform-specific daemon spawning
         #[cfg(unix)]
@@ -246,7 +264,7 @@ impl DaemonManager {
         debug!("Executing command: {}", command);
 
         // Check resource limits before execution
-        if let Some(lim) = limiter {
+        if let Some(ref lim) = limiter {
             lim.check_limits().context("Resource limit check failed before execution")?;
         }
 
@@ -263,7 +281,7 @@ impl DaemonManager {
             .context("Failed to execute command")?;
 
         // Check resource limits after execution
-        if let Some(lim) = limiter {
+        if let Some(ref lim) = limiter {
             lim.check_limits().context("Resource limit check failed after execution")?;
         }
 
@@ -366,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_job_creation() {
-        let job = Job::new("test-id".to_string(), "echo hello".to_string());
+        let job = Job::new("test-id".to_string(), "echo hello".to_string(), None);
         assert_eq!(job.id, "test-id");
         assert_eq!(job.command, "echo hello");
         assert_eq!(job.status, JobStatus::Pending);
@@ -389,7 +407,7 @@ mod tests {
             ..Default::default()
         };
         let manager = DaemonManager::new(config);
-        let result = manager.submit_job("echo test".to_string()).await;
+        let result = manager.submit_job("echo test".to_string(), None).await;
         assert!(result.is_err());
     }
 

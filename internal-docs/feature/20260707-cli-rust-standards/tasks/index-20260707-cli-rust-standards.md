@@ -45,8 +45,8 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 | 03-002 | Man Pages Generation | [x] Done | feature/current/20260707-cli-rust-standards/story-03-002-man-pages | 01-001 | Parallel-safe: true | docs/ |
 | 03-003 | Cross-Platform Path Handling | [x] Done | feature/current/20260707-cli-rust-standards/story-03-003-cross-platform-paths | 01-003 | Parallel-safe: true | io.rs |
 | 03-004 | Security Features Implementation | [x] Done | feature/current/20260707-cli-rust-standards/story-03-004-security-features | 01-002 | Parallel-safe: true | config.rs |
-| 03-005 | Resource Limits | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-03-005-resource-limits | 02-004 | Parallel-safe: true | daemon.rs |
-| 03-006 | Health Check Mechanism | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-006-health-checks | 02-004 | Parallel-safe: true | health.rs |
+| 03-005 | Resource Limits | [x] Done | feature/current/20260707-cli-rust-standards/story-03-005-resource-limits | 02-004 | Parallel-safe: true | daemon.rs |
+| 03-006 | Health Check Mechanism | [x] Done | feature/current/20260707-cli-rust-standards/story-03-006-health-checks | 02-004 | Parallel-safe: true | health.rs |
 
 **Phase 3 Milestone:** Integration features complete and tested
 

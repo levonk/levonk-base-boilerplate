@@ -14,7 +14,7 @@ impl PathUtils {
         
         if platform_sep == forward_sep {
             // Unix-like: convert backslashes to forward slashes
-            path.replace(backward_sep, forward_sep)
+            path.replace(backward_sep, &forward_sep.to_string())
         } else {
             // Windows: convert forward slashes to backslashes
             // But preserve UNC paths (\\server\share) and drive letters (C:\)
@@ -91,7 +91,7 @@ impl PathUtils {
 
     /// Join path components with platform-appropriate separator
     pub fn join(components: &[&str]) -> String {
-        components.iter().filter(|c| !c.is_empty()).collect::<Vec<_>>().join(&std::path::MAIN_SEPARATOR.to_string())
+        components.iter().filter(|c| !c.is_empty()).map(|c| c.to_string()).collect::<Vec<_>>().join(&std::path::MAIN_SEPARATOR.to_string())
     }
 
     /// Get the parent directory of a path

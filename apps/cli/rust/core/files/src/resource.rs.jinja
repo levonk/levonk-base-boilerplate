@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{info, warn, debug};
 use std::thread;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Resource limits for operations
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceLimits {
     /// Maximum memory limit in bytes (None = no limit)
     pub max_memory: Option<u64>,
@@ -45,7 +46,7 @@ impl ResourceLimits {
         let (num_str, suffix) = if let Some(pos) = s.find(|c: char| !c.is_numeric()) {
             (&s[..pos], &s[pos..])
         } else {
-            (&s, "")
+            (s.as_str(), "")
         };
 
         let num: u64 = num_str.parse()

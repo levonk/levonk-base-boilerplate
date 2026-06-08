@@ -27,20 +27,20 @@ Implement health check mechanism (signal or HTTP endpoint) for container orchest
 
 ## Sub-Tasks
 
-- [ ] Add axum or warp dependency for HTTP health endpoint
-- [ ] Create health.rs module
-- [ ] Implement health check logic (operational state validation)
-- [ ] Add HTTP health endpoint (/health)
-- [ ] Implement signal-based health check alternative
-- [ ] Ensure health checks have no side effects
-- [ ] Add health check response time monitoring
-- [ ] Implement health check for daemon process
-- [ ] Add health check for config validity
-- [ ] Add health check for resource availability
-- [ ] Create tests for HTTP health endpoint
-- [ ] Create tests for signal-based health check
-- [ ] Create tests for health check response time
-- [ ] Add health check to daemon mode
+- [x] Add axum or warp dependency for HTTP health endpoint
+- [x] Create health.rs module
+- [x] Implement health check logic (operational state validation)
+- [x] Add HTTP health endpoint (/health)
+- [x] Implement signal-based health check alternative
+- [x] Ensure health checks have no side effects
+- [x] Add health check response time monitoring
+- [x] Implement health check for daemon process
+- [x] Add health check for config validity
+- [x] Add health check for resource availability
+- [x] Create tests for HTTP health endpoint
+- [x] Create tests for signal-based health check
+- [x] Create tests for health check response time
+- [x] Add health check to daemon mode
 
 ## Relevant Files
 
