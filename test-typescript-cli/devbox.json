@@ -45,7 +45,7 @@
       "just bootstrap-internal"
     ]
   }
-,
+
   "env": {
     "NODE_ENV": "development",
     "TS_NODE_PROJECT": "./tsconfig.json",
