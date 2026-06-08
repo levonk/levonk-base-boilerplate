@@ -26,14 +26,14 @@ Support privacy mode with explicit ignore lists. Distinguish between "unknown" (
 
 ## Sub-Tasks
 
-- [ ] Implement privacy mode flag
-- [ ] Implement anonymous ignore lists
-- [ ] Distinguish unknown vs anonymous
-- [ ] Add configurable privacy toggles
-- [ ] Apply privacy to logging
-- [ ] Apply privacy to output
-- [ ] Add tests for privacy mode
-- [ ] Update documentation
+- [x] Implement privacy mode flag
+- [x] Implement anonymous ignore lists
+- [x] Distinguish unknown vs anonymous
+- [x] Add configurable privacy toggles
+- [x] Apply privacy to logging
+- [x] Apply privacy to output
+- [x] Add tests for privacy mode
+- [x] Update documentation
 
 ## Relevant Files
 

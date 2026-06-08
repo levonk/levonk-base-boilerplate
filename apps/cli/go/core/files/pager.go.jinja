@@ -267,11 +267,11 @@ func GetTerminalSizeWithFallback() (width, height int) {
 
 // GetWinsize returns the terminal window size using syscall
 func GetWinsize() (rows, cols uint16, err error) {
-	ws, _, err := term.GetSize(int(os.Stdout.Fd()))
+	w, h, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		return 24, 80, err
 	}
-	return uint16(ws.Row), uint16(ws.Col), nil
+	return uint16(h), uint16(w), nil
 }
 
 // IsTerminal returns true if stdout is a terminal

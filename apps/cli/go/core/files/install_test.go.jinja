@@ -11,7 +11,7 @@ import (
 func TestInstallCompletions(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir := t.TempDir()
-	
+
 	// Override home directory for testing
 	oldHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
@@ -23,7 +23,8 @@ func TestInstallCompletions(t *testing.T) {
 	}
 
 	// Test installCompletions
-	err := installCompletions(cmd)
+	ctx := context.Background()
+	err := installCompletions(ctx, cmd)
 	if err != nil {
 		t.Fatalf("installCompletions failed: %v", err)
 	}
@@ -50,7 +51,7 @@ func TestInstallCompletions(t *testing.T) {
 func TestUninstallCompletions(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir := t.TempDir()
-	
+
 	// Override home directory for testing
 	oldHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
@@ -95,7 +96,7 @@ func TestUninstallCompletions(t *testing.T) {
 func TestInstallIdempotency(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir := t.TempDir()
-	
+
 	// Override home directory for testing
 	oldHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
@@ -128,7 +129,7 @@ func TestInstallIdempotency(t *testing.T) {
 func TestUninstallHandlesMissingFiles(t *testing.T) {
 	// Create a temporary directory for testing
 	tmpDir := t.TempDir()
-	
+
 	// Override home directory for testing
 	oldHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
