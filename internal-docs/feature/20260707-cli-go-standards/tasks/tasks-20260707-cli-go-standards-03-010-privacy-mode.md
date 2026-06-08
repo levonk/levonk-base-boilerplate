@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 3
 parallel_id: 10
 branch: "feature/current/20260707-cli-go-standards/story-03-010-privacy-mode"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,7 +27,7 @@ Implement privacy mode with explicit ignore lists for sensitive identifiers. Dis
 
 ## Sub-Tasks
 
-- [ ] Add --privacy flag to root command — `core/files/main.go.jinja`
+- [~] Add --privacy flag to root command — `core/files/main.go.jinja`
 - [ ] Create privacy mode utility — `core/files/privacy.go.jinja`
 - [ ] Implement ignore list for sensitive identifiers — `core/files/privacy.go.jinja`
 - [ ] Add distinction between unknown and anonymous — `core/files/privacy.go.jinja`

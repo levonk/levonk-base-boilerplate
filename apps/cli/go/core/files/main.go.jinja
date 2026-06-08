@@ -36,6 +36,7 @@ var (
 	noDaemonFlag bool
 	urlFormat string
 	healthCheckFlag bool
+	privacyFlag bool
 	logger *Logger
 	terminal *Terminal
 	version = "1.0.0"
@@ -387,6 +388,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&noDaemonFlag, "no-daemon", false, "Force synchronous operation (disable daemon)")
 	rootCmd.Flags().StringVar(&urlFormat, "url-format", "auto", "URL format: auto, plain, terminal")
 	rootCmd.Flags().BoolVar(&healthCheckFlag, "health-check", false, "Run health check and exit")
+	rootCmd.Flags().BoolVar(&privacyFlag, "privacy", false, "Enable privacy mode to ignore sensitive identifiers")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }

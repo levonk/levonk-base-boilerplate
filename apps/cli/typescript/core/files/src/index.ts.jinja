@@ -47,6 +47,11 @@ import {
     confirmDestructive,
     type PromptOptions,
 } from './prompts.js';
+import {
+    getProgressManager,
+    resetProgressManager,
+    type ProgressOptions,
+} from './progress.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -80,6 +85,7 @@ program
   .addHelpText('after', '\nLogging Options:\n  --debug       Enable debug-level logging\n  --log-format  Log format: text (default) or json\n  --quiet        Suppress all output except errors\n  --verbose      Enable verbose output with extra details\n  Environment Variables:\n  LOG_LEVEL      Set log level (debug, info, warn, error, fatal)\n  NODE_ENV       Set to "development" to enable debug mode')
   .addHelpText('after', '\nDry-Run Mode:\n  --dry-run     Preview changes without executing them\n                Shows what would be done without making any changes')
   .addHelpText('after', '\nConfirmation Prompts:\n  --force       Bypass confirmation prompts for destructive operations\n                Use with caution in automated scripts\n  Environment Variables:\n  CONFIRM_BYPASS Set to "true" or "1" to bypass prompts in non-TTY environments')
+  .addHelpText('after', '\nProgress Indicators:\n  Progress bars are shown for long-running file operations\n  Progress is suppressed in quiet mode (--quiet) or JSON mode (--json)\n  Progress can be cancelled with Ctrl+C (SIGINT)')
   .addHelpText('after', '\nInstallation:\n  --install      Install CLI (generate completions, initialize config)\n  --uninstall    Uninstall CLI (remove completions, clean up config)')
   .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
   .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')
@@ -227,6 +233,13 @@ program
           // Initialize dry-run manager
           initGlobalDryRunManager(logger, options.dryRun);
 
+          // Initialize progress manager
+          const progressOptions: ProgressOptions = {
+              quiet: mergedOptions.quiet,
+              json: mergedOptions.json,
+          };
+          const progressManager = getProgressManager(progressOptions);
+
           // Input Processing
           const filesToProcess: string[] = [];
           let readStdin = false;
@@ -265,18 +278,40 @@ program
               results.push({ source: 'stdin', length: content.length });
           }
 
-          for (const file of filesToProcess) {
-              try {
-                  logger.info(`Processing ${file}...`);
-                  const content = await fs.readFile(file, 'utf-8');
-                  results.push({ source: file, length: content.length });
-              } catch (error) {
-                  if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          // Process files with progress bar
+          if (filesToProcess.length > 0 && !mergedOptions.quiet && !mergedOptions.json) {
+              const bar = progressManager.createBar(filesToProcess.length, 'Processing files');
+              for (const file of filesToProcess) {
+                  try {
+                      const content = await fs.readFile(file, 'utf-8');
+                      results.push({ source: file, length: content.length });
+                      bar?.increment();
+                  } catch (error) {
+                      bar?.stop();
+                      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                          throw new FileNotFoundError(`File not found: ${file}`, { file });
+                      } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+                          throw new PermissionDeniedError(`Permission denied: ${file}`, { file });
+                      } else {
+                          throw new GenericError(`Error processing ${file}: ${error}`, { file, error });
+                      }
+                  }
+              }
+              bar?.stop();
+          } else {
+              for (const file of filesToProcess) {
+                  try {
+                      logger.info(`Processing ${file}...`);
+                      const content = await fs.readFile(file, 'utf-8');
+                      results.push({ source: file, length: content.length });
+                  } catch (error) {
+                      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
                       throw new FileNotFoundError(`File not found: ${file}`, { file });
                   } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
                       throw new PermissionDeniedError(`Permission denied: ${file}`, { file });
                   } else {
                       throw new GenericError(`Error processing ${file}: ${error}`, { file, error });
+                  }
                   }
               }
           }

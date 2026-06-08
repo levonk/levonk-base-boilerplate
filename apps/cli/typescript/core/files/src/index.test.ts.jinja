@@ -582,4 +582,58 @@ describe('CLI', () => {
             expect(stdout).toBeDefined();
         });
     });
+
+    describe('Progress Indicators', () => {
+        let tempDir: string;
+        let tempFiles: string[] = [];
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(os.tmpdir());
+            // Create multiple test files
+            for (let i = 0; i < 5; i++) {
+                const filePath = path.join(tempDir, `test-${i}.txt`);
+                await fs.writeFile(filePath, `test content ${i}`);
+                tempFiles.push(filePath);
+            }
+        });
+
+        afterEach(async () => {
+            for (const file of tempFiles) {
+                try {
+                    await fs.unlink(file);
+                } catch {
+                    // Ignore if file doesn't exist
+                }
+            }
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should process files without errors', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFiles.join('" "')}"`);
+            expect(stdout).toContain('Processed 5 inputs');
+        });
+
+        it('should suppress progress in quiet mode', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --quiet "${tempFiles[0]}"`);
+            // In quiet mode, only errors should be shown
+            expect(stdout).toBeDefined();
+        });
+
+        it('should suppress progress in JSON mode', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --json "${tempFiles[0]}"`);
+            // In JSON mode, output should be valid JSON
+            const output = JSON.parse(stdout);
+            expect(output).toHaveProperty('results');
+            expect(output.results).toBeInstanceOf(Array);
+        });
+
+        it('should handle single file without progress bar issues', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFiles[0]}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+    });
 });

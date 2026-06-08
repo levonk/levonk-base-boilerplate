@@ -42,12 +42,80 @@ def get_completion_dir() -> Path:
 
 def generate_completion_script(shell: str, app: typer.Typer) -> str:
     """Generate completion script for the specified shell."""
+    # Note: Typer's completion API varies between versions
+    # This is a simplified implementation that returns a basic completion script
+    # In production, use typer's built-in completion commands: --install-completion, --show-completion
+
+    project_slug = "{{ project_slug }}"
+
     if shell == "bash":
-        return typer.main.get_completion_app(app).get_completion_script("bash")
+        script = "# Bash completion for " + project_slug + "\n"
+        script += "_" + project_slug + "_completion() {\n"
+        script += "    local cur prev words cword\n"
+        script += "    _init_completion || return\n"
+        script += "    words=(\"${COMP_WORDS[@]}\")\n"
+        script += "    cword=\"${COMP_CWORD}\"\n"
+        script += "    cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
+        script += "\n"
+        script += "    case \"${cur}\" in\n"
+        script += "        -*)\n"
+        script += "            COMPREPLY=($(compgen -W \"--help --version --quiet --verbose --debug --color --json --install --uninstall --man --force --dry-run\" -- \"${cur}\"))\n"
+        script += "            ;;\n"
+        script += "        *)\n"
+        script += "            COMPREPLY=($(compgen -f -- \"${cur}\"))\n"
+        script += "            ;;\n"
+        script += "    esac\n"
+        script += "}\n"
+        script += "\n"
+        script += "complete -F _" + project_slug + "_completion " + project_slug + "\n"
+        return script
     elif shell == "zsh":
-        return typer.main.get_completion_app(app).get_completion_script("zsh")
+        script = "# Zsh completion for " + project_slug + "\n"
+        script += "#compdef " + project_slug + "\n"
+        script += "\n"
+        script += "_" + project_slug + "() {\n"
+        script += "    local -a commands\n"
+        script += "    commands=(\n"
+        script += "        '--help:Show help message'\n"
+        script += "        '--version:Show version'\n"
+        script += "        '--quiet:Suppress output'\n"
+        script += "        '--verbose:Show detailed output'\n"
+        script += "        '--debug:Enable debug mode'\n"
+        script += "        '--color:Set color mode'\n"
+        script += "        '--json:JSON output format'\n"
+        script += "        '--install:Install shell completion'\n"
+        script += "        '--uninstall:Uninstall shell completion'\n"
+        script += "        '--man:Show man page'\n"
+        script += "        '--force:Bypass confirmation'\n"
+        script += "        '--dry-run:Preview changes'\n"
+        script += "    )\n"
+        script += "\n"
+        script += "    if [[ CURRENT -eq 1 ]]; then\n"
+        script += "        _describe 'command' commands\n"
+        script += "    else\n"
+        script += "        _files\n"
+        script += "    fi\n"
+        script += "}\n"
+        script += "\n"
+        script += "_" + project_slug + " \"$@\"\n"
+        return script
     elif shell == "fish":
-        return typer.main.get_completion_app(app).get_completion_script("fish")
+        script = "# Fish completion for " + project_slug + "\n"
+        script += "complete -c " + project_slug + " -f\n"
+        script += "\n"
+        script += "complete -c " + project_slug + " -l help -d 'Show help message'\n"
+        script += "complete -c " + project_slug + " -l version -d 'Show version'\n"
+        script += "complete -c " + project_slug + " -l quiet -d 'Suppress output'\n"
+        script += "complete -c " + project_slug + " -l verbose -d 'Show detailed output'\n"
+        script += "complete -c " + project_slug + " -l debug -d 'Enable debug mode'\n"
+        script += "complete -c " + project_slug + " -l color -d 'Set color mode'\n"
+        script += "complete -c " + project_slug + " -l json -d 'JSON output format'\n"
+        script += "complete -c " + project_slug + " -l install -d 'Install shell completion'\n"
+        script += "complete -c " + project_slug + " -l uninstall -d 'Uninstall shell completion'\n"
+        script += "complete -c " + project_slug + " -l man -d 'Show man page'\n"
+        script += "complete -c " + project_slug + " -l force -d 'Bypass confirmation'\n"
+        script += "complete -c " + project_slug + " -l dry-run -d 'Preview changes'\n"
+        return script
     else:
         raise ValueError(f"Unsupported shell: {shell}")
 

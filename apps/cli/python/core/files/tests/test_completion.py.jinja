@@ -90,7 +90,7 @@ def test_get_completion_dir():
 
 def test_install_all_completions_old():
     """Test installing all shell completions (old signature for compatibility)."""
-    results = install_all_completions(force=True)
+    results = install_all_completions(app, force=True)
     assert "bash" in results
     assert "zsh" in results
     assert "fish" in results

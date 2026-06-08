@@ -37,7 +37,7 @@ class PrivacyManager:
             data_type: Data type to ignore
         """
         self.anonymous_list.add(data_type)
-        logger.debug(f"Added {data_type} to anonymous list", module="privacy")
+        privacy_logger.debug(f"Added {data_type} to anonymous list", module="privacy")
 
     def add_to_unknown(self, data_type: str):
         """
