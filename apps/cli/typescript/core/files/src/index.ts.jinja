@@ -23,6 +23,11 @@ import {
     type CompletionOptions,
     type ShellType,
 } from './completions.js';
+import {
+    writeManPage,
+    getManPageInstallInstructions,
+    type ManPageOptions,
+} from './man.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -48,11 +53,15 @@ program
   .option('-c, --config <path>', 'Config file path (default: ~/.config/{{ project_slug }}/config.toml)', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
   .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables ({{ PROJECT_SLUG }}_*)\n  3. Local project config (./.{{ project_slug }}/config.toml)\n  4. User config (~/.config/{{ project_slug }}/config.toml)\n  5. System config (/etc/{{ project_slug }}/config.toml)\n  6. Hardcoded defaults')
   .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
+  .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')
   .option('--json', 'Output results as JSON')
   .option('--completion <shell>', 'Generate shell completion script (bash, zsh, fish)')
   .option('--completion-install <shell>', 'Show shell completion installation instructions')
   .option('--output-dir <path>', 'Output directory for completion scripts', 'completions')
   .option('--stdout', 'Output completion script to stdout instead of file')
+  .option('--man', 'Generate man page')
+  .option('--man-install', 'Show man page installation instructions')
+  .option('--man-output-dir <path>', 'Output directory for man pages', 'man')
   .action(async (inputs: string[], options) => {
       try {
           // Handle --usage flag
@@ -78,6 +87,24 @@ program
           if (options.completionInstall) {
               const shell = options.completionInstall as ShellType;
               const instructions = getCompletionInstallInstructions(shell, '{{ project_slug }}');
+              console.log(instructions);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --man flag
+          if (options.man) {
+              const manOptions: ManPageOptions = {
+                  outputDir: options.manOutputDir,
+                  stdout: options.stdout,
+              };
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              await writeManPage(program, manOptions, logger);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --man-install flag
+          if (options.manInstall) {
+              const instructions = getManPageInstallInstructions('{{ project_slug }}');
               console.log(instructions);
               process.exit(EXIT_CODES.SUCCESS);
           }

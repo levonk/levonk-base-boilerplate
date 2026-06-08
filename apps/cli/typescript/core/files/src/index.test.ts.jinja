@@ -312,4 +312,60 @@ describe('CLI', () => {
             expect(stdout).toContain('~/.bashrc');
         });
     });
+
+    describe('Man Pages', () => {
+        const testManDir = path.join(os.tmpdir(), 'test-man-{{ project_slug }}');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testManDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testManDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should generate man page', async () => {
+            const { stdout } = await execAsync(
+                `npx ts-node src/index.ts --man --man-output-dir "${testManDir}"`
+            );
+
+            const manFile = path.join(testManDir, '{{ project_slug }}.1');
+            const exists = await fs.access(manFile).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            const content = await fs.readFile(manFile, 'utf-8');
+            expect(content).toContain('.TH');
+            expect(content).toContain('.SH NAME');
+            expect(content).toContain('{{ project_slug }}');
+        });
+
+        it('should output man page to stdout with --stdout flag', async () => {
+            const { stdout } = await execAsync(
+                'npx ts-node src/index.ts --man --stdout'
+            );
+
+            expect(stdout).toContain('.TH');
+            expect(stdout).toContain('.SH NAME');
+            expect(stdout).toContain('{{ project_slug }}');
+        });
+
+        it('should show man page installation instructions', async () => {
+            const { stdout } = await execAsync(
+                'npx ts-node src/index.ts --man-install'
+            );
+
+            expect(stdout).toContain('Man page installation');
+            expect(stdout).toContain('~/.local/share/man/man1');
+        });
+    });
 });
