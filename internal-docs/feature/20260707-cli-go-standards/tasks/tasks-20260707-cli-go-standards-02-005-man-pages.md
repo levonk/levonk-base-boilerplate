@@ -27,14 +27,14 @@ Generate traditional Unix man pages for documentation, accessible via `man {comm
 
 ## Sub-Tasks
 
-- [ ] Add --man flag to root command — `core/files/main.go.jinja`
-- [ ] Create man page template — `core/files/man.1.jinja`
-- [ ] Implement man page generation logic — `core/files/docs.go.jinja`
-- [ ] Generate man page from command structure — `core/files/docs.go.jinja`
-- [ ] Add man page installation to install flag — `core/files/install.go.jinja`
-- [ ] Test man page generation — `core/files/docs_test.go.jinja`
-- [ ] Test --man flag displays man page — `core/files/docs_test.go.jinja`
-- [ ] Test man page installation — `core/files/docs_test.go.jinja`
+- [x] Add --man flag to root command — `core/files/main.go.jinja`
+- [x] Create man page template — `core/files/man.1.jinja`
+- [x] Implement man page generation logic — `core/files/docs.go.jinja`
+- [x] Generate man page from command structure — `core/files/docs.go.jinja`
+- [x] Add man page installation to install flag — `core/files/install.go.jinja`
+- [x] Test man page generation — `core/files/docs_test.go.jinja`
+- [x] Test --man flag displays man page — `core/files/docs_test.go.jinja`
+- [x] Test man page installation — `core/files/docs_test.go.jinja`
 
 ## Relevant Files
 
@@ -46,12 +46,12 @@ Generate traditional Unix man pages for documentation, accessible via `man {comm
 
 ## Acceptance Criteria
 
-- [ ] Man pages are generated from command structure
-- [ ] `--man` flag displays man page
-- [ ] Man pages include all command documentation
-- [ ] Man pages are installed via --install flag
-- [ ] Man pages follow Unix man page format
-- [ ] Man pages are accessible via `man {command}`
+- [x] Man pages are generated from command structure
+- [x] `--man` flag displays man page
+- [x] Man pages include all command documentation
+- [x] Man pages are installed via --install flag
+- [x] Man pages follow Unix man page format
+- [x] Man pages are accessible via `man {command}`
 
 ## Test Plan
 

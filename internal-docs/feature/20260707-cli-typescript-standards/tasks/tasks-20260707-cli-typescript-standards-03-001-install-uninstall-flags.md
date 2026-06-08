@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 3
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-03-001-install-uninstall-flags"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-003"]
@@ -28,19 +28,19 @@ Add `--install` and `--uninstall` flags to handle CLI installation tasks. The `-
 ## Sub-Tasks
 
 - [x] Create install module with installation logic
-- [ ] Add `--install` flag to index.ts
-- [ ] Add `--uninstall` flag to index.ts
-- [ ] Implement shell completion script generation (delegates to completion module)
-- [ ] Implement default config file initialization
-- [ ] Implement environment setup logic
-- [ ] Add installation status tracking
-- [ ] Implement uninstall cleanup logic
-- [ ] Add user confirmation for destructive uninstall operations
-- [ ] Add unit tests for install logic
-- [ ] Add unit tests for uninstall logic
-- [ ] Add integration tests for install/uninstall workflow
-- [ ] Update help text to document install/uninstall flags
-- [ ] Add logging for installation steps
+- [x] Add `--install` flag to index.ts
+- [x] Add `--uninstall` flag to index.ts
+- [x] Implement shell completion script generation (delegates to completion module)
+- [x] Implement default config file initialization
+- [x] Implement environment setup logic
+- [x] Add installation status tracking
+- [x] Implement uninstall cleanup logic
+- [x] Add user confirmation for destructive uninstall operations
+- [x] Add unit tests for install logic
+- [x] Add unit tests for uninstall logic
+- [x] Add integration tests for install/uninstall workflow
+- [x] Update help text to document install/uninstall flags
+- [x] Add logging for installation steps
 
 ## Relevant Files
 
@@ -51,15 +51,15 @@ Add `--install` and `--uninstall` flags to handle CLI installation tasks. The `-
 
 ## Acceptance Criteria
 
-- [ ] `--install` flag generates shell completion scripts
-- [ ] `--install` flag initializes default config files
-- [ ] `--install` flag sets up required environment
-- [ ] `--uninstall` flag removes completion scripts
-- [ ] `--uninstall` flag removes config files (with user confirmation)
-- [ ] `--uninstall` flag cleans up environment changes
-- [ ] Installation steps are logged to user
-- [ ] Uninstall requires user confirmation for destructive operations
-- [ ] Install/uninstall status is clearly communicated
+- [x] `--install` flag generates shell completion scripts
+- [x] `--install` flag initializes default config files
+- [x] `--install` flag sets up required environment
+- [x] `--uninstall` flag removes completion scripts
+- [x] `--uninstall` flag removes config files (with user confirmation)
+- [x] `--uninstall` flag cleans up environment changes
+- [x] Installation steps are logged to user
+- [x] Uninstall requires user confirmation for destructive operations
+- [x] Install/uninstall status is clearly communicated
 
 ## Test Plan
 

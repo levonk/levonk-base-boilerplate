@@ -1,0 +1,299 @@
+package main
+
+import (
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+	"syscall"
+
+	"github.com/mattn/go-isatty"
+	"golang.org/x/term"
+)
+
+// Pager handles automatic paging of long output
+type Pager struct {
+	noPager    bool
+	pagerCmd   string
+	terminal   *os.File
+	original   *os.File
+}
+
+// NewPager creates a new Pager instance
+func NewPager(noPager bool) *Pager {
+	return &Pager{
+		noPager:  noPager,
+		terminal: os.Stdout,
+	}
+}
+
+// GetTerminalHeight returns the height of the terminal or a default value
+func GetTerminalHeight() int {
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		// Not a terminal, use a reasonable default
+		return 24
+	}
+
+	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		// If we can't get the size, use a reasonable default
+		return 24
+	}
+
+	// If height is 0 or very small, use default
+	if height < 10 {
+		return 24
+	}
+
+	return height
+}
+
+// GetPagerCommand returns the pager command to use
+func GetPagerCommand() string {
+	// Check PAGER environment variable
+	pager := os.Getenv("PAGER")
+	if pager != "" {
+		return pager
+	}
+
+	// Default to 'less'
+	return "less"
+}
+
+// ShouldUsePager determines if the pager should be used based on line count
+func (p *Pager) ShouldUsePager(lineCount int) bool {
+	// If --no-pager flag is set, don't use pager
+	if p.noPager {
+		return false
+	}
+
+	// If not a terminal, don't use pager
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return false
+	}
+
+	// Get terminal height
+	terminalHeight := GetTerminalHeight()
+
+	// Use pager if output exceeds terminal height
+	return lineCount > terminalHeight
+}
+
+// Start activates the pager for long output
+func (p *Pager) Start() error {
+	if p.noPager {
+		return nil
+	}
+
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return nil
+	}
+
+	pagerCmd := GetPagerCommand()
+	if pagerCmd == "" {
+		return nil
+	}
+
+	// Parse pager command and arguments
+	parts := strings.Fields(pagerCmd)
+	if len(parts) == 0 {
+		return nil
+	}
+
+	cmd := exec.Command(parts[0], parts[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	// Create a pipe to capture output
+	pr, pw, err := os.Pipe()
+	if err != nil {
+		return err
+	}
+
+	// Save original stdout
+	p.original = os.Stdout
+
+	// Set stdout to pipe writer
+	os.Stdout = pw
+
+	// Start the pager
+	cmd.Stdin = pr
+	if err := cmd.Start(); err != nil {
+		pw.Close()
+		pr.Close()
+		os.Stdout = p.original
+		return err
+	}
+
+	p.pagerCmd = pagerCmd
+	return nil
+}
+
+// Finish closes the pager and restores stdout
+func (p *Pager) Finish() {
+	if p.original == nil {
+		return
+	}
+
+	// Close the pipe writer to signal EOF to pager
+	if pw, ok := os.Stdout.(*os.File); ok {
+		pw.Close()
+	}
+
+	// Restore original stdout
+	os.Stdout = p.original
+	p.original = nil
+}
+
+// Write writes data to the pager or stdout
+func (p *Pager) Write(data []byte) (int, error) {
+	if p.original == nil {
+		return os.Stdout.Write(data)
+	}
+	return os.Stdout.Write(data)
+}
+
+// IsRunning returns true if the pager is currently running
+func (p *Pager) IsRunning() bool {
+	return p.original != nil
+}
+
+// Close terminates the pager process
+func (p *Pager) Close() error {
+	if p.original == nil {
+		return nil
+	}
+
+	p.Finish()
+	return nil
+}
+
+// WithPager executes a function with pager enabled if needed
+func WithPager(noPager bool, lineCount int, fn func() error) error {
+	pager := NewPager(noPager)
+
+	if pager.ShouldUsePager(lineCount) {
+		if err := pager.Start(); err != nil {
+			// If pager fails to start, just run without it
+			return fn()
+		}
+		defer pager.Close()
+	}
+
+	return fn()
+}
+
+// GetTerminalWidth returns the width of the terminal or a default value
+func GetTerminalWidth() int {
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return 80
+	}
+
+	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return 80
+	}
+
+	if width < 10 {
+		return 80
+	}
+
+	return width
+}
+
+// IsTerminal returns true if stdout is a terminal
+func IsTerminal() bool {
+	return isatty.IsTerminal(os.Stdout.Fd())
+}
+
+// GetTerminalSize returns both width and height of the terminal
+func GetTerminalSize() (width, height int) {
+	if !isatty.IsTerminal(os.Stdout.Fd()) {
+		return 80, 24
+	}
+
+	w, h, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return 80, 24
+	}
+
+	if w < 10 {
+		w = 80
+	}
+	if h < 10 {
+		h = 24
+	}
+
+	return w, h
+}
+
+// GetEnvTerminalSize reads terminal size from environment variables (fallback)
+func GetEnvTerminalSize() (width, height int) {
+	// Try LINES and COLUMNS environment variables
+	lines := os.Getenv("LINES")
+	cols := os.Getenv("COLUMNS")
+
+	if lines != "" {
+		if h, err := strconv.Atoi(lines); err == nil && h > 0 {
+			height = h
+		}
+	}
+
+	if cols != "" {
+		if w, err := strconv.Atoi(cols); err == nil && w > 0 {
+			width = w
+		}
+	}
+
+	// Default values if not set
+	if width == 0 {
+		width = 80
+	}
+	if height == 0 {
+		height = 24
+	}
+
+	return width, height
+}
+
+// GetTerminalSizeWithFallback tries multiple methods to get terminal size
+func GetTerminalSizeWithFallback() (width, height int) {
+	// First try term.GetSize
+	if IsTerminal() {
+		w, h, err := term.GetSize(int(os.Stdout.Fd()))
+		if err == nil && w > 0 && h > 0 {
+			return w, h
+		}
+	}
+
+	// Fallback to environment variables
+	return GetEnvTerminalSize()
+}
+
+// GetWinsize returns the terminal window size using syscall
+func GetWinsize() (rows, cols uint16, err error) {
+	ws, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return 24, 80, err
+	}
+	return uint16(ws.Row), uint16(ws.Col), nil
+}
+
+// SetRawMode sets the terminal to raw mode (for TUI applications)
+func SetRawMode() (*term.State, error) {
+	if !IsTerminal() {
+		return nil, nil
+	}
+	return term.MakeRaw(int(os.Stdout.Fd()))
+}
+
+// RestoreMode restores the terminal to normal mode
+func RestoreMode(state *term.State) error {
+	if state == nil {
+		return nil
+	}
+	return term.Restore(int(os.Stdout.Fd()), state)
+}
+
+{# vim: set ft=go: #}

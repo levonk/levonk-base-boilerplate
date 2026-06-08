@@ -11,9 +11,9 @@ This index provides a summary of all stories for implementing CLI Tool Standards
 | 01-001 | Enhanced Color Control | feature/current/20260707-cli-typescript-standards/story-01-001-enhanced-color-control | None | Parallel-safe: true | [x] Done | logger.ts |
 | 01-002 | Standard Exit Codes | feature/current/20260707-cli-typescript-standards/story-01-002-standard-exit-codes | None | Parallel-safe: true | [x] Done | index.ts, error handling |
 | 01-003 | Configuration File Initialization | feature/current/20260707-cli-typescript-standards/story-01-003-config-file-initialization | None | Parallel-safe: true | [x] Done | config/ |
-| 02-001 | Enhanced Logging Modes | feature/current/20260707-cli-typescript-standards/story-02-001-enhanced-logging-modes | 01-001 | Parallel-safe: true | [~] In-Progress | logger.ts |
+| 02-001 | Enhanced Logging Modes | feature/current/20260707-cli-typescript-standards/story-02-001-enhanced-logging-modes | 01-001 | Parallel-safe: true | [x] Done | logger.ts |
 | 02-002 | Configuration Precedence Chain | feature/current/20260707-cli-typescript-standards/story-02-002-config-precedence-chain | 01-003 | Parallel-safe: true | [x] Done | config/ |
-| 03-001 | Install/Uninstall Flags | feature/current/20260707-cli-typescript-standards/story-03-001-install-uninstall-flags | 01-003 | Parallel-safe: true | [~] In-Progress | index.ts, install/ |
+| 03-001 | Install/Uninstall Flags | feature/current/20260707-cli-typescript-standards/story-03-001-install-uninstall-flags | 01-003 | Parallel-safe: true | [x] Done | index.ts, install/ |
 | 03-002 | Shell Completion Scripts | feature/current/20260707-cli-typescript-standards/story-03-002-shell-completion-scripts | None | Parallel-safe: true | [x] Done | completions/ |
 | 03-003 | Man Pages | feature/current/20260707-cli-typescript-standards/story-03-003-man-pages | None | Parallel-safe: true | [x] Done | docs/ |
 | 04-001 | Dry-Run Mode | feature/current/20260707-cli-typescript-standards/story-04-001-dry-run-mode | None | Parallel-safe: true | index.ts, dry-run/ |

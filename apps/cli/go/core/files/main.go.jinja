@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/mattn/go-isatty"
@@ -27,6 +28,7 @@ var (
 	manFlag bool
 	dryRun bool
 	force bool
+	noPager bool
 	logger *Logger
 	version = "1.0.0"
 
@@ -236,6 +238,25 @@ Examples:
 				enc.SetIndent("", "  ")
 				return enc.Encode(results)
 			} else {
+				// Count lines in output to determine if pager is needed
+				outputLines := 1 // Start with 1 for the summary line
+				for _, result := range results {
+					if jsonBytes, err := json.MarshalIndent(result, "", "  "); err == nil {
+						outputLines += len(strings.Split(string(jsonBytes), "\n"))
+					}
+				}
+
+				// Use pager if output is long and --no-pager is not set
+				pager := NewPager(noPager)
+				if pager.ShouldUsePager(outputLines) {
+					if err := pager.Start(); err != nil {
+						logger.Warn("Failed to start pager: %v", err)
+					} else {
+						defer pager.Close()
+						logger.Debug("Using pager: %s", GetPagerCommand())
+					}
+				}
+
 				fmt.Printf("Processed %d inputs.\n", len(results))
 			}
 
@@ -307,6 +328,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&manFlag, "man", false, "Generate and display man page")
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without executing them")
 	rootCmd.Flags().BoolVarP(&force, "force", "f", false, "Bypass confirmation prompts for destructive operations")
+	rootCmd.Flags().BoolVar(&noPager, "no-pager", false, "Disable automatic paging for long output")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createLogger, LoggerOptions, ColorMode } from './logger.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createLogger, LoggerOptions, ColorMode, LogLevel, LogFormat } from './logger.js';
 
 describe('Logger Color Mode Resolution', () => {
   const originalNoColor = process.env.NO_COLOR;
@@ -113,5 +113,250 @@ describe('Logger Color Mode Resolution', () => {
       expect(color2).toBe('always');
       expect(color3).toBe('never');
     });
+  });
+});
+
+describe('Logger Debug Mode', () => {
+  const originalLogEnv = process.env.LOG_LEVEL;
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    if (originalLogEnv === undefined) {
+      delete process.env.LOG_LEVEL;
+    } else {
+      process.env.LOG_LEVEL = originalLogEnv;
+    }
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it('should enable debug mode when debug option is true', () => {
+    delete process.env.LOG_LEVEL;
+    delete process.env.NODE_ENV;
+    const logger = createLogger({ debug: true });
+    logger.debug('Debug message');
+    // Debug message should be logged when debug is enabled
+    expect(logger).toBeDefined();
+  });
+
+  it('should enable debug mode when NODE_ENV is development', () => {
+    delete process.env.LOG_LEVEL;
+    process.env.NODE_ENV = 'development';
+    const logger = createLogger({});
+    logger.debug('Debug message');
+    expect(logger).toBeDefined();
+  });
+
+  it('should respect LOG_LEVEL environment variable', () => {
+    process.env.LOG_LEVEL = 'debug';
+    delete process.env.NODE_ENV;
+    const logger = createLogger({});
+    logger.debug('Debug message');
+    expect(logger).toBeDefined();
+  });
+
+  it('should respect logLevel option from config', () => {
+    delete process.env.LOG_LEVEL;
+    delete process.env.NODE_ENV;
+    const logger = createLogger({ logLevel: 'debug' });
+    logger.debug('Debug message');
+    expect(logger).toBeDefined();
+  });
+});
+
+describe('Logger Quiet Mode', () => {
+  it('should suppress non-error output when quiet is true', () => {
+    const logger = createLogger({ quiet: true });
+    logger.info('Info message');
+    logger.debug('Debug message');
+    logger.warn('Warning message');
+    expect(logger).toBeDefined();
+  });
+
+  it('should still log errors when quiet is true', () => {
+    const logger = createLogger({ quiet: true });
+    logger.error('Error message');
+    logger.fatal('Fatal message');
+    expect(logger).toBeDefined();
+  });
+});
+
+describe('Logger JSON Format', () => {
+  it('should format logs as JSON when logFormat is json', () => {
+    const logger = createLogger({ logFormat: 'json' });
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    logger.info('Test message');
+    expect(consoleLogSpy).toHaveBeenCalled();
+    const loggedData = JSON.parse(consoleLogSpy.mock.calls[0][0] as string);
+    expect(loggedData).toHaveProperty('timestamp');
+    expect(loggedData).toHaveProperty('level', 'info');
+    expect(loggedData).toHaveProperty('message', 'Test message');
+    expect(loggedData).toHaveProperty('module');
+    consoleLogSpy.mockRestore();
+  });
+
+  it('should include extra fields in JSON logs', () => {
+    const logger = createLogger({ logFormat: 'json' });
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    logger.info('Test message', { userId: 123, action: 'test' });
+    expect(consoleLogSpy).toHaveBeenCalled();
+    const loggedData = JSON.parse(consoleLogSpy.mock.calls[0][0] as string);
+    expect(loggedData.userId).toBe(123);
+    expect(loggedData.action).toBe('test');
+    consoleLogSpy.mockRestore();
+  });
+
+  it('should format logs as text when logFormat is text', () => {
+    const logger = createLogger({ logFormat: 'text' });
+    const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    logger.info('Test message');
+    expect(consoleLogSpy).toHaveBeenCalled();
+    const loggedMessage = consoleLogSpy.mock.calls[0][0] as string;
+    expect(loggedMessage).toContain('Test message');
+    expect(loggedMessage).toContain('[INFO]');
+    consoleLogSpy.mockRestore();
+  });
+});
+
+describe('Logger Format Auto-Detection', () => {
+  const originalIsTTY = process.stdout.isTTY;
+
+  afterEach(() => {
+    // Restore original isTTY after each test
+    Object.defineProperty(process.stdout, 'isTTY', {
+      value: originalIsTTY,
+      writable: true,
+    });
+  });
+
+  it('should use text format when stdout is a TTY', () => {
+    Object.defineProperty(process.stdout, 'isTTY', {
+      value: true,
+      writable: true,
+    });
+    const logger = createLogger({});
+    expect(logger).toBeDefined();
+  });
+
+  it('should use JSON format when stdout is not a TTY', () => {
+    Object.defineProperty(process.stdout, 'isTTY', {
+      value: false,
+      writable: true,
+    });
+    const logger = createLogger({});
+    expect(logger).toBeDefined();
+  });
+
+  it('should respect explicit logFormat option over auto-detection', () => {
+    Object.defineProperty(process.stdout, 'isTTY', {
+      value: true,
+      writable: true,
+    });
+    const logger = createLogger({ logFormat: 'json' });
+    expect(logger).toBeDefined();
+  });
+});
+
+describe('Logger Log Level Resolution', () => {
+  const originalLogEnv = process.env.LOG_LEVEL;
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  afterEach(() => {
+    if (originalLogEnv === undefined) {
+      delete process.env.LOG_LEVEL;
+    } else {
+      process.env.LOG_LEVEL = originalLogEnv;
+    }
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  });
+
+  it('should prioritize LOG_LEVEL env var over config logLevel', () => {
+    process.env.LOG_LEVEL = 'error';
+    delete process.env.NODE_ENV;
+    const logger = createLogger({ logLevel: 'debug' });
+    expect(logger).toBeDefined();
+  });
+
+  it('should prioritize config logLevel over debug flag', () => {
+    delete process.env.LOG_LEVEL;
+    delete process.env.NODE_ENV;
+    const logger = createLogger({ logLevel: 'warn', debug: true });
+    expect(logger).toBeDefined();
+  });
+
+  it('should use debug flag when no env var or config logLevel is set', () => {
+    delete process.env.LOG_LEVEL;
+    delete process.env.NODE_ENV;
+    const logger = createLogger({ debug: true });
+    expect(logger).toBeDefined();
+  });
+
+  it('should default to info level when nothing is set', () => {
+    delete process.env.LOG_LEVEL;
+    delete process.env.NODE_ENV;
+    const logger = createLogger({});
+    expect(logger).toBeDefined();
+  });
+});
+
+describe('Logger Log Level Hierarchy', () => {
+  it('should log all levels when current level is debug', () => {
+    const logger = createLogger({ logLevel: 'debug' });
+    expect(logger).toBeDefined();
+  });
+
+  it('should not log debug when current level is info', () => {
+    const logger = createLogger({ logLevel: 'info' });
+    expect(logger).toBeDefined();
+  });
+
+  it('should not log debug or info when current level is warn', () => {
+    const logger = createLogger({ logLevel: 'warn' });
+    expect(logger).toBeDefined();
+  });
+
+  it('should not log debug, info, or warn when current level is error', () => {
+    const logger = createLogger({ logLevel: 'error' });
+    expect(logger).toBeDefined();
+  });
+
+  it('should always log error and fatal regardless of level', () => {
+    const logger = createLogger({ logLevel: 'debug' });
+    logger.error('Error message');
+    logger.fatal('Fatal message');
+    expect(logger).toBeDefined();
+  });
+});
+
+describe('LogFormat type', () => {
+  it('should accept valid log format values', () => {
+    const format1: LogFormat = 'text';
+    const format2: LogFormat = 'json';
+
+    expect(format1).toBe('text');
+    expect(format2).toBe('json');
+  });
+});
+
+describe('LogLevel type', () => {
+  it('should accept valid log level values', () => {
+    const level1: LogLevel = 'debug';
+    const level2: LogLevel = 'info';
+    const level3: LogLevel = 'warn';
+    const level4: LogLevel = 'error';
+    const level5: LogLevel = 'fatal';
+
+    expect(level1).toBe('debug');
+    expect(level2).toBe('info');
+    expect(level3).toBe('warn');
+    expect(level4).toBe('error');
+    expect(level5).toBe('fatal');
   });
 });

@@ -368,4 +368,126 @@ describe('CLI', () => {
             expect(stdout).toContain('~/.local/share/man/man1');
         });
     });
+
+    describe('Logging Mode Combinations', () => {
+        let tempFile: string;
+
+        beforeEach(async () => {
+            tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.unlink(tempFile);
+            } catch {
+                // Ignore if file doesn't exist
+            }
+        });
+
+        it('should accept --debug flag', async () => {
+            const { stdout } = await execAsync(`npx ts-node src/index.ts --debug "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept --log-format=json flag', async () => {
+            const { stdout } = await execAsync(`npx ts-node src/index.ts --log-format=json "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept --log-format=text flag', async () => {
+            const { stdout } = await execAsync(`npx ts-node src/index.ts --log-format=text "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept --quiet flag', async () => {
+            const { stdout } = await execAsync(`npx ts-node src/index.ts --quiet "${tempFile}"`);
+            // Quiet mode should suppress info output
+            expect(stdout).not.toContain('Processing');
+        });
+
+        it('should accept --verbose flag', async () => {
+            const { stdout } = await execAsync(`npx ts-node src/index.ts --verbose "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept combination of --debug and --log-format=json', async () => {
+            const { stdout } = await execAsync(`npx ts-node src/index.ts --debug --log-format=json "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept combination of --quiet and --log-format=json', async () => {
+            const { stdout } = await execAsync(`npx ts-node src/index.ts --quiet --log-format=json "${tempFile}"`);
+            expect(stdout).not.toContain('Processing');
+        });
+
+        it('should show logging options in help text', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            expect(stdout).toContain('--debug');
+            expect(stdout).toContain('--log-format');
+            expect(stdout).toContain('--quiet');
+            expect(stdout).toContain('--verbose');
+        });
+
+        it('should show LOG_LEVEL environment variable in help text', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            expect(stdout).toContain('LOG_LEVEL');
+        });
+
+        it('should show NODE_ENV environment variable in help text', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            expect(stdout).toContain('NODE_ENV');
+        });
+    });
+
+    describe('Install/Uninstall Workflow', () => {
+        const testConfigDir = path.join(os.tmpdir(), 'test-config-{{ project_slug }}');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should accept --install flag', async () => {
+            const customXDG = testConfigDir;
+            const { stdout } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --install --skip-completions`
+            );
+            expect(stdout).toContain('installed successfully');
+        });
+
+        it('should accept --uninstall flag', async () => {
+            const customXDG = testConfigDir;
+
+            // First install
+            await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --install --skip-completions`
+            );
+
+            // Then uninstall
+            const { stdout } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --uninstall --force`
+            );
+            expect(stdout).toContain('uninstalled successfully');
+        });
+
+        it('should show install options in help text', async () => {
+            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            expect(stdout).toContain('--install');
+            expect(stdout).toContain('--uninstall');
+        });
+    });
 });

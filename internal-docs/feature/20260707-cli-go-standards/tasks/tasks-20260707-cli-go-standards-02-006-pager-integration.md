@@ -27,15 +27,15 @@ Implement auto-pager for long output that respects the `PAGER` environment varia
 
 ## Sub-Tasks
 
-- [ ] Add --no-pager flag to root command — `core/files/main.go.jinja`
-- [ ] Create pager detection utility — `core/files/pager.go.jinja`
-- [ ] Implement terminal height detection — `core/files/pager.go.jinja`
-- [ ] Add auto-pager logic for long output — `core/files/pager.go.jinja`
-- [ ] Implement PAGER env var support — `core/files/pager.go.jinja`
-- [ ] Add --no-pager bypass logic — `core/files/main.go.jinja`
-- [ ] Test pager activates for long output — `core/files/pager_test.go.jinja`
-- [ ] Test --no-pager bypasses pager — `core/files/pager_test.go.jinja`
-- [ ] Test PAGER env var is respected — `core/files/pager_test.go.jinja`
+- [x] Add --no-pager flag to root command — `core/files/main.go.jinja`
+- [x] Create pager detection utility — `core/files/pager.go.jinja`
+- [x] Implement terminal height detection — `core/files/pager.go.jinja`
+- [x] Add auto-pager logic for long output — `core/files/pager.go.jinja`
+- [x] Implement PAGER env var support — `core/files/pager.go.jinja`
+- [x] Add --no-pager bypass logic — `core/files/main.go.jinja`
+- [x] Test pager activates for long output — `core/files/pager_test.go.jinja`
+- [x] Test --no-pager bypasses pager — `core/files/pager_test.go.jinja`
+- [x] Test PAGER env var is respected — `core/files/pager_test.go.jinja`
 
 ## Relevant Files
 
@@ -45,12 +45,12 @@ Implement auto-pager for long output that respects the `PAGER` environment varia
 
 ## Acceptance Criteria
 
-- [ ] Auto-pager activates for long output
-- [ ] PAGER environment variable is respected
-- [ ] Default pager is `less`
-- [ ] `--no-pager` flag bypasses pager
-- [ ] Pager detects terminal height correctly
-- [ ] Pager doesn't activate for short output
+- [x] Auto-pager activates for long output
+- [x] PAGER environment variable is respected
+- [x] Default pager is `less`
+- [x] `--no-pager` flag bypasses pager
+- [x] Pager detects terminal height correctly
+- [x] Pager doesn't activate for short output
 
 ## Test Plan
 

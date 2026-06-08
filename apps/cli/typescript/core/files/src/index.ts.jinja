@@ -28,6 +28,13 @@ import {
     getManPageInstallInstructions,
     type ManPageOptions,
 } from './man.js';
+import {
+    install,
+    uninstall,
+    checkInstallStatus,
+    type InstallOptions,
+    type UninstallOptions,
+} from './install.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -51,8 +58,12 @@ program
   .option('--usage', 'Display usage information')
   .option('--color <mode>', 'Color mode: auto, always, or never', 'auto')
   .option('--log-format <format>', 'Log format: text or json', 'text')
+  .option('--install', 'Install CLI (generate completions, initialize config)')
+  .option('--uninstall', 'Uninstall CLI (remove completions, clean up config)')
   .option('-c, --config <path>', 'Config file path (default: ~/.config/{{ project_slug }}/config.toml)', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
   .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables ({{ PROJECT_SLUG }}_*)\n  3. Local project config (./.{{ project_slug }}/config.toml)\n  4. User config (~/.config/{{ project_slug }}/config.toml)\n  5. System config (/etc/{{ project_slug }}/config.toml)\n  6. Hardcoded defaults')
+  .addHelpText('after', '\nLogging Options:\n  --debug       Enable debug-level logging\n  --log-format  Log format: text (default) or json\n  --quiet        Suppress all output except errors\n  --verbose      Enable verbose output with extra details\n  Environment Variables:\n  LOG_LEVEL      Set log level (debug, info, warn, error, fatal)\n  NODE_ENV       Set to "development" to enable debug mode')
+  .addHelpText('after', '\nInstallation:\n  --install      Install CLI (generate completions, initialize config)\n  --uninstall    Uninstall CLI (remove completions, clean up config)')
   .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
   .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')
   .option('--json', 'Output results as JSON')
@@ -110,6 +121,32 @@ program
               process.exit(EXIT_CODES.SUCCESS);
           }
 
+          // Handle --install flag
+          if (options.install) {
+              const installOptions: InstallOptions = {
+                  projectSlug: '{{ project_slug }}',
+                  verbose: options.verbose,
+                  force: false,
+                  skipCompletions: false,
+              };
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              await install(installOptions, logger);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --uninstall flag
+          if (options.uninstall) {
+              const uninstallOptions: UninstallOptions = {
+                  projectSlug: '{{ project_slug }}',
+                  verbose: options.verbose,
+                  force: false,
+                  keepConfig: false,
+              };
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              await uninstall(uninstallOptions, logger);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
           // Initialize config with full precedence chain
           const configOptions: ConfigOptions = {
               projectSlug: '{{ project_slug }}',
@@ -123,7 +160,7 @@ program
           if (options.verbose !== undefined) cliArgs.verbose = options.verbose;
           if (options.debug !== undefined) cliArgs.debug = options.debug;
           if (options.color !== undefined) cliArgs.color = options.color;
-          if (options.logFormat !== undefined) cliArgs.logFormat = options.logFormat;
+          if (options.logFormat !== undefined) cliArgs.log_format = options.logFormat;
           if (options.json !== undefined) cliArgs.json = options.json;
 
           const config = await loadConfigWithPrecedence(configOptions, cliArgs);
@@ -132,8 +169,9 @@ program
           const mergedOptions = {
               quiet: config.quiet,
               verbose: config.verbose,
+              debug: config.debug,
               color: config.color,
-              logFormat: config.logFormat,
+              logFormat: config.log_format,
               json: config.json,
           };
 
@@ -142,6 +180,7 @@ program
               quiet: mergedOptions.quiet,
               verbose: mergedOptions.verbose,
               debug: mergedOptions.debug,
+              logLevel: config.log_level as any,
               color: mergedOptions.color,
               logFormat: mergedOptions.logFormat,
               module: '{{ project_slug }}',

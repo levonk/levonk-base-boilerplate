@@ -10,6 +10,7 @@ export interface LoggerOptions {
   quiet?: boolean;
   verbose?: boolean;
   debug?: boolean;
+  logLevel?: LogLevel;
   color?: ColorMode;
   logFormat?: LogFormat;
   module?: string;
@@ -124,9 +125,11 @@ export class Logger {
       ...options,
     };
 
-    // Set current log level: env var > debug flag > info default
+    // Set current log level: env var > config log_level > debug flag > info default
     if (envLogLevel && ['debug', 'info', 'warn', 'error', 'fatal'].includes(envLogLevel)) {
       this.currentLevel = envLogLevel;
+    } else if (options.logLevel && ['debug', 'info', 'warn', 'error', 'fatal'].includes(options.logLevel)) {
+      this.currentLevel = options.logLevel;
     } else if (this.options.debug) {
       this.currentLevel = 'debug';
     } else {

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 2
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-02-001-enhanced-logging-modes"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,8 +27,8 @@ Add `--debug` flag for debug-level logging and enhance the existing logging syst
 
 ## Sub-Tasks
 
-- [~] Add `--debug` flag to index.ts command line options
-- [~] Add debug log level to logger.ts
+- [x] Add `--debug` flag to index.ts command line options
+- [x] Add debug log level to logger.ts
 - [x] Implement log level hierarchy (debug < info < warn < error < fatal)
 - [x] Ensure --quiet flag suppresses all non-essential output including progress indicators
 - [x] Add structured logging support (JSON format for logs)
@@ -38,15 +38,15 @@ Add `--debug` flag for debug-level logging and enhance the existing logging syst
 - [x] Add timestamp, level, module, and message fields to JSON logs
 - [x] Implement format auto-detection based on TTY
 - [x] Support language-native env filters (NODE_ENV, LOG_LEVEL)
-- [~] Implement log level resolution: env vars > CLI flags > config file > defaults
-- [ ] Add unit tests for debug logging behavior
-- [ ] Add unit tests for quiet mode behavior
-- [ ] Add unit tests for JSON log formatting
-- [ ] Add unit tests for format auto-detection
-- [ ] Add unit tests for env filter support
-- [ ] Add unit tests for log level resolution
-- [ ] Add integration tests for logging mode combinations
-- [ ] Update help text to document new logging options
+- [x] Implement log level resolution: env vars > CLI flags > config file > defaults
+- [x] Add unit tests for debug logging behavior
+- [x] Add unit tests for quiet mode behavior
+- [x] Add unit tests for JSON log formatting
+- [x] Add unit tests for format auto-detection
+- [x] Add unit tests for env filter support
+- [x] Add unit tests for log level resolution
+- [x] Add integration tests for logging mode combinations
+- [x] Update help text to document new logging options
 
 ## Relevant Files
 
@@ -57,14 +57,14 @@ Add `--debug` flag for debug-level logging and enhance the existing logging syst
 
 ## Acceptance Criteria
 
-- [ ] `--debug` flag enables debug-level logging
-- [ ] Debug logs show more detailed information than info logs
-- [ ] `--quiet` flag suppresses all non-essential output including progress indicators
-- [ ] `--log-format=json` flag enables structured JSON logging
-- [ ] JSON logs include timestamp, level, module, and message fields
-- [ ] Log level hierarchy is correctly enforced (debug < info < warn < error < fatal)
-- [ ] All existing logging functionality continues to work
-- [ ] Help text clearly documents new logging options
+- [x] `--debug` flag enables debug-level logging
+- [x] Debug logs show more detailed information than info logs
+- [x] `--quiet` flag suppresses all non-essential output including progress indicators
+- [x] `--log-format=json` flag enables structured JSON logging
+- [x] JSON logs include timestamp, level, module, and message fields
+- [x] Log level hierarchy is correctly enforced (debug < info < warn < error < fatal)
+- [x] All existing logging functionality continues to work
+- [x] Help text clearly documents new logging options
 
 ## Test Plan
 
