@@ -26,13 +26,13 @@ Secure handling of sensitive data. No logging of secrets or credentials, support
 
 ## Sub-Tasks
 
-- [ ] Add keyring library dependency
-- [ ] Implement secure storage using keychain
-- [ ] Implement encrypted file storage
-- [ ] Add secret redaction from logs
-- [ ] Add warnings for insecure config
-- [ ] Add tests for credential handling
-- [ ] Update documentation
+- [x] Add keyring library dependency
+- [x] Implement secure storage using keychain
+- [x] Implement encrypted file storage
+- [x] Add secret redaction from logs
+- [x] Add warnings for insecure config
+- [x] Add tests for credential handling
+- [x] Update documentation
 
 ## Relevant Files
 

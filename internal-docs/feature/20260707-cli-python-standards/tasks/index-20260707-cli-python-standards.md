@@ -39,7 +39,7 @@ This index summarizes all stories for implementing the Python CLI Standards Comp
 | 03-002 | Daemon Process Support | feature/current/20260707-cli-python-standards/story-03-002-daemon-process-support | 01-001, 01-006 | Parallel-safe: false | daemon, main | [ ] Todo |
 | 03-003 | File Reference Formatting | feature/current/20260707-cli-python-standards/story-03-003-file-reference-formatting | 02-004 | Parallel-safe: true | main, output | [x] Done |
 | 03-004 | URL Formatting | feature/current/20260707-cli-python-standards/story-03-004-url-formatting | None | Parallel-safe: true | main, output | [x] Done |
-| 03-005 | Credential/Secret Handling | feature/current/20260707-cli-python-standards/story-03-005-credential-secret-handling | 01-001, 01-007 | Parallel-safe: true | secrets, config | [ ] Todo |
+| 03-005 | Credential/Secret Handling | feature/current/20260707-cli-python-standards/story-03-005-credential-secret-handling | 01-001, 01-007 | Parallel-safe: true | secrets, config | [x] Done |
 | 03-006 | Config File Auto-Migration | feature/current/20260707-cli-python-standards/story-03-006-config-auto-migration | 01-001, 01-007 | Parallel-safe: true | config, migration | [ ] Todo |
 | 03-007 | Structured Logging with Format Auto-Detection | feature/current/20260707-cli-python-standards/story-03-007-structured-logging | None | Parallel-safe: true | logging, main | [x] Done |
 | 03-008 | Signal-Based Config Reload | feature/current/20260707-cli-python-standards/story-03-008-config-reload | 01-007 | Parallel-safe: true | config, main | [ ] Todo |
