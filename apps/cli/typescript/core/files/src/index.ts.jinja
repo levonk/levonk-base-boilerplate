@@ -4,11 +4,19 @@ import process from 'process';
 import { glob } from 'glob';
 import fs from 'fs/promises';
 import { createLogger, LoggerOptions } from './logger.js';
+import {
+    UsageError,
+    FileNotFoundError,
+    PermissionDeniedError,
+    GenericError,
+    handleError,
+    EXIT_CODES,
+} from './error.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
     process.stderr.write('\nOperation cancelled.\n');
-    process.exit(130);
+    process.exit(EXIT_CODES.SIGINT);
 });
 
 const program = new Command();
@@ -19,6 +27,7 @@ program
   .version('1.0.0', '-v, --version', 'Output the version number')
   .helpOption('-h, --help', 'Display help for command')
   .addHelpText('after', 'Use "{{ project_slug }} help <command>" for more information on a command.')
+  .addHelpText('after', '\nExit Codes:\n  0   Success\n  1   Generic error\n  2   Usage error (invalid arguments, missing required args)\n  3   Network error (connection failures, timeouts)\n  4   Validation error (invalid config, schema validation failures)\n  5   File not found\n  6   Permission denied\n  130 SIGINT (Ctrl+C)')
   .argument('[inputs...]', 'Input files or glob patterns. Use "-" for stdin.')
   .option('-q, --quiet', 'Suppress all output except errors')
   .option('--verbose', 'Enable verbose output with extra details')
@@ -27,73 +36,83 @@ program
   .option('-c, --config <path>', 'Config file path', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
   .option('--json', 'Output results as JSON')
   .action(async (inputs: string[], options) => {
-      // Handle --usage flag
-      if (options.usage) {
-          program.helpInformation();
-          process.exit(0);
-      }
-      // Create logger with options
-      const loggerOptions: LoggerOptions = {
-          quiet: options.quiet,
-          verbose: options.verbose,
-          color: options.color,
-          module: '{{ project_slug }}',
-      };
-      const logger = createLogger(loggerOptions);
-
-      // Input Processing
-      const filesToProcess: string[] = [];
-      let readStdin = false;
-
-      if (inputs.length === 0) {
-          // Check if stdin is a TTY
-          if (process.stdin.isTTY) {
-              program.help();
-              process.exit(1);
-          } else {
-              readStdin = true;
+      try {
+          // Handle --usage flag
+          if (options.usage) {
+              program.helpInformation();
+              process.exit(EXIT_CODES.SUCCESS);
           }
-      } else {
-          for (const input of inputs) {
-              if (input === '-') {
-                  readStdin = true;
+          // Create logger with options
+          const loggerOptions: LoggerOptions = {
+              quiet: options.quiet,
+              verbose: options.verbose,
+              color: options.color,
+              module: '{{ project_slug }}',
+          };
+          const logger = createLogger(loggerOptions);
+
+          // Input Processing
+          const filesToProcess: string[] = [];
+          let readStdin = false;
+
+          if (inputs.length === 0) {
+              // Check if stdin is a TTY
+              if (process.stdin.isTTY) {
+                  throw new UsageError('No inputs provided. Use "-" for stdin or provide file patterns.');
               } else {
-                  // Globbing
-                  const matches = await glob(input, { nodir: true });
-                  if (matches.length === 0) {
-                      logger.warn(`No files found for pattern '${input}'`);
+                  readStdin = true;
+              }
+          } else {
+              for (const input of inputs) {
+                  if (input === '-') {
+                      readStdin = true;
+                  } else {
+                      // Globbing
+                      const matches = await glob(input, { nodir: true });
+                      if (matches.length === 0) {
+                          logger.warn(`No files found for pattern '${input}'`);
+                      }
+                      filesToProcess.push(...matches);
                   }
-                  filesToProcess.push(...matches);
               }
           }
-      }
 
-      const results: any[] = [];
+          const results: any[] = [];
 
-      if (readStdin) {
-          logger.info('Processing stdin...');
-          const chunks = [];
-          for await (const chunk of process.stdin) {
-              chunks.push(chunk);
+          if (readStdin) {
+              logger.info('Processing stdin...');
+              const chunks = [];
+              for await (const chunk of process.stdin) {
+                  chunks.push(chunk);
+              }
+              const content = Buffer.concat(chunks).toString('utf-8');
+              results.push({ source: 'stdin', length: content.length });
           }
-          const content = Buffer.concat(chunks).toString('utf-8');
-          results.push({ source: 'stdin', length: content.length });
-      }
 
-      for (const file of filesToProcess) {
-          try {
-              logger.info(`Processing ${file}...`);
-              const content = await fs.readFile(file, 'utf-8');
-              results.push({ source: file, length: content.length });
-          } catch (error) {
-              logger.error(`Error processing ${file}: ${error}`);
+          for (const file of filesToProcess) {
+              try {
+                  logger.info(`Processing ${file}...`);
+                  const content = await fs.readFile(file, 'utf-8');
+                  results.push({ source: file, length: content.length });
+              } catch (error) {
+                  if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                      throw new FileNotFoundError(`File not found: ${file}`, { file });
+                  } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+                      throw new PermissionDeniedError(`Permission denied: ${file}`, { file });
+                  } else {
+                      throw new GenericError(`Error processing ${file}: ${error}`, { file, error });
+                  }
+              }
           }
-      }
 
-      if (options.json) {
-          console.log(JSON.stringify(results, null, 2));
-      } else {
-          logger.info(`Processed ${results.length} inputs.`);
+          if (options.json) {
+              console.log(JSON.stringify(results, null, 2));
+          } else {
+              logger.info(`Processed ${results.length} inputs.`);
+          }
+      } catch (error) {
+          const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: '{{ project_slug }}' });
+          handleError(error, logger);
       }
   });
 

@@ -10,9 +10,22 @@ from rich.console import Console
 from platformdirs import user_config_dir
 
 from {{ project_slug }}.logging import configure_logging, get_logger
+{% if include_advanced_config %}
+from {{ project_slug }}.config import ConfigManager, get_config_manager
+{% endif %}
 
 # Version constant
 VERSION = "0.1.0"
+
+# Exit code constants
+EXIT_SUCCESS = 0
+EXIT_ERROR = 1
+EXIT_USAGE = 2
+EXIT_NETWORK_ERROR = 3
+EXIT_VALIDATION_ERROR = 4
+EXIT_FILE_NOT_FOUND = 5
+EXIT_PERMISSION_DENIED = 6
+EXIT_SIGINT = 130
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -30,7 +43,7 @@ def cleanup(signum, frame):
     if logger:
         logger.fatal("Aborted by user")
     console.print("[bold red]\nAborted! Cleaning up...[/bold red]")
-    sys.exit(130)
+    sys.exit(EXIT_SIGINT)
 
 
 signal.signal(signal.SIGINT, cleanup)
@@ -67,7 +80,8 @@ def process(
     config: Path = typer.Option(None, envvar="{{ project_slug | upper | replace('-', '_') }}_CONFIG", help="Path to config file"),
     json_output: bool = typer.Option(False, "--json", help="Output results as JSON to stdout"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress all log output"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose (debug) logging"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    debug: bool = typer.Option(False, "--debug", help="Enable detailed debugging output"),
     nocolor: bool = typer.Option(False, "--nocolor", help="Disable colored output"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
@@ -81,22 +95,56 @@ def process(
         cat file.txt | {{ project_slug }} -
     """
     global logger
-    
+
     # Configure logging based on flags
     configure_logging(
         name="{{ project_slug }}",
         quiet=quiet,
         verbose=verbose,
+        debug=debug,
         nocolor=nocolor
     )
     logger = get_logger()
-    
-    # XDG Config Resolution
+
+    {% if include_advanced_config %}
+    # Load configuration with precedence
+    config_manager = get_config_manager()
+
+    # Initialize config file if it doesn't exist
+    if not config:
+        try:
+            config = config_manager.initialize_config()
+        except Exception as e:
+            if not quiet:
+                logger.warn(f"Could not initialize config: {e}", module="config")
+
+    # Load from specified config file if provided
+    if config and config.exists():
+        try:
+            from {{ project_slug }}.config import ConfigSource
+            config_manager._load_from_file(config, ConfigSource.USER)
+        except Exception as e:
+            if not quiet:
+                logger.error(f"Failed to load config from {config}: {e}", module="config")
+
+    # Validate configuration
+    validation_errors = config_manager.validate()
+    if validation_errors:
+        if not quiet:
+            logger.error("Configuration validation errors:", module="config")
+            for error in validation_errors:
+                logger.error(f"  - {error}", module="config")
+
+    if not quiet:
+        logger.info(f"Configuration loaded from {len(config_manager.sources)} sources", module="config")
+    {% else %}
+    # XDG Config Resolution (legacy)
     if not config:
         config = Path(user_config_dir("{{ project_slug }}")) / "config.toml"
 
     if not quiet:
         logger.info(f"Reading config from {config}", module="config")
+    {% endif %}
 
     files_to_process = []
     read_from_stdin = False
@@ -122,7 +170,7 @@ def process(
         # No input provided and TTY -> Show help
         ctx = typer.get_current_context()
         console.print(ctx.get_help())
-        sys.exit(1)
+        sys.exit(EXIT_USAGE)
 
     results = []
 
@@ -137,9 +185,18 @@ def process(
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 results.append(process_content(content, file_path))
+        except FileNotFoundError:
+            if not quiet:
+                logger.error(f"File not found: {file_path}", module="io")
+            sys.exit(EXIT_FILE_NOT_FOUND)
+        except PermissionError:
+            if not quiet:
+                logger.error(f"Permission denied: {file_path}", module="io")
+            sys.exit(EXIT_PERMISSION_DENIED)
         except Exception as e:
             if not quiet:
                 logger.error(f"Error reading {file_path}: {e}", module="io")
+            sys.exit(EXIT_ERROR)
 
     # Output Strategy
     if json_output:

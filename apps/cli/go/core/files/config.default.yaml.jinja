@@ -1,0 +1,128 @@
+# Default configuration for {{ project_name }}
+# {{ description }}
+#
+# This file contains all available configuration options with their default values.
+# All settings are commented out - uncomment and modify as needed.
+#
+# Configuration precedence (highest to lowest):
+# 1. Command-line flags (--flag)
+# 2. Environment variables ({{ project_slug | upper | replace('-', '_') }}_SETTING_NAME)
+# 3. Config file (this file)
+# 4. Default values
+
+# -----------------------------------------------------------------------------
+# General Settings
+# -----------------------------------------------------------------------------
+
+# Enable verbose output for debugging
+# verbose: false
+
+# Suppress all output except errors
+# quiet: false
+
+# Disable colored output
+# no-color: false
+
+# Output results as JSON
+# json: false
+
+# -----------------------------------------------------------------------------
+# Color Control
+# -----------------------------------------------------------------------------
+
+# Color output mode: auto, always, or never
+# - auto: Enable color when TTY detected (default)
+# - always: Force color output regardless of TTY
+# - never: Disable all color output
+# color: auto
+
+# Note: The NO_COLOR environment variable takes precedence over all color settings
+# Set NO_COLOR=1 to disable color output globally
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+
+# Log level: debug, info, warn, error
+# log-level: info
+
+# Log file path (if set, logs will be written to file in addition to stderr)
+# log-file: ""
+
+# Log format: text or json
+# log-format: text
+
+# -----------------------------------------------------------------------------
+# Input Processing
+# -----------------------------------------------------------------------------
+
+# Maximum file size to process (in bytes)
+# Use 0 for unlimited
+# max-file-size: 104857600
+
+# Maximum number of files to process
+# Use 0 for unlimited
+# max-files: 1000
+
+# Follow symbolic links when processing files
+# follow-symlinks: false
+
+# -----------------------------------------------------------------------------
+# Output Formatting
+# -----------------------------------------------------------------------------
+
+# Output format: text, json, yaml
+# output-format: text
+
+# Indentation size for structured output
+# indent-size: 2
+
+# Include timestamps in output
+# include-timestamps: false
+
+# -----------------------------------------------------------------------------
+# Performance
+# -----------------------------------------------------------------------------
+
+# Number of parallel workers for processing
+# Set to 0 to use number of CPU cores
+# workers: 0
+
+# Timeout for individual file processing (in seconds)
+# Use 0 for no timeout
+# processing-timeout: 30
+
+# -----------------------------------------------------------------------------
+# Security
+# -----------------------------------------------------------------------------
+
+# Verify file checksums before processing
+# verify-checksums: false
+
+# Allow processing of files with potentially dangerous extensions
+# allow-dangerous-extensions: false
+
+# -----------------------------------------------------------------------------
+# Advanced
+# -----------------------------------------------------------------------------
+
+# Custom configuration directory
+# Overrides default XDG config directory
+# config-dir: ""
+
+# Custom cache directory
+# Overrides default XDG cache directory
+# cache-dir: ""
+
+# Enable experimental features
+# Experimental features may change or be removed in future versions
+# enable-experimental: false
+
+# -----------------------------------------------------------------------------
+# Example: Custom Settings
+# -----------------------------------------------------------------------------
+
+# Add your custom settings here
+# custom-setting: "value"
+
+{# vim: set ft=yaml: #}

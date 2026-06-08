@@ -1,0 +1,185 @@
+import { describe, it, expect, vi } from 'vitest';
+import {
+    EXIT_CODES,
+    CLIError,
+    GenericError,
+    UsageError,
+    NetworkError,
+    ValidationError,
+    FileNotFoundError,
+    PermissionDeniedError,
+    handleError,
+    isCLIError,
+    getExitCode,
+} from './error.js';
+
+describe('EXIT_CODES', () => {
+    it('should have correct exit code values', () => {
+        expect(EXIT_CODES.SUCCESS).toBe(0);
+        expect(EXIT_CODES.GENERIC_ERROR).toBe(1);
+        expect(EXIT_CODES.USAGE_ERROR).toBe(2);
+        expect(EXIT_CODES.NETWORK_ERROR).toBe(3);
+        expect(EXIT_CODES.VALIDATION_ERROR).toBe(4);
+        expect(EXIT_CODES.FILE_NOT_FOUND).toBe(5);
+        expect(EXIT_CODES.PERMISSION_DENIED).toBe(6);
+        expect(EXIT_CODES.SIGINT).toBe(130);
+    });
+});
+
+describe('CLIError', () => {
+    it('should create error with message and exit code', () => {
+        const error = new CLIError('Test error', 1);
+        expect(error.message).toBe('Test error');
+        expect(error.exitCode).toBe(1);
+        expect(error.name).toBe('CLIError');
+    });
+
+    it('should include context in error', () => {
+        const context = { file: 'test.txt' };
+        const error = new CLIError('Test error', 1, context);
+        expect(error.context).toEqual(context);
+    });
+
+    it('should format message with exit code', () => {
+        const error = new CLIError('Test error', 1);
+        expect(error.getFormattedMessage()).toBe('CLIError: Test error (exit code: 1)');
+    });
+
+    it('should format message with context', () => {
+        const error = new CLIError('Test error', 1, { file: 'test.txt' });
+        expect(error.getFormattedMessage()).toBe('CLIError: Test error (exit code: 1) {"file":"test.txt"}');
+    });
+});
+
+describe('GenericError', () => {
+    it('should have exit code 1', () => {
+        const error = new GenericError('Generic error');
+        expect(error.exitCode).toBe(EXIT_CODES.GENERIC_ERROR);
+        expect(error.name).toBe('GenericError');
+    });
+});
+
+describe('UsageError', () => {
+    it('should have exit code 2', () => {
+        const error = new UsageError('Usage error');
+        expect(error.exitCode).toBe(EXIT_CODES.USAGE_ERROR);
+        expect(error.name).toBe('UsageError');
+    });
+});
+
+describe('NetworkError', () => {
+    it('should have exit code 3', () => {
+        const error = new NetworkError('Network error');
+        expect(error.exitCode).toBe(EXIT_CODES.NETWORK_ERROR);
+        expect(error.name).toBe('NetworkError');
+    });
+});
+
+describe('ValidationError', () => {
+    it('should have exit code 4', () => {
+        const error = new ValidationError('Validation error');
+        expect(error.exitCode).toBe(EXIT_CODES.VALIDATION_ERROR);
+        expect(error.name).toBe('ValidationError');
+    });
+});
+
+describe('FileNotFoundError', () => {
+    it('should have exit code 5', () => {
+        const error = new FileNotFoundError('File not found');
+        expect(error.exitCode).toBe(EXIT_CODES.FILE_NOT_FOUND);
+        expect(error.name).toBe('FileNotFoundError');
+    });
+});
+
+describe('PermissionDeniedError', () => {
+    it('should have exit code 6', () => {
+        const error = new PermissionDeniedError('Permission denied');
+        expect(error.exitCode).toBe(EXIT_CODES.PERMISSION_DENIED);
+        expect(error.name).toBe('PermissionDeniedError');
+    });
+});
+
+describe('handleError', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit called');
+    });
+    const mockLogger = { error: vi.fn() };
+
+    afterEach(() => {
+        mockExit.mockClear();
+        mockLogger.error.mockClear();
+    });
+
+    afterAll(() => {
+        mockExit.mockRestore();
+    });
+
+    it('should handle CLIError with correct exit code', () => {
+        const error = new UsageError('Test usage error');
+        expect(() => handleError(error, mockLogger)).toThrow('process.exit called');
+        expect(mockExit).toHaveBeenCalledWith(EXIT_CODES.USAGE_ERROR);
+        expect(mockLogger.error).toHaveBeenCalledWith('UsageError: Test usage error (exit code: 2)');
+    });
+
+    it('should handle generic Error with exit code 1', () => {
+        const error = new Error('Generic error');
+        expect(() => handleError(error, mockLogger)).toThrow('process.exit called');
+        expect(mockExit).toHaveBeenCalledWith(EXIT_CODES.GENERIC_ERROR);
+        expect(mockLogger.error).toHaveBeenCalledWith('Error: Generic error');
+    });
+
+    it('should handle string error with exit code 1', () => {
+        const error = 'String error';
+        expect(() => handleError(error, mockLogger)).toThrow('process.exit called');
+        expect(mockExit).toHaveBeenCalledWith(EXIT_CODES.GENERIC_ERROR);
+        expect(mockLogger.error).toHaveBeenCalledWith('String error');
+    });
+
+    it('should handle unknown error with exit code 1', () => {
+        const error = null;
+        expect(() => handleError(error, mockLogger)).toThrow('process.exit called');
+        expect(mockExit).toHaveBeenCalledWith(EXIT_CODES.GENERIC_ERROR);
+        expect(mockLogger.error).toHaveBeenCalledWith('An unexpected error occurred');
+    });
+
+    it('should work without logger', () => {
+        const error = new UsageError('Test usage error');
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        expect(() => handleError(error)).toThrow('process.exit called');
+        expect(consoleErrorSpy).toHaveBeenCalledWith('UsageError: Test usage error (exit code: 2)');
+        consoleErrorSpy.mockRestore();
+    });
+});
+
+describe('isCLIError', () => {
+    it('should return true for CLIError instances', () => {
+        const error = new UsageError('Test');
+        expect(isCLIError(error, UsageError)).toBe(true);
+    });
+
+    it('should return false for non-CLIError instances', () => {
+        const error = new Error('Test');
+        expect(isCLIError(error, UsageError)).toBe(false);
+    });
+
+    it('should return false for wrong CLIError type', () => {
+        const error = new UsageError('Test');
+        expect(isCLIError(error, NetworkError)).toBe(false);
+    });
+});
+
+describe('getExitCode', () => {
+    it('should return exit code from CLIError', () => {
+        const error = new UsageError('Test');
+        expect(getExitCode(error)).toBe(EXIT_CODES.USAGE_ERROR);
+    });
+
+    it('should return generic exit code for non-CLIError', () => {
+        const error = new Error('Test');
+        expect(getExitCode(error)).toBe(EXIT_CODES.GENERIC_ERROR);
+    });
+
+    it('should return generic exit code for unknown error', () => {
+        expect(getExitCode(null)).toBe(EXIT_CODES.GENERIC_ERROR);
+    });
+});

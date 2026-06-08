@@ -148,28 +148,38 @@ func processContent(content string, source string) map[string]interface{} {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-	
+
 	// Persistent flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/{{ project_slug }}/config.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
-	
+
 	// Local flags
 	rootCmd.Flags().Bool("usage", false, "Show usage information")
-	
+
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }
 
 func initConfig() {
+	var configPath string
+
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
+		configPath = cfgFile
 	} else {
 		configDir, _ := os.UserConfigDir()
 		viper.AddConfigPath(configDir + "/{{ project_slug }}")
 		viper.SetConfigName("config")
+		configPath = configDir + "/{{ project_slug }}/config.yaml"
 	}
+
+	// Initialize config file if it doesn't exist (first run)
+	if err := InitConfigIfNeeded(configPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize config file: %v\n", err)
+	}
+
 	viper.SetEnvPrefix("{{ project_slug | upper | replace('-', '_') }}")
 	viper.AutomaticEnv()
 	viper.ReadInConfig()

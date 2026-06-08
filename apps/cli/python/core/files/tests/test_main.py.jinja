@@ -4,9 +4,58 @@ from {{ project_slug }}.__main__ import app
 runner = CliRunner()
 
 def test_help():
+    """Test --help flag displays help at root command."""
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "Show this message and exit" in result.stdout
+
+def test_version():
+    """Test --version flag displays version."""
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "0.1.0" in result.stdout
+
+def test_usage():
+    """Test --usage flag displays usage information."""
+    result = runner.invoke(app, ["--usage"])
+    assert result.exit_code == 0
+    assert "Show this message and exit" in result.stdout
+
+def test_debug_flag():
+    """Test --debug flag enables debug logging."""
+    result = runner.invoke(app, ["-", "--debug", "--quiet"], input="test content")
+    assert result.exit_code == 0
+    # Debug flag should be accepted without error
+
+def test_verbose_flag():
+    """Test --verbose flag enables verbose logging."""
+    result = runner.invoke(app, ["-", "--verbose", "--quiet"], input="test content")
+    assert result.exit_code == 0
+    # Verbose flag should be accepted without error
+
+def test_exit_code_file_not_found(tmp_path):
+    """Test exit code for file not found error."""
+    nonexistent = tmp_path / "nonexistent.txt"
+    result = runner.invoke(app, [str(nonexistent)])
+    assert result.exit_code == 5  # EXIT_FILE_NOT_FOUND
+
+def test_exit_code_permission_denied(tmp_path):
+    """Test exit code for permission denied error."""
+    # Create a file with no read permissions
+    f = tmp_path / "no_perms.txt"
+    f.write_text("content")
+    f.chmod(0o000)
+
+    result = runner.invoke(app, [str(f)])
+    # Should exit with permission denied code (6) or error (1) depending on OS
+    assert result.exit_code in (1, 6)
+
+def test_exit_code_sigint():
+    """Test SIGINT returns exit code 130."""
+    # This test would require sending SIGINT to the process
+    # For now, we just verify the constant is defined
+    from {{ project_slug }}.__main__ import EXIT_SIGINT
+    assert EXIT_SIGINT == 130
 
 def test_no_args_tty():
     # Simulate TTY with no args -> Should show help and exit 1

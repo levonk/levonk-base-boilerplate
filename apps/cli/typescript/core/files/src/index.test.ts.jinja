@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { exec } from 'child_process';
 import util from 'util';
+import fs from 'fs/promises';
+import os from 'os';
 
 const execAsync = util.promisify(exec);
 
@@ -56,6 +58,75 @@ describe('CLI', () => {
         it('should prioritize NO_COLOR over --color flag', async () => {
             const { stdout } = await execAsync('NO_COLOR=1 npx ts-node src/index.ts --color=always --help');
             expect(stdout).toContain('Usage:');
+        });
+    });
+
+    describe('Exit Codes', () => {
+        let tempFile: string;
+
+        beforeEach(async () => {
+            tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.unlink(tempFile);
+            } catch {
+                // Ignore if file doesn't exist
+            }
+        });
+
+        it('should exit with code 0 on success', async () => {
+            const { stdout } = await execAsync(`npx ts-node src/index.ts "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should exit with code 2 on usage error (no inputs)', async () => {
+            try {
+                await execAsync('npx ts-node src/index.ts', { stdio: 'pipe' });
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(2);
+                expect(error.stderr).toContain('UsageError');
+            }
+        });
+
+        it('should exit with code 5 on file not found', async () => {
+            try {
+                await execAsync('npx ts-node src/index.ts /nonexistent/file.txt', { stdio: 'pipe' });
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(5);
+                expect(error.stderr).toContain('FileNotFoundError');
+            }
+        });
+
+        it('should exit with code 6 on permission denied', async () => {
+            // Create a file with no read permissions
+            const noPermFile = await fs.mkdtemp(os.tmpdir()) + '/no-perm.txt';
+            await fs.writeFile(noPermFile, 'test');
+            await fs.chmod(noPermFile, 0o000);
+
+            try {
+                await execAsync(`npx ts-node src/index.ts "${noPermFile}"`, { stdio: 'pipe' });
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(6);
+                expect(error.stderr).toContain('PermissionDeniedError');
+            } finally {
+                await fs.chmod(noPermFile, 0o644);
+                await fs.unlink(noPermFile);
+            }
+        });
+
+        it('should include exit code in error messages', async () => {
+            try {
+                await execAsync('npx ts-node src/index.ts /nonexistent/file.txt', { stdio: 'pipe' });
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.stderr).toContain('exit code: 5');
+            }
         });
     });
 });

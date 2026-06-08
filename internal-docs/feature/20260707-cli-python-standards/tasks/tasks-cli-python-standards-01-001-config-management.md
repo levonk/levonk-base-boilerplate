@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 1
 parallel_id: 1
 branch: "feature/current/cli-python-standards/story-01-001-config-management"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,16 +27,16 @@ Implement a comprehensive configuration management system that supports config f
 
 ## Sub-Tasks
 
-- [ ] Create `config.py.jinja` template file with ConfigManager class — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja`
-- [ ] Implement config file initialization with default commented settings on first run — `config.py.jinja`
-- [ ] Add config file validation with clear error messages including line numbers — `config.py.jinja`
-- [ ] Implement config file auto-migration with backup and logging — `config.py.jinja`
-- [ ] Add configuration precedence logic (CLI args > env vars > local > user > system > defaults) — `config.py.jinja`
-- [ ] Add TOML parsing support with pydantic validation — `config.py.jinja`
-- [ ] Update `copier.yml` to add `include_advanced_config` boolean option — `apps/cli/python/core/copier.yml`
-- [ ] Update `pyproject.toml.jinja` to add pydantic and toml dependencies — `apps/cli/python/core/files/pyproject.toml.jinja`
-- [ ] Integrate ConfigManager into `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Add tests for config initialization, validation, and migration — `apps/cli/python/core/files/tests/test_config.py.jinja`
+- [x] Create `config.py.jinja` template file with ConfigManager class — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja`
+- [x] Implement config file initialization with default commented settings on first run — `config.py.jinja`
+- [x] Add config file validation with clear error messages including line numbers — `config.py.jinja`
+- [x] Implement config file auto-migration with backup and logging — `config.py.jinja`
+- [x] Add configuration precedence logic (CLI args > env vars > local > user > system > defaults) — `config.py.jinja`
+- [x] Add TOML parsing support with pydantic validation — `config.py.jinja`
+- [x] Update `copier.yml` to add `include_advanced_config` boolean option — `apps/cli/python/core/copier.yml`
+- [x] Update `pyproject.toml.jinja` to add pydantic and toml dependencies — `apps/cli/python/core/files/pyproject.toml.jinja`
+- [x] Integrate ConfigManager into `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [~] Add tests for config initialization, validation, and migration — `apps/cli/python/core/files/tests/test_config.py.jinja`
 
 ## Relevant Files
 

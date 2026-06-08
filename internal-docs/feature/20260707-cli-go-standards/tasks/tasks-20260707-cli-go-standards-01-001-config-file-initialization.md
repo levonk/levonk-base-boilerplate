@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 1
 parallel_id: 1
 branch: "feature/current/20260707-cli-go-standards/story-01-001-config-file-initialization"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,9 +27,9 @@ Implement automatic config file initialization on first run. When no config file
 
 ## Sub-Tasks
 
-- [ ] Add config initialization function to detect first run — `core/files/config.go.jinja`
-- [ ] Create default config template with all settings commented — `core/files/config.default.yaml.jinja`
-- [ ] Implement config file creation logic in initConfig — `core/files/main.go.jinja`
+- [x] Add config initialization function to detect first run — `core/files/config.go.jinja`
+- [x] Create default config template with all settings commented — `core/files/config.default.yaml.jinja`
+- [~] Implement config file creation logic in initConfig — `core/files/main.go.jinja`
 - [ ] Add config file path detection and validation — `core/files/config.go.jinja`
 - [ ] Test config file creation on first run — `core/files/main_test.go.jinja`
 - [ ] Test config file is not overwritten if exists — `core/files/main_test.go.jinja`

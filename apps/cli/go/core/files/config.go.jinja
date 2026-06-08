@@ -1,0 +1,74 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+// IsFirstRun checks if this is the first run by detecting if the config file exists
+func IsFirstRun(configPath string) bool {
+	if configPath == "" {
+		return true
+	}
+	_, err := os.Stat(configPath)
+	return os.IsNotExist(err)
+}
+
+// GetConfigPath returns the default config file path
+func GetConfigPath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user config directory: %w", err)
+	}
+	configPath := filepath.Join(configDir, "{{ project_slug }}", "config.yaml")
+	return configPath, nil
+}
+
+// EnsureConfigDir creates the config directory if it doesn't exist
+func EnsureConfigDir(configPath string) error {
+	configDir := filepath.Dir(configPath)
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			return fmt.Errorf("failed to create config directory: %w", err)
+		}
+	}
+	return nil
+}
+
+// CreateDefaultConfig creates a default config file with all settings commented out
+func CreateDefaultConfig(configPath string) error {
+	// Ensure the config directory exists
+	if err := EnsureConfigDir(configPath); err != nil {
+		return err
+	}
+
+	// Create a basic default config file
+	// This will be replaced with the full template in the next sub-task
+	defaultConfig := `# Default configuration for {{ project_name }}
+# All settings are commented out with their default values
+# Uncomment and modify as needed
+
+# Example setting:
+# setting_name: default_value
+`
+
+	if err := os.WriteFile(configPath, []byte(defaultConfig), 0600); err != nil {
+		return fmt.Errorf("failed to create default config file: %w", err)
+	}
+
+	return nil
+}
+
+// InitConfigIfNeeded initializes the config file if it doesn't exist
+// This should be called during application initialization
+func InitConfigIfNeeded(configPath string) error {
+	if IsFirstRun(configPath) {
+		if err := CreateDefaultConfig(configPath); err != nil {
+			return fmt.Errorf("failed to initialize config file: %w", err)
+		}
+	}
+	return nil
+}
+
+{# vim: set ft=go: #}
