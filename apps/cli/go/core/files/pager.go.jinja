@@ -34,7 +34,7 @@ func GetTerminalHeight() int {
 		return 24
 	}
 
-	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	_, height, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		// If we can't get the size, use a reasonable default
 		return 24
@@ -137,7 +137,7 @@ func (p *Pager) Finish() {
 	}
 
 	// Close the pipe writer to signal EOF to pager
-	if pw, ok := os.Stdout.(*os.File); ok {
+	if pw, ok := p.writer.(*os.File); ok {
 		pw.Close()
 	}
 
@@ -190,7 +190,7 @@ func GetTerminalWidth() int {
 		return 80
 	}
 
-	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		return 80
 	}

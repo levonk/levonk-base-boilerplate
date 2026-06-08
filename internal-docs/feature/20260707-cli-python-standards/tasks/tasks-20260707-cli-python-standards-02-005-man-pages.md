@@ -26,12 +26,12 @@ Generate traditional Unix man pages accessible via `man {command}` or `--man` fl
 
 ## Sub-Tasks
 
-- [ ] Add man page generation logic
-- [ ] Implement --man flag
-- [ ] Generate man pages for all commands
-- [ ] Install man pages to system location
-- [ ] Add tests for man page generation
-- [ ] Update documentation
+- [x] Add man page generation logic
+- [x] Implement --man flag
+- [x] Generate man pages for all commands
+- [x] Install man pages to system location
+- [x] Add tests for man page generation
+- [x] Update documentation
 
 ## Relevant Files
 
