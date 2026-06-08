@@ -16,6 +16,7 @@ from {{ project_slug }}.progress import progress_bar
 from {{ project_slug }}.daemon import get_daemon_manager
 from {{ project_slug }}.man_page import print_man_page
 from {{ project_slug }}.terminal import get_terminal_size, should_use_pager, page_output
+from {{ project_slug }}.resource import get_resource_monitor
 {% if include_tui %}
 from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
 {% endif %}
@@ -123,6 +124,8 @@ def process(
     cancel_job: Optional[str] = typer.Option(None, "--cancel-job", help="Cancel a specific background job by ID"),
     man: bool = typer.Option(False, "--man", help="Display man page"),
     no_pager: bool = typer.Option(False, "--no-pager", help="Disable automatic paging of long output"),
+    max_memory: Optional[int] = typer.Option(None, "--max-memory", help="Maximum memory usage in MB"),
+    max_cpu: Optional[float] = typer.Option(None, "--max-cpu", help="Maximum CPU usage percentage"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
@@ -193,6 +196,13 @@ def process(
     if man:
         print_man_page()
         sys.exit(EXIT_SUCCESS)
+
+    # Initialize resource monitor if limits specified
+    resource_monitor = None
+    if max_memory or max_cpu:
+        resource_monitor = get_resource_monitor(max_memory, max_cpu)
+        if not quiet:
+            logger.info(f"Resource limits: max_memory={max_memory}MB, max_cpu={max_cpu}%", module="resource")
 
 {% if include_tui %}
     # Handle TUI mode
@@ -372,6 +382,15 @@ def process(
 
                 if progress:
                     progress.update(task, advance=1)
+
+                # Check resource limits
+                if resource_monitor:
+                    if not resource_monitor.check_memory_limit():
+                        logger.error("Memory limit exceeded, aborting", module="resource")
+                        sys.exit(EXIT_ERROR)
+                    if not resource_monitor.check_cpu_limit():
+                        logger.error("CPU limit exceeded, aborting", module="resource")
+                        sys.exit(EXIT_ERROR)
 
     # Output Strategy
     if json_output:
