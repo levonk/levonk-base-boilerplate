@@ -5,6 +5,9 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 func TestColorModeAuto(t *testing.T) {
@@ -247,6 +250,207 @@ func TestDebugIsSeparateFromVerbose(t *testing.T) {
 	output = buf.String()
 	if output != "" {
 		t.Error("Debug should not appear when debug is false, even if verbose is true")
+	}
+}
+
+func TestStructuredLoggingJSONFormat(t *testing.T) {
+	// Test that non-TTY output uses JSON format
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+
+	// Force JSON formatter by setting to non-TTY
+	logger.logrusLogger.SetFormatter(&logrus.JSONFormatter{})
+
+	logger.Info("test message")
+
+	output := buf.String()
+	// JSON format should contain structured fields
+	if !strings.Contains(output, "test message") {
+		t.Error("Output should contain the test message")
+	}
+	if !strings.Contains(output, "module") {
+		t.Error("JSON output should contain module field")
+	}
+	if !strings.Contains(output, "level") {
+		t.Error("JSON output should contain level field")
+	}
+	if !strings.Contains(output, "time") {
+		t.Error("JSON output should contain time field")
+	}
+}
+
+func TestStructuredLoggingPrettyFormat(t *testing.T) {
+	// Test that TTY output uses pretty format
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+
+	// Force text formatter for TTY
+	logger.logrusLogger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	logger.Info("test message")
+
+	output := buf.String()
+	// Pretty format should contain the message
+	if !strings.Contains(output, "test message") {
+		t.Error("Output should contain the test message")
+	}
+}
+
+func TestLOG_LEVELEnvVar(t *testing.T) {
+	// Test LOG_LEVEL environment variable precedence
+	oldLogLevel := os.Getenv("LOG_LEVEL")
+	defer os.Setenv("LOG_LEVEL", oldLogLevel)
+
+	// Set LOG_LEVEL to DEBUG
+	os.Setenv("LOG_LEVEL", "DEBUG")
+
+	// Reset viper to avoid interference
+	viper.Reset()
+
+	level := resolveLogLevel()
+	if level != logrus.DebugLevel {
+		t.Errorf("LOG_LEVEL=DEBUG should resolve to DebugLevel, got %v", level)
+	}
+
+	// Test other levels
+	os.Setenv("LOG_LEVEL", "INFO")
+	level = resolveLogLevel()
+	if level != logrus.InfoLevel {
+		t.Errorf("LOG_LEVEL=INFO should resolve to InfoLevel, got %v", level)
+	}
+
+	os.Setenv("LOG_LEVEL", "WARN")
+	level = resolveLogLevel()
+	if level != logrus.WarnLevel {
+		t.Errorf("LOG_LEVEL=WARN should resolve to WarnLevel, got %v", level)
+	}
+
+	os.Setenv("LOG_LEVEL", "ERROR")
+	level = resolveLogLevel()
+	if level != logrus.ErrorLevel {
+		t.Errorf("LOG_LEVEL=ERROR should resolve to ErrorLevel, got %v", level)
+	}
+}
+
+func TestLogLevelResolutionPrecedence(t *testing.T) {
+	// Test precedence: env vars > CLI flags > config file > defaults
+
+	// Reset viper
+	viper.Reset()
+
+	// 1. Test default (no env, no flags, no config)
+	oldLogLevel := os.Getenv("LOG_LEVEL")
+	os.Unsetenv("LOG_LEVEL")
+	defer os.Setenv("LOG_LEVEL", oldLogLevel)
+
+	level := resolveLogLevel()
+	if level != logrus.InfoLevel {
+		t.Errorf("Default should be InfoLevel, got %v", level)
+	}
+
+	// 2. Test config file precedence (no env, no flags)
+	viper.Set("log_level", "DEBUG")
+	level = resolveLogLevel()
+	if level != logrus.DebugLevel {
+		t.Errorf("Config log_level=DEBUG should resolve to DebugLevel, got %v", level)
+	}
+
+	// 3. Test CLI flag precedence (no env)
+	viper.Set("debug", true)
+	level = resolveLogLevel()
+	if level != logrus.DebugLevel {
+		t.Errorf("CLI flag debug=true should resolve to DebugLevel, got %v", level)
+	}
+
+	// 4. Test env var precedence (highest)
+	os.Setenv("LOG_LEVEL", "ERROR")
+	level = resolveLogLevel()
+	if level != logrus.ErrorLevel {
+		t.Errorf("LOG_LEVEL=ERROR should override CLI flags and config, got %v", level)
+	}
+
+	// Cleanup
+	viper.Reset()
+}
+
+func TestStructuredLoggingFields(t *testing.T) {
+	// Test that structured logs include consistent fields
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+	logger.logrusLogger.SetFormatter(&logrus.JSONFormatter{})
+
+	logger.Info("test message")
+
+	output := buf.String()
+
+	// Check for consistent fields
+	if !strings.Contains(output, "module") {
+		t.Error("Structured logs should include module field")
+	}
+	if !strings.Contains(output, "test") {
+		t.Error("Module field should be 'test'")
+	}
+	if !strings.Contains(output, "level") {
+		t.Error("Structured logs should include level field")
+	}
+	if !strings.Contains(output, "time") {
+		t.Error("Structured logs should include time field")
+	}
+	if !strings.Contains(output, "msg") {
+		t.Error("Structured logs should include msg field")
+	}
+}
+
+func TestFormatAutoDetection(t *testing.T) {
+	// Test that format auto-detection works correctly
+	logger := NewLogger("test")
+
+	// The logger should auto-detect format based on TTY
+	// We can't easily test TTY detection in unit tests, but we can verify
+	// that the logger has a formatter set
+	if logger.logrusLogger.Formatter == nil {
+		t.Error("Logger should have a formatter set")
+	}
+}
+
+func TestLogLevelUpdate(t *testing.T) {
+	// Test that log level updates when settings change
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+
+	// Initial level should be based on resolveLogLevel
+	initialLevel := logger.logrusLogger.GetLevel()
+
+	// Set debug mode
+	logger.SetDebug(true)
+	if logger.logrusLogger.GetLevel() != logrus.DebugLevel {
+		t.Error("SetDebug(true) should set log level to DebugLevel")
+	}
+
+	// Set quiet mode
+	logger.SetDebug(false)
+	logger.SetQuiet(true)
+	if logger.logrusLogger.GetLevel() != logrus.ErrorLevel {
+		t.Error("SetQuiet(true) should set log level to ErrorLevel")
+	}
+
+	// Reset to normal
+	logger.SetQuiet(false)
+	logger.SetVerbose(true)
+	if logger.logrusLogger.GetLevel() != logrus.InfoLevel {
+		t.Error("SetVerbose(true) should set log level to InfoLevel")
+	}
+
+	// Restore initial
+	logger.SetVerbose(false)
+	if logger.logrusLogger.GetLevel() != initialLevel {
+		t.Error("Resetting should restore initial log level")
 	}
 }
 {# vim: set ft=go: #}

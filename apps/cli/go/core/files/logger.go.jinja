@@ -10,6 +10,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -45,6 +46,7 @@ type Logger struct {
 	enableRefs    bool
 	refFormat     ReferenceFormat
 	secretManager *SecretManager
+	logrusLogger  *logrus.Logger
 }
 
 // Log level colors (ANSI escape codes)
@@ -76,6 +78,29 @@ func NewLogger(moduleName string) *Logger {
 	colorIndex := moduleColorIndex % len(moduleColors)
 	moduleColorIndex++
 
+	// Initialize logrus logger
+	logrusLogger := logrus.New()
+	logrusLogger.SetOutput(os.Stderr)
+	logrusLogger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat:  "2006-01-02 15:04:05",
+		DisableColors:   false,
+		ForceColors:     false,
+		DisableSorting:  false,
+	})
+
+	// Auto-detect format based on TTY
+	if !isatty.IsTerminal(os.Stderr.Fd()) {
+		// Non-TTY: use JSON format for structured logging
+		logrusLogger.SetFormatter(&logrus.JSONFormatter{
+			TimestampFormat: "2006-01-02T15:04:05Z07:00",
+		})
+	}
+
+	// Set initial log level from environment or default
+	logLevel := resolveLogLevel()
+	logrusLogger.SetLevel(logLevel)
+
 	return &Logger{
 		quiet:       false,
 		verbose:     false,
@@ -86,22 +111,26 @@ func NewLogger(moduleName string) *Logger {
 		writer:      os.Stderr,
 		enableRefs:  false,
 		refFormat:   FormatStandard,
+		logrusLogger: logrusLogger,
 	}
 }
 
 // SetQuiet sets the quiet mode (suppresses all output)
 func (l *Logger) SetQuiet(quiet bool) {
 	l.quiet = quiet
+	l.updateLogLevel()
 }
 
 // SetVerbose sets verbose mode (enables debug output)
 func (l *Logger) SetVerbose(verbose bool) {
 	l.verbose = verbose
+	l.updateLogLevel()
 }
 
 // SetDebug sets debug mode (enables detailed diagnostic logging)
 func (l *Logger) SetDebug(debug bool) {
 	l.debug = debug
+	l.updateLogLevel()
 }
 
 // SetColorMode sets the color output mode
@@ -150,6 +179,72 @@ func (l *Logger) SetRefFormat(format ReferenceFormat) {
 // SetSecretManager sets the secret manager for redaction
 func (l *Logger) SetSecretManager(sm *SecretManager) {
 	l.secretManager = sm
+}
+
+// resolveLogLevel resolves the log level based on precedence:
+// env vars > CLI flags > config file > defaults
+func resolveLogLevel() logrus.Level {
+	// 1. Check LOG_LEVEL environment variable (highest precedence)
+	if envLevel := os.Getenv("LOG_LEVEL"); envLevel != "" {
+		switch strings.ToUpper(envLevel) {
+		case "DEBUG":
+			return logrus.DebugLevel
+		case "INFO":
+			return logrus.InfoLevel
+		case "WARN", "WARNING":
+			return logrus.WarnLevel
+		case "ERROR":
+			return logrus.ErrorLevel
+		case "FATAL":
+			return logrus.FatalLevel
+		default:
+			// Invalid value, fall through to next precedence
+		}
+	}
+
+	// 2. Check CLI flags (via viper)
+	if viper.IsSet("debug") && viper.GetBool("debug") {
+		return logrus.DebugLevel
+	}
+	if viper.IsSet("verbose") && viper.GetBool("verbose") {
+		return logrus.InfoLevel
+	}
+	if viper.IsSet("quiet") && viper.GetBool("quiet") {
+		return logrus.ErrorLevel
+	}
+
+	// 3. Check config file
+	if viper.IsSet("log_level") {
+		configLevel := viper.GetString("log_level")
+		switch strings.ToUpper(configLevel) {
+		case "DEBUG":
+			return logrus.DebugLevel
+		case "INFO":
+			return logrus.InfoLevel
+		case "WARN", "WARNING":
+			return logrus.WarnLevel
+		case "ERROR":
+			return logrus.ErrorLevel
+		case "FATAL":
+			return logrus.FatalLevel
+		}
+	}
+
+	// 4. Default to INFO level
+	return logrus.InfoLevel
+}
+
+// updateLogLevel updates the log level based on current settings
+func (l *Logger) updateLogLevel() {
+	if l.quiet {
+		l.logrusLogger.SetLevel(logrus.ErrorLevel)
+	} else if l.debug {
+		l.logrusLogger.SetLevel(logrus.DebugLevel)
+	} else if l.verbose {
+		l.logrusLogger.SetLevel(logrus.InfoLevel)
+	} else {
+		l.logrusLogger.SetLevel(resolveLogLevel())
+	}
 }
 
 // shouldUseColor determines if color should be used
@@ -254,9 +349,6 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 		return
 	}
 
-	timestamp := l.formatTimestamp()
-	levelStr := l.formatLevel(level)
-	moduleStr := l.formatModule()
 	message := fmt.Sprintf(format, args...)
 
 	// Redact secrets if secret manager is available
@@ -264,21 +356,30 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 		message = l.secretManager.RedactSecrets(message)
 	}
 
-	if l.shouldUseColor() {
-		grayColor := color.New(color.FgHiBlack)
-		fmt.Fprintf(l.writer, "%s [%s] %s: %s\n",
-			grayColor.Sprint(timestamp),
-			levelStr,
-			moduleStr,
-			message,
-		)
-	} else {
-		fmt.Fprintf(l.writer, "%s [%s] %s: %s\n",
-			timestamp,
-			levelStr,
-			moduleStr,
-			message,
-		)
+	// Convert our LogLevel to logrus Level
+	logrusLevel := l.convertLogLevel(level)
+
+	// Log with structured fields
+	l.logrusLogger.WithFields(logrus.Fields{
+		"module": l.moduleName,
+	}).Log(logrusLevel, message)
+}
+
+// convertLogLevel converts our LogLevel to logrus Level
+func (l *Logger) convertLogLevel(level LogLevel) logrus.Level {
+	switch level {
+	case LevelDebug:
+		return logrus.DebugLevel
+	case LevelInfo:
+		return logrus.InfoLevel
+	case LevelWarn:
+		return logrus.WarnLevel
+	case LevelError:
+		return logrus.ErrorLevel
+	case LevelFatal:
+		return logrus.FatalLevel
+	default:
+		return logrus.InfoLevel
 	}
 }
 
@@ -288,9 +389,6 @@ func (l *Logger) logWithRef(level LogLevel, ref *FileReference, format string, a
 		return
 	}
 
-	timestamp := l.formatTimestamp()
-	levelStr := l.formatLevel(level)
-	moduleStr := l.formatModule()
 	message := fmt.Sprintf(format, args...)
 
 	// Redact secrets if secret manager is available
@@ -298,29 +396,21 @@ func (l *Logger) logWithRef(level LogLevel, ref *FileReference, format string, a
 		message = l.secretManager.RedactSecrets(message)
 	}
 
-	var refStr string
-	if l.enableRefs && ref != nil {
-		refStr = fmt.Sprintf(" (%s)", ref.Format(l.refFormat))
+	// Convert our LogLevel to logrus Level
+	logrusLevel := l.convertLogLevel(level)
+
+	// Build structured fields
+	fields := logrus.Fields{
+		"module": l.moduleName,
 	}
 
-	if l.shouldUseColor() {
-		grayColor := color.New(color.FgHiBlack)
-		fmt.Fprintf(l.writer, "%s [%s] %s: %s%s\n",
-			grayColor.Sprint(timestamp),
-			levelStr,
-			moduleStr,
-			message,
-			refStr,
-		)
-	} else {
-		fmt.Fprintf(l.writer, "%s [%s] %s: %s%s\n",
-			timestamp,
-			levelStr,
-			moduleStr,
-			message,
-			refStr,
-		)
+	// Add file reference if enabled
+	if l.enableRefs && ref != nil {
+		fields["file"] = ref.Format(l.refFormat)
 	}
+
+	// Log with structured fields
+	l.logrusLogger.WithFields(fields).Log(logrusLevel, message)
 }
 
 // Info logs an info message
@@ -371,17 +461,23 @@ func (l *Logger) Debug(format string, args ...interface{}) {
 // DebugWithStack logs a debug message with stack trace (only in debug mode)
 func (l *Logger) DebugWithStack(format string, args ...interface{}) {
 	if l.debug {
-		l.log(LevelDebug, format, args...)
-		// Print stack trace in debug mode
+		message := fmt.Sprintf(format, args...)
+
+		// Redact secrets if secret manager is available
+		if l.secretManager != nil {
+			message = l.secretManager.RedactSecrets(message)
+		}
+
+		// Get stack trace
 		buf := make([]byte, 4096)
 		n := runtime.Stack(buf, false)
 		stackTrace := string(buf[:n])
-		grayColor := color.New(color.FgHiBlack)
-		if l.shouldUseColor() {
-			fmt.Fprintf(l.writer, "%s%s\n", grayColor.Sprint("Stack trace:"), grayColor.Sprint(stackTrace))
-		} else {
-			fmt.Fprintf(l.writer, "Stack trace:\n%s\n", stackTrace)
-		}
+
+		// Log with stack trace as a field
+		l.logrusLogger.WithFields(logrus.Fields{
+			"module":      l.moduleName,
+			"stack_trace": stackTrace,
+		}).Debug(message)
 	}
 }
 
