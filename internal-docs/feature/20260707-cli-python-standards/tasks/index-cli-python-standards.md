@@ -32,7 +32,7 @@ This index summarizes all stories for implementing the Python CLI Standards Comp
 | 03-003 | Dry-Run and Confirmation Prompts | feature/current/cli-python-standards/story-03-003-dry-run-confirm | 01-001 | Parallel-safe: true | __main__.py | [x] Done |
 | 03-004 | Progress Indicators | feature/current/cli-python-standards/story-03-004-progress-indicators | 01-001 | Parallel-safe: true | progress module | [x] Done |
 | 04-001 | Shell Completion and Man Pages | feature/current/cli-python-standards/story-04-001-completion-manpages | 02-001 | Parallel-safe: true | completion module, man page module | [x] Done |
-| 04-002 | Pager Integration and Terminal Awareness | feature/current/cli-python-standards/story-04-002-pager-terminal | 01-001 | Parallel-safe: true | __main__.py, terminal module | [ ] Todo |
+| 04-002 | Pager Integration and Terminal Awareness | feature/current/cli-python-standards/story-04-002-pager-terminal | 01-001 | Parallel-safe: true | __main__.py, terminal module | [x] Done |
 | 04-003 | Logging Modes Enhancement | feature/current/cli-python-standards/story-04-003-logging-modes | 01-001, 01-003 | Parallel-safe: true | logging.py | [ ] Todo |
 | 04-004 | Security and Resource Management | feature/current/cli-python-standards/story-04-004-security-resources | 01-001 | Parallel-safe: true | security module, resource module | [ ] Todo |
 | 05-001 | Comprehensive Test Coverage | feature/current/cli-python-standards/story-05-001-test-coverage | 01-001, 01-002, 01-003, 02-001, 02-002, 02-003, 03-001, 03-002, 03-003, 03-004, 04-001, 04-002, 04-003, 04-004, 06-001, 06-002, 06-003, 06-004, 06-005, 06-006 | Parallel-safe: false | tests/ | [ ] Todo |
