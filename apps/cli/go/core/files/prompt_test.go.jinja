@@ -33,7 +33,10 @@ func TestPromptForConfirmation_Yes(t *testing.T) {
 			oldStdout := os.Stdout
 			rOut, wOut, _ := os.Pipe()
 			os.Stdout = wOut
-			defer func() { os.Stdout = oldStdout }()
+			defer func() {
+				wOut.Close()
+				os.Stdout = oldStdout
+			}()
 
 			cfg := PromptConfig{
 				Message:  "Test prompt",

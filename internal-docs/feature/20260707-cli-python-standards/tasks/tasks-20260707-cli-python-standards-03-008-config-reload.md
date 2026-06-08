@@ -26,14 +26,14 @@ Support SIGHUP to reload config files without restart. Validate new config befor
 
 ## Sub-Tasks
 
-- [ ] Implement SIGHUP signal handler
-- [ ] Implement config reload logic
-- [ ] Add config validation before reload
-- [ ] Add reload event logging
-- [ ] Handle validation errors gracefully
-- [ ] Keep old config on validation failure
-- [ ] Add tests for config reload
-- [ ] Update documentation
+- [x] Implement SIGHUP signal handler
+- [x] Implement config reload logic
+- [x] Add config validation before reload
+- [x] Add reload event logging
+- [x] Handle validation errors gracefully
+- [x] Keep old config on validation failure
+- [x] Add tests for config reload
+- [x] Update documentation
 
 ## Relevant Files
 
