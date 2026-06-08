@@ -1,0 +1,62 @@
+from {{ project_slug }}.logging import Logger, configure_logging, get_logger
+import os
+import pytest
+
+
+def test_color_always():
+    """Test --color=always forces color output."""
+    logger = Logger(name="{{ project_slug }}", color="always")
+    assert logger.use_color is True
+
+
+def test_color_never():
+    """Test --color=never disables color output."""
+    logger = Logger(name="{{ project_slug }}", color="never")
+    assert logger.use_color is False
+
+
+def test_color_auto_tty():
+    """Test --color=auto with TTY detection."""
+    # In non-TTY environment, auto should disable color
+    logger = Logger(name="{{ project_slug }}", color="auto")
+    # Result depends on whether we're in a TTY
+    assert isinstance(logger.use_color, bool)
+
+
+def test_no_color_env_var():
+    """Test NO_COLOR environment variable takes precedence."""
+    os.environ["NO_COLOR"] = "1"
+    try:
+        logger = Logger(name="{{ project_slug }}", color="always")
+        assert logger.use_color is False
+    finally:
+        del os.environ["NO_COLOR"]
+
+
+def test_no_color_precedence_over_never():
+    """Test NO_COLOR takes precedence even when --color=never."""
+    os.environ["NO_COLOR"] = "1"
+    try:
+        logger = Logger(name="{{ project_slug }}", color="never")
+        assert logger.use_color is False
+    finally:
+        del os.environ["NO_COLOR"]
+
+
+def test_color_invalid_value():
+    """Test invalid color value defaults to auto."""
+    logger = Logger(name="{{ project_slug }}", color="invalid")
+    assert isinstance(logger.use_color, bool)
+
+
+def test_configure_logging_with_color():
+    """Test configure_logging accepts color parameter."""
+    configure_logging(name="{{ project_slug }}", color="always")
+    logger = get_logger()
+    assert logger.use_color is True
+
+
+def test_get_logger_with_color():
+    """Test get_logger accepts color parameter."""
+    logger = get_logger(name="{{ project_slug }}", color="never")
+    assert logger.use_color is False

@@ -83,7 +83,7 @@ def process(
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress all log output"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
     debug: bool = typer.Option(False, "--debug", help="Enable detailed debugging output"),
-    nocolor: bool = typer.Option(False, "--nocolor", help="Disable colored output"),
+    color: str = typer.Option("auto", "--color", help="Color mode: auto, always, or never"),
     install: bool = typer.Option(False, "--install", help="Install shell completions and initialize config"),
     uninstall: bool = typer.Option(False, "--uninstall", help="Uninstall shell completions and cleanup"),
     force: bool = typer.Option(False, "--force", help="Force overwrite during install"),
@@ -106,7 +106,7 @@ def process(
         quiet=quiet,
         verbose=verbose,
         debug=debug,
-        nocolor=nocolor
+        color=color
     )
     logger = get_logger()
 

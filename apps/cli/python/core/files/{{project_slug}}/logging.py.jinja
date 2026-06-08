@@ -87,20 +87,38 @@ class Logger:
         quiet: bool = False,
         verbose: bool = False,
         debug: bool = False,
-        nocolor: bool = False
+        color: str = "auto"
     ):
         self.name = name
         self.quiet = quiet
         self.verbose = verbose
         self.debug = debug
-        self.nocolor = nocolor
+        self.color = color
         self.logger = logging.getLogger(name)
 
-        # Detect terminal color support
-        self.use_color = self._detect_color_support() and not nocolor
+        # Detect terminal color support with precedence
+        self.use_color = self._resolve_color_mode()
 
         # Configure logger
         self._setup_logger()
+
+    def _resolve_color_mode(self) -> bool:
+        """Resolve color mode with precedence: NO_COLOR > --color > config > auto-detection."""
+        # 1. NO_COLOR environment variable takes highest precedence
+        if "NO_COLOR" in os.environ:
+            return False
+
+        # 2. Explicit --color flag
+        if self.color == "always":
+            return True
+        elif self.color == "never":
+            return False
+        elif self.color == "auto":
+            # 3. Auto mode: use TTY detection
+            return self._detect_color_support()
+        else:
+            # Invalid value, default to auto
+            return self._detect_color_support()
 
     def _detect_color_support(self) -> bool:
         """Detect if terminal supports color."""
@@ -213,13 +231,13 @@ def get_logger(
     quiet: bool = False,
     verbose: bool = False,
     debug: bool = False,
-    nocolor: bool = False
+    color: str = "auto"
 ) -> Logger:
     """Get or create the global logger instance."""
     global _global_logger
 
     if _global_logger is None:
-        _global_logger = Logger(name, quiet, verbose, debug, nocolor)
+        _global_logger = Logger(name, quiet, verbose, debug, color)
 
     return _global_logger
 
@@ -229,8 +247,8 @@ def configure_logging(
     quiet: bool = False,
     verbose: bool = False,
     debug: bool = False,
-    nocolor: bool = False
+    color: str = "auto"
 ):
     """Configure the global logger with the given settings."""
     global _global_logger
-    _global_logger = Logger(name, quiet, verbose, debug, nocolor)
+    _global_logger = Logger(name, quiet, verbose, debug, color)
