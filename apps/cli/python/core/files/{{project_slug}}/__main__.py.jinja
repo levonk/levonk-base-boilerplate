@@ -40,6 +40,29 @@ EXIT_FILE_NOT_FOUND = 5
 EXIT_PERMISSION_DENIED = 6
 EXIT_SIGINT = 130
 
+# Deprecation warnings
+DEPRECATED_FLAGS = {
+    # Example: "--old-flag": "Use --new-flag instead (deprecated in v1.0, will be removed in v2.0)"
+}
+
+
+def warn_deprecated(feature: str, replacement: str = None, removal_version: str = None):
+    """
+    Log a deprecation warning to stderr.
+
+    Args:
+        feature: The deprecated feature name
+        replacement: The replacement feature (if any)
+        removal_version: Version when this will be removed
+    """
+    import sys
+    message = f"WARNING: {feature} is deprecated"
+    if replacement:
+        message += f". Use {replacement} instead"
+    if removal_version:
+        message += f". Will be removed in {removal_version}"
+    print(message, file=sys.stderr)
+
 app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,

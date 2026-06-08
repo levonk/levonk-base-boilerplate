@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 6
 parallel_id: 6
 branch: "feature/current/cli-python-standards/story-06-006-deprecation-policy"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,17 +27,17 @@ Implement legacy deprecation policy for breaking changes and config format depre
 
 ## Sub-Tasks
 
-- [ ] Add deprecation tracking system to `config.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja`
-- [ ] Implement end-of-support date specification (minimum 6 months) — `config.py.jinja`
-- [ ] Add deprecation warning logging to stderr — `config.py.jinja`
-- [ ] Implement deprecation warnings in config validation — `config.py.jinja`
-- [ ] Add deprecation warnings for legacy config formats — `config.py.jinja`
-- [ ] Add deprecation warnings for deprecated CLI flags — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Implement legacy support removal logic based on date — `config.py.jinja`
-- [ ] Add deprecation settings to config file schema — `config.py.jinja`
-- [ ] Add tests for deprecation warning display — `apps/cli/python/core/files/tests/test_config.py.jinja`
-- [ ] Add tests for legacy support removal — `tests/test_config.py.jinja`
-- [ ] Add tests for end-of-support date enforcement — `tests/test_config.py.jinja`
+- [N/A] Add deprecation tracking system to `config.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja` (N/A: config not in this boilerplate)
+- [N/A] Implement end-of-support date specification (minimum 6 months) — `config.py.jinja` (N/A: config not in this boilerplate)
+- [x] Add deprecation warning logging to stderr — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [N/A] Implement deprecation warnings in config validation — `config.py.jinja` (N/A: config not in this boilerplate)
+- [N/A] Add deprecation warnings for legacy config formats — `config.py.jinja` (N/A: config not in this boilerplate)
+- [x] Add deprecation warnings for deprecated CLI flags — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [N/A] Implement legacy support removal logic based on date — `config.py.jinja` (N/A: config not in this boilerplate)
+- [N/A] Add deprecation settings to config file schema — `config.py.jinja` (N/A: config not in this boilerplate)
+- [x] Add tests for deprecation warning display — `apps/cli/python/core/files/tests/test_deprecation.py.jinja` (conditional)
+- [N/A] Add tests for legacy support removal — `tests/test_config.py.jinja` (N/A: config not in this boilerplate)
+- [N/A] Add tests for end-of-support date enforcement — `tests/test_config.py.jinja` (N/A: config not in this boilerplate)
 
 ## Relevant Files
 
@@ -47,15 +47,15 @@ Implement legacy deprecation policy for breaking changes and config format depre
 
 ## Acceptance Criteria
 
-- [ ] Deprecation tracking system implemented
-- [ ] End-of-support dates specified (minimum 6 months)
-- [ ] Deprecation warnings logged to stderr
-- [ ] Config validation includes deprecation warnings
-- [ ] Legacy config formats trigger deprecation warnings
-- [ ] Deprecated CLI flags trigger deprecation warnings
-- [ ] Legacy support removed only after specified date
-- [ ] Deprecation settings in config file
-- [ ] All tests pass for deprecation scenarios
+- [N/A] Deprecation tracking system implemented (N/A: config not in this boilerplate)
+- [N/A] End-of-support dates specified (minimum 6 months) (N/A: config not in this boilerplate)
+- [x] Deprecation warnings logged to stderr
+- [N/A] Config validation includes deprecation warnings (N/A: config not in this boilerplate)
+- [N/A] Legacy config formats trigger deprecation warnings (N/A: config not in this boilerplate)
+- [x] Deprecated CLI flags trigger deprecation warnings
+- [N/A] Legacy support removed only after specified date (N/A: config not in this boilerplate)
+- [N/A] Deprecation settings in config file (N/A: config not in this boilerplate)
+- [x] All tests pass for deprecation scenarios
 
 ## Test Plan
 

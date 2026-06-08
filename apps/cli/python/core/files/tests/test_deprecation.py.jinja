@@ -1,0 +1,61 @@
+# vim: set ft=python :
+import sys
+from io import StringIO
+from {{ project_slug }}.__main__ import warn_deprecated
+import pytest
+
+
+def test_warn_deprecated_basic():
+    """Test basic deprecation warning."""
+    old_stderr = sys.stderr
+    sys.stderr = StringIO()
+    
+    warn_deprecated("old_feature")
+    
+    output = sys.stderr.getvalue()
+    sys.stderr = old_stderr
+    
+    assert "WARNING: old_feature is deprecated" in output
+
+
+def test_warn_deprecated_with_replacement():
+    """Test deprecation warning with replacement."""
+    old_stderr = sys.stderr
+    sys.stderr = StringIO()
+    
+    warn_deprecated("old_feature", replacement="new_feature")
+    
+    output = sys.stderr.getvalue()
+    sys.stderr = old_stderr
+    
+    assert "WARNING: old_feature is deprecated" in output
+    assert "Use new_feature instead" in output
+
+
+def test_warn_deprecated_with_removal_version():
+    """Test deprecation warning with removal version."""
+    old_stderr = sys.stderr
+    sys.stderr = StringIO()
+    
+    warn_deprecated("old_feature", removal_version="v2.0")
+    
+    output = sys.stderr.getvalue()
+    sys.stderr = old_stderr
+    
+    assert "WARNING: old_feature is deprecated" in output
+    assert "Will be removed in v2.0" in output
+
+
+def test_warn_deprecated_complete():
+    """Test deprecation warning with all parameters."""
+    old_stderr = sys.stderr
+    sys.stderr = StringIO()
+    
+    warn_deprecated("old_feature", replacement="new_feature", removal_version="v2.0")
+    
+    output = sys.stderr.getvalue()
+    sys.stderr = old_stderr
+    
+    assert "WARNING: old_feature is deprecated" in output
+    assert "Use new_feature instead" in output
+    assert "Will be removed in v2.0" in output
