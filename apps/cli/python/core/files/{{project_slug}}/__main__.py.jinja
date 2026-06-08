@@ -18,6 +18,7 @@ from {{ project_slug }}.man_page import print_man_page
 from {{ project_slug }}.terminal import get_terminal_size, should_use_pager, page_output
 from {{ project_slug }}.resource import get_resource_monitor
 from {{ project_slug }}.health import perform_health_check
+from {{ project_slug }}.privacy import get_privacy_manager
 {% if include_tui %}
 from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
 {% endif %}
@@ -127,6 +128,7 @@ def process(
     no_pager: bool = typer.Option(False, "--no-pager", help="Disable automatic paging of long output"),
     max_memory: Optional[int] = typer.Option(None, "--max-memory", help="Maximum memory usage in MB"),
     max_cpu: Optional[float] = typer.Option(None, "--max-cpu", help="Maximum CPU usage percentage"),
+    privacy_mode: bool = typer.Option(False, "--privacy-mode", help="Enable privacy mode with anonymous lists"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
@@ -204,6 +206,13 @@ def process(
         resource_monitor = get_resource_monitor(max_memory, max_cpu)
         if not quiet:
             logger.info(f"Resource limits: max_memory={max_memory}MB, max_cpu={max_cpu}%", module="resource")
+
+    # Initialize privacy manager if privacy mode enabled
+    privacy_manager = None
+    if privacy_mode:
+        privacy_manager = get_privacy_manager(privacy_mode=True)
+        if not quiet:
+            logger.info("Privacy mode enabled with anonymous lists", module="privacy")
 
 {% if include_tui %}
     # Handle TUI mode
@@ -365,6 +374,13 @@ def process(
 
             for i, file_path in enumerate(files_to_process):
                 try:
+                    # Apply privacy mode filtering
+                    if privacy_manager:
+                        processed_path = privacy_manager.process_data("file_path", file_path)
+                        if processed_path is None:
+                            logger.debug(f"File path filtered by privacy mode: {file_path}", module="privacy")
+                            continue
+
                     with open(file_path, 'r', encoding='utf-8') as f:
                         content = f.read()
                         results.append(process_content(content, file_path))

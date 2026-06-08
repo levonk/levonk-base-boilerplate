@@ -1,0 +1,107 @@
+# vim: set ft=python :
+from {{ project_slug }}.privacy import PrivacyManager, get_privacy_manager
+import pytest
+
+
+def test_privacy_manager_creation():
+    """Test privacy manager can be created."""
+    manager = PrivacyManager(privacy_mode=False)
+    assert manager is not None
+    assert manager.privacy_mode is False
+
+
+def test_privacy_manager_enabled():
+    """Test privacy manager with privacy mode enabled."""
+    manager = PrivacyManager(privacy_mode=True)
+    assert manager.privacy_mode is True
+
+
+def test_add_to_anonymous():
+    """Test adding data type to anonymous list."""
+    manager = PrivacyManager(privacy_mode=True)
+    manager.add_to_anonymous("password")
+    assert "password" in manager.anonymous_list
+
+
+def test_add_to_unknown():
+    """Test adding data type to unknown list."""
+    manager = PrivacyManager(privacy_mode=True)
+    manager.add_to_unknown("username")
+    assert "username" in manager.unknown_list
+
+
+def test_set_privacy_toggle():
+    """Test setting privacy toggle."""
+    manager = PrivacyManager(privacy_mode=True)
+    manager.set_privacy_toggle("telemetry", False)
+    assert manager.privacy_toggles["telemetry"] is False
+
+
+def test_is_anonymous():
+    """Test anonymous data detection."""
+    manager = PrivacyManager(privacy_mode=True)
+    manager.add_to_anonymous("password")
+    assert manager.is_anonymous("password") is True
+    assert manager.is_anonymous("username") is False
+
+
+def test_is_anonymous_default_patterns():
+    """Test anonymous detection with default patterns."""
+    manager = PrivacyManager(privacy_mode=True)
+    assert manager.is_anonymous("my_password") is True
+    assert manager.is_anonymous("api_key") is True
+    assert manager.is_anonymous("secret_token") is True
+
+
+def test_is_unknown():
+    """Test unknown data detection."""
+    manager = PrivacyManager(privacy_mode=True)
+    manager.add_to_unknown("username")
+    assert manager.is_unknown("username") is True
+    assert manager.is_unknown("password") is False
+
+
+def test_should_collect():
+    """Test data collection toggle."""
+    manager = PrivacyManager(privacy_mode=True)
+    manager.set_privacy_toggle("telemetry", False)
+    assert manager.should_collect("telemetry") is False
+    assert manager.should_collect("analytics") is True  # Default enabled
+
+
+def test_process_data_anonymous():
+    """Test processing anonymous data."""
+    manager = PrivacyManager(privacy_mode=True)
+    manager.add_to_anonymous("password")
+    result = manager.process_data("password", "secret123")
+    assert result is None
+
+
+def test_process_data_unknown():
+    """Test processing unknown data."""
+    manager = PrivacyManager(privacy_mode=True)
+    manager.add_to_unknown("username")
+    result = manager.process_data("username", "john")
+    assert result is None
+
+
+def test_process_data_normal():
+    """Test processing normal data."""
+    manager = PrivacyManager(privacy_mode=True)
+    result = manager.process_data("filename", "test.txt")
+    assert result == "test.txt"
+
+
+def test_get_privacy_manager():
+    """Test get_privacy_manager function."""
+    manager = get_privacy_manager(privacy_mode=True)
+    assert manager is not None
+    assert manager.privacy_mode is True
+
+
+def test_privacy_mode_disabled():
+    """Test privacy mode disabled behavior."""
+    manager = PrivacyManager(privacy_mode=False)
+    manager.add_to_anonymous("password")
+    assert manager.is_anonymous("password") is False
+    assert manager.process_data("password", "secret") == "secret"

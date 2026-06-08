@@ -90,3 +90,8 @@ include_health_check:
   type: bool
   help: Include health check mechanism for container orchestration?
   default: false
+
+include_privacy:
+  type: bool
+  help: Include privacy mode with anonymous lists?
+  default: false
