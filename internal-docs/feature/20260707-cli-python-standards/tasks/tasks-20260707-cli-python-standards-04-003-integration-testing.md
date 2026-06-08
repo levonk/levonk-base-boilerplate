@@ -26,18 +26,18 @@ Run comprehensive integration tests to verify all features work together correct
 
 ## Sub-Tasks
 
-- [ ] Add integration tests for config precedence
-- [ ] Add integration tests for CLI flag interactions
-- [ ] Add integration tests for end-to-end workflows
-- [ ] Test install/uninstall workflow
-- [ ] Test config initialization workflow
-- [ ] Test color control across modes
-- [ ] Test error handling end-to-end
-- [ ] Test daemon mode workflow
-- [ ] Test TUI mode workflow
-- [ ] Run full integration test suite
-- [ ] Verify all integration tests pass
-- [ ] Update documentation
+- [x] Add integration tests for config precedence
+- [x] Add integration tests for CLI flag interactions
+- [x] Add integration tests for end-to-end workflows
+- [x] Test install/uninstall workflow
+- [x] Test config initialization workflow
+- [x] Test color control across modes
+- [x] Test error handling end-to-end
+- [x] Test daemon mode workflow
+- [x] Test TUI mode workflow
+- [x] Run full integration test suite
+- [x] Verify all integration tests pass
+- [x] Update documentation
 
 ## Relevant Files
 
