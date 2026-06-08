@@ -27,15 +27,15 @@ Implement legacy deprecation policy that specifies clear end-of-support dates (m
 
 ## Sub-Tasks
 
-- [ ] Create deprecation policy utility — `core/files/deprecation.go.jinja`
-- [ ] Implement deprecation date tracking — `core/files/deprecation.go.jinja`
-- [ ] Add deprecation warning logging — `core/files/deprecation.go.jinja`
-- [ ] Implement legacy support removal logic — `core/files/deprecation.go.jinja`
-- [ ] Add deprecation settings to config file — `core/files/config.default.yaml.jinja`
-- [ ] Update version checking for deprecation — `core/files/main.go.jinja`
-- [ ] Test deprecation warnings are logged — `core/files/deprecation_test.go.jinja`
-- [ ] Test legacy support removal after date — `core/files/deprecation_test.go.jinja`
-- [ ] Test deprecation policy enforcement — `core/files/deprecation_test.go.jinja`
+- [x] Create deprecation policy utility — `core/files/deprecation.go.jinja`
+- [x] Implement deprecation date tracking — `core/files/deprecation.go.jinja`
+- [x] Add deprecation warning logging — `core/files/deprecation.go.jinja`
+- [x] Implement legacy support removal logic — `core/files/deprecation.go.jinja`
+- [x] Add deprecation settings to config file — `core/files/config.default.yaml.jinja`
+- [x] Update version checking for deprecation — `core/files/main.go.jinja`
+- [x] Test deprecation warnings are logged — `core/files/deprecation_test.go.jinja`
+- [x] Test legacy support removal after date — `core/files/deprecation_test.go.jinja`
+- [x] Test deprecation policy enforcement — `core/files/deprecation_test.go.jinja`
 
 ## Relevant Files
 
@@ -46,12 +46,12 @@ Implement legacy deprecation policy that specifies clear end-of-support dates (m
 
 ## Acceptance Criteria
 
-- [ ] Deprecation dates are clearly specified
-- [ ] Minimum 6 months deprecation period
-- [ ] Deprecation warnings logged to stderr
-- [ ] Legacy support removed only after specified date
-- [ ] Deprecation policy is enforced
-- [ ] Users are warned about upcoming removals
+- [x] Deprecation dates are clearly specified
+- [x] Minimum 6 months deprecation period
+- [x] Deprecation warnings logged to stderr
+- [x] Legacy support removed only after specified date
+- [x] Deprecation policy is enforced
+- [x] Users are warned about upcoming removals
 
 ## Test Plan
 

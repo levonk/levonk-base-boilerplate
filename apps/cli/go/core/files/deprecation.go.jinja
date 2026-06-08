@@ -1,0 +1,286 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/fatih/color"
+	"github.com/spf13/viper"
+)
+
+// DeprecationStatus represents the status of a deprecated feature
+type DeprecationStatus int
+
+const (
+	// StatusActive means the feature is still active and not deprecated
+	StatusActive DeprecationStatus = iota
+	// StatusDeprecated means the feature is deprecated but still supported
+	StatusDeprecated
+	// StatusRemoved means the feature has been removed and is no longer supported
+	StatusRemoved
+)
+
+// DeprecationPolicy defines the deprecation policy for a feature
+type DeprecationPolicy struct {
+	FeatureName      string
+	DeprecatedSince  time.Time
+	RemovalDate      time.Time
+	MinDeprecationPeriod time.Duration // Minimum deprecation period (6 months)
+	WarningMessage   string
+}
+
+// DeprecationManager manages deprecation policies and warnings
+type DeprecationManager struct {
+	policies      map[string]*DeprecationPolicy
+	logger        *Logger
+	quietMode     bool
+}
+
+// NewDeprecationManager creates a new deprecation manager
+func NewDeprecationManager(logger *Logger) *DeprecationManager {
+	return &DeprecationManager{
+		policies:  make(map[string]*DeprecationPolicy),
+		logger:    logger,
+		quietMode: false,
+	}
+}
+
+// SetQuietMode sets the quiet mode for deprecation warnings
+func (dm *DeprecationManager) SetQuietMode(quiet bool) {
+	dm.quietMode = quiet
+}
+
+// RegisterPolicy registers a deprecation policy for a feature
+func (dm *DeprecationManager) RegisterPolicy(policy *DeprecationPolicy) error {
+	// Validate the policy
+	if policy.FeatureName == "" {
+		return fmt.Errorf("feature name cannot be empty")
+	}
+
+	// Ensure minimum deprecation period of 6 months
+	minPeriod := 6 * 30 * 24 * time.Hour // Approximately 6 months
+	if policy.MinDeprecationPeriod < minPeriod {
+		policy.MinDeprecationPeriod = minPeriod
+	}
+
+	// Validate removal date is after deprecation date
+	if !policy.RemovalDate.IsZero() && policy.RemovalDate.Before(policy.DeprecatedSince) {
+		return fmt.Errorf("removal date must be after deprecation date")
+	}
+
+	dm.policies[policy.FeatureName] = policy
+	return nil
+}
+
+// GetStatus returns the current status of a deprecated feature
+func (dm *DeprecationManager) GetStatus(featureName string) DeprecationStatus {
+	policy, exists := dm.policies[featureName]
+	if !exists {
+		return StatusActive
+	}
+
+	now := time.Now()
+
+	// Check if the feature has been removed
+	if !policy.RemovalDate.IsZero() && now.After(policy.RemovalDate) {
+		return StatusRemoved
+	}
+
+	// Check if the feature is deprecated
+	if now.After(policy.DeprecatedSince) {
+		return StatusDeprecated
+	}
+
+	return StatusActive
+}
+
+// CheckAndWarn checks the status of a feature and logs a warning if deprecated
+func (dm *DeprecationManager) CheckAndWarn(featureName string) error {
+	status := dm.GetStatus(featureName)
+
+	if status == StatusActive {
+		return nil
+	}
+
+	policy, exists := dm.policies[featureName]
+	if !exists {
+		return nil
+	}
+
+	now := time.Now()
+
+	switch status {
+	case StatusDeprecated:
+		// Log deprecation warning to stderr
+		if !dm.quietMode {
+			dm.logDeprecationWarning(policy, now)
+		}
+		return nil
+
+	case StatusRemoved:
+		// Feature has been removed, return error
+		return fmt.Errorf("feature '%s' has been removed as of %s. %s",
+			policy.FeatureName,
+			policy.RemovalDate.Format("2006-01-02"),
+			policy.WarningMessage)
+	}
+
+	return nil
+}
+
+// logDeprecationWarning logs a deprecation warning to stderr
+func (dm *DeprecationManager) logDeprecationWarning(policy *DeprecationPolicy, now time.Time) {
+	// Calculate time until removal
+	var timeUntilRemoval string
+	if !policy.RemovalDate.IsZero() {
+		duration := policy.RemovalDate.Sub(now)
+		if duration > 0 {
+			days := int(duration.Hours() / 24)
+			if days > 30 {
+				months := days / 30
+				timeUntilRemoval = fmt.Sprintf("approximately %d months", months)
+			} else {
+				timeUntilRemoval = fmt.Sprintf("%d days", days)
+			}
+		} else {
+			timeUntilRemoval = "soon"
+		}
+	}
+
+	// Build warning message
+	warningColor := color.New(color.FgYellow).SprintFunc()
+	featureColor := color.New(color.FgCyan).SprintFunc()
+	dateColor := color.New(color.FgHiWhite).SprintFunc()
+
+	message := fmt.Sprintf(
+		"%s: Feature %s is deprecated since %s",
+		warningColor("DEPRECATION WARNING"),
+		featureColor(policy.FeatureName),
+		dateColor(policy.DeprecatedSince.Format("2006-01-02")),
+	)
+
+	if timeUntilRemoval != "" {
+		message += fmt.Sprintf(" and will be removed in %s", dateColor(timeUntilRemoval))
+	}
+
+	if policy.WarningMessage != "" {
+		message += fmt.Sprintf(". %s", policy.WarningMessage)
+	}
+
+	// Write to stderr
+	fmt.Fprintln(os.Stderr, message)
+}
+
+// IsDeprecated checks if a feature is currently deprecated
+func (dm *DeprecationManager) IsDeprecated(featureName string) bool {
+	return dm.GetStatus(featureName) == StatusDeprecated
+}
+
+// IsRemoved checks if a feature has been removed
+func (dm *DeprecationManager) IsRemoved(featureName string) bool {
+	return dm.GetStatus(featureName) == StatusRemoved
+}
+
+// GetPolicies returns all registered deprecation policies
+func (dm *DeprecationManager) GetPolicies() map[string]*DeprecationPolicy {
+	return dm.policies
+}
+
+// LoadFromConfig loads deprecation policies from config file
+func (dm *DeprecationManager) LoadFromConfig() error {
+	if !viper.IsSet("deprecation") {
+		return nil
+	}
+
+	deprecationConfig := viper.Get("deprecation")
+	if deprecationConfig == nil {
+		return nil
+	}
+
+	// Parse deprecation policies from config
+	// This is a simplified implementation - in production, you'd want more robust parsing
+	if policies, ok := deprecationConfig.(map[string]interface{}); ok {
+		for featureName, policyData := range policies {
+			if policyMap, ok := policyData.(map[string]interface{}); ok {
+				policy := &DeprecationPolicy{
+					FeatureName: featureName,
+				}
+
+				// Parse deprecated_since
+				if deprecatedSinceStr, ok := policyMap["deprecated_since"].(string); ok {
+					if parsedTime, err := time.Parse("2006-01-02", deprecatedSinceStr); err == nil {
+						policy.DeprecatedSince = parsedTime
+					}
+				}
+
+				// Parse removal_date
+				if removalDateStr, ok := policyMap["removal_date"].(string); ok {
+					if parsedTime, err := time.Parse("2006-01-02", removalDateStr); err == nil {
+						policy.RemovalDate = parsedTime
+					}
+				}
+
+				// Parse warning_message
+				if warningMsg, ok := policyMap["warning_message"].(string); ok {
+					policy.WarningMessage = warningMsg
+				}
+
+				// Register the policy
+				if err := dm.RegisterPolicy(policy); err != nil {
+					return fmt.Errorf("failed to register policy for %s: %w", featureName, err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// ValidateConfig validates deprecation settings from config
+func (dm *DeprecationManager) ValidateConfig() error {
+	if !viper.IsSet("deprecation") {
+		return nil
+	}
+
+	deprecationConfig := viper.Get("deprecation")
+	if deprecationConfig == nil {
+		return nil
+	}
+
+	// Validate each policy
+	if policies, ok := deprecationConfig.(map[string]interface{}); ok {
+		for featureName, policyData := range policies {
+			if policyMap, ok := policyData.(map[string]interface{}); ok {
+				// Check required fields
+				if _, hasDeprecatedSince := policyMap["deprecated_since"]; !hasDeprecatedSince {
+					return fmt.Errorf("deprecation policy for '%s' missing required field 'deprecated_since'", featureName)
+				}
+
+				// Check removal_date is after deprecated_since
+				if deprecatedSinceStr, ok := policyMap["deprecated_since"].(string); ok {
+					if removalDateStr, ok := policyMap["removal_date"].(string); ok {
+						deprecatedSince, err1 := time.Parse("2006-01-02", deprecatedSinceStr)
+						removalDate, err2 := time.Parse("2006-01-02", removalDateStr)
+
+						if err1 == nil && err2 == nil {
+							if removalDate.Before(deprecatedSince) {
+								return fmt.Errorf("deprecation policy for '%s': removal_date must be after deprecated_since", featureName)
+							}
+
+							// Check minimum 6-month deprecation period
+							minPeriod := 6 * 30 * 24 * time.Hour
+							if removalDate.Sub(deprecatedSince) < minPeriod {
+								return fmt.Errorf("deprecation policy for '%s': deprecation period must be at least 6 months", featureName)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+{# vim: set ft=go: #}

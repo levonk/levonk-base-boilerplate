@@ -1,0 +1,456 @@
+package main
+
+import (
+	"os"
+	"testing"
+	"time"
+
+	"github.com/spf13/viper"
+)
+
+func TestNewDeprecationManager(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+
+	if dm == nil {
+		t.Fatal("NewDeprecationManager returned nil")
+	}
+
+	if dm.policies == nil {
+		t.Error("policies map is not initialized")
+	}
+
+	if dm.logger == nil {
+		t.Error("logger is not set")
+	}
+}
+
+func TestRegisterPolicy(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+
+	// Test valid policy
+	policy := &DeprecationPolicy{
+		FeatureName:     "test-feature",
+		DeprecatedSince: time.Now().Add(-24 * time.Hour),
+		RemovalDate:     time.Now().Add(6 * 30 * 24 * time.Hour),
+		WarningMessage:  "This feature is deprecated",
+	}
+
+	err := dm.RegisterPolicy(policy)
+	if err != nil {
+		t.Errorf("RegisterPolicy failed: %v", err)
+	}
+
+	// Test empty feature name
+	invalidPolicy := &DeprecationPolicy{
+		FeatureName: "",
+	}
+
+	err = dm.RegisterPolicy(invalidPolicy)
+	if err == nil {
+		t.Error("RegisterPolicy should fail with empty feature name")
+	}
+
+	// Test removal date before deprecation date
+	invalidPolicy2 := &DeprecationPolicy{
+		FeatureName:     "invalid-feature",
+		DeprecatedSince: time.Now().Add(6 * 30 * 24 * time.Hour),
+		RemovalDate:     time.Now().Add(-24 * time.Hour),
+	}
+
+	err = dm.RegisterPolicy(invalidPolicy2)
+	if err == nil {
+		t.Error("RegisterPolicy should fail with removal date before deprecation date")
+	}
+}
+
+func TestGetStatus(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+
+	now := time.Now()
+
+	// Test active feature (not deprecated yet)
+	activePolicy := &DeprecationPolicy{
+		FeatureName:     "active-feature",
+		DeprecatedSince: now.Add(24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+	}
+	dm.RegisterPolicy(activePolicy)
+
+	status := dm.GetStatus("active-feature")
+	if status != StatusActive {
+		t.Errorf("Expected StatusActive, got %v", status)
+	}
+
+	// Test deprecated feature
+	deprecatedPolicy := &DeprecationPolicy{
+		FeatureName:     "deprecated-feature",
+		DeprecatedSince: now.Add(-24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+	}
+	dm.RegisterPolicy(deprecatedPolicy)
+
+	status = dm.GetStatus("deprecated-feature")
+	if status != StatusDeprecated {
+		t.Errorf("Expected StatusDeprecated, got %v", status)
+	}
+
+	// Test removed feature
+	removedPolicy := &DeprecationPolicy{
+		FeatureName:     "removed-feature",
+		DeprecatedSince: now.Add(-12 * 30 * 24 * time.Hour),
+		RemovalDate:     now.Add(-24 * time.Hour),
+	}
+	dm.RegisterPolicy(removedPolicy)
+
+	status = dm.GetStatus("removed-feature")
+	if status != StatusRemoved {
+		t.Errorf("Expected StatusRemoved, got %v", status)
+	}
+
+	// Test non-existent feature
+	status = dm.GetStatus("non-existent-feature")
+	if status != StatusActive {
+		t.Errorf("Expected StatusActive for non-existent feature, got %v", status)
+	}
+}
+
+func TestCheckAndWarn(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+	dm.SetQuietMode(true) // Suppress actual output during tests
+
+	now := time.Now()
+
+	// Test deprecated feature - should not return error
+	deprecatedPolicy := &DeprecationPolicy{
+		FeatureName:     "deprecated-feature",
+		DeprecatedSince: now.Add(-24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+		WarningMessage:  "This feature is deprecated",
+	}
+	dm.RegisterPolicy(deprecatedPolicy)
+
+	err := dm.CheckAndWarn("deprecated-feature")
+	if err != nil {
+		t.Errorf("CheckAndWarn should not return error for deprecated feature: %v", err)
+	}
+
+	// Test removed feature - should return error
+	removedPolicy := &DeprecationPolicy{
+		FeatureName:     "removed-feature",
+		DeprecatedSince: now.Add(-12 * 30 * 24 * time.Hour),
+		RemovalDate:     now.Add(-24 * time.Hour),
+		WarningMessage:  "This feature has been removed",
+	}
+	dm.RegisterPolicy(removedPolicy)
+
+	err = dm.CheckAndWarn("removed-feature")
+	if err == nil {
+		t.Error("CheckAndWarn should return error for removed feature")
+	}
+
+	// Test active feature - should not return error
+	activePolicy := &DeprecationPolicy{
+		FeatureName:     "active-feature",
+		DeprecatedSince: now.Add(24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+	}
+	dm.RegisterPolicy(activePolicy)
+
+	err = dm.CheckAndWarn("active-feature")
+	if err != nil {
+		t.Errorf("CheckAndWarn should not return error for active feature: %v", err)
+	}
+}
+
+func TestIsDeprecated(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+
+	now := time.Now()
+
+	// Test deprecated feature
+	deprecatedPolicy := &DeprecationPolicy{
+		FeatureName:     "deprecated-feature",
+		DeprecatedSince: now.Add(-24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+	}
+	dm.RegisterPolicy(deprecatedPolicy)
+
+	if !dm.IsDeprecated("deprecated-feature") {
+		t.Error("IsDeprecated should return true for deprecated feature")
+	}
+
+	// Test active feature
+	activePolicy := &DeprecationPolicy{
+		FeatureName:     "active-feature",
+		DeprecatedSince: now.Add(24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+	}
+	dm.RegisterPolicy(activePolicy)
+
+	if dm.IsDeprecated("active-feature") {
+		t.Error("IsDeprecated should return false for active feature")
+	}
+}
+
+func TestIsRemoved(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+
+	now := time.Now()
+
+	// Test removed feature
+	removedPolicy := &DeprecationPolicy{
+		FeatureName:     "removed-feature",
+		DeprecatedSince: now.Add(-12 * 30 * 24 * time.Hour),
+		RemovalDate:     now.Add(-24 * time.Hour),
+	}
+	dm.RegisterPolicy(removedPolicy)
+
+	if !dm.IsRemoved("removed-feature") {
+		t.Error("IsRemoved should return true for removed feature")
+	}
+
+	// Test deprecated feature
+	deprecatedPolicy := &DeprecationPolicy{
+		FeatureName:     "deprecated-feature",
+		DeprecatedSince: now.Add(-24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+	}
+	dm.RegisterPolicy(deprecatedPolicy)
+
+	if dm.IsRemoved("deprecated-feature") {
+		t.Error("IsRemoved should return false for deprecated feature")
+	}
+}
+
+func TestMinimumDeprecationPeriod(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+
+	now := time.Now()
+
+	// Test policy with less than 6 months deprecation period
+	shortPeriodPolicy := &DeprecationPolicy{
+		FeatureName:     "short-period-feature",
+		DeprecatedSince: now.Add(-24 * time.Hour),
+		RemovalDate:     now.Add(30 * 24 * time.Hour), // Only 1 month
+	}
+
+	err := dm.RegisterPolicy(shortPeriodPolicy)
+	if err != nil {
+		t.Errorf("RegisterPolicy should auto-adjust minimum period: %v", err)
+	}
+
+	// Verify the period was adjusted to minimum
+	policy := dm.policies["short-period-feature"]
+	expectedMinPeriod := 6 * 30 * 24 * time.Hour
+	if policy.MinDeprecationPeriod < expectedMinPeriod {
+		t.Errorf("Minimum deprecation period should be at least 6 months, got %v", policy.MinDeprecationPeriod)
+	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+
+	// Reset viper for testing
+	viper.Reset()
+
+	// Test valid config
+	viper.Set("deprecation", map[string]interface{}{
+		"legacy-flag": map[string]interface{}{
+			"deprecated_since": "2026-01-01",
+			"removal_date":     "2026-07-01",
+			"warning_message":  "Use new-flag instead",
+		},
+	})
+
+	err := dm.ValidateConfig()
+	if err != nil {
+		t.Errorf("ValidateConfig should pass for valid config: %v", err)
+	}
+
+	// Test missing deprecated_since
+	viper.Set("deprecation", map[string]interface{}{
+		"legacy-flag": map[string]interface{}{
+			"removal_date":    "2026-07-01",
+			"warning_message": "Use new-flag instead",
+		},
+	})
+
+	err = dm.ValidateConfig()
+	if err == nil {
+		t.Error("ValidateConfig should fail with missing deprecated_since")
+	}
+
+	// Test removal date before deprecated_since
+	viper.Set("deprecation", map[string]interface{}{
+		"legacy-flag": map[string]interface{}{
+			"deprecated_since": "2026-07-01",
+			"removal_date":     "2026-01-01",
+		},
+	})
+
+	err = dm.ValidateConfig()
+	if err == nil {
+		t.Error("ValidateConfig should fail with removal date before deprecated_since")
+	}
+
+	// Test less than 6 months deprecation period
+	viper.Set("deprecation", map[string]interface{}{
+		"legacy-flag": map[string]interface{}{
+			"deprecated_since": "2026-06-01",
+			"removal_date":     "2026-07-01", // Only 1 month
+		},
+	})
+
+	err = dm.ValidateConfig()
+	if err == nil {
+		t.Error("ValidateConfig should fail with less than 6 months deprecation period")
+	}
+}
+
+func TestLoadFromConfig(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+
+	// Reset viper for testing
+	viper.Reset()
+
+	// Test loading policies from config
+	viper.Set("deprecation", map[string]interface{}{
+		"legacy-flag": map[string]interface{}{
+			"deprecated_since": "2026-01-01",
+			"removal_date":     "2026-07-01",
+			"warning_message":  "Use new-flag instead",
+		},
+	})
+
+	err := dm.LoadFromConfig()
+	if err != nil {
+		t.Errorf("LoadFromConfig failed: %v", err)
+	}
+
+	// Verify policy was loaded
+	if len(dm.policies) != 1 {
+		t.Errorf("Expected 1 policy, got %d", len(dm.policies))
+	}
+
+	policy, exists := dm.policies["legacy-flag"]
+	if !exists {
+		t.Error("Policy 'legacy-flag' was not loaded")
+	}
+
+	if policy.WarningMessage != "Use new-flag instead" {
+		t.Errorf("Warning message not loaded correctly: got %s", policy.WarningMessage)
+	}
+}
+
+func TestDeprecationWarningOutput(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+	dm.SetQuietMode(false) // Enable output for this test
+
+	now := time.Now()
+
+	// Test that warning is written to stderr
+	deprecatedPolicy := &DeprecationPolicy{
+		FeatureName:     "test-feature",
+		DeprecatedSince: now.Add(-24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+		WarningMessage:  "This is a test warning",
+	}
+	dm.RegisterPolicy(deprecatedPolicy)
+
+	// Redirect stderr to capture output
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	err := dm.CheckAndWarn("test-feature")
+	w.Close()
+	os.Stderr = oldStderr
+
+	if err != nil {
+		t.Errorf("CheckAndWarn failed: %v", err)
+	}
+
+	// Read captured output
+	output := make([]byte, 1024)
+	n, _ := r.Read(output)
+	r.Close()
+
+	outputStr := string(output[:n])
+	if outputStr == "" {
+		t.Error("Expected deprecation warning output, got empty string")
+	}
+
+	// Verify warning contains expected content
+	if !contains(outputStr, "DEPRECATION WARNING") {
+		t.Error("Warning should contain 'DEPRECATION WARNING'")
+	}
+
+	if !contains(outputStr, "test-feature") {
+		t.Error("Warning should contain feature name")
+	}
+}
+
+func TestQuietMode(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDeprecationManager(logger)
+	dm.SetQuietMode(true) // Enable quiet mode
+
+	now := time.Now()
+
+	deprecatedPolicy := &DeprecationPolicy{
+		FeatureName:     "test-feature",
+		DeprecatedSince: now.Add(-24 * time.Hour),
+		RemovalDate:     now.Add(6 * 30 * 24 * time.Hour),
+		WarningMessage:  "This is a test warning",
+	}
+	dm.RegisterPolicy(deprecatedPolicy)
+
+	// Redirect stderr to capture output
+	oldStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	err := dm.CheckAndWarn("test-feature")
+	w.Close()
+	os.Stderr = oldStderr
+
+	if err != nil {
+		t.Errorf("CheckAndWarn failed: %v", err)
+	}
+
+	// Read captured output
+	output := make([]byte, 1024)
+	n, _ := r.Read(output)
+	r.Close()
+
+	outputStr := string(output[:n])
+	if outputStr != "" {
+		t.Error("Expected no output in quiet mode, got: %s", outputStr)
+	}
+}
+
+// Helper function to check if string contains substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
+}
+
+func containsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+{# vim: set ft=go: #}

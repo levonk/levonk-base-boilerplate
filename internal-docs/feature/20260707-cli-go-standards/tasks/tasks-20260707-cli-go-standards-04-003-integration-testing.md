@@ -27,20 +27,20 @@ Implement comprehensive integration tests that verify the entire CLI tool works 
 
 ## Sub-Tasks
 
-- [ ] Create integration test framework — `core/files/integration_test.go.jinja`
-- [ ] Test complete CLI workflow end-to-end — `core/files/integration_test.go.jinja`
-- [ ] Test config file initialization and loading — `core/files/integration_test.go.jinja`
-- [ ] Test config precedence chain end-to-end — `core/files/integration_test.go.jinja`
-- [ ] Test install/uninstall workflow — `core/files/integration_test.go.jinja`
-- [ ] Test shell completion installation — `core/files/integration_test.go.jinja`
-- [ ] Test color control in real terminal — `core/files/integration_test.go.jinja`
-- [ ] Test daemon process lifecycle — `core/files/integration_test.go.jinja`
-- [ ] Test TUI mode interaction — `core/files/integration_test.go.jinja`
-- [ ] Test error handling in real scenarios — `core/files/integration_test.go.jinja`
-- [ ] Test cross-platform path handling — `core/files/integration_test.go.jinja`
-- [ ] Test config migration workflow — `core/files/integration_test.go.jinja`
-- [ ] Add integration test to Makefile — `core/files/Makefile.jinja`
-- [ ] Run all integration tests — `Makefile.jinja`
+- [x] Create integration test framework — `core/files/integration_test.go.jinja`
+- [x] Test complete CLI workflow end-to-end — `core/files/integration_test.go.jinja`
+- [x] Test config file initialization and loading — `core/files/integration_test.go.jinja`
+- [x] Test config precedence chain end-to-end — `core/files/integration_test.go.jinja`
+- [x] Test install/uninstall workflow — `core/files/integration_test.go.jinja`
+- [x] Test shell completion installation — `core/files/integration_test.go.jinja`
+- [x] Test color control in real terminal — `core/files/integration_test.go.jinja`
+- [x] Test daemon process lifecycle — `core/files/integration_test.go.jinja`
+- [x] Test TUI mode interaction — `core/files/integration_test.go.jinja`
+- [x] Test error handling in real scenarios — `core/files/integration_test.go.jinja`
+- [x] Test cross-platform path handling — `core/files/integration_test.go.jinja`
+- [x] Test config migration workflow — `core/files/integration_test.go.jinja`
+- [x] Add integration test to Makefile — `core/files/Makefile.jinja`
+- [x] Run all integration tests — `Makefile.jinja`
 
 ## Relevant Files
 
@@ -49,11 +49,11 @@ Implement comprehensive integration tests that verify the entire CLI tool works 
 
 ## Acceptance Criteria
 
-- [ ] Integration tests cover complete workflows
-- [ ] All features work together correctly
-- [ ] Integration tests pass consistently
-- [ ] Integration tests are maintainable
-- [ ] Integration tests can run in CI
+- [x] Integration tests cover complete workflows
+- [x] All features work together correctly
+- [x] Integration tests pass consistently
+- [x] Integration tests are maintainable
+- [x] Integration tests can run in CI
 
 ## Test Plan
 

@@ -12,6 +12,7 @@ import {
     isCLIError,
     getExitCode,
 } from './error.js';
+import type { FileLocation } from './file-ref.js';
 
 describe('EXIT_CODES', () => {
     it('should have correct exit code values', () => {
@@ -48,6 +49,31 @@ describe('CLIError', () => {
     it('should format message with context', () => {
         const error = new CLIError('Test error', 1, { file: 'test.txt' });
         expect(error.getFormattedMessage()).toBe('CLIError: Test error (exit code: 1) {"file":"test.txt"}');
+    });
+
+    it('should format message with file location', () => {
+        const fileLocation: FileLocation = {
+            path: '/path/to/file.ts',
+            line: 10,
+            column: 5,
+        };
+        const error = new CLIError('Test error', 1, undefined, fileLocation);
+        const formatted = error.getFormattedMessage();
+        expect(formatted).toContain('Test error (exit code: 1)');
+        expect(formatted).toMatch(/file:\/.*\/path\/to\/file\.ts:10:5/);
+    });
+
+    it('should format message with both context and file location', () => {
+        const fileLocation: FileLocation = {
+            path: '/path/to/file.ts',
+            line: 10,
+            column: 5,
+        };
+        const error = new CLIError('Test error', 1, { file: 'test.txt' }, fileLocation);
+        const formatted = error.getFormattedMessage();
+        expect(formatted).toContain('Test error (exit code: 1)');
+        expect(formatted).toMatch(/file:\/.*\/path\/to\/file\.ts:10:5/);
+        expect(formatted).toContain('{"file":"test.txt"}');
     });
 });
 

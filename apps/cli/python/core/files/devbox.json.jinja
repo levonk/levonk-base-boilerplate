@@ -25,16 +25,6 @@
   },
   "packages": {
     "nixpkgs#python311": "",
-    "nixpkgs#python311Packages.pip": "",
-    "nixpkgs#python311Packages.setuptools": "",
-    "nixpkgs#python311Packages.wheel": "",
-    "nixpkgs#python311Packages.build": "",
-    "nixpkgs#python311Packages.pytest": "",
-    "nixpkgs#python311Packages.pytest-cov": "",
-    "nixpkgs#python311Packages.ruff": "",
-    "nixpkgs#python311Packages.mypy": "",
-    "nixpkgs#python311Packages.watchfiles": "",
-    "nixpkgs#python311Packages.mkdocs": "",
     {% if include_requests %}
     "nixpkgs#python311Packages.requests": "",
     {% endif %}
@@ -67,8 +57,8 @@
     {% endif %}
   },
   "env": {
-    "PYTHONPATH": "{{ pythonpath | default('./src') }}",
-    "PYTHONPATH_DEV": "{{ pythonpath_dev | default('./src:./tests') }}",
+    "PYTHONPATH": "{{ pythonpath | default('.') }}",
+    "PYTHONPATH_DEV": "{{ pythonpath_dev | default('.:./tests') }}",
     {% if include_async %}
     "PYTHONASYNCIODEBUG": "1",
     {% endif %}
@@ -83,5 +73,10 @@
     "FLASK_DEBUG": "1",
     {% endif %}
   },
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-python.jinja" %}
+  "hooks": {
+    "on_create": [
+      "pip install poetry",
+      "poetry install"
+    ]
+  }
 }

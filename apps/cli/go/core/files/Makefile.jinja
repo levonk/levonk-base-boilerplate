@@ -1,4 +1,4 @@
-.PHONY: doctor bootstrap profile help clean clean-inner build build-inner build-release build-release-inner debug debug-inner run run-inner run-debug run-debug-inner deploy deploy-inner lint lint-inner test test-inner coverage coverage-inner docker-build docker-run
+.PHONY: doctor bootstrap profile help clean clean-inner build build-inner build-release build-release-inner debug debug-inner run run-inner run-debug run-debug-inner deploy deploy-inner lint lint-inner test test-inner test-integration test-integration-inner coverage coverage-inner docker-build docker-run
 
 PROJECT_SLUG := {{ project_slug }}
 NIX := $(shell if [ -x /nix/var/nix/profiles/default/bin/nix ]; then echo /nix/var/nix/profiles/default/bin/nix; else echo nix; fi)
@@ -92,6 +92,13 @@ test: doctor bootstrap ## Run tests (via nix dev shell)
 test-inner: ## Run tests
 	GOFLAGS=-mod=mod go mod tidy
 	go test -v ./...
+
+test-integration: doctor bootstrap ## Run integration tests (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) test-integration-inner
+
+test-integration-inner: ## Run integration tests
+	GOFLAGS=-mod=mod go mod tidy
+	go test -v -run TestIntegration ./...
 
 coverage: doctor bootstrap ## Run test coverage analysis (via nix dev shell)
 	@$(NIX_DEV) $(MAKE) coverage-inner

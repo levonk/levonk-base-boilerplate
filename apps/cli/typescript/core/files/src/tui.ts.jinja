@@ -1,0 +1,277 @@
+#!/usr/bin/env node
+import React, { useState, useEffect, useCallback } from 'react';
+import { render, Box, Text, useInput, useApp } from 'ink';
+import TextInput from 'ink-text-input';
+import type { Config } from './config.js';
+
+export interface TUIOptions {
+    config: Config;
+    onExecute: (modifiedConfig: Config) => void;
+    onCancel: () => void;
+    projectSlug: string;
+}
+
+export interface ArgumentItem {
+    key: string;
+    label: string;
+    value: any;
+    type: 'boolean' | 'string' | 'number' | 'enum';
+    enumValues?: string[];
+    description?: string;
+}
+
+export function TUI({ config, onExecute, onCancel, projectSlug }: TUIOptions): React.ReactNode {
+    const { exit } = useApp();
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+    const [editValue, setEditValue] = useState('');
+    const [showHelp, setShowHelp] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+
+    // Convert config to argument items
+    const arguments: ArgumentItem[] = [
+        {
+            key: 'quiet',
+            label: 'Quiet Mode',
+            value: config.quiet,
+            type: 'boolean',
+            description: 'Suppress all output except errors',
+        },
+        {
+            key: 'verbose',
+            label: 'Verbose Mode',
+            value: config.verbose,
+            type: 'boolean',
+            description: 'Enable verbose output with extra details',
+        },
+        {
+            key: 'debug',
+            label: 'Debug Mode',
+            value: config.debug,
+            type: 'boolean',
+            description: 'Enable debug-level logging',
+        },
+        {
+            key: 'color',
+            label: 'Color Mode',
+            value: config.color,
+            type: 'enum',
+            enumValues: ['auto', 'always', 'never'],
+            description: 'Color mode: auto, always, or never',
+        },
+        {
+            key: 'log_format',
+            label: 'Log Format',
+            value: config.log_format,
+            type: 'enum',
+            enumValues: ['text', 'json'],
+            description: 'Log format: text or json',
+        },
+        {
+            key: 'json',
+            label: 'JSON Output',
+            value: config.json,
+            type: 'boolean',
+            description: 'Output results as JSON',
+        },
+    ];
+
+    const handleInput = useCallback((input: string, key: unknown) => {
+        const keyObj = key as { return?: boolean; escape?: boolean; upArrow?: boolean; downArrow?: boolean; ctrl?: { c?: boolean } };
+
+        if (showConfirm) {
+            if (input === 'y' || input === 'Y') {
+                onExecute(config);
+                exit();
+            } else if (input === 'n' || input === 'N' || keyObj.escape) {
+                setShowConfirm(false);
+            }
+            return;
+        }
+
+        if (showHelp) {
+            if (keyObj.escape || keyObj.return) {
+                setShowHelp(false);
+            }
+            return;
+        }
+
+        if (editingIndex !== null) {
+            if (keyObj.return) {
+                // Save edit
+                const arg = arguments[editingIndex];
+                const newConfig = { ...config };
+                if (arg.type === 'boolean') {
+                    newConfig[arg.key as keyof Config] = (editValue.toLowerCase() === 'true') as any;
+                } else if (arg.type === 'number') {
+                    newConfig[arg.key as keyof Config] = Number(editValue) as any;
+                } else {
+                    newConfig[arg.key as keyof Config] = editValue as any;
+                }
+                onExecute(newConfig);
+                setEditingIndex(null);
+                setEditValue('');
+            } else if (keyObj.escape) {
+                setEditingIndex(null);
+                setEditValue('');
+            }
+            return;
+        }
+
+        if (keyObj.escape) {
+            onCancel();
+            exit();
+        } else if (keyObj.ctrl?.c) {
+            onCancel();
+            exit();
+        } else if (keyObj.return) {
+            setShowConfirm(true);
+        } else if (keyObj.upArrow) {
+            setSelectedIndex(Math.max(0, selectedIndex - 1));
+        } else if (keyObj.downArrow) {
+            setSelectedIndex(Math.min(arguments.length - 1, selectedIndex + 1));
+        } else if (input === 'h' || input === 'H') {
+            setShowHelp(true);
+        } else if (input === ' ') {
+            // Toggle boolean values
+            const arg = arguments[selectedIndex];
+            if (arg.type === 'boolean') {
+                const newConfig = { ...config };
+                newConfig[arg.key as keyof Config] = !arg.value as any;
+                onExecute(newConfig);
+            }
+        }
+    }, [config, selectedIndex, editingIndex, editValue, showHelp, showConfirm, onExecute, onCancel, exit, arguments]);
+
+    useInput(handleInput);
+
+    if (showConfirm) {
+        return (
+            <Box flexDirection="column" padding={1}>
+                <Box>
+                    <Text bold color="yellow">Confirm Execution</Text>
+                </Box>
+                <Box marginTop={1}>
+                    <Text>Execute with current configuration?</Text>
+                </Box>
+                <Box marginTop={1}>
+                    <Text color="green">[Y]es</Text>
+                    <Text> / </Text>
+                    <Text color="red">[N]o</Text>
+                </Box>
+            </Box>
+        );
+    }
+
+    if (showHelp) {
+        return (
+            <Box flexDirection="column" padding={1}>
+                <Box>
+                    <Text bold color="cyan">TUI Mode Help</Text>
+                </Box>
+                <Box marginTop={1}>
+                    <Text>Keyboard Shortcuts:</Text>
+                </Box>
+                <Box marginTop={1}>
+                    <Text>  ↑/↓    Navigate arguments</Text>
+                </Box>
+                <Box>
+                    <Text>  Space  Toggle boolean values</Text>
+                </Box>
+                <Box>
+                    <Text>  Enter  Edit value / Execute</Text>
+                </Box>
+                <Box>
+                    <Text>  H      Show this help</Text>
+                </Box>
+                <Box>
+                    <Text>  Esc    Cancel / Go back</Text>
+                </Box>
+                <Box>
+                    <Text>  Ctrl+C Exit</Text>
+                </Box>
+                <Box marginTop={1}>
+                    <Text color="dim">Press Esc or Enter to close</Text>
+                </Box>
+            </Box>
+        );
+    }
+
+    if (editingIndex !== null) {
+        const arg = arguments[editingIndex];
+        return (
+            <Box flexDirection="column" padding={1}>
+                <Box>
+                    <Text bold color="cyan">Edit: {arg.label}</Text>
+                </Box>
+                <Box marginTop={1}>
+                    <Text color="dim">{arg.description}</Text>
+                </Box>
+                <Box marginTop={1}>
+                    <Text>Current value: </Text>
+                    <Text color="yellow">{String(arg.value)}</Text>
+                </Box>
+                <Box marginTop={1}>
+                    <Text>New value: </Text>
+                    <TextInput
+                        value={editValue}
+                        onChange={setEditValue}
+                        placeholder={String(arg.value)}
+                    />
+                </Box>
+                <Box marginTop={1}>
+                    <Text color="dim">Press Enter to save, Esc to cancel</Text>
+                </Box>
+            </Box>
+        );
+    }
+
+    return (
+        <Box flexDirection="column" padding={1}>
+            <Box>
+                <Text bold color="cyan">{projectSlug} - TUI Mode</Text>
+            </Box>
+            <Box marginTop={1}>
+                <Text color="dim">Configure arguments before execution</Text>
+            </Box>
+            <Box marginTop={1}>
+                <Text color="dim">Press H for help, Esc to cancel, Enter to execute</Text>
+            </Box>
+            <Box marginTop={1} flexDirection="column">
+                {arguments.map((arg, index) => (
+                    <Box key={arg.key}>
+                        <Box>
+                            {index === selectedIndex ? (
+                                <Text color="green">► </Text>
+                            ) : (
+                                <Text>  </Text>
+                            )}
+                            <Text color={index === selectedIndex ? 'white' : 'gray'}>
+                                {arg.label}:
+                            </Text>
+                            <Text color={index === selectedIndex ? 'yellow' : 'dim'}>
+                                {' '}
+                                {String(arg.value)}
+                            </Text>
+                        </Box>
+                    </Box>
+                ))}
+            </Box>
+        </Box>
+    );
+}
+
+export function launchTUI(options: TUIOptions): void {
+    const { exit } = render(<TUI {...options} />);
+}
+
+export function isTTY(): boolean {
+    return process.stdout.isTTY;
+}
+
+export function checkTUICompatibility(): { compatible: boolean; reason?: string } {
+    if (!process.stdout.isTTY) {
+        return { compatible: false, reason: 'Not running in a TTY environment' };
+    }
+    return { compatible: true };
+}

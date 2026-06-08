@@ -138,6 +138,40 @@
 #   auto-prune: true
 
 # -----------------------------------------------------------------------------
+# Deprecation Policy
+# -----------------------------------------------------------------------------
+
+# Configure deprecation policies for legacy features
+# All dates must be in YYYY-MM-DD format
+# Minimum deprecation period is 6 months from announcement
+# deprecation:
+#   # Example deprecation policy for a feature
+#   # legacy-flag:
+#   #   deprecated_since: "2026-01-01"
+#   #   removal_date: "2026-07-01"
+#   #   warning_message: "Use --new-flag instead. See documentation for migration guide."
+#   #
+#   # Notes:
+#   # - deprecated_since: When the feature was first marked as deprecated
+#   # - removal_date: When the feature will be removed (must be at least 6 months after deprecated_since)
+#   # - warning_message: Custom message to display to users (optional)
+
+# -----------------------------------------------------------------------------
+# Daemon Process Support
+# -----------------------------------------------------------------------------
+
+# Enable daemon mode for background job processing
+# Daemon mode is only supported on Linux, macOS, and Windows
+# daemon:
+#   enabled: true
+#   # Enable noisy behavior (verbose logging for daemon operations)
+#   noisy_behavior: false
+#   # Directory for job metadata and state
+#   job_dir: ""
+#   # Maximum number of concurrent background jobs
+#   max_jobs: 10
+
+# -----------------------------------------------------------------------------
 # Advanced
 # -----------------------------------------------------------------------------
 

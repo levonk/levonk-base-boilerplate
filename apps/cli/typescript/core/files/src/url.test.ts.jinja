@@ -1,0 +1,181 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import {
+  supportsClickableURLs,
+  normalizeURL,
+  encodeURLComponent,
+  formatURL,
+  formatErrorURL,
+  formatHelpURL,
+  formatLogURL,
+  isValidURL,
+} from './url';
+
+describe('URL Formatting', () => {
+  describe('supportsClickableURLs', () => {
+    it('should return false when stdout is not a TTY', () => {
+      const originalIsTTY = process.stdout.isTTY;
+      Object.defineProperty(process.stdout, 'isTTY', { value: false });
+      expect(supportsClickableURLs()).toBe(false);
+      Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
+    });
+
+    it('should detect supported terminals', () => {
+      const originalTerm = process.env.TERM;
+      const originalIsTTY = process.stdout.isTTY;
+      
+      Object.defineProperty(process.stdout, 'isTTY', { value: true });
+      process.env.TERM = 'xterm-256color';
+      expect(supportsClickableURLs()).toBe(true);
+      
+      process.env.TERM = originalTerm;
+      Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
+    });
+  });
+
+  describe('normalizeURL', () => {
+    it('should add https:// protocol if missing', () => {
+      expect(normalizeURL('example.com')).toBe('https://example.com');
+      expect(normalizeURL('www.example.com')).toBe('https://www.example.com');
+    });
+
+    it('should preserve existing https:// protocol', () => {
+      expect(normalizeURL('https://example.com')).toBe('https://example.com');
+    });
+
+    it('should preserve existing http:// protocol', () => {
+      expect(normalizeURL('http://example.com')).toBe('http://example.com');
+    });
+
+    it('should trim whitespace', () => {
+      expect(normalizeURL('  example.com  ')).toBe('https://example.com');
+    });
+
+    it('should throw error for invalid URL', () => {
+      expect(() => normalizeURL('not a url')).toThrow('Invalid URL');
+    });
+
+    it('should handle URLs with paths', () => {
+      expect(normalizeURL('example.com/path')).toBe('https://example.com/path');
+    });
+
+    it('should handle URLs with query parameters', () => {
+      expect(normalizeURL('example.com?query=1')).toBe('https://example.com/?query=1');
+    });
+  });
+
+  describe('encodeURLComponent', () => {
+    it('should encode special characters', () => {
+      expect(encodeURLComponent('hello world')).toBe('hello%20world');
+      expect(encodeURLComponent('test@example.com')).toBe('test%40example.com');
+    });
+
+    it('should encode spaces', () => {
+      expect(encodeURLComponent(' ')).toBe('%20');
+    });
+
+    it('should not encode safe characters', () => {
+      expect(encodeURLComponent('abc123')).toBe('abc123');
+    });
+  });
+
+  describe('formatURL', () => {
+    it('should format URL with clickable escape sequences when supported', () => {
+      const originalIsTTY = process.stdout.isTTY;
+      const originalTerm = process.env.TERM;
+      
+      Object.defineProperty(process.stdout, 'isTTY', { value: true });
+      process.env.TERM = 'xterm-256color';
+      
+      const result = formatURL('https://example.com', { clickable: true });
+      expect(result).toContain('\x1b]8;;');
+      expect(result).toContain('https://example.com');
+      
+      process.env.TERM = originalTerm;
+      Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
+    });
+
+    it('should return plain URL when clickable is false', () => {
+      const result = formatURL('https://example.com', { clickable: false });
+      expect(result).toBe('https://example.com');
+    });
+
+    it('should return plain URL when terminal does not support clickable URLs', () => {
+      const originalIsTTY = process.stdout.isTTY;
+      Object.defineProperty(process.stdout, 'isTTY', { value: false });
+      
+      const result = formatURL('https://example.com', { clickable: true });
+      expect(result).toBe('https://example.com');
+      
+      Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
+    });
+
+    it('should use fallback text when provided', () => {
+      const originalIsTTY = process.stdout.isTTY;
+      Object.defineProperty(process.stdout, 'isTTY', { value: false });
+      
+      const result = formatURL('https://example.com', { 
+        clickable: true,
+        fallbackText: 'Click here' 
+      });
+      expect(result).toBe('Click here');
+      
+      Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
+    });
+
+    it('should encode URL when encode option is true', () => {
+      const result = formatURL('https://example.com/path with spaces', { 
+        clickable: false,
+        encode: true 
+      });
+      expect(result).toContain('%20');
+    });
+  });
+
+  describe('formatErrorURL', () => {
+    it('should format URL for error messages', () => {
+      const result = formatErrorURL('https://example.com');
+      expect(result).toContain('https://example.com');
+    });
+  });
+
+  describe('formatHelpURL', () => {
+    it('should format URL for help text', () => {
+      const result = formatHelpURL('https://example.com');
+      expect(result).toContain('https://example.com');
+    });
+  });
+
+  describe('formatLogURL', () => {
+    it('should format URL for log output with color', () => {
+      const result = formatLogURL('https://example.com', true);
+      expect(result).toContain('https://example.com');
+    });
+
+    it('should format URL for log output without color', () => {
+      const result = formatLogURL('https://example.com', false);
+      expect(result).toContain('https://example.com');
+    });
+  });
+
+  describe('isValidURL', () => {
+    it('should return true for valid URLs', () => {
+      expect(isValidURL('https://example.com')).toBe(true);
+      expect(isValidURL('http://example.com')).toBe(true);
+      expect(isValidURL('https://example.com/path')).toBe(true);
+    });
+
+    it('should return false for invalid URLs', () => {
+      expect(isValidURL('not a url')).toBe(false);
+      expect(isValidURL('')).toBe(false);
+      expect(isValidURL('example')).toBe(false);
+    });
+
+    it('should return true for URLs with query parameters', () => {
+      expect(isValidURL('https://example.com?query=1')).toBe(true);
+    });
+
+    it('should return true for URLs with fragments', () => {
+      expect(isValidURL('https://example.com#section')).toBe(true);
+    });
+  });
+});

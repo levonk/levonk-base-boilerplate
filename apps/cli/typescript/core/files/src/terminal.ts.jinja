@@ -1,0 +1,322 @@
+import process from 'process';
+
+export interface TerminalSize {
+  columns: number;
+  rows: number;
+}
+
+export interface TerminalOptions {
+  isTTY?: boolean;
+  minWidth?: number;
+  maxWidth?: number;
+  defaultWidth?: number;
+}
+
+// Default terminal dimensions for non-TTY environments
+const DEFAULT_TERMINAL_SIZE: TerminalSize = {
+  columns: 80,
+  rows: 24,
+};
+
+// Minimum terminal width to ensure readability
+const MIN_TERMINAL_WIDTH = 40;
+
+// Maximum terminal width to prevent excessive wrapping
+const MAX_TERMINAL_WIDTH = 200;
+
+/**
+ * Get terminal size using the term-size library or fallback to defaults
+ */
+function getTerminalSize(): TerminalSize {
+  // If not a TTY, return default size
+  if (!process.stdout.isTTY) {
+    return { ...DEFAULT_TERMINAL_SIZE };
+  }
+
+  // Try to get actual terminal size from process.stdout
+  try {
+    const columns = process.stdout.columns || DEFAULT_TERMINAL_SIZE.columns;
+    const rows = process.stdout.rows || DEFAULT_TERMINAL_SIZE.rows;
+    
+    // Clamp values to reasonable ranges
+    const clampedColumns = Math.max(
+      MIN_TERMINAL_WIDTH,
+      Math.min(MAX_TERMINAL_WIDTH, columns)
+    );
+    
+    return {
+      columns: clampedColumns,
+      rows: Math.max(10, rows),
+    };
+  } catch (error) {
+    // Fallback to defaults if detection fails
+    return { ...DEFAULT_TERMINAL_SIZE };
+  }
+}
+
+/**
+ * Terminal size awareness manager
+ */
+export class Terminal {
+  private currentSize: TerminalSize;
+  private options: TerminalOptions;
+  private resizeListeners: Array<(size: TerminalSize) => void> = [];
+  private resizeHandler: (() => void) | null = null;
+
+  constructor(options: TerminalOptions = {}) {
+    this.options = {
+      isTTY: process.stdout.isTTY,
+      minWidth: MIN_TERMINAL_WIDTH,
+      maxWidth: MAX_TERMINAL_WIDTH,
+      defaultWidth: DEFAULT_TERMINAL_SIZE.columns,
+      ...options,
+    };
+
+    this.currentSize = getTerminalSize();
+    
+    // Set up resize event listener if in TTY
+    if (this.options.isTTY && process.stdout.isTTY) {
+      this.setupResizeHandler();
+    }
+  }
+
+  /**
+   * Get current terminal size
+   */
+  getSize(): TerminalSize {
+    return { ...this.currentSize };
+  }
+
+  /**
+   * Get terminal width (columns)
+   */
+  getWidth(): number {
+    return this.currentSize.columns;
+  }
+
+  /**
+   * Get terminal height (rows)
+   */
+  getHeight(): number {
+    return this.currentSize.rows;
+  }
+
+  /**
+   * Check if running in a TTY
+   */
+  isTTY(): boolean {
+    return this.options.isTTY || false;
+  }
+
+  /**
+   * Set up resize event handler
+   */
+  private setupResizeHandler(): void {
+    if (typeof process.stdout.on === 'function') {
+      this.resizeHandler = () => {
+        const newSize = getTerminalSize();
+        if (
+          newSize.columns !== this.currentSize.columns ||
+          newSize.rows !== this.currentSize.rows
+        ) {
+          this.currentSize = newSize;
+          this.notifyResizeListeners(newSize);
+        }
+      };
+
+      process.stdout.on('resize', this.resizeHandler);
+    }
+  }
+
+  /**
+   * Notify all resize listeners
+   */
+  private notifyResizeListeners(size: TerminalSize): void {
+    this.resizeListeners.forEach((listener) => {
+      try {
+        listener(size);
+      } catch (error) {
+        // Silently handle listener errors to prevent crashes
+        console.error('Error in resize listener:', error);
+      }
+    });
+  }
+
+  /**
+   * Add a listener for terminal resize events
+   */
+  onResize(listener: (size: TerminalSize) => void): void {
+    this.resizeListeners.push(listener);
+  }
+
+  /**
+   * Remove a resize listener
+   */
+  offResize(listener: (size: TerminalSize) => void): void {
+    const index = this.resizeListeners.indexOf(listener);
+    if (index > -1) {
+      this.resizeListeners.splice(index, 1);
+    }
+  }
+
+  /**
+   * Clean up event listeners
+   */
+  destroy(): void {
+    if (this.resizeHandler && typeof process.stdout.off === 'function') {
+      process.stdout.off('resize', this.resizeHandler);
+    }
+    this.resizeListeners = [];
+    this.resizeHandler = null;
+  }
+
+  /**
+   * Wrap text to fit within terminal width
+   */
+  wrapText(text: string, indent: number = 0): string {
+    const width = this.getWidth() - indent;
+    if (width <= 0) return text;
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    words.forEach((word) => {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (testLine.length <= width) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) {
+          lines.push(currentLine);
+        }
+        currentLine = word;
+      }
+    });
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    // Add indentation to all lines except the first
+    const indentStr = ' '.repeat(indent);
+    return lines.map((line, i) => (i === 0 ? line : indentStr + line)).join('\n');
+  }
+
+  /**
+   * Format a table to fit within terminal width
+   */
+  formatTable(
+    headers: string[],
+    rows: string[][],
+    padding: number = 2
+  ): string[] {
+    const width = this.getWidth();
+    
+    // Calculate column widths based on content
+    const columnCount = headers.length;
+    const columnWidths: number[] = headers.map((h, i) => {
+      const maxWidth = Math.max(
+        h.length,
+        ...rows.map((row) => (row[i] || '').length)
+      );
+      return maxWidth + padding;
+    });
+
+    // Check if table fits in terminal
+    const totalWidth = columnWidths.reduce((sum, w) => sum + w, 0);
+    
+    if (totalWidth > width) {
+      // Table doesn't fit, wrap each cell
+      return this.formatWrappedTable(headers, rows, columnWidths, width);
+    }
+
+    // Table fits, format normally
+    const headerLine = headers
+      .map((h, i) => h.padEnd(columnWidths[i]))
+      .join('');
+    const separator = columnWidths.map((w) => '-'.repeat(w)).join('');
+    
+    const rowLines = rows.map((row) =>
+      row
+        .map((cell, i) => (cell || '').padEnd(columnWidths[i]))
+        .join('')
+    );
+
+    return [headerLine, separator, ...rowLines];
+  }
+
+  /**
+   * Format table with wrapped cells when table is too wide
+   */
+  private formatWrappedTable(
+    headers: string[],
+    rows: string[][],
+    columnWidths: number[],
+    maxWidth: number
+  ): string[] {
+    const lines: string[] = [];
+    
+    // Wrap header
+    const wrappedHeaders = headers.map((h, i) =>
+      this.wrapText(h, 0).split('\n')
+    );
+    const maxHeaderLines = Math.max(...wrappedHeaders.map((h) => h.length));
+    
+    for (let i = 0; i < maxHeaderLines; i++) {
+      const line = wrappedHeaders
+        .map((h, idx) => (h[i] || '').padEnd(columnWidths[idx]))
+        .join('');
+      lines.push(line);
+    }
+
+    // Separator
+    lines.push(columnWidths.map((w) => '-'.repeat(w)).join(''));
+
+    // Wrap each row
+    rows.forEach((row) => {
+      const wrappedCells = row.map((cell, i) =>
+        this.wrapText(cell || '', 0).split('\n')
+      );
+      const maxCellLines = Math.max(...wrappedCells.map((c) => c.length));
+      
+      for (let i = 0; i < maxCellLines; i++) {
+        const line = wrappedCells
+          .map((c, idx) => (c[i] || '').padEnd(columnWidths[idx]))
+          .join('');
+        lines.push(line);
+      }
+    });
+
+    return lines;
+  }
+
+  /**
+   * Truncate text to fit within terminal width with ellipsis
+   */
+  truncateText(text: string, suffix: string = '...'): string {
+    const width = this.getWidth();
+    if (text.length <= width) return text;
+    
+    const availableWidth = width - suffix.length;
+    if (availableWidth <= 0) return suffix;
+    
+    return text.substring(0, availableWidth) + suffix;
+  }
+}
+
+/**
+ * Create a terminal instance
+ */
+export function createTerminal(options?: TerminalOptions): Terminal {
+  return new Terminal(options);
+}
+
+/**
+ * Get terminal size synchronously (convenience function)
+ */
+export function getTerminalWidth(): number {
+  const terminal = createTerminal();
+  const width = terminal.getWidth();
+  terminal.destroy();
+  return width;
+}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -34,6 +35,8 @@ var (
 	tuiFlag bool
 	daemonFlag bool
 	noDaemonFlag bool
+	listJobsFlag bool
+	cancelJobFlag string
 	urlFormat string
 	healthCheckFlag bool
 	privacyFlag bool
@@ -42,6 +45,8 @@ var (
 	auditExportTypes string
 	logger *Logger
 	terminal *Terminal
+	deprecationManager *DeprecationManager
+	daemonManager *DaemonManager
 	version = "1.0.0"
 
 	rootCmd = &cobra.Command{
@@ -65,6 +70,16 @@ Examples:
 			// Handle --audit-export flag
 			if auditExportFile != "" {
 				return RunAuditExport(ctx)
+			}
+
+			// Handle --list-jobs flag
+			if listJobsFlag {
+				return RunListJobsCommand()
+			}
+
+			// Handle --cancel-job flag
+			if cancelJobFlag != "" {
+				return RunCancelJobCommand(cancelJobFlag)
 			}
 
 			// Handle --install flag
@@ -104,6 +119,25 @@ Examples:
 			logger.SetDebug(debug)
 			logger.SetColorMode(colorMode)
 			logger.SetPrivacyMode(privacyFlag)
+
+			// Initialize daemon manager
+			daemonManager = NewDaemonManager(logger)
+
+			// Handle daemon flags
+			if daemonFlag {
+				if !daemonManager.IsPlatformSupported() {
+					return WrapError(fmt.Errorf("daemon mode not supported on %s", runtime.GOOS), ErrorTypePlatform, "Daemon not supported", "Daemon mode is only supported on Linux, macOS, and Windows")
+				}
+				if err := daemonManager.StartDaemon(); err != nil {
+					return WrapError(err, ErrorTypeExecution, "Failed to start daemon", "Check system permissions and daemon configuration")
+				}
+				logger.Info("Daemon started in background")
+				return nil
+			}
+
+			if noDaemonFlag {
+				logger.Debug("Daemon mode explicitly disabled")
+			}
 
 			// Initialize terminal size detection
 			terminal = NewTerminal()
@@ -443,6 +477,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&tuiFlag, "tui", false, "Launch TUI mode (alias for --interactive)")
 	rootCmd.Flags().BoolVar(&daemonFlag, "daemon", false, "Pre-launch daemon in background")
 	rootCmd.Flags().BoolVar(&noDaemonFlag, "no-daemon", false, "Force synchronous operation (disable daemon)")
+	rootCmd.Flags().BoolVar(&listJobsFlag, "list-jobs", false, "List background jobs")
+	rootCmd.Flags().StringVar(&cancelJobFlag, "cancel-job", "", "Cancel a background job by ID")
 	rootCmd.Flags().StringVar(&urlFormat, "url-format", "auto", "URL format: auto, plain, terminal")
 	rootCmd.Flags().BoolVar(&healthCheckFlag, "health-check", false, "Run health check and exit")
 	rootCmd.Flags().BoolVar(&privacyFlag, "privacy", false, "Enable privacy mode to ignore sensitive identifiers")
@@ -533,6 +569,20 @@ func initConfig() {
 	defaults := GetHardcodedDefaults()
 	for key, value := range defaults {
 		viper.SetDefault(key, value)
+	}
+
+	// Initialize deprecation manager and load policies from config
+	deprecationManager = NewDeprecationManager(logger)
+	deprecationManager.SetQuietMode(quiet)
+
+	// Validate deprecation configuration
+	if err := deprecationManager.ValidateConfig(); err != nil {
+		logger.Error("Deprecation configuration validation failed: %v", err)
+	}
+
+	// Load deprecation policies from config
+	if err := deprecationManager.LoadFromConfig(); err != nil {
+		logger.Error("Failed to load deprecation policies: %v", err)
 	}
 }
 

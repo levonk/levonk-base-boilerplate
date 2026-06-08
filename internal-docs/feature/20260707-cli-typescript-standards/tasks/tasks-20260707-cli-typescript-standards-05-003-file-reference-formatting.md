@@ -27,17 +27,17 @@ Format all file references with line numbers in VSCode-compatible format (`file:
 
 ## Sub-Tasks
 
-- [ ] Create file reference formatting utility module
-- [ ] Implement VSCode-compatible file reference format
-- [ ] Implement standard file:line:column format
-- [ ] Add file reference formatting to error messages
-- [ ] Add file reference formatting to log output
-- [ ] Add file reference formatting to user-facing output
-- [ ] Implement format selection based on environment
-- [ ] Add unit tests for file reference formatting
-- [ ] Add integration tests for file references in errors
-- [ ] Update help text to document file reference format
-- [ ] Add file reference format configuration option
+- [x] Create file reference formatting utility module
+- [x] Implement VSCode-compatible file reference format
+- [x] Implement standard file:line:column format
+- [x] Add file reference formatting to error messages
+- [x] Add file reference formatting to log output
+- [x] Add file reference formatting to user-facing output
+- [x] Implement format selection based on environment
+- [x] Add unit tests for file reference formatting
+- [x] Add integration tests for file references in errors
+- [x] Update help text to document file reference format
+- [x] Add file reference format configuration option
 
 ## Relevant Files
 
@@ -49,14 +49,14 @@ Format all file references with line numbers in VSCode-compatible format (`file:
 
 ## Acceptance Criteria
 
-- [ ] File references use VSCode-compatible format when appropriate
-- [ ] File references use standard file:line:column format for terminals
-- [ ] Error messages include formatted file references
-- [ ] Log output includes formatted file references
-- [ ] User-facing output includes formatted file references
-- [ ] Format selection is automatic based on environment
-- [ ] File references are clickable in supported terminals
-- [ ] File references work with VSCode's file link protocol
+- [x] File references use VSCode-compatible format when appropriate
+- [x] File references use standard file:line:column format for terminals
+- [x] Error messages include formatted file references
+- [x] Log output includes formatted file references
+- [x] User-facing output includes formatted file references
+- [x] Format selection is automatic based on environment
+- [x] File references are clickable in supported terminals
+- [x] File references work with VSCode's file link protocol
 
 ## Test Plan
 

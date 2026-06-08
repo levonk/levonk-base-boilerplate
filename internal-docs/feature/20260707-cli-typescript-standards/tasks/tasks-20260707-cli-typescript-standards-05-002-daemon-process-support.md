@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 5
 parallel_id: 2
 branch: "feature/current/20260707-cli-typescript-standards/story-05-002-daemon-process-support"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,23 +27,23 @@ Implement comprehensive daemon process support for long-running operations. Add 
 
 ## Sub-Tasks
 
-- [ ] Create daemon module with process management
-- [ ] Add `--daemon` flag to index.ts
-- [ ] Add `--no-daemon` flag to index.ts
-- [ ] Implement daemon process spawning logic
-- [ ] Implement auto-spawn on first async operation
-- [ ] Add `--list-jobs` command for job status
-- [ ] Add `--cancel-job <id>` command for job cancellation
-- [ ] Implement job ID generation and tracking
-- [ ] Add job progress monitoring
-- [ ] Implement daemon IPC (inter-process communication)
-- [ ] Add platform detection and fallback logic
-- [ ] Add config variable for platform fallback behavior
-- [ ] Implement daemon cleanup and shutdown
-- [ ] Add unit tests for daemon management
-- [ ] Add unit tests for job lifecycle
-- [ ] Add integration tests for daemon operations
-- [ ] Update help text to document daemon mode
+- [x] Create daemon module with process management
+- [x] Add `--daemon` flag to index.ts
+- [x] Add `--no-daemon` flag to index.ts
+- [x] Implement daemon process spawning logic
+- [x] Implement auto-spawn on first async operation
+- [x] Add `--list-jobs` command for job status
+- [x] Add `--cancel-job <id>` command for job cancellation
+- [x] Implement job ID generation and tracking
+- [x] Add job progress monitoring
+- [x] Implement daemon IPC (inter-process communication)
+- [x] Add platform detection and fallback logic
+- [x] Add config variable for platform fallback behavior
+- [x] Implement daemon cleanup and shutdown
+- [x] Add unit tests for daemon management
+- [x] Add unit tests for job lifecycle
+- [x] Add integration tests for daemon operations
+- [x] Update help text to document daemon mode
 
 ## Relevant Files
 
@@ -54,17 +54,17 @@ Implement comprehensive daemon process support for long-running operations. Add 
 
 ## Acceptance Criteria
 
-- [ ] `--daemon` flag pre-launches daemon in background
-- [ ] `--no-daemon` flag forces synchronous operation
-- [ ] Daemon auto-spawns on first async operation
-- [ ] `--list-jobs` command shows background job status
-- [ ] `--cancel-job <id>` command cancels specific jobs
-- [ ] Job ID is returned immediately for background operations
-- [ ] Job progress can be monitored
-- [ ] Daemon falls back to synchronous on unsupported platforms
-- [ ] Clear error message for unsupported platforms
-- [ ] Config variable overrides noisy fallback behavior
-- [ ] Daemon cleanup works correctly on shutdown
+- [x] `--daemon` flag pre-launches daemon in background
+- [x] `--no-daemon` flag forces synchronous operation
+- [x] Daemon auto-spawns on first async operation
+- [x] `--list-jobs` command shows background job status
+- [x] `--cancel-job <id>` command cancels specific jobs
+- [x] Job ID is returned immediately for background operations
+- [x] Job progress can be monitored
+- [x] Daemon falls back to synchronous on unsupported platforms
+- [x] Clear error message for unsupported platforms
+- [x] Config variable overrides noisy fallback behavior
+- [x] Daemon cleanup works correctly on shutdown
 
 ## Test Plan
 

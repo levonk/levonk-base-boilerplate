@@ -52,15 +52,15 @@ This index summarizes all stories for the Go CLI Standards compliance implementa
 | 03-009 | Health Check for Containers | 03 | [x] Done | | true | None | None | [health, main] | feature/current/20260707-cli-go-standards/story-03-009-health-check |
 | 03-010 | Privacy Mode with Anonymous Lists | 03 | [x] Done | | true | None | None | [privacy, main] | feature/current/20260707-cli-go-standards/story-03-010-privacy-mode |
 | 03-011 | Audit Logging with Retention | 03 | [x] Done | | true | None | None | [audit, main] | feature/current/20260707-cli-go-standards/story-03-011-audit-logging |
-| 03-012 | Legacy Deprecation Policy | 03 | [ ] Todo | | true | None | None | [deprecation, main] | feature/current/20260707-cli-go-standards/story-03-012-deprecation-policy |
+| 03-012 | Legacy Deprecation Policy | 03 | [x] Done | | true | None | None | [deprecation, main] | feature/current/20260707-cli-go-standards/story-03-012-deprecation-policy |
 
 ### Phase 04: Comprehensive Testing
 
 | Story ID | Story Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
 | -------- | ----------- | ----: | ------ | -------- | ------------- | ------------ | ---------- | ------- | ------ |
-| 04-001 | Test Coverage for New Features | 04 | [ ] Todo | | true | 01-007, 02-007, 03-006 | 04-003 | [all] | feature/current/20260707-cli-go-standards/story-04-001-test-new-features |
-| 04-002 | Test Coverage for Existing Features | 04 | [ ] Todo | | true | None | 04-003 | [all] | feature/current/20260707-cli-go-standards/story-04-002-test-existing-features |
-| 04-003 | Integration Testing | 04 | [ ] Todo | | true | 04-001, 04-002 | None | [all] | feature/current/20260707-cli-go-standards/story-04-003-integration-testing |
+| 04-001 | Test Coverage for New Features | 04 | [x] Done | | true | 01-007, 02-007, 03-006 | 04-003 | [all] | feature/current/20260707-cli-go-standards/story-04-001-test-new-features |
+| 04-002 | Test Coverage for Existing Features | 04 | [x] Done | | true | None | 04-003 | [all] | feature/current/20260707-cli-go-standards/story-04-002-test-existing-features |
+| 04-003 | Integration Testing | 04 | [x] Done | | true | 04-001, 04-002 | None | [all] | feature/current/20260707-cli-go-standards/story-04-003-integration-testing |
 
 ## Dependency Graph
 

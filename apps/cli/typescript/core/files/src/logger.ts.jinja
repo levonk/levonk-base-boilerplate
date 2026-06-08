@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import supportsColor from 'supports-color';
 import process from 'process';
+import { formatLogFileRef, type FileLocation } from './file-ref';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 export type ColorMode = 'auto' | 'always' | 'never';
@@ -167,6 +168,15 @@ export class Logger {
     const moduleStr = moduleFn(`[${module}]`);
 
     let output = `${timestamp} ${moduleStr} ${levelStr} ${message}`;
+
+    // Format file location if present in extra
+    if (extra && 'fileLocation' in extra && extra.fileLocation) {
+      const fileLocation = extra.fileLocation as FileLocation;
+      output += ` ${formatLogFileRef(fileLocation)}`;
+      // Remove fileLocation from extra to avoid duplication
+      const { fileLocation: _, ...restExtra } = extra;
+      extra = restExtra;
+    }
 
     if (extra && this.options.verbose) {
       const extraStr = Object.entries(extra)

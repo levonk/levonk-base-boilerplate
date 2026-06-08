@@ -1,0 +1,338 @@
+#!/usr/bin/env node
+import { spawn, ChildProcess } from 'child_process';
+import { randomUUID } from 'crypto';
+import { createWriteStream, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
+import { createLogger, type LoggerOptions } from './logger.js';
+
+export interface Job {
+  id: string;
+  command: string;
+  args: string[];
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  startTime?: Date;
+  endTime?: Date;
+  progress?: number;
+  result?: any;
+  error?: string;
+}
+
+export interface DaemonConfig {
+  enabled: boolean;
+  autoSpawn: boolean;
+  platformFallback: 'sync' | 'error' | 'warn';
+  ipcMethod: 'stdio' | 'socket' | 'http';
+  maxJobs: number;
+  jobTimeout: number;
+}
+
+const DEFAULT_DAEMON_CONFIG: DaemonConfig = {
+  enabled: true,
+  autoSpawn: true,
+  platformFallback: 'warn',
+  ipcMethod: 'stdio',
+  maxJobs: 10,
+  jobTimeout: 3600000, // 1 hour
+};
+
+class DaemonManager {
+  private process: ChildProcess | null = null;
+  private jobs: Map<string, Job> = new Map();
+  private config: DaemonConfig;
+  private logger: ReturnType<typeof createLogger>;
+  private stateDir: string;
+  private pidFile: string;
+  private jobsFile: string;
+
+  constructor(config: Partial<DaemonConfig> = {}, loggerOptions?: LoggerOptions) {
+    this.config = { ...DEFAULT_DAEMON_CONFIG, ...config };
+    this.logger = createLogger(loggerOptions || { quiet: false, verbose: false, color: 'auto', module: 'daemon' });
+    this.stateDir = join(homedir(), '.{{ project_slug }}', 'daemon');
+    this.pidFile = join(this.stateDir, 'daemon.pid');
+    this.jobsFile = join(this.stateDir, 'jobs.json');
+    
+    // Ensure state directory exists
+    if (!existsSync(this.stateDir)) {
+      mkdirSync(this.stateDir, { recursive: true });
+    }
+  }
+
+  /**
+   * Check if daemon is running
+   */
+  isRunning(): boolean {
+    if (!existsSync(this.pidFile)) {
+      return false;
+    }
+
+    try {
+      const pid = parseInt(readFileSync(this.pidFile, 'utf-8').trim());
+      // Try to send signal 0 to check if process exists
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      // Process doesn't exist, clean up stale PID file
+      this.cleanup();
+      return false;
+    }
+  }
+
+  /**
+   * Start the daemon process
+   */
+  async start(): Promise<void> {
+    if (this.isRunning()) {
+      this.logger.warn('Daemon is already running');
+      return;
+    }
+
+    // Check platform support
+    if (!this.isPlatformSupported()) {
+      this.handlePlatformFallback('Daemon not supported on this platform');
+      return;
+    }
+
+    this.logger.info('Starting daemon process...');
+
+    // Spawn daemon as detached process
+    const daemonProcess = spawn(process.execPath, [process.argv[1], '--daemon-internal'], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+
+    daemonProcess.unref();
+
+    // Write PID file
+    writeFileSync(this.pidFile, daemonProcess.pid.toString());
+
+    this.logger.info(`Daemon started with PID ${daemonProcess.pid}`);
+  }
+
+  /**
+   * Stop the daemon process
+   */
+  async stop(): Promise<void> {
+    if (!this.isRunning()) {
+      this.logger.warn('Daemon is not running');
+      return;
+    }
+
+    const pid = parseInt(readFileSync(this.pidFile, 'utf-8').trim());
+    
+    try {
+      process.kill(pid, 'SIGTERM');
+      this.logger.info(`Daemon process ${pid} stopped`);
+    } catch (error) {
+      this.logger.error(`Failed to stop daemon: ${error}`);
+    }
+
+    this.cleanup();
+  }
+
+  /**
+   * Spawn daemon on first async operation
+   */
+  async autoSpawn(): Promise<void> {
+    if (!this.config.autoSpawn) {
+      return;
+    }
+
+    if (!this.isRunning()) {
+      this.logger.info('Auto-spawning daemon for async operation...');
+      await this.start();
+    }
+  }
+
+  /**
+   * Create a new job
+   */
+  async createJob(command: string, args: string[]): Promise<Job> {
+    const job: Job = {
+      id: randomUUID(),
+      command,
+      args,
+      status: 'pending',
+    };
+
+    this.jobs.set(job.id, job);
+    this.saveJobs();
+
+    this.logger.info(`Created job ${job.id}: ${command} ${args.join(' ')}`);
+    return job;
+  }
+
+  /**
+   * Get job status
+   */
+  getJob(jobId: string): Job | undefined {
+    return this.jobs.get(jobId);
+  }
+
+  /**
+   * List all jobs
+   */
+  listJobs(): Job[] {
+    return Array.from(this.jobs.values());
+  }
+
+  /**
+   * Cancel a job
+   */
+  async cancelJob(jobId: string): Promise<boolean> {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      this.logger.warn(`Job ${jobId} not found`);
+      return false;
+    }
+
+    if (job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled') {
+      this.logger.warn(`Job ${jobId} is already ${job.status}`);
+      return false;
+    }
+
+    job.status = 'cancelled';
+    job.endTime = new Date();
+    this.saveJobs();
+
+    this.logger.info(`Cancelled job ${jobId}`);
+    return true;
+  }
+
+  /**
+   * Update job progress
+   */
+  updateJobProgress(jobId: string, progress: number): void {
+    const job = this.jobs.get(jobId);
+    if (job) {
+      job.progress = progress;
+      this.saveJobs();
+    }
+  }
+
+  /**
+   * Mark job as completed
+   */
+  completeJob(jobId: string, result?: any): void {
+    const job = this.jobs.get(jobId);
+    if (job) {
+      job.status = 'completed';
+      job.endTime = new Date();
+      job.result = result;
+      job.progress = 100;
+      this.saveJobs();
+    }
+  }
+
+  /**
+   * Mark job as failed
+   */
+  failJob(jobId: string, error: string): void {
+    const job = this.jobs.get(jobId);
+    if (job) {
+      job.status = 'failed';
+      job.endTime = new Date();
+      job.error = error;
+      this.saveJobs();
+    }
+  }
+
+  /**
+   * Load jobs from disk
+   */
+  private loadJobs(): void {
+    if (existsSync(this.jobsFile)) {
+      try {
+        const data = readFileSync(this.jobsFile, 'utf-8');
+        const jobs = JSON.parse(data) as Job[];
+        this.jobs = new Map(jobs.map(job => [job.id, job]));
+      } catch (error) {
+        this.logger.error(`Failed to load jobs: ${error}`);
+      }
+    }
+  }
+
+  /**
+   * Save jobs to disk
+   */
+  private saveJobs(): void {
+    try {
+      const jobs = Array.from(this.jobs.values());
+      writeFileSync(this.jobsFile, JSON.stringify(jobs, null, 2));
+    } catch (error) {
+      this.logger.error(`Failed to save jobs: ${error}`);
+    }
+  }
+
+  /**
+   * Check if platform supports daemon
+   */
+  private isPlatformSupported(): boolean {
+    // Windows has limited support for detached processes
+    if (process.platform === 'win32') {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Handle platform fallback
+   */
+  private handlePlatformFallback(message: string): void {
+    switch (this.config.platformFallback) {
+      case 'sync':
+        this.logger.info(`${message} - falling back to synchronous mode`);
+        break;
+      case 'error':
+        throw new Error(`${message} - daemon mode not available`);
+      case 'warn':
+      default:
+        this.logger.warn(`${message} - falling back to synchronous mode`);
+        break;
+    }
+  }
+
+  /**
+   * Cleanup daemon resources
+   */
+  private cleanup(): void {
+    try {
+      if (existsSync(this.pidFile)) {
+        unlinkSync(this.pidFile);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to cleanup PID file: ${error}`);
+    }
+  }
+
+  /**
+   * Shutdown daemon gracefully
+   */
+  async shutdown(): Promise<void> {
+    this.logger.info('Shutting down daemon...');
+    
+    // Cancel all running jobs
+    for (const [jobId, job] of this.jobs.entries()) {
+      if (job.status === 'running') {
+        await this.cancelJob(jobId);
+      }
+    }
+
+    await this.stop();
+  }
+}
+
+// Export singleton instance
+let daemonManager: DaemonManager | null = null;
+
+export function getDaemonManager(config?: Partial<DaemonConfig>, loggerOptions?: LoggerOptions): DaemonManager {
+  if (!daemonManager) {
+    daemonManager = new DaemonManager(config, loggerOptions);
+  }
+  return daemonManager;
+}
+
+export function resetDaemonManager(): void {
+  daemonManager = null;
+}

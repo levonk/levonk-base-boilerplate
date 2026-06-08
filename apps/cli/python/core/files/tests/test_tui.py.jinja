@@ -32,4 +32,11 @@ def test_confirm_execution():
     result = confirm_execution(args)
     # Placeholder implementation always returns True
     assert result is True
+{% else %}
+import pytest
+
+
+def test_tui_not_enabled():
+    """Test that TUI is not enabled when include_tui is false."""
+    pytest.skip("TUI mode not enabled in this boilerplate configuration")
 {% endif %}

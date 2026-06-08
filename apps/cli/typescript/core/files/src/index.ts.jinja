@@ -56,6 +56,17 @@ import {
     createPager,
     type PagerOptions,
 } from './pager.js';
+import {
+    launchTUI,
+    isTTY,
+    checkTUICompatibility,
+    type TUIOptions,
+} from './tui.js';
+import {
+    getDaemonManager,
+    type DaemonConfig,
+    type Job,
+} from './daemon.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -87,14 +98,23 @@ program
   .option('-c, --config <path>', 'Config file path (default: ~/.config/{{ project_slug }}/config.toml)', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
   .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables ({{ PROJECT_SLUG }}_*)\n  3. Local project config (./.{{ project_slug }}/config.toml)\n  4. User config (~/.config/{{ project_slug }}/config.toml)\n  5. System config (/etc/{{ project_slug }}/config.toml)\n  6. Hardcoded defaults')
   .addHelpText('after', '\nLogging Options:\n  --debug       Enable debug-level logging\n  --log-format  Log format: text (default) or json\n  --quiet        Suppress all output except errors\n  --verbose      Enable verbose output with extra details\n  Environment Variables:\n  LOG_LEVEL      Set log level (debug, info, warn, error, fatal)\n  NODE_ENV       Set to "development" to enable debug mode')
+  .addHelpText('after', '\nURL Formatting:\n  URLs in output are automatically formatted for terminal display\n  - Clickable links are enabled in supported terminals (OSC 8 escape sequences)\n  - URLs are normalized to use HTTP/HTTPS protocol\n  - Special characters are properly encoded\n  - Fallback to plain text for terminals without URL support\n  - NO_COLOR environment variable disables clickable URLs')
   .addHelpText('after', '\nDry-Run Mode:\n  --dry-run     Preview changes without executing them\n                Shows what would be done without making any changes')
   .addHelpText('after', '\nConfirmation Prompts:\n  --force       Bypass confirmation prompts for destructive operations\n                Use with caution in automated scripts\n  Environment Variables:\n  CONFIRM_BYPASS Set to "true" or "1" to bypass prompts in non-TTY environments')
   .addHelpText('after', '\nProgress Indicators:\n  Progress bars are shown for long-running file operations\n  Progress is suppressed in quiet mode (--quiet) or JSON mode (--json)\n  Progress can be cancelled with Ctrl+C (SIGINT)')
+  .addHelpText('after', '\nFile References:\n  Error messages and log output include clickable file references\n  Format: file:///absolute/path/to/file:line:column (VSCode)\n  Format: file:line:column (standard terminal)\n  File references are automatically formatted based on environment detection')
   .addHelpText('after', '\nInstallation:\n  --install      Install CLI (generate completions, initialize config)\n  --uninstall    Uninstall CLI (remove completions, clean up config)')
   .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
   .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')
   .addHelpText('after', '\nPager:\n  Long output is automatically paged using the PAGER environment variable (default: less)\n  Use --no-pager to disable paging\n  Paging is disabled for JSON output mode and piped output\n  Environment Variables:\n  PAGER         Set pager command (default: less)')
+  .addHelpText('after', '\nTUI Mode:\n  --interactive, --tui  Launch interactive Terminal User Interface\n                        Allows viewing and modifying all arguments before execution\n                        Falls back to CLI mode in non-TTY environments')
+  .addHelpText('after', '\nDaemon Mode:\n  --daemon              Pre-launch daemon in background for long-running operations\n  --no-daemon           Force synchronous operation (disable daemon)\n  --list-jobs           List background job status\n  --cancel-job <id>     Cancel a specific background job\n  Daemon auto-spawns on first async operation unless --no-daemon is set')
   .option('--dry-run', 'Preview changes without executing them')
+  .option('--interactive, --tui', 'Launch interactive Terminal User Interface')
+  .option('--daemon', 'Pre-launch daemon in background')
+  .option('--no-daemon', 'Force synchronous operation (disable daemon)')
+  .option('--list-jobs', 'List background job status')
+  .option('--cancel-job <id>', 'Cancel a specific background job')
   .option('--completion <shell>', 'Generate shell completion script (bash, zsh, fish)')
   .option('--completion-install <shell>', 'Show shell completion installation instructions')
   .option('--output-dir <path>', 'Output directory for completion scripts', 'completions')
@@ -188,6 +208,84 @@ program
               process.exit(EXIT_CODES.SUCCESS);
           }
 
+          // Handle --list-jobs flag
+          if (options.listJobs) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const daemon = getDaemonManager({}, { quiet: false, verbose: options.verbose, color: 'auto', module: 'daemon' });
+              const jobs = daemon.listJobs();
+
+              if (jobs.length === 0) {
+                  logger.info('No background jobs found');
+              } else {
+                  logger.info(`Found ${jobs.length} background job(s):`);
+                  for (const job of jobs) {
+                      logger.info(`  ${job.id}: ${job.status} - ${job.command} ${job.args.join(' ')}`);
+                      if (job.progress !== undefined) {
+                          logger.info(`    Progress: ${job.progress}%`);
+                      }
+                  }
+              }
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --cancel-job flag
+          if (options.cancelJob) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const daemon = getDaemonManager({}, { quiet: false, verbose: options.verbose, color: 'auto', module: 'daemon' });
+              const cancelled = await daemon.cancelJob(options.cancelJob);
+
+              if (cancelled) {
+                  logger.info(`Job ${options.cancelJob} cancelled successfully`);
+              } else {
+                  logger.error(`Failed to cancel job ${options.cancelJob}`);
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --interactive / --tui flag
+          if (options.interactive || options.tui) {
+              const compatibility = checkTUICompatibility();
+              if (!compatibility.compatible) {
+                  const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+                  logger.warn(`TUI mode not available: ${compatibility.reason}`);
+                  logger.info('Falling back to CLI mode');
+              } else {
+                  // Initialize config for TUI
+                  const configOptions: ConfigOptions = {
+                      projectSlug: '{{ project_slug }}',
+                      configPath: options.config,
+                      debug: options.verbose,
+                  };
+                  const cliArgs: Partial<Config> = {};
+                  if (options.quiet !== undefined) cliArgs.quiet = options.quiet;
+                  if (options.verbose !== undefined) cliArgs.verbose = options.verbose;
+                  if (options.debug !== undefined) cliArgs.debug = options.debug;
+                  if (options.color !== undefined) cliArgs.color = options.color;
+                  if (options.logFormat !== undefined) cliArgs.log_format = options.logFormat;
+                  if (options.json !== undefined) cliArgs.json = options.json;
+
+                  const config = await loadConfigWithPrecedence(configOptions, cliArgs);
+
+                  const tuiOptions: TUIOptions = {
+                      config,
+                      onExecute: (modifiedConfig) => {
+                          // Store modified config for use in main execution
+                          (options as any).tuiConfig = modifiedConfig;
+                      },
+                      onCancel: () => {
+                          const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+                          logger.info('TUI cancelled by user');
+                          process.exit(EXIT_CODES.SUCCESS);
+                      },
+                      projectSlug: '{{ project_slug }}',
+                  };
+
+                  launchTUI(tuiOptions);
+                  // TUI is synchronous, so we continue after it exits
+              }
+          }
+
           // Initialize config with full precedence chain
           const configOptions: ConfigOptions = {
               projectSlug: '{{ project_slug }}',
@@ -204,7 +302,12 @@ program
           if (options.logFormat !== undefined) cliArgs.log_format = options.logFormat;
           if (options.json !== undefined) cliArgs.json = options.json;
 
-          const config = await loadConfigWithPrecedence(configOptions, cliArgs);
+          let config = await loadConfigWithPrecedence(configOptions, cliArgs);
+
+          // Use TUI-modified config if available
+          if ((options as any).tuiConfig) {
+              config = { ...config, ...(options as any).tuiConfig };
+          }
 
           // Use merged config (CLI args already applied via precedence)
           // For quiet and json, prefer CLI args directly to ensure they work as expected
@@ -235,6 +338,25 @@ program
               module: '{{ project_slug }}',
           };
           const logger = createLogger(loggerOptions);
+
+          // Handle daemon mode
+          const daemonConfig: Partial<DaemonConfig> = {
+              enabled: options.noDaemon !== true,
+              autoSpawn: options.noDaemon !== true,
+          };
+          const daemon = getDaemonManager(daemonConfig, {
+              quiet: options.quiet === true || options.json === true,
+              verbose: options.verbose === true,
+              color: options.color !== undefined ? options.color : config.color,
+              module: 'daemon',
+          });
+
+          // Pre-launch daemon if --daemon flag is set
+          if (options.daemon) {
+              logger.info('Pre-launching daemon in background...');
+              await daemon.start();
+              logger.info('Daemon launched successfully');
+          }
 
           // Initialize dry-run manager
           initGlobalDryRunManager(logger, options.dryRun);

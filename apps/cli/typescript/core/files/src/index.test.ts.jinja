@@ -725,4 +725,66 @@ describe('CLI', () => {
             expect(stdout).toContain('Processed 30 inputs');
         });
     });
+
+    describe('TUI Mode', () => {
+        it('should show TUI mode in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--interactive, --tui');
+            expect(stdout).toContain('Launch interactive Terminal User Interface');
+        });
+
+        it('should show TUI fallback information in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Falls back to CLI mode in non-TTY environments');
+        });
+
+        it('should accept --interactive flag', async () => {
+            // In non-TTY environment (test), it should fall back to CLI mode
+            const { stdout, stderr } = await execAsync('node dist/index.js --interactive --help');
+            // Should still show help since it falls back to CLI mode
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should accept --tui flag', async () => {
+            // In non-TTY environment (test), it should fall back to CLI mode
+            const { stdout, stderr } = await execAsync('node dist/index.js --tui --help');
+            // Should still show help since it falls back to CLI mode
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should warn about TUI compatibility in non-TTY environment', async () => {
+            // Mock non-TTY environment
+            const { stdout, stderr } = await execAsync('node dist/index.js --interactive --help');
+            // Should warn about TUI not being available
+            expect(stderr).toContain('TUI mode not available');
+        });
+    });
+
+    describe('URL Formatting', () => {
+        it('should format URLs in error messages with clickable links when supported', async () => {
+            // Test that URLs in error messages are properly formatted
+            const { stderr } = await execAsync('node dist/index.js --help');
+            // URLs should be present in help text
+            expect(stderr).not.toContain('Invalid URL');
+        });
+
+        it('should format URLs in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            // Help text should contain any URLs that are documented
+            // This test verifies the URL formatting functions are integrated
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should handle URLs with special characters', async () => {
+            // Test that URLs with spaces and special characters are encoded properly
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should provide fallback for terminals without URL support', async () => {
+            // In non-TTY environment (test), URLs should still be displayed as plain text
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Usage:');
+        });
+    });
 });

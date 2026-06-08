@@ -1,6 +1,5 @@
 # vim: set ft=python :
 import signal
-from {{ project_slug }}.__main__ import handle_sighup, reload_config, _config_needs_reload
 import pytest
 
 
@@ -9,6 +8,7 @@ def test_handle_sighup_sets_reload_flag():
     import {{ project_slug }}.__main__ as main_module
     main_module._config_needs_reload = False
 
+    from {{ project_slug }}.__main__ import handle_sighup
     handle_sighup(signal.SIGHUP, None)
 
     assert main_module._config_needs_reload is True
@@ -16,6 +16,7 @@ def test_handle_sighup_sets_reload_flag():
 
 def test_reload_config_returns_true():
     """Test reload_config returns True on success."""
+    from {{ project_slug }}.__main__ import reload_config
     result = reload_config()
     assert result is True
 
@@ -25,6 +26,7 @@ def test_reload_config_clears_flag():
     import {{ project_slug }}.__main__ as main_module
     main_module._config_needs_reload = True
 
+    from {{ project_slug }}.__main__ import reload_config
     reload_config()
 
     assert main_module._config_needs_reload is False

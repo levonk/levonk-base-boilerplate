@@ -13,6 +13,8 @@
  * - 130: SIGINT (Ctrl+C)
  */
 
+import { formatErrorFileRef, type FileLocation } from './file-ref';
+
 /**
  * Standard exit codes
  */
@@ -33,12 +35,14 @@ export const EXIT_CODES = {
 export class CLIError extends Error {
     readonly exitCode: number;
     readonly context?: Record<string, unknown>;
+    readonly fileLocation?: FileLocation;
 
-    constructor(message: string, exitCode: number, context?: Record<string, unknown>) {
+    constructor(message: string, exitCode: number, context?: Record<string, unknown>, fileLocation?: FileLocation) {
         super(message);
         this.name = this.constructor.name;
         this.exitCode = exitCode;
         this.context = context;
+        this.fileLocation = fileLocation;
         Error.captureStackTrace(this, this.constructor);
     }
 
@@ -49,7 +53,10 @@ export class CLIError extends Error {
         const contextStr = this.context
             ? ` ${JSON.stringify(this.context)}`
             : '';
-        return `${this.name}: ${this.message} (exit code: ${this.exitCode})${contextStr}`;
+        const fileRefStr = this.fileLocation
+            ? ` ${formatErrorFileRef(this.fileLocation)}`
+            : '';
+        return `${this.name}: ${this.message} (exit code: ${this.exitCode})${fileRefStr}${contextStr}`;
     }
 }
 
@@ -57,8 +64,8 @@ export class CLIError extends Error {
  * Generic error for unspecified issues
  */
 export class GenericError extends CLIError {
-    constructor(message: string, context?: Record<string, unknown>) {
-        super(message, EXIT_CODES.GENERIC_ERROR, context);
+    constructor(message: string, context?: Record<string, unknown>, fileLocation?: FileLocation) {
+        super(message, EXIT_CODES.GENERIC_ERROR, context, fileLocation);
     }
 }
 
@@ -66,8 +73,8 @@ export class GenericError extends CLIError {
  * Usage error for invalid arguments or missing required arguments
  */
 export class UsageError extends CLIError {
-    constructor(message: string, context?: Record<string, unknown>) {
-        super(message, EXIT_CODES.USAGE_ERROR, context);
+    constructor(message: string, context?: Record<string, unknown>, fileLocation?: FileLocation) {
+        super(message, EXIT_CODES.USAGE_ERROR, context, fileLocation);
     }
 }
 
@@ -75,8 +82,8 @@ export class UsageError extends CLIError {
  * Network error for connection failures, timeouts, etc.
  */
 export class NetworkError extends CLIError {
-    constructor(message: string, context?: Record<string, unknown>) {
-        super(message, EXIT_CODES.NETWORK_ERROR, context);
+    constructor(message: string, context?: Record<string, unknown>, fileLocation?: FileLocation) {
+        super(message, EXIT_CODES.NETWORK_ERROR, context, fileLocation);
     }
 }
 
@@ -84,8 +91,8 @@ export class NetworkError extends CLIError {
  * Validation error for invalid config, schema validation failures
  */
 export class ValidationError extends CLIError {
-    constructor(message: string, context?: Record<string, unknown>) {
-        super(message, EXIT_CODES.VALIDATION_ERROR, context);
+    constructor(message: string, context?: Record<string, unknown>, fileLocation?: FileLocation) {
+        super(message, EXIT_CODES.VALIDATION_ERROR, context, fileLocation);
     }
 }
 
@@ -93,8 +100,8 @@ export class ValidationError extends CLIError {
  * File not found error
  */
 export class FileNotFoundError extends CLIError {
-    constructor(message: string, context?: Record<string, unknown>) {
-        super(message, EXIT_CODES.FILE_NOT_FOUND, context);
+    constructor(message: string, context?: Record<string, unknown>, fileLocation?: FileLocation) {
+        super(message, EXIT_CODES.FILE_NOT_FOUND, context, fileLocation);
     }
 }
 
@@ -102,8 +109,8 @@ export class FileNotFoundError extends CLIError {
  * Permission denied error
  */
 export class PermissionDeniedError extends CLIError {
-    constructor(message: string, context?: Record<string, unknown>) {
-        super(message, EXIT_CODES.PERMISSION_DENIED, context);
+    constructor(message: string, context?: Record<string, unknown>, fileLocation?: FileLocation) {
+        super(message, EXIT_CODES.PERMISSION_DENIED, context, fileLocation);
     }
 }
 

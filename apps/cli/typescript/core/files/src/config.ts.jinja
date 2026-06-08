@@ -21,6 +21,8 @@ export interface Config {
     log_format?: 'text' | 'json';
     /** Output results as JSON. Default: false */
     json?: boolean;
+    /** File reference format: vscode, standard, auto. Default: "auto" */
+    file_ref_format?: 'vscode' | 'standard' | 'auto';
     /** Custom configuration values */
     [key: string]: any;
 }
@@ -52,6 +54,7 @@ export const DEFAULT_CONFIG: Config = {
     color: 'auto',
     log_format: 'text',
     json: false,
+    file_ref_format: 'auto',
 };
 
 export interface ConfigOptions {

@@ -27,39 +27,40 @@ Ensure all URLs support copying to browser or smart terminal linking. Use standa
 
 ## Sub-Tasks
 
-- [ ] Create URL formatting utility module
-- [ ] Implement URL validation and normalization
-- [ ] Add proper URL encoding for special characters
-- [ ] Implement terminal URL detection for clickable links
-- [ ] Add URL formatting to error messages
-- [ ] Add URL formatting to help text
-- [ ] Add URL formatting to log output
-- [ ] Implement OSC 8 escape sequences for terminal links
-- [ ] Add fallback for terminals without URL support
-- [ ] Add unit tests for URL formatting
-- [ ] Add unit tests for URL encoding
-- [ ] Add integration tests for URL display
-- [ ] Update help text to document URL behavior
+- [x] Create URL formatting utility module
+- [x] Implement URL validation and normalization
+- [x] Add proper URL encoding for special characters
+- [x] Implement terminal URL detection for clickable links
+- [x] Add URL formatting to error messages
+- [x] Add URL formatting to help text
+- [x] Add URL formatting to log output
+- [x] Implement OSC 8 escape sequences for terminal links
+- [x] Add fallback for terminals without URL support
+- [x] Add unit tests for URL formatting
+- [x] Add unit tests for URL encoding
+- [x] Add integration tests for URL display
+- [x] Update help text to document URL behavior
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/url.ts.jinja` - New URL formatting module (to be created)
+- `apps/cli/typescript/core/files/src/url.ts.jinja` - New URL formatting module
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with URL integration
 - `apps/cli/typescript/core/files/src/logger.ts.jinja` - Logger with URL formatting
-- `apps/cli/typescript/core/files/src/url.test.ts.jinja` - Unit tests for URL formatting (to be created)
+- `apps/cli/typescript/core/files/src/url.test.ts.jinja` - Unit tests for URL formatting
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for URLs
+- `_shared/partials/devbox-partials/devbox-hooks-typescript.jinja` - Fixed JSON syntax error (missing comma)
 
 ## Acceptance Criteria
 
-- [ ] URLs use standard HTTP/HTTPS format
-- [ ] URLs are properly encoded for special characters
-- [ ] URLs are clickable in supported terminals
-- [ ] OSC 8 escape sequences are used for terminal links
-- [ ] Fallback works for terminals without URL support
-- [ ] URLs in error messages are formatted correctly
-- [ ] URLs in help text are formatted correctly
-- [ ] URLs in log output are formatted correctly
-- [ ] URLs can be copied to browser
+- [x] URLs use standard HTTP/HTTPS format
+- [x] URLs are properly encoded for special characters
+- [x] URLs are clickable in supported terminals
+- [x] OSC 8 escape sequences are used for terminal links
+- [x] Fallback works for terminals without URL support
+- [x] URLs in error messages are formatted correctly
+- [x] URLs in help text are formatted correctly
+- [x] URLs in log output are formatted correctly
+- [x] URLs can be copied to browser
 
 ## Test Plan
 
