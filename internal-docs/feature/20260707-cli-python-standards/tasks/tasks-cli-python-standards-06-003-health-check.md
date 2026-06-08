@@ -28,15 +28,15 @@ Implement health check mechanism for container orchestration (Docker HEALTHCHECK
 ## Sub-Tasks
 
 - [x] Add `include_health_check` boolean option to `copier.yml` — `apps/cli/python/core/copier.yml`
-- [~] Create `health.py.jinja` template file with health check implementation — `apps/cli/python/core/files/{{project_slug}}/health.py.jinja`
-- [ ] Implement signal-based health check — `health.py.jinja`
-- [ ] Implement HTTP endpoint for health check (conditional on include_health_check) — `health.py.jinja`
-- [ ] Add health check validation logic (operational state without side effects) — `health.py.jinja`
-- [ ] Add `--health-check` command for manual health validation — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Implement appropriate exit codes for health status (0 healthy, 1 unhealthy) — `health.py.jinja`
-- [ ] Add Docker HEALTHCHECK instruction to Dockerfile.jinja — `apps/cli/python/core/files/Dockerfile.jinja`
-- [ ] Add Kubernetes probe configuration to docker-compose.yml.jinja — `apps/cli/python/core/files/docker-compose.yml.jinja`
-- [ ] Add tests for health check mechanism — `apps/cli/python/core/files/tests/test_health.py.jinja` (conditional)
+- [x] Create `health.py.jinja` template file with health check implementation — `apps/cli/python/core/files/{{project_slug}}/health.py.jinja`
+- [x] Implement signal-based health check — `health.py.jinja`
+- [x] Implement HTTP endpoint for health check (conditional on include_health_check) — `health.py.jinja`
+- [x] Add health check validation logic (operational state without side effects) — `health.py.jinja`
+- [x] Add `--health-check` command for manual health validation — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Implement appropriate exit codes for health status (0 healthy, 1 unhealthy) — `health.py.jinja`
+- [N/A] Add Docker HEALTHCHECK instruction to Dockerfile.jinja — `apps/cli/python/core/files/Dockerfile.jinja` (N/A: not in this boilerplate)
+- [N/A] Add Kubernetes probe configuration to docker-compose.yml.jinja — `apps/cli/python/core/files/docker-compose.yml.jinja` (N/A: not in this boilerplate)
+- [x] Add tests for health check mechanism — `apps/cli/python/core/files/tests/test_health.py.jinja` (conditional)
 
 ## Relevant Files
 
@@ -49,14 +49,14 @@ Implement health check mechanism for container orchestration (Docker HEALTHCHECK
 
 ## Acceptance Criteria
 
-- [ ] Health check mechanism implemented (signal and/or HTTP)
-- [ ] Health check validates operational state without side effects
-- [ ] `--health-check` command works for manual validation
-- [ ] Exit codes: 0 for healthy, 1 for unhealthy
-- [ ] Docker HEALTHCHECK instruction added (conditional)
-- [ ] Kubernetes probe configuration added (conditional)
-- [ ] Health check is optional via template choice
-- [ ] All tests pass for health check scenarios
+- [x] Health check mechanism implemented (signal and/or HTTP)
+- [x] Health check validates operational state without side effects
+- [x] `--health-check` command works for manual validation
+- [x] Exit codes: 0 for healthy, 1 for unhealthy
+- [N/A] Docker HEALTHCHECK instruction added (conditional - N/A for this boilerplate)
+- [N/A] Kubernetes probe configuration added (conditional - N/A for this boilerplate)
+- [x] Health check is optional via template choice
+- [x] All tests pass for health check scenarios
 
 ## Test Plan
 

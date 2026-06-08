@@ -17,6 +17,7 @@ from {{ project_slug }}.daemon import get_daemon_manager
 from {{ project_slug }}.man_page import print_man_page
 from {{ project_slug }}.terminal import get_terminal_size, should_use_pager, page_output
 from {{ project_slug }}.resource import get_resource_monitor
+from {{ project_slug }}.health import perform_health_check
 {% if include_tui %}
 from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
 {% endif %}
@@ -409,6 +410,16 @@ def process(
         else:
             for line in output_lines:
                 console.print(f"[green]✓[/green] {line.replace('✓ Processed ', '')}")
+
+
+@app.command()
+def health_check():
+    """
+    Perform health check for container orchestration.
+
+    Returns exit code 0 if healthy, 1 if unhealthy.
+    """
+    sys.exit(perform_health_check())
 
 
 if __name__ == "__main__":
