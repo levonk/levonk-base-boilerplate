@@ -80,3 +80,8 @@ include_advanced_config:
   type: bool
   help: Include advanced config features (validation, migration, precedence)?
   default: true
+
+include_tui:
+  type: bool
+  help: Include TUI (Terminal User Interface) mode with textual library?
+  default: false

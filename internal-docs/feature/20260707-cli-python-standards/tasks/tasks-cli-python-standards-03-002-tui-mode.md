@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 3
 parallel_id: 2
 branch: "feature/current/cli-python-standards/story-03-002-tui-mode"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,16 +27,16 @@ Implement Terminal User Interface (TUI) mode for interactive configuration and e
 
 ## Sub-Tasks
 
-- [ ] Add `include_tui` boolean option to `copier.yml` — `apps/cli/python/core/copier.yml`
-- [ ] Add textual dependency to `pyproject.toml.jinja` conditional on include_tui — `apps/cli/python/core/files/pyproject.toml.jinja`
-- [ ] Create `tui.py.jinja` template file with TUI implementation — `apps/cli/python/core/files/{{project_slug}}/tui.py.jinja`
-- [ ] Implement `--interactive` flag in `__main__.py.jinja` (conditional on include_tui) — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Implement `--tui` flag as alias for `--interactive` — `__main__.py.jinja`
-- [ ] Create TUI interface using textual library — `tui.py.jinja`
-- [ ] Implement argument viewing and modification in TUI — `tui.py.jinja`
-- [ ] Add confirmation before execution in TUI mode — `tui.py.jinja`
-- [ ] Add tests for TUI mode functionality — `apps/cli/python/core/files/tests/test_tui.py.jinja` (conditional)
-- [ ] Add TUI usage documentation to README — `apps/cli/python/core/README.md`
+- [x] Add `include_tui` boolean option to `copier.yml` — `apps/cli/python/core/copier.yml`
+- [x] Add textual dependency to `pyproject.toml.jinja` conditional on include_tui — `apps/cli/python/core/files/pyproject.toml.jinja`
+- [x] Create `tui.py.jinja` template file with TUI implementation — `apps/cli/python/core/files/{{project_slug}}/tui.py.jinja`
+- [x] Create TUI interface using textual library — `tui.py.jinja`
+- [x] Implement argument viewing and modification in TUI — `tui.py.jinja`
+- [x] Add confirmation before execution in TUI mode — `tui.py.jinja`
+- [x] Implement `--interactive` flag in `__main__.py.jinja` (conditional on include_tui) — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Implement `--tui` flag as alias for `--interactive` — `__main__.py.jinja`
+- [x] Add tests for TUI mode functionality — `apps/cli/python/core/files/tests/test_tui.py.jinja` (conditional)
+- [x] Add TUI usage documentation to README — `apps/cli/python/core/README.md`
 
 ## Relevant Files
 
@@ -49,14 +49,14 @@ Implement Terminal User Interface (TUI) mode for interactive configuration and e
 
 ## Acceptance Criteria
 
-- [ ] `--interactive` flag launches TUI mode when include_tui is enabled
-- [ ] `--tui` flag works as alias for `--interactive`
-- [ ] TUI allows viewing all arguments before execution
-- [ ] TUI allows modifying all arguments before execution
-- [ ] TUI requires confirmation before execution
-- [ ] TUI mode is optional via include_tui template choice
-- [ ] TUI works correctly with all CLI arguments
-- [ ] Tests pass for TUI functionality when enabled
+- [x] `--interactive` flag launches TUI mode when include_tui is enabled
+- [x] `--tui` flag works as alias for `--interactive`
+- [x] TUI allows viewing all arguments before execution
+- [x] TUI allows modifying all arguments before execution
+- [x] TUI requires confirmation before execution
+- [x] TUI mode is optional via include_tui template choice
+- [x] TUI works correctly with all CLI arguments
+- [x] Tests pass for TUI functionality when enabled
 
 ## Test Plan
 

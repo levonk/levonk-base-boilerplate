@@ -12,6 +12,9 @@ from platformdirs import user_config_dir
 from {{ project_slug }}.logging import configure_logging, get_logger
 from {{ project_slug }}.completion import install_all_completions, uninstall_all_completions
 from {{ project_slug }}.errors import format_file_not_found_error, format_permission_denied_error
+{% if include_tui %}
+from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
+{% endif %}
 {% if include_advanced_config %}
 from {{ project_slug }}.config import ConfigManager, get_config_manager
 {% endif %}
@@ -88,6 +91,9 @@ def process(
     install: bool = typer.Option(False, "--install", help="Install shell completions and initialize config"),
     uninstall: bool = typer.Option(False, "--uninstall", help="Uninstall shell completions and cleanup"),
     force: bool = typer.Option(False, "--force", help="Force overwrite during install"),
+{% if include_tui %}
+    interactive: bool = typer.Option(False, "--interactive", "--tui", help="Launch TUI mode for interactive configuration"),
+{% endif %}
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
@@ -110,6 +116,41 @@ def process(
         color=color
     )
     logger = get_logger()
+
+{% if include_tui %}
+    # Handle TUI mode
+    if interactive:
+        args = CLIArguments(
+            inputs=inputs,
+            config=str(config) if config else None,
+            json_output=json_output,
+            quiet=quiet,
+            verbose=verbose,
+            debug=debug,
+            color=color,
+            install=install,
+            uninstall=uninstall,
+            force=force
+        )
+        modified_args = launch_tui(args)
+
+        # Update variables from TUI
+        inputs = modified_args.inputs
+        config = Path(modified_args.config) if modified_args.config else None
+        json_output = modified_args.json_output
+        quiet = modified_args.quiet
+        verbose = modified_args.verbose
+        debug = modified_args.debug
+        color = modified_args.color
+        install = modified_args.install
+        uninstall = modified_args.uninstall
+        force = modified_args.force
+
+        # Confirm execution
+        if not confirm_execution(modified_args):
+            logger.info("Execution cancelled by user", module="tui")
+            sys.exit(EXIT_SUCCESS)
+{% endif %}
 
     # Handle install/uninstall flags
     if install:
