@@ -419,6 +419,19 @@ func initConfig() {
 		logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to initialize config file", "Check config directory permissions and disk space"))
 	}
 
+	// Check for legacy format and run migration if needed
+	if !IsFirstRun(configPath) {
+		migrationManager := NewMigrationManager(configPath, logger)
+
+		// Check for legacy format and show deprecation warning
+		if migrationManager.CheckLegacyFormat() {
+			// Legacy format detected, run migration
+			if err := migrationManager.Migrate(); err != nil {
+				logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to migrate config file", "Check backup file and manually migrate if needed"))
+			}
+		}
+	}
+
 	// Set environment variable prefix
 	viper.SetEnvPrefix("{{ project_slug | upper | replace('-', '_') }}")
 	viper.AutomaticEnv()
