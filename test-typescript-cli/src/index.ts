@@ -51,11 +51,11 @@ process.on('SIGINT', () => {
 const program = new Command();
 
 program
-  .name('{{ project_slug }}')
-  .description('{{ description }}')
+  .name('my-cli-tool')
+  .description('A CLI tool')
   .version('1.0.0', '-v, --version', 'Output the version number')
   .helpOption('-h, --help', 'Display help for command')
-  .addHelpText('after', 'Use "{{ project_slug }} help <command>" for more information on a command.')
+  .addHelpText('after', 'Use "my-cli-tool help <command>" for more information on a command.')
   .addHelpText('after', '\nExit Codes:\n  0   Success\n  1   Generic error\n  2   Usage error (invalid arguments, missing required args)\n  3   Network error (connection failures, timeouts)\n  4   Validation error (invalid config, schema validation failures)\n  5   File not found\n  6   Permission denied\n  130 SIGINT (Ctrl+C)')
   .argument('[inputs...]', 'Input files or glob patterns. Use "-" for stdin.')
   .option('-q, --quiet', 'Suppress all output except errors')
@@ -68,13 +68,13 @@ program
   .option('--skip-completions', 'Skip shell completion generation during install')
   .option('--uninstall', 'Uninstall CLI (remove completions, clean up config)')
   .option('--force', 'Force operation without confirmation')
-  .option('-c, --config <path>', 'Config file path (default: ~/.config/{{ project_slug }}/config.toml)', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
-  .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables ({{ PROJECT_SLUG }}_*)\n  3. Local project config (./.{{ project_slug }}/config.toml)\n  4. User config (~/.config/{{ project_slug }}/config.toml)\n  5. System config (/etc/{{ project_slug }}/config.toml)\n  6. Hardcoded defaults')
+  .option('-c, --config <path>', 'Config file path (default: ~/.config/my-cli-tool/config.toml)', process.env.MY_CLI_TOOL_CONFIG)
+  .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables (_*)\n  3. Local project config (./.my-cli-tool/config.toml)\n  4. User config (~/.config/my-cli-tool/config.toml)\n  5. System config (/etc/my-cli-tool/config.toml)\n  6. Hardcoded defaults')
   .addHelpText('after', '\nLogging Options:\n  --debug       Enable debug-level logging\n  --log-format  Log format: text (default) or json\n  --quiet        Suppress all output except errors\n  --verbose      Enable verbose output with extra details\n  Environment Variables:\n  LOG_LEVEL      Set log level (debug, info, warn, error, fatal)\n  NODE_ENV       Set to "development" to enable debug mode')
   .addHelpText('after', '\nDry-Run Mode:\n  --dry-run     Preview changes without executing them\n                Shows what would be done without making any changes')
   .addHelpText('after', '\nInstallation:\n  --install      Install CLI (generate completions, initialize config)\n  --uninstall    Uninstall CLI (remove completions, clean up config)')
-  .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
-  .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')
+  .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: my-cli-tool --completion <shell>\n  Show installation instructions with: my-cli-tool --completion-install <shell>')
+  .addHelpText('after', '\nMan Pages:\n  Generate man page with: my-cli-tool --man\n  Show installation instructions with: my-cli-tool --man-install')
   .option('--json', 'Output results as JSON')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--completion <shell>', 'Generate shell completion script (bash, zsh, fish)')
@@ -100,7 +100,7 @@ program
                   outputDir: options.outputDir,
                   stdout: options.stdout,
               };
-              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: 'my-cli-tool' });
               await writeCompletionScript(program, completionOptions, logger);
               process.exit(EXIT_CODES.SUCCESS);
           }
@@ -108,7 +108,7 @@ program
           // Handle --completion-install flag
           if (options.completionInstall) {
               const shell = options.completionInstall as ShellType;
-              const instructions = getCompletionInstallInstructions(shell, '{{ project_slug }}');
+              const instructions = getCompletionInstallInstructions(shell, 'my-cli-tool');
               console.log(instructions);
               process.exit(EXIT_CODES.SUCCESS);
           }
@@ -119,14 +119,14 @@ program
                   outputDir: options.manOutputDir,
                   stdout: options.stdout,
               };
-              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: 'my-cli-tool' });
               await writeManPage(program, manOptions, logger);
               process.exit(EXIT_CODES.SUCCESS);
           }
 
           // Handle --man-install flag
           if (options.manInstall) {
-              const instructions = getManPageInstallInstructions('{{ project_slug }}');
+              const instructions = getManPageInstallInstructions('my-cli-tool');
               console.log(instructions);
               process.exit(EXIT_CODES.SUCCESS);
           }
@@ -134,12 +134,12 @@ program
           // Handle --install flag
           if (options.install) {
               const installOptions: InstallOptions = {
-                  projectSlug: '{{ project_slug }}',
+                  projectSlug: 'my-cli-tool',
                   verbose: options.verbose,
                   force: options.force,
                   skipCompletions: options.skipCompletions,
               };
-              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: 'my-cli-tool' });
               await install(installOptions, logger);
               process.exit(EXIT_CODES.SUCCESS);
           }
@@ -147,19 +147,19 @@ program
           // Handle --uninstall flag
           if (options.uninstall) {
               const uninstallOptions: UninstallOptions = {
-                  projectSlug: '{{ project_slug }}',
+                  projectSlug: 'my-cli-tool',
                   verbose: options.verbose,
                   force: options.force,
                   keepConfig: false,
               };
-              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: 'my-cli-tool' });
               await uninstall(uninstallOptions, logger);
               process.exit(EXIT_CODES.SUCCESS);
           }
 
           // Initialize config with full precedence chain
           const configOptions: ConfigOptions = {
-              projectSlug: '{{ project_slug }}',
+              projectSlug: 'my-cli-tool',
               configPath: options.config,
               debug: options.verbose,
           };
@@ -211,7 +211,7 @@ program
               logLevel: config.log_level as any,
               color: mergedOptions.color,
               logFormat: mergedOptions.logFormat,
-              module: '{{ project_slug }}',
+              module: 'my-cli-tool',
           };
           const logger = createLogger(loggerOptions);
 
@@ -292,7 +292,7 @@ program
               console.warn = originalWarn;
           }
       } catch (error) {
-          const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: '{{ project_slug }}' });
+          const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: 'my-cli-tool' });
           handleError(error, logger);
       }
   });

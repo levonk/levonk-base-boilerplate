@@ -287,7 +287,41 @@ func ValidateConfig(config map[string]interface{}, configPath string) []ConfigVa
 		}
 	}
 
+	// Check for secrets in config values
+	secretWarnings := ValidateConfigForSecrets(config)
+	for _, warning := range secretWarnings {
+		fmt.Fprintf(os.Stderr, "WARNING: %s\n", warning)
+	}
+
 	return errors
+}
+
+// ValidateConfigForSecrets checks a config map for insecure secret storage
+func ValidateConfigForSecrets(config map[string]interface{}) []string {
+	warnings := []string{}
+
+	// Initialize a secret manager for validation
+	sm, err := NewSecretManager()
+	if err != nil {
+		// If we can't initialize the secret manager, skip validation
+		return warnings
+	}
+
+	// Check each config value
+	for key, value := range config {
+		strValue, ok := value.(string)
+		if !ok {
+			continue
+		}
+
+		isSecret, reason := sm.ValidateSecret(strValue)
+		if isSecret {
+			warning := fmt.Sprintf("Insecure config detected: key '%s' - %s. Use secure storage (keychain or encrypted file) instead.", key, reason)
+			warnings = append(warnings, warning)
+		}
+	}
+
+	return warnings
 }
 
 // validateField validates a single field against its schema

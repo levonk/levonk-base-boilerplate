@@ -121,7 +121,7 @@ export class Logger {
       debug: isDevelopment || options.debug,
       color: 'auto',
       logFormat,
-      module: '{{ project_slug }}',
+      module: 'my-cli-tool',
       ...options,
     };
 
@@ -149,7 +149,7 @@ export class Logger {
     message: string,
     extra?: Record<string, unknown>
   ): string {
-    const module = this.options.module || '{{ project_slug }}';
+    const module = this.options.module || 'my-cli-tool';
 
     // Use JSON format if specified
     if (this.options.logFormat === 'json') {

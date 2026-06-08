@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  cli:
+    build: .
+    image: my-cli-tool:latest
+    entrypoint: ["node", "dist/index.js"]
+    volumes:
+      - .:/app
+    # Keep container running if needed, or just run one-off
+    # command: ["--help"]

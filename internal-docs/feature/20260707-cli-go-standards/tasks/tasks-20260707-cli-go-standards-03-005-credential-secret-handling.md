@@ -27,19 +27,19 @@ Implement secure handling of sensitive data with no logging of secrets, secure s
 
 ## Sub-Tasks
 
-- [ ] Add zalando/go-keyring or 99designs/keyring dependency to go.mod — `core/files/go.mod.jinja`
-- [ ] Create secret handling utility — `core/files/secrets.go.jinja`
-- [ ] Implement secret redaction in logs — `core/files/secrets.go.jinja`
-- [ ] Add keychain storage support using zalando/go-keyring or 99designs/keyring — `core/files/secrets.go.jinja`
-- [ ] Add encrypted file storage support — `core/files/secrets.go.jinja`
-- [ ] Implement secret validation — `core/files/secrets.go.jinja`
-- [ ] Add warnings for insecure config methods — `core/files/secrets.go.jinja`
-- [ ] Update logger to redact secrets — `core/files/logger.go.jinja`
-- [ ] Update config validation to check for secrets — `core/files/config.go.jinja`
-- [ ] Test secret redaction in logs — `core/files/secrets_test.go.jinja`
-- [ ] Test keychain storage — `core/files/secrets_test.go.jinja`
-- [ ] Test encrypted file storage — `core/files/secrets_test.go.jinja`
-- [ ] Test insecure config warnings — `core/files/secrets_test.go.jinja`
+- [x] Add zalando/go-keyring or 99designs/keyring dependency to go.mod — `core/files/go.mod.jinja`
+- [x] Create secret handling utility — `core/files/secrets.go.jinja`
+- [x] Implement secret redaction in logs — `core/files/secrets.go.jinja`
+- [x] Add keychain storage support using zalando/go-keyring or 99designs/keyring — `core/files/secrets.go.jinja`
+- [x] Add encrypted file storage support — `core/files/secrets.go.jinja`
+- [x] Implement secret validation — `core/files/secrets.go.jinja`
+- [x] Add warnings for insecure config methods — `core/files/secrets.go.jinja`
+- [x] Update logger to redact secrets — `core/files/logger.go.jinja`
+- [x] Update config validation to check for secrets — `core/files/config.go.jinja`
+- [x] Test secret redaction in logs — `core/files/secrets_test.go.jinja`
+- [x] Test keychain storage — `core/files/secrets_test.go.jinja`
+- [x] Test encrypted file storage — `core/files/secrets_test.go.jinja`
+- [x] Test insecure config warnings — `core/files/secrets_test.go.jinja`
 
 ## Relevant Files
 
@@ -51,13 +51,13 @@ Implement secure handling of sensitive data with no logging of secrets, secure s
 
 ## Acceptance Criteria
 
-- [ ] Secrets are never logged
-- [ ] Secrets are redacted from error messages
-- [ ] Keychain storage works on supported platforms
-- [ ] Encrypted file storage works
-- [ ] Insecure config methods show clear warnings
-- [ ] Secret validation prevents insecure storage
-- [ ] Secrets are handled securely throughout CLI
+- [x] Secrets are never logged
+- [x] Secrets are redacted from error messages
+- [x] Keychain storage works on supported platforms
+- [x] Encrypted file storage works
+- [x] Insecure config methods show clear warnings
+- [x] Secret validation prevents insecure storage
+- [x] Secrets are handled securely throughout CLI
 
 ## Test Plan
 

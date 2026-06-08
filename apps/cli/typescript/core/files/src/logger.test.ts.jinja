@@ -185,6 +185,10 @@ describe('Logger Quiet Mode', () => {
 });
 
 describe('Logger JSON Format', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should format logs as JSON when logFormat is json', () => {
     const logger = createLogger({ logFormat: 'json' });
     const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});

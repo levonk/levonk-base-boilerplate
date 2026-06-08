@@ -1,0 +1,38 @@
+{
+  "name": "my-cli-tool",
+  "version": "1.0.0",
+  "description": "A CLI tool",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "my-cli-tool": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "vitest run",
+    "lint": "eslint src/**/*.ts",
+    "preinstall": "npx -y only-allow pnpm"
+  },
+  "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "glob": "^10.0.0",
+    "supports-color": "^9.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": "*"
+  }
+}

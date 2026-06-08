@@ -103,8 +103,8 @@ async function writeInstallStatus(projectSlug: string, status: InstallStatus, cu
  * Generate shell completion script for bash
  */
 function generateBashCompletion(projectSlug: string): string {
-    return `# Bash completion for {{ project_slug }}
-_{{ project_slug }}() {
+    return `# Bash completion for my-cli-tool
+_my-cli-tool() {
     local cur prev words cword
     _init_completion || return
 
@@ -128,7 +128,7 @@ _{{ project_slug }}() {
     fi
 }
 
-complete -F _{{ project_slug }} {{ project_slug }}
+complete -F _my-cli-tool my-cli-tool
 `;
 }
 
@@ -136,8 +136,8 @@ complete -F _{{ project_slug }} {{ project_slug }}
  * Generate shell completion script for zsh
  */
 function generateZshCompletion(projectSlug: string): string {
-    return `#compdef {{ project_slug }}
-_{{ project_slug }}() {
+    return `#compdef my-cli-tool
+_my-cli-tool() {
     local -a arguments
     arguments=(
         {-h,--help}'[Display help for command]'
@@ -149,15 +149,15 @@ _{{ project_slug }}() {
         {--color}'[Color mode: auto, always, or never]: :(auto always never)'
         {-c,--config}'[Config file path]: :_files'
         {--json}'[Output results as JSON]'
-        {--install}'[Install {{ project_slug }}]'
-        {--uninstall}'[Uninstall {{ project_slug }}]'
+        {--install}'[Install my-cli-tool]'
+        {--uninstall}'[Uninstall my-cli-tool]'
     )
 
     _arguments -s $arguments && return 0
     _files && return 0
 }
 
-_{{ project_slug }}
+_my-cli-tool
 `;
 }
 
@@ -165,20 +165,20 @@ _{{ project_slug }}
  * Generate shell completion script for fish
  */
 function generateFishCompletion(projectSlug: string): string {
-    return `# Fish completion for {{ project_slug }}
-complete -c {{ project_slug }} -f
+    return `# Fish completion for my-cli-tool
+complete -c my-cli-tool -f
 
-complete -c {{ project_slug }} -s h -l help -d 'Display help for command'
-complete -c {{ project_slug }} -s v -l version -d 'Output the version number'
-complete -c {{ project_slug }} -s q -l quiet -d 'Suppress all output except errors'
-complete -c {{ project_slug }} -l verbose -d 'Enable verbose output with extra details'
-complete -c {{ project_slug }} -l debug -d 'Enable debug-level logging'
-complete -c {{ project_slug }} -l usage -d 'Display usage information'
-complete -c {{ project_slug }} -l color -d 'Color mode: auto, always, or never' -x -a 'auto always never'
-complete -c {{ project_slug }} -s c -l config -d 'Config file path' -r
-complete -c {{ project_slug }} -l json -d 'Output results as JSON'
-complete -c {{ project_slug }} -l install -d 'Install {{ project_slug }}'
-complete -c {{ project_slug }} -l uninstall -d 'Uninstall {{ project_slug }}'
+complete -c my-cli-tool -s h -l help -d 'Display help for command'
+complete -c my-cli-tool -s v -l version -d 'Output the version number'
+complete -c my-cli-tool -s q -l quiet -d 'Suppress all output except errors'
+complete -c my-cli-tool -l verbose -d 'Enable verbose output with extra details'
+complete -c my-cli-tool -l debug -d 'Enable debug-level logging'
+complete -c my-cli-tool -l usage -d 'Display usage information'
+complete -c my-cli-tool -l color -d 'Color mode: auto, always, or never' -x -a 'auto always never'
+complete -c my-cli-tool -s c -l config -d 'Config file path' -r
+complete -c my-cli-tool -l json -d 'Output results as JSON'
+complete -c my-cli-tool -l install -d 'Install my-cli-tool'
+complete -c my-cli-tool -l uninstall -d 'Uninstall my-cli-tool'
 `;
 }
 
@@ -272,12 +272,12 @@ function detectAvailableShells(): string[] {
 }
 
 /**
- * Install {{ project_slug }}
+ * Install my-cli-tool
  */
 export async function install(options: InstallOptions, logger: Logger): Promise<void> {
     const { projectSlug, verbose = false, force = false, skipCompletions = false } = options;
 
-    logger.info(`Installing {{ project_slug }}...`);
+    logger.info(`Installing my-cli-tool...`);
 
     // Get custom config directory from XDG_CONFIG_HOME if set
     // If XDG_CONFIG_HOME is set, it should already include the project slug in the test context
@@ -286,7 +286,7 @@ export async function install(options: InstallOptions, logger: Logger): Promise<
     // Check if already installed
     const existingStatus = await readInstallStatus(projectSlug, customConfigDir);
     if (existingStatus && !force) {
-        logger.warn('{{ project_slug }} is already installed. Use --force to reinstall.');
+        logger.warn('my-cli-tool is already installed. Use --force to reinstall.');
         logger.info(`Installed on: ${existingStatus.installDate}`);
         return;
     }
@@ -329,20 +329,20 @@ export async function install(options: InstallOptions, logger: Logger): Promise<
 
     await writeInstallStatus(projectSlug, status, customConfigDir);
 
-    logger.info('{{ project_slug }} installed successfully!');
+    logger.info('my-cli-tool installed successfully!');
     logger.info('Next steps:');
     logger.info('  1. Restart your shell to enable completion scripts');
-    logger.info('  2. Run "{{ project_slug }} --help" to see available commands');
+    logger.info('  2. Run "my-cli-tool --help" to see available commands');
     logger.info('  3. Edit config file to customize settings');
 }
 
 /**
- * Uninstall {{ project_slug }}
+ * Uninstall my-cli-tool
  */
 export async function uninstall(options: UninstallOptions, logger: Logger): Promise<void> {
     const { projectSlug, verbose = false, force = false, keepConfig = false } = options;
 
-    logger.info(`Uninstalling {{ project_slug }}...`);
+    logger.info(`Uninstalling my-cli-tool...`);
 
     // Get custom config directory from XDG_CONFIG_HOME if set
     const customConfigDir = process.env.XDG_CONFIG_HOME;
@@ -350,7 +350,7 @@ export async function uninstall(options: UninstallOptions, logger: Logger): Prom
     // Check if installed
     const status = await readInstallStatus(projectSlug, customConfigDir);
     if (!status) {
-        logger.warn('{{ project_slug }} is not installed.');
+        logger.warn('my-cli-tool is not installed.');
         return;
     }
 
@@ -416,7 +416,7 @@ export async function uninstall(options: UninstallOptions, logger: Logger): Prom
         }
     }
 
-    logger.info('{{ project_slug }} uninstalled successfully!');
+    logger.info('my-cli-tool uninstalled successfully!');
     if (keepConfig) {
         logger.info('Configuration files preserved as requested.');
     }
@@ -429,12 +429,12 @@ export async function checkInstallStatus(projectSlug: string, logger: Logger): P
     const status = await readInstallStatus(projectSlug);
 
     if (!status) {
-        logger.info('{{ project_slug }} is not installed.');
-        logger.info('Run "{{ project_slug }} --install" to install.');
+        logger.info('my-cli-tool is not installed.');
+        logger.info('Run "my-cli-tool --install" to install.');
         return;
     }
 
-    logger.info('{{ project_slug }} installation status:');
+    logger.info('my-cli-tool installation status:');
     logger.info(`  Version: ${status.version}`);
     logger.info(`  Installed: ${status.installDate}`);
     logger.info(`  Config initialized: ${status.configInitialized}`);

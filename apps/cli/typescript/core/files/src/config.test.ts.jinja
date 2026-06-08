@@ -24,6 +24,7 @@ describe('config module', () => {
     const testSlug = 'test-cli';
     const testConfigDir = path.join(os.tmpdir(), 'test-config', testSlug);
     const testConfigPath = path.join(testConfigDir, 'config.toml');
+    const originalEnv = { ...process.env };
 
     beforeEach(async () => {
         // Clean up test directory before each test
@@ -41,6 +42,14 @@ describe('config module', () => {
         } catch {
             // Ignore if directory doesn't exist
         }
+
+        // Restore environment variables after each test
+        Object.keys(process.env).forEach(key => {
+            if (!(key in originalEnv)) {
+                delete process.env[key];
+            }
+        });
+        Object.assign(process.env, originalEnv);
     });
 
     describe('getXDGConfigPath', () => {

@@ -26,11 +26,13 @@ describe('Install Module', () => {
         } catch {
             // Ignore if directory doesn't exist
         }
+        // Clear any cached install status
+        vi.clearAllMocks();
     });
 
     describe('readInstallStatus', () => {
         it('should return null when status file does not exist', async () => {
-            const status = await readInstallStatus(testProjectSlug);
+            const status = await readInstallStatus(testProjectSlug, testConfigDir);
             expect(status).toBeNull();
         });
 
@@ -45,7 +47,7 @@ describe('Install Module', () => {
             };
             await fs.writeFile(testStatusPath, JSON.stringify(testStatus, null, 2));
 
-            const status = await readInstallStatus(testProjectSlug);
+            const status = await readInstallStatus(testProjectSlug, testConfigDir);
             expect(status).toEqual(testStatus);
         });
     });
@@ -60,130 +62,244 @@ describe('Install Module', () => {
                 skipCompletions: true, // Skip completions for simpler test
             };
 
-            await install(options, logger);
+            // Set XDG_CONFIG_HOME for test isolation (parent directory, not including project slug)
+            const originalXDG = process.env.XDG_CONFIG_HOME;
+            const parentDir = path.join(os.tmpdir(), 'test-config');
+            process.env.XDG_CONFIG_HOME = parentDir;
 
-            // Check that status file was created
-            const status = await readInstallStatus(testProjectSlug);
-            expect(status).not.toBeNull();
-            expect(status?.installed).toBe(true);
+            try {
+                await install(options, logger);
+
+                // Check that status file was created
+                const status = await readInstallStatus(testProjectSlug, parentDir);
+                expect(status).not.toBeNull();
+                expect(status?.installed).toBe(true);
+            } finally {
+                if (originalXDG === undefined) {
+                    delete process.env.XDG_CONFIG_HOME;
+                } else {
+                    process.env.XDG_CONFIG_HOME = originalXDG;
+                }
+                // Clean up parent directory
+                try {
+                    await fs.rm(parentDir, { recursive: true, force: true });
+                } catch {
+                    // Ignore
+                }
+            }
         });
 
         it('should skip installation if already installed and not forced', async () => {
             const logger = createLogger({ quiet: true, verbose: false, color: 'never', module: testProjectSlug });
-            
-            // First installation
-            const options: InstallOptions = {
-                projectSlug: testProjectSlug,
-                verbose: false,
-                force: false,
-                skipCompletions: true,
-            };
-            await install(options, logger);
 
-            // Second installation without force
-            await install(options, logger);
+            // Set XDG_CONFIG_HOME for test isolation
+            const originalXDG = process.env.XDG_CONFIG_HOME;
+            const parentDir = path.join(os.tmpdir(), 'test-config');
+            process.env.XDG_CONFIG_HOME = parentDir;
 
-            // Should not error, just warn
-            const status = await readInstallStatus(testProjectSlug);
-            expect(status).not.toBeNull();
+            try {
+                // First installation
+                const options: InstallOptions = {
+                    projectSlug: testProjectSlug,
+                    verbose: false,
+                    force: false,
+                    skipCompletions: true,
+                };
+                await install(options, logger);
+
+                // Second installation without force
+                await install(options, logger);
+
+                // Should not error, just warn
+                const status = await readInstallStatus(testProjectSlug, parentDir);
+                expect(status).not.toBeNull();
+            } finally {
+                if (originalXDG === undefined) {
+                    delete process.env.XDG_CONFIG_HOME;
+                } else {
+                    process.env.XDG_CONFIG_HOME = originalXDG;
+                }
+                // Clean up parent directory
+                try {
+                    await fs.rm(parentDir, { recursive: true, force: true });
+                } catch {
+                    // Ignore
+                }
+            }
         });
 
         it('should reinstall when force is true', async () => {
             const logger = createLogger({ quiet: true, verbose: false, color: 'never', module: testProjectSlug });
-            
-            const options: InstallOptions = {
-                projectSlug: testProjectSlug,
-                verbose: false,
-                force: true,
-                skipCompletions: true,
-            };
 
-            await install(options, logger);
-            await install(options, logger);
+            // Set XDG_CONFIG_HOME for test isolation
+            const originalXDG = process.env.XDG_CONFIG_HOME;
+            const parentDir = path.join(os.tmpdir(), 'test-config');
+            process.env.XDG_CONFIG_HOME = parentDir;
 
-            const status = await readInstallStatus(testProjectSlug);
-            expect(status).not.toBeNull();
+            try {
+                const options: InstallOptions = {
+                    projectSlug: testProjectSlug,
+                    verbose: false,
+                    force: true,
+                    skipCompletions: true,
+                };
+
+                await install(options, logger);
+                await install(options, logger);
+
+                const status = await readInstallStatus(testProjectSlug, parentDir);
+                expect(status).not.toBeNull();
+            } finally {
+                if (originalXDG === undefined) {
+                    delete process.env.XDG_CONFIG_HOME;
+                } else {
+                    process.env.XDG_CONFIG_HOME = originalXDG;
+                }
+                // Clean up parent directory
+                try {
+                    await fs.rm(parentDir, { recursive: true, force: true });
+                } catch {
+                    // Ignore
+                }
+            }
         });
     });
 
     describe('uninstall', () => {
         it('should uninstall CLI with default options', async () => {
             const logger = createLogger({ quiet: true, verbose: false, color: 'never', module: testProjectSlug });
-            
-            // First install
-            const installOptions: InstallOptions = {
-                projectSlug: testProjectSlug,
-                verbose: false,
-                force: false,
-                skipCompletions: true,
-            };
-            await install(installOptions, logger);
 
-            // Then uninstall
-            const uninstallOptions: UninstallOptions = {
-                projectSlug: testProjectSlug,
-                verbose: false,
-                force: true,
-                keepConfig: false,
-            };
-            await uninstall(uninstallOptions, logger);
+            // Set XDG_CONFIG_HOME for test isolation
+            const originalXDG = process.env.XDG_CONFIG_HOME;
+            const parentDir = path.join(os.tmpdir(), 'test-config');
+            process.env.XDG_CONFIG_HOME = parentDir;
 
-            // Check that status file was removed
-            const status = await readInstallStatus(testProjectSlug);
-            expect(status).toBeNull();
+            try {
+                // First install
+                const installOptions: InstallOptions = {
+                    projectSlug: testProjectSlug,
+                    verbose: false,
+                    force: false,
+                    skipCompletions: true,
+                };
+                await install(installOptions, logger);
+
+                // Then uninstall
+                const uninstallOptions: UninstallOptions = {
+                    projectSlug: testProjectSlug,
+                    verbose: false,
+                    force: true,
+                    keepConfig: false,
+                };
+                await uninstall(uninstallOptions, logger);
+
+                // Check that status file was removed
+                const status = await readInstallStatus(testProjectSlug, parentDir);
+                expect(status).toBeNull();
+            } finally {
+                if (originalXDG === undefined) {
+                    delete process.env.XDG_CONFIG_HOME;
+                } else {
+                    process.env.XDG_CONFIG_HOME = originalXDG;
+                }
+                // Clean up parent directory
+                try {
+                    await fs.rm(parentDir, { recursive: true, force: true });
+                } catch {
+                    // Ignore
+                }
+            }
         });
 
         it('should keep config when keepConfig is true', async () => {
             const logger = createLogger({ quiet: true, verbose: false, color: 'never', module: testProjectSlug });
-            
-            const installOptions: InstallOptions = {
-                projectSlug: testProjectSlug,
-                verbose: false,
-                force: false,
-                skipCompletions: true,
-            };
-            await install(installOptions, logger);
 
-            const uninstallOptions: UninstallOptions = {
-                projectSlug: testProjectSlug,
-                verbose: false,
-                force: true,
-                keepConfig: true,
-            };
-            await uninstall(uninstallOptions, logger);
+            // Set XDG_CONFIG_HOME for test isolation
+            const originalXDG = process.env.XDG_CONFIG_HOME;
+            const parentDir = path.join(os.tmpdir(), 'test-config');
+            process.env.XDG_CONFIG_HOME = parentDir;
 
-            // Config should still exist
-            const configPath = path.join(testConfigDir, 'config.toml');
-            const configExists = await fs.access(configPath).then(() => true).catch(() => false);
-            expect(configExists).toBe(true);
+            try {
+                const installOptions: InstallOptions = {
+                    projectSlug: testProjectSlug,
+                    verbose: false,
+                    force: false,
+                    skipCompletions: true,
+                };
+                await install(installOptions, logger);
+
+                const uninstallOptions: UninstallOptions = {
+                    projectSlug: testProjectSlug,
+                    verbose: false,
+                    force: true,
+                    keepConfig: true,
+                };
+                await uninstall(uninstallOptions, logger);
+
+                // Config should still exist
+                const configPath = path.join(parentDir, testProjectSlug, 'config.toml');
+                const configExists = await fs.access(configPath).then(() => true).catch(() => false);
+                expect(configExists).toBe(true);
+            } finally {
+                if (originalXDG === undefined) {
+                    delete process.env.XDG_CONFIG_HOME;
+                } else {
+                    process.env.XDG_CONFIG_HOME = originalXDG;
+                }
+                // Clean up parent directory
+                try {
+                    await fs.rm(parentDir, { recursive: true, force: true });
+                } catch {
+                    // Ignore
+                }
+            }
         });
 
         it('should warn when not installed', async () => {
             const logger = createLogger({ quiet: true, verbose: false, color: 'never', module: testProjectSlug });
-            
-            const uninstallOptions: UninstallOptions = {
-                projectSlug: testProjectSlug,
-                verbose: false,
-                force: false,
-                keepConfig: false,
-            };
-            
-            // Should not error
-            await uninstall(uninstallOptions, logger);
+
+            // Set XDG_CONFIG_HOME for test isolation
+            const originalXDG = process.env.XDG_CONFIG_HOME;
+            const parentDir = path.join(os.tmpdir(), 'test-config');
+            process.env.XDG_CONFIG_HOME = parentDir;
+
+            try {
+                const uninstallOptions: UninstallOptions = {
+                    projectSlug: testProjectSlug,
+                    verbose: false,
+                    force: false,
+                    keepConfig: false,
+                };
+
+                // Should not error
+                await uninstall(uninstallOptions, logger);
+            } finally {
+                if (originalXDG === undefined) {
+                    delete process.env.XDG_CONFIG_HOME;
+                } else {
+                    process.env.XDG_CONFIG_HOME = originalXDG;
+                }
+                // Clean up parent directory
+                try {
+                    await fs.rm(parentDir, { recursive: true, force: true });
+                } catch {
+                    // Ignore
+                }
+            }
         });
     });
 
     describe('checkInstallStatus', () => {
         it('should report not installed when status file does not exist', async () => {
             const logger = createLogger({ quiet: true, verbose: false, color: 'never', module: testProjectSlug });
-            
+
             // Should not error
             await checkInstallStatus(testProjectSlug, logger);
         });
 
         it('should report installation status when installed', async () => {
             const logger = createLogger({ quiet: true, verbose: false, color: 'never', module: testProjectSlug });
-            
+
             const installOptions: InstallOptions = {
                 projectSlug: testProjectSlug,
                 verbose: false,

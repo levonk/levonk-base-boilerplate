@@ -244,6 +244,9 @@ describe('Global dry-run manager', () => {
     afterEach(() => {
         // Reset global state
         vi.unstubAllGlobals();
+        // Reset global dry-run manager
+        const { initGlobalDryRunManager } = require('./dry-run.js');
+        initGlobalDryRunManager(logger, false);
     });
 
     describe('initGlobalDryRunManager', () => {

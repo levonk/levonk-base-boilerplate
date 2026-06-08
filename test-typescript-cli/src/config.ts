@@ -133,7 +133,7 @@ export async function ensureConfigDir(configDir: string): Promise<void> {
  * Get default config template with all settings commented out
  */
 export function getDefaultConfigTemplate(): string {
-    return `# Configuration file for {{ project_slug }}
+    return `# Configuration file for my-cli-tool
 # All settings are commented out with their default values
 # Uncomment and modify as needed
 

@@ -44,6 +44,7 @@ type Logger struct {
 	writer        io.Writer
 	enableRefs    bool
 	refFormat     ReferenceFormat
+	secretManager *SecretManager
 }
 
 // Log level colors (ANSI escape codes)
@@ -144,6 +145,11 @@ func (l *Logger) SetEnableRefs(enable bool) {
 // SetRefFormat sets the file reference format
 func (l *Logger) SetRefFormat(format ReferenceFormat) {
 	l.refFormat = format
+}
+
+// SetSecretManager sets the secret manager for redaction
+func (l *Logger) SetSecretManager(sm *SecretManager) {
+	l.secretManager = sm
 }
 
 // shouldUseColor determines if color should be used
@@ -253,6 +259,11 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	moduleStr := l.formatModule()
 	message := fmt.Sprintf(format, args...)
 
+	// Redact secrets if secret manager is available
+	if l.secretManager != nil {
+		message = l.secretManager.RedactSecrets(message)
+	}
+
 	if l.shouldUseColor() {
 		grayColor := color.New(color.FgHiBlack)
 		fmt.Fprintf(l.writer, "%s [%s] %s: %s\n",
@@ -281,6 +292,11 @@ func (l *Logger) logWithRef(level LogLevel, ref *FileReference, format string, a
 	levelStr := l.formatLevel(level)
 	moduleStr := l.formatModule()
 	message := fmt.Sprintf(format, args...)
+
+	// Redact secrets if secret manager is available
+	if l.secretManager != nil {
+		message = l.secretManager.RedactSecrets(message)
+	}
 
 	var refStr string
 	if l.enableRefs && ref != nil {

@@ -41,7 +41,7 @@ def test_install_with_force():
 
 def test_generate_bash_completion():
     """Test bash completion script generation."""
-    script = generate_completion_script("bash")
+    script = generate_completion_script("bash", app)
     assert script is not None
     assert len(script) > 0
     assert "{{ project_slug }}" in script
@@ -49,7 +49,7 @@ def test_generate_bash_completion():
 
 def test_generate_zsh_completion():
     """Test zsh completion script generation."""
-    script = generate_completion_script("zsh")
+    script = generate_completion_script("zsh", app)
     assert script is not None
     assert len(script) > 0
     assert "{{ project_slug }}" in script
@@ -57,19 +57,28 @@ def test_generate_zsh_completion():
 
 def test_generate_fish_completion():
     """Test fish completion script generation."""
-    script = generate_completion_script("fish")
+    script = generate_completion_script("fish", app)
     assert script is not None
     assert len(script) > 0
     assert "{{ project_slug }}" in script
 
 
 def test_generate_invalid_shell():
-    """Test completion generation for invalid shell."""
+    """Test invalid shell raises error."""
     try:
-        generate_completion_script("invalid_shell")
+        generate_completion_script("invalid", app)
         assert False, "Should have raised ValueError"
     except ValueError as e:
         assert "Unsupported shell" in str(e)
+
+
+def test_install_all_completions():
+    """Test install all completions."""
+    results = install_all_completions(app, force=True)
+    assert "bash" in results
+    assert "zsh" in results
+    assert "fish" in results
+    assert "man_page" in results
 
 
 def test_get_completion_dir():
@@ -79,8 +88,8 @@ def test_get_completion_dir():
     assert completion_dir.exists()
 
 
-def test_install_all_completions():
-    """Test installing all shell completions."""
+def test_install_all_completions_old():
+    """Test installing all shell completions (old signature for compatibility)."""
     results = install_all_completions(force=True)
     assert "bash" in results
     assert "zsh" in results

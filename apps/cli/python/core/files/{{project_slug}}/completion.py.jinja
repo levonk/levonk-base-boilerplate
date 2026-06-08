@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Optional
 from platformdirs import user_config_dir, user_data_dir
 import typer
-from {{ project_slug }}.__main__ import app
 from {{ project_slug }}.logging import get_logger
 from {{ project_slug }}.man_page import install_man_page, uninstall_man_page
 
@@ -41,7 +40,7 @@ def get_completion_dir() -> Path:
         return bash_dir
 
 
-def generate_completion_script(shell: str) -> str:
+def generate_completion_script(shell: str, app: typer.Typer) -> str:
     """Generate completion script for the specified shell."""
     if shell == "bash":
         return typer.main.get_completion_app(app).get_completion_script("bash")
@@ -53,11 +52,11 @@ def generate_completion_script(shell: str) -> str:
         raise ValueError(f"Unsupported shell: {shell}")
 
 
-def install_completion(shell: str, force: bool = False) -> bool:
+def install_completion(shell: str, app: typer.Typer, force: bool = False) -> bool:
     """Install completion script for the specified shell."""
     try:
         completion_dir = get_completion_dir()
-        completion_script = generate_completion_script(shell)
+        completion_script = generate_completion_script(shell, app)
 
         # Determine filename based on shell
         if shell == "bash":
@@ -119,12 +118,12 @@ def uninstall_completion(shell: str) -> bool:
         return False
 
 
-def install_all_completions(force: bool = False) -> dict:
+def install_all_completions(app: typer.Typer, force: bool = False) -> dict:
     """Install completion scripts for all supported shells and man page."""
     results = {
-        "bash": install_completion("bash", force),
-        "zsh": install_completion("zsh", force),
-        "fish": install_completion("fish", force),
+        "bash": install_completion("bash", app, force),
+        "zsh": install_completion("zsh", app, force),
+        "fish": install_completion("fish", app, force),
         "man_page": install_man_page(force)
     }
     return results
@@ -141,10 +140,10 @@ def uninstall_all_completions() -> dict:
     return results
 
 
-def print_completion_script(shell: str) -> None:
+def print_completion_script(shell: str, app: typer.Typer) -> None:
     """Print completion script to stdout for manual installation."""
     try:
-        completion_script = generate_completion_script(shell)
+        completion_script = generate_completion_script(shell, app)
         print(completion_script)
     except Exception as e:
         logger.error(f"Failed to generate {shell} completion: {e}", module="completion")
