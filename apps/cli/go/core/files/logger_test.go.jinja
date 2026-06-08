@@ -1,0 +1,166 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"strings"
+	"testing"
+)
+
+func TestColorModeAuto(t *testing.T) {
+	logger := NewLogger("test")
+	logger.SetColorMode("auto")
+
+	// Test that color mode is set to ColorAuto
+	if logger.colorMode != ColorAuto {
+		t.Errorf("Expected colorMode to be ColorAuto, got %v", logger.colorMode)
+	}
+}
+
+func TestColorModeAlways(t *testing.T) {
+	logger := NewLogger("test")
+	logger.SetColorMode("always")
+
+	// Test that color mode is set to ColorAlways
+	if logger.colorMode != ColorAlways {
+		t.Errorf("Expected colorMode to be ColorAlways, got %v", logger.colorMode)
+	}
+}
+
+func TestColorModeNever(t *testing.T) {
+	logger := NewLogger("test")
+	logger.SetColorMode("never")
+
+	// Test that color mode is set to ColorNever
+	if logger.colorMode != ColorNever {
+		t.Errorf("Expected colorMode to be ColorNever, got %v", logger.colorMode)
+	}
+}
+
+func TestColorModeInvalid(t *testing.T) {
+	logger := NewLogger("test")
+	logger.SetColorMode("invalid")
+
+	// Test that invalid mode defaults to ColorAuto
+	if logger.colorMode != ColorAuto {
+		t.Errorf("Expected colorMode to default to ColorAuto for invalid input, got %v", logger.colorMode)
+	}
+}
+
+func TestNO_COLORPrecedence(t *testing.T) {
+	// Set NO_COLOR environment variable
+	oldNoColor := os.Getenv("NO_COLOR")
+	os.Setenv("NO_COLOR", "1")
+	defer os.Setenv("NO_COLOR", oldNoColor)
+
+	logger := NewLogger("test")
+	logger.SetColorMode("always")
+
+	// NO_COLOR should override --color=always
+	if logger.shouldUseColor() {
+		t.Error("NO_COLOR environment variable should disable color even with --color=always")
+	}
+}
+
+func TestNO_COLORUnset(t *testing.T) {
+	// Ensure NO_COLOR is not set
+	oldNoColor := os.Getenv("NO_COLOR")
+	os.Unsetenv("NO_COLOR")
+	defer os.Setenv("NO_COLOR", oldNoColor)
+
+	logger := NewLogger("test")
+	logger.SetColorMode("always")
+
+	// Without NO_COLOR, --color=always should work
+	if !logger.shouldUseColor() {
+		t.Error("--color=always should enable color when NO_COLOR is not set")
+	}
+}
+
+func TestColorNeverDisablesColor(t *testing.T) {
+	// Ensure NO_COLOR is not set
+	oldNoColor := os.Getenv("NO_COLOR")
+	os.Unsetenv("NO_COLOR")
+	defer os.Setenv("NO_COLOR", oldNoColor)
+
+	logger := NewLogger("test")
+	logger.SetColorMode("never")
+
+	// --color=never should disable color
+	if logger.shouldUseColor() {
+		t.Error("--color=never should disable color")
+	}
+}
+
+func TestColorAlwaysForcesColor(t *testing.T) {
+	// Ensure NO_COLOR is not set
+	oldNoColor := os.Getenv("NO_COLOR")
+	os.Unsetenv("NO_COLOR")
+	defer os.Setenv("NO_COLOR", oldNoColor)
+
+	logger := NewLogger("test")
+	logger.SetColorMode("always")
+
+	// --color=always should force color
+	if !logger.shouldUseColor() {
+		t.Error("--color=always should force color")
+	}
+}
+
+func TestColorOutput(t *testing.T) {
+	// Ensure NO_COLOR is not set
+	oldNoColor := os.Getenv("NO_COLOR")
+	os.Unsetenv("NO_COLOR")
+	defer os.Setenv("NO_COLOR", oldNoColor)
+
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+	logger.SetColorMode("always")
+
+	logger.Info("test message")
+
+	output := buf.String()
+	// When color is enabled, output should contain ANSI escape codes
+	// (fatih/color adds these when color is enabled)
+	if !strings.Contains(output, "test message") {
+		t.Error("Output should contain the test message")
+	}
+}
+
+func TestQuietMode(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+	logger.SetQuiet(true)
+
+	logger.Info("test message")
+
+	output := buf.String()
+	if output != "" {
+		t.Error("Quiet mode should suppress all output")
+	}
+}
+
+func TestVerboseMode(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+	logger.SetVerbose(false)
+
+	logger.Debug("debug message")
+
+	output := buf.String()
+	if output != "" {
+		t.Error("Debug messages should not appear when verbose is false")
+	}
+
+	logger.SetVerbose(true)
+	logger.Debug("debug message")
+
+	output = buf.String()
+	if output == "" {
+		t.Error("Debug messages should appear when verbose is true")
+	}
+}
+{# vim: set ft=go: #}

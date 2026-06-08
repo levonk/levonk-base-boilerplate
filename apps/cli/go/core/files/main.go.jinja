@@ -19,7 +19,7 @@ var (
 	jsonOutput bool
 	quiet bool
 	verbose bool
-	noColor bool
+	colorMode string
 	installFlag bool
 	uninstallFlag bool
 	logger *Logger
@@ -58,7 +58,7 @@ Examples:
 			logger = NewLogger("main")
 			logger.SetQuiet(quiet)
 			logger.SetVerbose(verbose)
-			logger.SetNoColor(noColor)
+			logger.SetColorMode(colorMode)
 
 			if !quiet {
 				logger.Info("Using config file: %s", viper.ConfigFileUsed())
@@ -166,7 +166,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
-	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
+	rootCmd.PersistentFlags().StringVar(&colorMode, "color", "auto", "Color output: auto, always, never")
 
 	// Local flags
 	rootCmd.Flags().Bool("usage", false, "Show usage information")

@@ -7,7 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
+	"github.com/spf13/viper"
 )
 
 // LogLevel represents the severity of a log message
@@ -20,11 +22,20 @@ const (
 	LevelFatal
 )
 
+// ColorMode represents the color output mode
+type ColorMode int
+
+const (
+	ColorAuto ColorMode = iota
+	ColorAlways
+	ColorNever
+)
+
 // Logger handles structured logging with color support
 type Logger struct {
 	quiet      bool
 	verbose    bool
-	noColor    bool
+	colorMode  ColorMode
 	moduleName string
 	moduleColor string
 	writer     io.Writer
@@ -62,7 +73,7 @@ func NewLogger(moduleName string) *Logger {
 	return &Logger{
 		quiet:      false,
 		verbose:    false,
-		noColor:    false,
+		colorMode:  ColorAuto,
 		moduleName: moduleName,
 		moduleColor: moduleColors[colorIndex],
 		writer:     os.Stderr,
@@ -79,9 +90,32 @@ func (l *Logger) SetVerbose(verbose bool) {
 	l.verbose = verbose
 }
 
-// SetNoColor disables color output
-func (l *Logger) SetNoColor(noColor bool) {
-	l.noColor = noColor
+// SetColorMode sets the color output mode
+func (l *Logger) SetColorMode(modeStr string) {
+	// Parse the color mode string
+	switch strings.ToLower(modeStr) {
+	case "always":
+		l.colorMode = ColorAlways
+	case "never":
+		l.colorMode = ColorNever
+	case "auto":
+		l.colorMode = ColorAuto
+	default:
+		// Check config file for color setting
+		if viper.IsSet("color") {
+			configColor := viper.GetString("color")
+			switch strings.ToLower(configColor) {
+			case "always":
+				l.colorMode = ColorAlways
+			case "never":
+				l.colorMode = ColorNever
+			default:
+				l.colorMode = ColorAuto
+			}
+		} else {
+			l.colorMode = ColorAuto
+		}
+	}
 }
 
 // SetWriter sets the output writer
@@ -90,10 +124,24 @@ func (l *Logger) SetWriter(w io.Writer) {
 }
 
 // shouldUseColor determines if color should be used
+// Precedence: NO_COLOR env var > --color flag > config > auto-detection
 func (l *Logger) shouldUseColor() bool {
-	if l.noColor {
+	// NO_COLOR environment variable takes highest precedence
+	if os.Getenv("NO_COLOR") != "" {
 		return false
 	}
+
+	// Check explicit color mode from flag or config
+	switch l.colorMode {
+	case ColorNever:
+		return false
+	case ColorAlways:
+		return true
+	case ColorAuto:
+		// Auto mode: detect TTY
+		return isatty.IsTerminal(os.Stderr.Fd())
+	}
+
 	return isatty.IsTerminal(os.Stderr.Fd())
 }
 
@@ -105,25 +153,29 @@ func (l *Logger) formatTimestamp() string {
 // formatLevel returns the colored level string
 func (l *Logger) formatLevel(level LogLevel) string {
 	levelStr := ""
-	color := ""
 
 	switch level {
 	case LevelInfo:
 		levelStr = "INFO"
-		color = colorGreen
 	case LevelWarn:
 		levelStr = "WARN"
-		color = colorYellow
 	case LevelError:
 		levelStr = "ERROR"
-		color = colorRed
 	case LevelFatal:
 		levelStr = "FATAL"
-		color = colorRed
 	}
 
 	if l.shouldUseColor() {
-		return fmt.Sprintf("%s%-5s%s", color, levelStr, colorReset)
+		var c *color.Color
+		switch level {
+		case LevelInfo:
+			c = color.New(color.FgGreen)
+		case LevelWarn:
+			c = color.New(color.FgYellow)
+		case LevelError, LevelFatal:
+			c = color.New(color.FgRed)
+		}
+		return c.Sprintf("%-5s", levelStr)
 	}
 	return fmt.Sprintf("%-5s", levelStr)
 }
@@ -131,9 +183,36 @@ func (l *Logger) formatLevel(level LogLevel) string {
 // formatModule returns the colored module string
 func (l *Logger) formatModule() string {
 	if l.shouldUseColor() {
-		return fmt.Sprintf("%s%s%s", l.moduleColor, l.moduleName, colorReset)
+		// Parse the ANSI color code and create a color.Color
+		c := color.New(color.Attribute(getColorAttribute(l.moduleColor)))
+		return c.Sprintf("%s", l.moduleName)
 	}
 	return l.moduleName
+}
+
+// getColorAttribute converts ANSI color code to fatih/color attribute
+func getColorAttribute(ansiCode string) color.Attribute {
+	// Simple mapping for the module colors used
+	switch ansiCode {
+	case "\033[38;5;208m": // Orange
+		return color.FgHiYellow
+	case "\033[38;5;147m": // Purple
+		return color.FgHiMagenta
+	case "\033[38;5;214m": // Orange
+		return color.FgYellow
+	case "\033[38;5;39m": // Blue
+		return color.FgHiBlue
+	case "\033[38;5;220m": // Gold
+		return color.FgHiYellow
+	case "\033[38;5;77m": // Cyan
+		return color.FgHiCyan
+	case "\033[38;5;219m": // Pink
+		return color.FgHiMagenta
+	case "\033[38;5;82m": // Green
+		return color.FgHiGreen
+	default:
+		return color.FgCyan
+	}
 }
 
 // log is the internal logging method
@@ -148,8 +227,9 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	message := fmt.Sprintf(format, args...)
 
 	if l.shouldUseColor() {
+		grayColor := color.New(color.FgHiBlack)
 		fmt.Fprintf(l.writer, "%s [%s] %s: %s\n",
-			colorGray+timestamp+colorReset,
+			grayColor.Sprint(timestamp),
 			levelStr,
 			moduleStr,
 			message,
