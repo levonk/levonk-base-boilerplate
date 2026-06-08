@@ -33,12 +33,12 @@ Implement optional append-only audit logging using SQLite for CLIs that process 
 - [N/A] Add configurable retention period to config file schema — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja` (N/A: config not in this boilerplate)
 - [x] Implement auto-prune old data on startup — `audit.py.jinja`
 - [x] Add export commands for external analysis — `audit.py.jinja`
-- [~] Add `--audit-log` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Integrate audit logging into data processing logic — `__main__.py.jinja`
+- [x] Add `--audit-log` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Integrate audit logging into data processing logic — `__main__.py.jinja`
 - [N/A] Add audit settings to config file initialization — `config.py.jinja` (N/A: config not in this boilerplate)
-- [ ] Add tests for audit logging functionality — `apps/cli/python/core/files/tests/test_audit.py.jinja` (conditional)
-- [ ] Add tests for retention and auto-prune — `tests/test_audit.py.jinja` (conditional)
-- [ ] Add tests for export functionality — `tests/test_audit.py.jinja` (conditional)
+- [x] Add tests for audit logging functionality — `apps/cli/python/core/files/tests/test_audit.py.jinja` (conditional)
+- [x] Add tests for retention and auto-prune — `tests/test_audit.py.jinja` (conditional)
+- [x] Add tests for export functionality — `tests/test_audit.py.jinja` (conditional)
 
 ## Relevant Files
 
@@ -50,14 +50,14 @@ Implement optional append-only audit logging using SQLite for CLIs that process 
 
 ## Acceptance Criteria
 
-- [ ] Append-only audit log implemented using SQLite
-- [ ] Configurable retention period working
-- [ ] Auto-prune old data on startup
-- [ ] Export commands for external analysis working
-- [ ] `--audit-log` flag working
-- [ ] Audit settings in config file
-- [ ] Audit logging optional via template choice
-- [ ] All tests pass for audit logging scenarios
+- [x] Append-only audit log implemented using SQLite
+- [x] Configurable retention period working
+- [x] Auto-prune old data on startup
+- [x] Export commands for external analysis working
+- [x] `--audit-log` flag working
+- [N/A] Audit settings in config file (N/A for this boilerplate)
+- [x] Audit logging optional via template choice
+- [x] All tests pass for audit logging scenarios
 
 ## Test Plan
 
