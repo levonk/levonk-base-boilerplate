@@ -26,14 +26,14 @@ Implement shell completion scripts for bash, zsh, and fish using Click's built-i
 
 ## Sub-Tasks
 
-- [ ] Enable Click completion in CLI
-- [ ] Implement completion script generation for bash
-- [ ] Implement completion script generation for zsh
-- [ ] Implement completion script generation for fish
-- [ ] Add completion installation instructions
-- [ ] Integrate with --install flag
-- [ ] Add tests for completion generation
-- [ ] Update documentation
+- [x] Enable Click completion in CLI
+- [x] Implement completion script generation for bash
+- [x] Implement completion script generation for zsh
+- [x] Implement completion script generation for fish
+- [x] Add completion installation instructions
+- [x] Integrate with --install flag
+- [x] Add tests for completion generation
+- [x] Update documentation
 
 ## Relevant Files
 
