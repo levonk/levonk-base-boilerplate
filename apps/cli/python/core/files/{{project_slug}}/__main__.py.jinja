@@ -106,6 +106,9 @@ def reload_config() -> bool:
         return result
     except Exception as e:
         logger.error(f"Config reload failed: {e}", module="config")
+        if logger.debug_mode:
+            import traceback
+            traceback.print_exc()
         return False
 
 app = typer.Typer(
@@ -384,6 +387,9 @@ def process(
             console.print(f"\n[bold green]Config initialized at:[/bold green] {config}")
         except Exception as e:
             logger.warn(f"Could not initialize config: {e}", module="install")
+            if debug:
+                import traceback
+                traceback.print_exc()
         {% endif %}
 
         sys.exit(EXIT_SUCCESS)
@@ -424,6 +430,9 @@ def process(
         except Exception as e:
             if not quiet:
                 logger.warn(f"Could not initialize config: {e}", module="config")
+                if debug:
+                    import traceback
+                    traceback.print_exc()
 
     # Load from specified config file if provided
     if config and config.exists():
@@ -433,6 +442,9 @@ def process(
         except Exception as e:
             if not quiet:
                 logger.error(f"Failed to load config from {config}: {e}", module="config")
+                if debug:
+                    import traceback
+                    traceback.print_exc()
 
     # Validate configuration
     validation_errors = config_manager.validate()
@@ -523,6 +535,9 @@ def process(
                 except Exception as e:
                     if not quiet:
                         logger.error(f"Error reading {file_path}: {e}", module="io")
+                        if debug:
+                            import traceback
+                            traceback.print_exc()
                     sys.exit(EXIT_ERROR)
 
                 if progress:

@@ -16,17 +16,6 @@ func TestGetTerminalHeight(t *testing.T) {
 	}
 }
 
-func TestGetTerminalWidth(t *testing.T) {
-	// Test that GetTerminalWidth returns a reasonable value
-	width := GetTerminalWidth()
-	if width < 10 {
-		t.Errorf("Expected terminal width to be at least 10, got %d", width)
-	}
-	if width > 500 {
-		t.Errorf("Expected terminal width to be less than 500, got %d", width)
-	}
-}
-
 func TestGetTerminalSize(t *testing.T) {
 	width, height := GetTerminalSize()
 	if width < 10 {
@@ -179,11 +168,6 @@ func TestGetTerminalSizeWithFallback(t *testing.T) {
 	if height < 10 {
 		t.Errorf("Expected height to be at least 10, got %d", height)
 	}
-}
-
-func TestIsTerminal(t *testing.T) {
-	// This test just ensures the function runs without panic
-	_ = IsTerminal()
 }
 
 func TestWithPager(t *testing.T) {

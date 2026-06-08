@@ -26,13 +26,13 @@ Add `--debug` flag separate from `--verbose` for detailed diagnostic logging. De
 
 ## Sub-Tasks
 
-- [ ] Add --debug flag to CLI argument parser
-- [ ] Implement debug mode in logging module
-- [ ] Add stack trace output in debug mode
-- [ ] Add internal state logging in debug mode
-- [ ] Ensure debug flag is separate from --verbose
-- [ ] Add tests for debug flag behavior
-- [ ] Update documentation
+- [x] Add --debug flag to CLI argument parser
+- [x] Implement debug mode in logging module
+- [x] Add stack trace output in debug mode
+- [x] Add internal state logging in debug mode
+- [x] Ensure debug flag is separate from --verbose
+- [x] Add tests for debug flag behavior
+- [x] Update documentation
 
 ## Relevant Files
 

@@ -131,11 +131,6 @@ func TestFormatForWidthWithTerminal(t *testing.T) {
 	}
 }
 
-	if width < DefaultTerminalWidth {
-		t.Errorf("Expected width >= %d, got %d", DefaultTerminalWidth, width)
-	}
-}
-
 func TestTerminalResizeHandling(t *testing.T) {
 	term := NewTerminal()
 

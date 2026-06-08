@@ -30,28 +30,7 @@
     "nixpkgs#nodePackages.eslint": "",
     "nixpkgs#nodePackages.prettier": "",
     "nixpkgs#pnpm": "",
-    "nixpkgs#just": "",
-    {% if include_commander %}
-    "nixpkgs#nodePackages.commander": "",
-    {% endif %}
-    {% if include_inquirer %}
-    "nixpkgs#nodePackages.inquirer": "",
-    {% endif %}
-    {% if include_chalk %}
-    "nixpkgs#nodePackages.chalk": "",
-    {% endif %}
-    {% if include_axios %}
-    "nixpkgs#nodePackages.axios": "",
-    {% endif %}
-    {% if include_lodash %}
-    "nixpkgs#nodePackages.lodash": "",
-    {% endif %}
-    {% if include_yaml %}
-    "nixpkgs#nodePackages.yaml": "",
-    {% endif %}
-    {% if include_json_schema %}
-    "nixpkgs#nodePackages.jsonSchema": "",
-    {% endif %}
+    "nixpkgs#just": ""
   },
   "env": {
     "NODE_ENV": "{{ node_env | default('development') }}",
