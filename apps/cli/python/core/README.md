@@ -2,8 +2,128 @@
 
 {{ description }}
 
+## Installation
+
+### From Source
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd {{ project_slug }}
+
+# Install in development mode
+pip install -e .
+```
+
+### Shell Completion
+
+Install shell completions for bash, zsh, and fish:
+
+```bash
+{{ project_slug }} --install
+```
+
+This will:
+- Install completion scripts for your shell
+- Initialize configuration file (if advanced config is enabled)
+
+To uninstall completions:
+
+```bash
+{{ project_slug }} --uninstall
+```
+
+## Quick Start
+
+### Basic Usage
+
+```bash
+# Process a single file
+{{ project_slug }} file.txt
+
+# Process multiple files
+{{ project_slug }} file1.txt file2.txt file3.txt
+
+# Use globbing patterns
+{{ project_slug }} "**/*.txt"
+
+# Process from stdin
+cat file.txt | {{ project_slug }} -
+```
+
+### Help and Version
+
+```bash
+# Show help
+{{ project_slug }} --help
+{{ project_slug }} -h
+
+# Show version
+{{ project_slug }} --version
+{{ project_slug }} -v
+```
+
+## Features
+
+### Standard Features
+
+- **File Processing**: Process single files, multiple files, or glob patterns
+- **Stdin Support**: Read from stdin with `-` flag
+- **JSON Output**: Output results as JSON with `--json` flag
+- **Color Control**: Automatic color detection with `--color` (auto/always/never)
+- **Quiet Mode**: Suppress all output with `--quiet` or `-q`
+- **Verbose Mode**: Enable verbose logging with `--verbose` or `-v`
+- **Debug Mode**: Enable detailed debugging with `--debug`
+- **Dry Run**: Preview changes without execution with `--dry-run`
+- **Force Mode**: Bypass confirmation prompts with `--force`
+
+{% if include_advanced_config %}
+### Advanced Configuration
+
+When `include_advanced_config` is enabled, the CLI includes:
+
+- **Config File Management**: TOML-based configuration with validation
+- **Config Precedence**: CLI args > env vars > local config > user config > defaults
+- **Config Migration**: Automatic migration of old config formats
+- **Config Reload**: Signal-based (SIGHUP) and manual reload
+
+#### Configuration File
+
+Configuration is loaded from `~/.config/{{ project_slug }}/config.toml` by default.
+
+Example config:
+
+```toml
+version = 1
+log_level = "info"
+color = "auto"
+```
+
+#### Config Precedence
+
+Settings are loaded in the following order (later sources override earlier):
+
+1. Defaults (built-in)
+2. User config (`~/.config/{{ project_slug }}/config.toml`)
+3. Local config (`./config.toml`)
+4. Environment variables (`{{ project_slug | upper | replace('-', '_') }}_*`)
+5. CLI arguments (highest priority)
+
+#### Config Reload
+
+Reload configuration without restarting:
+
+```bash
+# Send SIGHUP signal
+kill -HUP <pid>
+
+# Or use the reload command
+{{ project_slug }} reload-config
+```
+{% endif %}
+
 {% if include_tui %}
-## TUI Mode
+### TUI Mode
 
 This CLI supports TUI (Terminal User Interface) mode for interactive configuration. Use the `--interactive` or `--tui` flag to launch the TUI:
 
@@ -20,3 +140,277 @@ In TUI mode, you can:
 
 TUI mode is optional and can be disabled during project generation.
 {% endif %}
+
+### Daemon Mode
+
+Run the CLI in background daemon mode:
+
+```bash
+# Start daemon
+{{ project_slug }} --daemon
+
+# List background jobs
+{{ project_slug }} --list-jobs
+
+# Cancel a specific job
+{{ project_slug }} --cancel-job <job-id>
+
+# Force synchronous mode (no daemon)
+{{ project_slug }} --no-daemon
+```
+
+### Progress Indicators
+
+Progress bars and spinners show processing status. Use `--quiet` to disable.
+
+### Pager Integration
+
+Long output is automatically paged. Disable with `--no-pager`.
+
+### Error Formatting
+
+Error messages include VSCode-compatible file references for easy navigation.
+
+{% if include_health_check %}
+### Health Check
+
+For container orchestration, the CLI includes a health check mechanism:
+
+```bash
+{{ project_slug }} health-check
+```
+
+Returns exit code 0 if healthy, 1 if unhealthy.
+{% endif %}
+
+{% if include_privacy %}
+### Privacy Mode
+
+Enable privacy mode to filter sensitive data:
+
+```bash
+{{ project_slug }} --privacy-mode
+```
+
+Privacy mode maintains anonymous lists of sensitive patterns and filters output accordingly.
+{% endif %}
+
+{% if include_audit %}
+### Audit Logging
+
+Enable audit logging with SQLite retention:
+
+```bash
+{{ project_slug }} --audit-log
+```
+
+Audit logs track all actions with timestamps and can be exported to JSON/CSV.
+{% endif %}
+
+## CLI Flags and Options
+
+### Global Options
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--help` | `-h` | Show help message and exit |
+| `--version` | `-v` | Show version and exit |
+| `--usage` | | Show usage information and exit |
+
+### Processing Options
+
+| Flag | Description |
+|------|-------------|
+| `inputs` | Input files or glob patterns (use `-` for stdin) |
+| `--config` | Path to config file |
+| `--json` | Output results as JSON to stdout |
+| `--dry-run` | Preview changes without executing |
+
+### Logging Options
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--quiet` | `-q` | Suppress all log output |
+| `--verbose` | `-v` | Enable verbose logging |
+| `--debug` | | Enable detailed debugging output |
+| `--color` | | Color mode: auto, always, or never |
+| `--log-format` | | Log format: human, json, or structured |
+
+### Install/Uninstall Options
+
+| Flag | Description |
+|------|-------------|
+| `--install` | Install shell completions and initialize config |
+| `--uninstall` | Uninstall shell completions and cleanup |
+
+{% if include_tui %}
+### TUI Options
+
+| Flag | Description |
+|------|-------------|
+| `--interactive` | Launch TUI mode for interactive configuration |
+| `--tui` | Alias for --interactive |
+{% endif %}
+
+### Confirmation Options
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Preview changes without execution |
+| `--force` | Force overwrite during install and bypass confirmation prompts |
+
+### Daemon Options
+
+| Flag | Description |
+|------|-------------|
+| `--daemon` | Run in daemon mode (background process) |
+| `--no-daemon` | Force synchronous operation (no daemon) |
+| `--list-jobs` | List background jobs |
+| `--cancel-job` | Cancel a specific background job by ID |
+
+### Display Options
+
+| Flag | Description |
+|------|-------------|
+| `--man` | Display man page |
+| `--no-pager` | Disable automatic paging of long output |
+
+### Resource Options
+
+| Flag | Description |
+|------|-------------|
+| `--max-memory` | Maximum memory usage in MB |
+| `--max-cpu` | Maximum CPU usage percentage |
+
+{% if include_privacy %}
+### Privacy Options
+
+| Flag | Description |
+|------|-------------|
+| `--privacy-mode` | Enable privacy mode with anonymous lists |
+{% endif %}
+
+{% if include_audit %}
+### Audit Options
+
+| Flag | Description |
+|------|-------------|
+| `--audit-log` | Enable audit logging with SQLite |
+{% endif %}
+
+## Environment Variables
+
+The CLI respects the following environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `{{ project_slug | upper | replace('-', '_') }}_CONFIG` | Path to config file |
+| `{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL` | Log level (debug, info, warn, error) |
+| `{{ project_slug | upper | replace('-', '_') }}_COLOR` | Color mode (auto, always, never) |
+| `NO_COLOR` | Disable colors (takes precedence over other color settings) |
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Usage error (invalid arguments) |
+| 3 | Network error |
+| 4 | Validation error |
+| 5 | File not found |
+| 6 | Permission denied |
+| 130 | Interrupted by user (SIGINT) |
+
+## Troubleshooting
+
+### Config File Not Found
+
+If you see "Config file not found" errors:
+
+1. Check the config path: `~/.config/{{ project_slug }}/config.toml`
+2. Run `{{ project_slug }} --install` to initialize config
+3. Specify config path explicitly: `{{ project_slug }} --config /path/to/config.toml`
+
+### Colors Not Working
+
+If colors are not displaying:
+
+1. Check your terminal supports colors
+2. Try `--color always` to force colors
+3. Check `NO_COLOR` environment variable is not set
+
+### Completion Not Working
+
+If shell completion is not working:
+
+1. Ensure completion is installed: `{{ project_slug }} --install`
+2. Restart your shell
+3. Check your shell's completion initialization
+
+### Permission Denied Errors
+
+If you encounter permission denied errors:
+
+1. Check file permissions
+2. Ensure you have read access to input files
+3. Use `sudo` if appropriate (not recommended for security)
+
+### Daemon Mode Not Available
+
+If daemon mode is not supported on your platform:
+
+1. Check platform compatibility (Linux/macOS supported)
+2. Use `--no-daemon` for synchronous operation
+3. Check error messages for platform-specific requirements
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov={{ project_slug }} --cov-report=html
+```
+
+### Project Structure
+
+```
+{{ project_slug }}/
+├── src/
+│   └── {{ project_slug }}/
+│       ├── __main__.py       # Main CLI entry point
+│       ├── config.py          # Configuration management
+│       ├── logging.py         # Logging configuration
+│       ├── completion.py      # Shell completion
+│       ├── errors.py          # Error formatting
+│       ├── daemon.py          # Daemon process support
+│       ├── progress.py        # Progress indicators
+│       ├── terminal.py        # Terminal awareness
+│       ├── security.py        # Security and resources
+{% if include_tui %}
+│       ├── tui.py             # TUI mode
+{% endif %}
+{% if include_health_check %}
+│       ├── health.py          # Health check
+{% endif %}
+{% if include_privacy %}
+│       ├── privacy.py         # Privacy mode
+{% endif %}
+{% if include_audit %}
+│       ├── audit.py           # Audit logging
+{% endif %}
+└── tests/                     # Test suite
+```
+
+## Migration
+
+If you're migrating from an older version of this CLI template, see [MIGRATION.md](MIGRATION.md) for detailed migration instructions.
+
+## License
+
+See LICENSE file for details.
+
