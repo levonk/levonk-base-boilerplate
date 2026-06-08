@@ -9,6 +9,9 @@ on:
       - 'scripts/modules/supported-models.json'
       - 'docs/scripts/models-json-to-markdown.js'
 
+permissions:
+  contents: write
+
 jobs:
   update_markdown:
     runs-on: ubuntu-latest
