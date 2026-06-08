@@ -104,7 +104,11 @@ color: true
 	}
 
 	// Test that config is loaded correctly
-	cfg, err := LoadConfig(configPath)
+	cfgContent, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to read config: %v", err)
+	}
+	cfg, err := parseConfigContentFromFile(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -121,7 +125,7 @@ color: true
 	os.Setenv("{{ project_slug | upper }}_LOG_LEVEL", "error")
 	defer os.Unsetenv("{{ project_slug | upper }}_LOG_LEVEL")
 
-	cfg2, err := LoadConfig(configPath)
+	cfg2, err := parseConfigContentFromFile(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config with env override: %v", err)
 	}
@@ -329,7 +333,7 @@ log_level: info
 	}
 
 	// Load config which should trigger migration
-	cfg, err := LoadConfig(configPath)
+	cfg, err := parseConfigContentFromFile(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load old config: %v", err)
 	}

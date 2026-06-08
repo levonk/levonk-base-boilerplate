@@ -26,15 +26,15 @@ Auto-migrate legacy configs to new format on schema changes. Create backup of ol
 
 ## Sub-Tasks
 
-- [ ] Implement config version tracking
-- [ ] Implement migration logic
-- [ ] Add backup creation with .bak suffix
-- [ ] Add migration logging
-- [ ] Add migrated config validation
-- [ ] Support legacy format for one cycle
-- [ ] Add deprecation warnings
-- [ ] Add tests for config migration
-- [ ] Update documentation
+- [x] Implement config version tracking
+- [x] Implement migration logic
+- [x] Add backup creation with .bak suffix
+- [x] Add migration logging
+- [x] Add migrated config validation
+- [x] Support legacy format for one cycle
+- [x] Add deprecation warnings
+- [x] Add tests for config migration
+- [x] Update documentation
 
 ## Relevant Files
 
