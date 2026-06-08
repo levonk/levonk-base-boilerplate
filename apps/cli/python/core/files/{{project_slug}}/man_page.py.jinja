@@ -14,15 +14,16 @@ def generate_man_page() -> str:
     Returns:
         Man page content as string
     """
+    description = "{{ description }}"
     man_content = f'''\
 .TH {{ project_slug.upper() }} 1 "{{ project_slug }}" "{{ project_slug }} User Manual"
 .SH NAME
-{{ project_slug }} \\- {{ description }}
+{{ project_slug }} \\- {description}
 .SH SYNOPSIS
 .B {{ project_slug }}
 [OPTIONS] [INPUTS]
 .SH DESCRIPTION
-{{ description }}
+{description}
 .SH OPTIONS
 .TP
 .B \\-h, \\-\\-help
@@ -202,7 +203,9 @@ def uninstall_man_page() -> bool:
 def print_man_page() -> None:
     """Print man page content to stdout."""
     try:
+        import sys
         man_content = generate_man_page()
-        print(man_content)
+        sys.stdout.write(man_content)
+        sys.stdout.write("\n")
     except Exception as e:
         logger.error(f"Failed to generate man page: {e}", module="man")

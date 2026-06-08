@@ -46,6 +46,7 @@ type Logger struct {
 	enableRefs    bool
 	refFormat     ReferenceFormat
 	secretManager *SecretManager
+	privacyMode   *PrivacyMode
 	logrusLogger  *logrus.Logger
 }
 
@@ -179,6 +180,20 @@ func (l *Logger) SetRefFormat(format ReferenceFormat) {
 // SetSecretManager sets the secret manager for redaction
 func (l *Logger) SetSecretManager(sm *SecretManager) {
 	l.secretManager = sm
+}
+
+// SetPrivacyMode sets the privacy mode for identifier sanitization
+func (l *Logger) SetPrivacyMode(enabled bool) {
+	if l.privacyMode == nil {
+		l.privacyMode = NewPrivacyMode(enabled)
+	} else {
+		l.privacyMode.enabled = enabled
+	}
+}
+
+// GetPrivacyMode returns the current privacy mode instance
+func (l *Logger) GetPrivacyMode() *PrivacyMode {
+	return l.privacyMode
 }
 
 // resolveLogLevel resolves the log level based on precedence:
@@ -356,6 +371,11 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 		message = l.secretManager.RedactSecrets(message)
 	}
 
+	// Sanitize identifiers if privacy mode is enabled
+	if l.privacyMode != nil && l.privacyMode.IsEnabled() {
+		message = l.privacyMode.SanitizeIdentifier(message)
+	}
+
 	// Convert our LogLevel to logrus Level
 	logrusLevel := l.convertLogLevel(level)
 
@@ -394,6 +414,11 @@ func (l *Logger) logWithRef(level LogLevel, ref *FileReference, format string, a
 	// Redact secrets if secret manager is available
 	if l.secretManager != nil {
 		message = l.secretManager.RedactSecrets(message)
+	}
+
+	// Sanitize identifiers if privacy mode is enabled
+	if l.privacyMode != nil && l.privacyMode.IsEnabled() {
+		message = l.privacyMode.SanitizeIdentifier(message)
 	}
 
 	// Convert our LogLevel to logrus Level

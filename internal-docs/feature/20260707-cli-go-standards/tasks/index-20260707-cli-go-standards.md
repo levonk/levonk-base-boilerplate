@@ -50,7 +50,7 @@ This index summarizes all stories for the Go CLI Standards compliance implementa
 | 03-007 | Structured Logging with Format Auto-Detection | 03 | [x] Done | | true | None | None | [logging, main] | feature/current/20260707-cli-go-standards/story-03-007-structured-logging |
 | 03-008 | Signal-Based Config Reload | 03 | [x] Done | | true | 01-007 | None | [config, main] | feature/current/20260707-cli-go-standards/story-03-008-config-reload |
 | 03-009 | Health Check for Containers | 03 | [x] Done | | true | None | None | [health, main] | feature/current/20260707-cli-go-standards/story-03-009-health-check |
-| 03-010 | Privacy Mode with Anonymous Lists | 03 | [~] In-Progress | | true | None | None | [privacy, main] | feature/current/20260707-cli-go-standards/story-03-010-privacy-mode |
+| 03-010 | Privacy Mode with Anonymous Lists | 03 | [x] Done | | true | None | None | [privacy, main] | feature/current/20260707-cli-go-standards/story-03-010-privacy-mode |
 | 03-011 | Audit Logging with Retention | 03 | [ ] Todo | | true | None | None | [audit, main] | feature/current/20260707-cli-go-standards/story-03-011-audit-logging |
 | 03-012 | Legacy Deprecation Policy | 03 | [ ] Todo | | true | None | None | [deprecation, main] | feature/current/20260707-cli-go-standards/story-03-012-deprecation-policy |
 

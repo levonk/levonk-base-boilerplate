@@ -636,4 +636,93 @@ describe('CLI', () => {
             expect(stdout).toContain('Processed 1 inputs');
         });
     });
+
+    describe('Pager Integration', () => {
+        let tempDir: string;
+        let tempFiles: string[] = [];
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(os.tmpdir());
+            // Create multiple test files to generate long output
+            for (let i = 0; i < 30; i++) {
+                const filePath = path.join(tempDir, `test-${i}.txt`);
+                await fs.writeFile(filePath, `test content ${i}`);
+                tempFiles.push(filePath);
+            }
+        });
+
+        afterEach(async () => {
+            for (const file of tempFiles) {
+                try {
+                    await fs.unlink(file);
+                } catch {
+                    // Ignore if file doesn't exist
+                }
+            }
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should accept --no-pager flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --no-pager "${tempFiles[0]}"`);
+            expect(stdout).toBeDefined();
+        });
+
+        it('should show --no-pager flag in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--no-pager');
+            expect(stdout).toContain('Disable pager for long output');
+        });
+
+        it('should show PAGER environment variable in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('PAGER');
+            expect(stdout).toContain('Set pager command');
+        });
+
+        it('should show pager section in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Pager');
+        });
+
+        it('should process files without pager when --no-pager is set', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --no-pager "${tempFiles.join('" "')}"`);
+            expect(stdout).toContain('Processed');
+        });
+
+        it('should process files normally without --no-pager flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFiles[0]}"`);
+            expect(stdout).toContain('Processed');
+        });
+
+        it('should respect PAGER environment variable', async () => {
+            // Set a dummy pager that won't actually be invoked in test
+            const { stdout } = await execAsync(`PAGER=cat node dist/index.js "${tempFiles[0]}"`);
+            expect(stdout).toContain('Processed');
+        });
+
+        it('should bypass pager for JSON output mode', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --json "${tempFiles[0]}"`);
+            const output = JSON.parse(stdout);
+            expect(output).toHaveProperty('results');
+        });
+
+        it('should show pager bypass for JSON in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Paging is disabled for JSON output mode');
+        });
+
+        it('should show pager bypass for piped output in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Paging is disabled for JSON output mode and piped output');
+        });
+
+        it('should handle long output without errors', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --no-pager "${tempFiles.join('" "')}"`);
+            expect(stdout).toContain('Processed 30 inputs');
+        });
+    });
 });

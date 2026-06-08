@@ -100,6 +100,31 @@
 # allow-dangerous-extensions: false
 
 # -----------------------------------------------------------------------------
+# Privacy Mode
+# -----------------------------------------------------------------------------
+
+# Enable privacy mode to ignore sensitive identifiers
+# When enabled, identifiers matching ignore/anonymous lists will be sanitized
+# privacy:
+#   enabled: false
+#   # Ignore list: identifiers are logged but not assigned (marked as <unknown>)
+#   ignore-list:
+#     - "email"
+#     - "phone"
+#     - "ssn"
+#   # Anonymous list: identifiers are ignored entirely (marked as <anonymous>)
+#   anonymous-list:
+#     - "password"
+#     - "token"
+#     - "secret"
+#   # Privacy toggles to disable specific data collection
+#   toggles:
+#     disable-ip-logging: false
+#     disable-user-logging: false
+#     disable-path-logging: false
+#     disable-timestamp-logging: false
+
+# -----------------------------------------------------------------------------
 # Advanced
 # -----------------------------------------------------------------------------
 

@@ -1,0 +1,187 @@
+package main
+
+import (
+	"testing"
+)
+
+func TestNewPrivacyMode(t *testing.T) {
+	// Test creating privacy mode with enabled=true
+	pm := NewPrivacyMode(true)
+	if !pm.IsEnabled() {
+		t.Error("Expected privacy mode to be enabled")
+	}
+
+	// Test creating privacy mode with enabled=false
+	pm = NewPrivacyMode(false)
+	if pm.IsEnabled() {
+		t.Error("Expected privacy mode to be disabled")
+	}
+}
+
+func TestIgnoreList(t *testing.T) {
+	pm := NewPrivacyMode(true)
+	pm.AddToIgnoreList("email")
+	pm.AddToIgnoreList("phone")
+
+	// Test that identifiers in ignore list are detected
+	if !pm.ShouldIgnore("user@example.com") {
+		t.Error("Expected email to be ignored")
+	}
+	if !pm.ShouldIgnore("+1-555-1234") {
+		t.Error("Expected phone to be ignored")
+	}
+
+	// Test that identifiers not in ignore list are not ignored
+	if pm.ShouldIgnore("username") {
+		t.Error("Expected username to not be ignored")
+	}
+}
+
+func TestAnonymousList(t *testing.T) {
+	pm := NewPrivacyMode(true)
+	pm.AddToAnonymousList("password")
+	pm.AddToAnonymousList("token")
+
+	// Test that identifiers in anonymous list are detected
+	if !pm.ShouldAnonymize("my-password-123") {
+		t.Error("Expected password to be anonymized")
+	}
+	if !pm.ShouldAnonymize("api-token-xyz") {
+		t.Error("Expected token to be anonymized")
+	}
+
+	// Test that identifiers not in anonymous list are not anonymized
+	if pm.ShouldAnonymize("username") {
+		t.Error("Expected username to not be anonymized")
+	}
+}
+
+func TestUnknownVsAnonymous(t *testing.T) {
+	pm := NewPrivacyMode(true)
+	pm.AddToIgnoreList("email")
+	pm.AddToAnonymousList("password")
+
+	// Test unknown (ignored but logged)
+	result := pm.SanitizeIdentifier("user@example.com")
+	if result != "<unknown>" {
+		t.Errorf("Expected <unknown>, got %s", result)
+	}
+
+	// Test anonymous (ignored entirely)
+	result = pm.SanitizeIdentifier("my-password")
+	if result != "<anonymous>" {
+		t.Errorf("Expected <anonymous>, got %s", result)
+	}
+
+	// Test normal identifier (not in either list)
+	result = pm.SanitizeIdentifier("username")
+	if result != "username" {
+		t.Errorf("Expected username, got %s", result)
+	}
+}
+
+func TestPrivacyToggles(t *testing.T) {
+	pm := NewPrivacyMode(true)
+
+	// Test setting toggles
+	pm.SetToggle("disable_ip_logging", true)
+	if !pm.GetToggle("disable_ip_logging") {
+		t.Error("Expected disable_ip_logging to be true")
+	}
+
+	pm.SetToggle("disable_user_logging", true)
+	if !pm.GetToggle("disable_user_logging") {
+		t.Error("Expected disable_user_logging to be true")
+	}
+
+	pm.SetToggle("disable_path_logging", false)
+	if pm.GetToggle("disable_path_logging") {
+		t.Error("Expected disable_path_logging to be false")
+	}
+
+	// Test default values
+	if pm.GetToggle("disable_timestamp_logging") {
+		t.Error("Expected disable_timestamp_logging to be false by default")
+	}
+}
+
+func TestPrivacyModeDisabled(t *testing.T) {
+	pm := NewPrivacyMode(false)
+	pm.AddToIgnoreList("email")
+	pm.AddToAnonymousList("password")
+
+	// When privacy mode is disabled, identifiers should not be sanitized
+	if pm.ShouldIgnore("user@example.com") {
+		t.Error("Expected ignore list to not work when privacy mode is disabled")
+	}
+	if pm.ShouldAnonymize("my-password") {
+		t.Error("Expected anonymous list to not work when privacy mode is disabled")
+	}
+
+	result := pm.SanitizeIdentifier("user@example.com")
+	if result != "user@example.com" {
+		t.Errorf("Expected original identifier when privacy mode is disabled, got %s", result)
+	}
+}
+
+func TestSanitizeIdentifier(t *testing.T) {
+	pm := NewPrivacyMode(true)
+	pm.AddToIgnoreList("ssn")
+	pm.AddToAnonymousList("credit-card")
+
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"my-ssn-123", "<unknown>"},
+		{"credit-card-number", "<anonymous>"},
+		{"normal-identifier", "normal-identifier"},
+	}
+
+	for _, test := range tests {
+		result := pm.SanitizeIdentifier(test.input)
+		if result != test.expected {
+			t.Errorf("For input %s, expected %s, got %s", test.input, test.expected, result)
+		}
+	}
+}
+
+func TestMultipleIgnorePatterns(t *testing.T) {
+	pm := NewPrivacyMode(true)
+	pm.AddToIgnoreList("email")
+	pm.AddToIgnoreList("phone")
+	pm.AddToIgnoreList("address")
+
+	// Test that multiple patterns work
+	testCases := []string{
+		"email@example.com",
+		"phone: 555-1234",
+		"address: 123 Main St",
+	}
+
+	for _, tc := range testCases {
+		if !pm.ShouldIgnore(tc) {
+			t.Errorf("Expected %s to be ignored", tc)
+		}
+	}
+}
+
+func TestPrivacyModeIntegration(t *testing.T) {
+	// Test that privacy mode can be toggled on and off
+	pm := NewPrivacyMode(false)
+	if pm.IsEnabled() {
+		t.Error("Expected privacy mode to be disabled initially")
+	}
+
+	pm.enabled = true
+	if !pm.IsEnabled() {
+		t.Error("Expected privacy mode to be enabled after toggle")
+	}
+
+	pm.enabled = false
+	if pm.IsEnabled() {
+		t.Error("Expected privacy mode to be disabled after toggle")
+	}
+}
+
+{# vim: set ft=go: #}

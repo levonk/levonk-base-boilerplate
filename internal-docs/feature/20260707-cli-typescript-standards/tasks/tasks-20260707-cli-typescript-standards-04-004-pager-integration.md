@@ -27,38 +27,38 @@ Implement auto-pager for long output that respects the PAGER environment variabl
 
 ## Sub-Tasks
 
-- [ ] Create pager module with pager integration logic
-- [ ] Add `--no-pager` flag to index.ts
-- [ ] Implement PAGER environment variable detection
-- [ ] Implement default pager (less) when PAGER not set
-- [ ] Implement terminal height detection
-- [ ] Implement output length detection
-- [ ] Add automatic pager invocation for long output
-- [ ] Add pager bypass for JSON output mode
-- [ ] Add pager bypass for piped output
-- [ ] Add unit tests for pager detection
-- [ ] Add unit tests for pager invocation logic
-- [ ] Add integration tests for pager behavior
-- [ ] Update help text to document pager integration
+- [x] Create pager module with pager integration logic
+- [x] Add `--no-pager` flag to index.ts
+- [x] Implement PAGER environment variable detection
+- [x] Implement default pager (less) when PAGER not set
+- [x] Implement terminal height detection
+- [x] Implement output length detection
+- [x] Add automatic pager invocation for long output
+- [x] Add pager bypass for JSON output mode
+- [x] Add pager bypass for piped output
+- [x] Add unit tests for pager detection
+- [x] Add unit tests for pager invocation logic
+- [x] Add integration tests for pager behavior
+- [x] Update help text to document pager integration
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/pager.ts.jinja` - New pager module (to be created)
+- `apps/cli/typescript/core/files/src/pager.ts.jinja` - Pager module with pager integration logic
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with pager integration
-- `apps/cli/typescript/core/files/src/pager.test.ts.jinja` - Unit tests for pager (to be created)
+- `apps/cli/typescript/core/files/src/pager.test.ts.jinja` - Unit tests for pager
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for pager
 
 ## Acceptance Criteria
 
-- [ ] Long output is automatically paged
-- [ ] PAGER environment variable is respected
-- [ ] Default pager (less) is used when PAGER not set
-- [ ] `--no-pager` flag bypasses paging
-- [ ] Paging is disabled for JSON output mode
-- [ ] Paging is disabled for piped output
-- [ ] Terminal height is correctly detected
-- [ ] Output length is correctly detected
-- [ ] Pager is invoked only when output exceeds terminal height
+- [x] Long output is automatically paged
+- [x] PAGER environment variable is respected
+- [x] Default pager (less) is used when PAGER not set
+- [x] `--no-pager` flag bypasses paging
+- [x] Paging is disabled for JSON output mode
+- [x] Paging is disabled for piped output
+- [x] Terminal height is correctly detected
+- [x] Output length is correctly detected
+- [x] Pager is invoked only when output exceeds terminal height
 
 ## Test Plan
 

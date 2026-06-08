@@ -270,7 +270,7 @@ def process(
 
     if man:
         print_man_page()
-        sys.exit(EXIT_SUCCESS)
+        return
 
     # Initialize resource monitor if limits specified
     resource_monitor = None

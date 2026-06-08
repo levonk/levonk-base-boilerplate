@@ -52,6 +52,10 @@ import {
     resetProgressManager,
     type ProgressOptions,
 } from './progress.js';
+import {
+    createPager,
+    type PagerOptions,
+} from './pager.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -89,6 +93,7 @@ program
   .addHelpText('after', '\nInstallation:\n  --install      Install CLI (generate completions, initialize config)\n  --uninstall    Uninstall CLI (remove completions, clean up config)')
   .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
   .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')
+  .addHelpText('after', '\nPager:\n  Long output is automatically paged using the PAGER environment variable (default: less)\n  Use --no-pager to disable paging\n  Paging is disabled for JSON output mode and piped output\n  Environment Variables:\n  PAGER         Set pager command (default: less)')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--completion <shell>', 'Generate shell completion script (bash, zsh, fish)')
   .option('--completion-install <shell>', 'Show shell completion installation instructions')
@@ -97,6 +102,7 @@ program
   .option('--man', 'Generate man page')
   .option('--man-install', 'Show man page installation instructions')
   .option('--man-output-dir <path>', 'Output directory for man pages', 'man')
+  .option('--no-pager', 'Disable pager for long output')
   .action(async (inputs: string[], options) => {
       try {
           // Suppress console output immediately for quiet and json modes
@@ -240,6 +246,13 @@ program
           };
           const progressManager = getProgressManager(progressOptions);
 
+          // Initialize pager
+          const pagerOptions: PagerOptions = {
+              enabled: !options.noPager,
+              isJsonOutput: mergedOptions.json,
+          };
+          const pager = createPager(pagerOptions);
+
           // Input Processing
           const filesToProcess: string[] = [];
           let readStdin = false;
@@ -336,7 +349,27 @@ program
               if (isDryRunEnabled()) {
                   logger.info('[DRY-RUN] Mode enabled - no changes were made');
               }
-              logger.info(`Processed ${results.length} inputs.`);
+
+              // Build output string
+              const outputLines: string[] = [];
+              outputLines.push(`Processed ${results.length} inputs.`);
+
+              if (results.length > 0) {
+                  outputLines.push('');
+                  outputLines.push('Results:');
+                  for (const result of results) {
+                      outputLines.push(`  ${result.source}: ${result.length} bytes`);
+                  }
+              }
+
+              const outputString = outputLines.join('\n');
+
+              // Use pager for output if enabled and output is long
+              if (!options.noPager) {
+                  pager.page(outputString);
+              } else {
+                  console.log(outputString);
+              }
           }
 
           // Restore console functions if they were suppressed
