@@ -1,0 +1,90 @@
+use anyhow::{Context, Result};
+use std::path::Path;
+use std::process::Command;
+
+/// Man page handler for displaying manual pages
+pub struct ManHandler;
+
+impl ManHandler {
+    /// Display the man page for the current command
+    pub fn display_man_page() -> Result<()> {
+        let man_page = Self::get_man_page_path()?;
+        
+        if !man_page.exists() {
+            // If man page file doesn't exist, try to display it via the man command
+            // assuming it's installed system-wide
+            Self::display_via_man_command("{{ project_slug }}")?;
+            return Ok(());
+        }
+
+        // Try to display using the man command with the local file
+        Self::display_via_man_command(&man_page.to_string_lossy())
+    }
+
+    /// Get the path to the man page file
+    fn get_man_page_path() -> Result<std::path::PathBuf> {
+        // Check multiple possible locations for the man page
+        let possible_paths = vec![
+            // Development location (after generation)
+            format!("target/man/{{ project_slug }}.1"),
+            // System installation location
+            format!("/usr/local/share/man/man1/{{ project_slug }}.1"),
+            format!("/usr/share/man/man1/{{ project_slug }}.1"),
+            // Package-relative location
+            format!("docs/man/{{ project_slug }}.1"),
+        ];
+
+        for path_str in possible_paths {
+            let path = Path::new(&path_str);
+            if path.exists() {
+                return Ok(path.to_path_buf());
+            }
+        }
+
+        // Return the first path as default (will trigger fallback to man command)
+        Ok(PathBuf::from("target/man/{{ project_slug }}.1"))
+    }
+
+    /// Display man page using the system man command
+    fn display_via_man_command(path: &str) -> Result<()> {
+        let output = Command::new("man")
+            .arg(path)
+            .output()
+            .context("Failed to execute man command. Is 'man' installed?")?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("man command failed: {}", stderr);
+        }
+
+        // Display the man page output
+        print!("{}", String::from_utf8_lossy(&output.stdout));
+        Ok(())
+    }
+
+    /// Generate man page from help text (fallback if clap_mangen is available)
+    #[cfg(feature = "man-pages")]
+    pub fn generate_man_page() -> Result<()> {
+        // This would use clap_mangen to generate man pages dynamically
+        // For the template approach, we use static templates instead
+        anyhow::bail!("Dynamic man page generation requires clap_mangen feature. Use static templates instead.")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_man_page_path() {
+        let path = ManHandler::get_man_page_path();
+        assert!(path.is_ok());
+    }
+
+    #[test]
+    fn test_display_via_man_command_missing() {
+        // Test with a non-existent man page
+        let result = ManHandler::display_via_man_command("nonexistent_command_12345");
+        assert!(result.is_err());
+    }
+}

@@ -275,6 +275,99 @@ audit-internal:
     # Audit dependencies
     cargo audit
 
+# Man page generation and installation
+generate-man-pages:
+    @echo "📄 Generating man pages..."
+    @devbox run generate-man-pages
+
+generate-man-pages-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Generate man pages from template
+    MAN_DIR="docs/man"
+    OUTPUT_DIR="target/man"
+    
+    # Create output directory
+    mkdir -p "$OUTPUT_DIR"
+    
+    # Process man page template
+    if [ -f "$MAN_DIR/{{ project_slug }}.1.jinja" ]; then
+        # For template-based approach, we'd use copier to render
+        # For now, copy the template as-is (will be rendered during project generation)
+        cp "$MAN_DIR/{{ project_slug }}.1.jinja" "$OUTPUT_DIR/{{ project_slug }}.1"
+        echo "✅ Man page template copied to $OUTPUT_DIR/{{ project_slug }}.1"
+    else
+        echo "⚠️  Man page template not found at $MAN_DIR/{{ project_slug }}.1.jinja"
+    fi
+
+install-man-pages:
+    @echo "📦 Installing man pages..."
+    @devbox run install-man-pages
+
+install-man-pages-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Install man pages to system man directory
+    MAN_DIR="target/man"
+    MAN_PATH="${MANPATH:-/usr/local/share/man}"
+    
+    if [ ! -d "$MAN_DIR" ]; then
+        echo "⚠️  Man pages not generated. Run 'just generate-man-pages' first."
+        exit 1
+    fi
+    
+    # Install man page (requires sudo)
+    echo "Installing man page to $MAN_PATH/man1/"
+    sudo mkdir -p "$MAN_PATH/man1/"
+    sudo cp "$MAN_DIR/{{ project_slug }}.1" "$MAN_PATH/man1/"
+    sudo mandb
+    echo "✅ Man page installed. Try 'man {{ project_slug }}' to view it."
+
+validate-man-pages:
+    @echo "🔍 Validating man page format and content..."
+    @devbox run validate-man-pages
+
+validate-man-pages-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Validate man page format using man command
+    MAN_DIR="target/man"
+    MAN_FILE="$MAN_DIR/{{ project_slug }}.1"
+    
+    if [ ! -f "$MAN_FILE" ]; then
+        echo "⚠️  Man page not found. Run 'just generate-man-pages' first."
+        exit 1
+    fi
+    
+    echo "Validating man page format..."
+    
+    # Check if man command can parse the file
+    if command -v man >/dev/null 2>&1; then
+        # Use man --warnings to check for formatting issues
+        if man --warnings --local-file "$MAN_FILE" 2>&1 | grep -q "warning"; then
+            echo "⚠️  Man page has formatting warnings:"
+            man --warnings --local-file "$MAN_FILE" 2>&1 | grep "warning"
+        else
+            echo "✅ Man page format is valid"
+        fi
+    else
+        echo "⚠️  man command not available, skipping format validation"
+    fi
+    
+    # Check for required sections
+    echo "Checking for required sections..."
+    REQUIRED_SECTIONS=("NAME" "SYNOPSIS" "DESCRIPTION" "OPTIONS" "EXAMPLES" "EXIT STATUS" "ENVIRONMENT" "FILES" "BUGS" "SEE ALSO")
+    for section in "${REQUIRED_SECTIONS[@]}"; do
+        if grep -q "\.SH $section" "$MAN_FILE"; then
+            echo "  ✅ $section section found"
+        else
+            echo "  ❌ $section section missing"
+            exit 1
+        fi
+    done
+    
+    echo "✅ Man page validation complete"
+
 # Help target
 help:
     echo "🦀 {{ project_name | default('rust-cli-app') }} - Rust CLI Application"

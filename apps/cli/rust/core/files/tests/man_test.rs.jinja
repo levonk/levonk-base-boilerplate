@@ -1,0 +1,130 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
+use std::fs;
+use std::path::Path;
+
+#[test]
+fn test_man_flag_exists() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--help");
+    cmd.assert().success().stdout(predicate::str::contains("--man"));
+}
+
+#[test]
+fn test_man_flag_help_text() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--help");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Display manual page"));
+}
+
+#[test]
+fn test_man_flag_without_man_page() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--man");
+    // Should fail gracefully when man page doesn't exist
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("Failed to display man page"));
+}
+
+#[test]
+fn test_man_page_template_exists() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    assert!(
+        Path::new(man_template_path).exists(),
+        "Man page template should exist at {}",
+        man_template_path
+    );
+}
+
+#[test]
+fn test_man_page_template_content() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    let content = fs::read_to_string(man_template_path)
+        .expect("Should be able to read man page template");
+    
+    // Check for standard man page sections
+    assert!(content.contains(".TH"), "Should have .TH header");
+    assert!(content.contains(".SH NAME"), "Should have NAME section");
+    assert!(content.contains(".SH SYNOPSIS"), "Should have SYNOPSIS section");
+    assert!(content.contains(".SH DESCRIPTION"), "Should have DESCRIPTION section");
+    assert!(content.contains(".SH OPTIONS"), "Should have OPTIONS section");
+    assert!(content.contains(".SH EXAMPLES"), "Should have EXAMPLES section");
+}
+
+#[test]
+fn test_man_page_template_has_project_slug() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    let content = fs::read_to_string(man_template_path)
+        .expect("Should be able to read man page template");
+    
+    assert!(content.contains("{{ project_slug }}"), "Should contain project_slug template variable");
+}
+
+#[test]
+fn test_man_page_template_has_description() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    let content = fs::read_to_string(man_template_path)
+        .expect("Should be able to read man page template");
+    
+    assert!(content.contains("{{ description }}"), "Should contain description template variable");
+}
+
+#[test]
+fn test_man_page_template_standard_format() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    let content = fs::read_to_string(man_template_path)
+        .expect("Should be able to read man page template");
+    
+    // Check for standard Unix man page macros
+    assert!(content.contains(".TP"), "Should use .TP for tagged paragraphs");
+    assert!(content.contains(".B"), "Should use .B for bold text");
+    assert!(content.contains(".I"), "Should use .I for italic text");
+    assert!(content.contains(".P"), "Should use .P for paragraphs");
+}
+
+#[test]
+fn test_man_page_template_exit_codes() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    let content = fs::read_to_string(man_template_path)
+        .expect("Should be able to read man page template");
+    
+    // Check for exit codes section
+    assert!(content.contains(".SH EXIT STATUS"), "Should have EXIT STATUS section");
+    assert!(content.contains("0"), "Should document exit code 0 (success)");
+    assert!(content.contains("1"), "Should document exit code 1 (error)");
+}
+
+#[test]
+fn test_man_page_template_environment_variables() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    let content = fs::read_to_string(man_template_path)
+        .expect("Should be able to read man page template");
+    
+    // Check for environment variables section
+    assert!(content.contains(".SH ENVIRONMENT"), "Should have ENVIRONMENT section");
+    assert!(content.contains("{{ project_slug | upper }}"), "Should reference environment variables");
+}
+
+#[test]
+fn test_man_page_template_see_also() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    let content = fs::read_to_string(man_template_path)
+        .expect("Should be able to read man page template");
+    
+    // Check for SEE ALSO section
+    assert!(content.contains(".SH SEE ALSO"), "Should have SEE ALSO section");
+}
+
+#[test]
+fn test_man_page_template_bugs_section() {
+    let man_template_path = "docs/man/{{ project_slug }}.1.jinja";
+    let content = fs::read_to_string(man_template_path)
+        .expect("Should be able to read man page template");
+    
+    // Check for BUGS section
+    assert!(content.contains(".SH BUGS"), "Should have BUGS section");
+    assert!(content.contains("{{ repository_url }}"), "Should reference repository URL");
+}

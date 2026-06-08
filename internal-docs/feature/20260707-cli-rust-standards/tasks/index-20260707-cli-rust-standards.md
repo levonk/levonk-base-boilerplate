@@ -41,8 +41,8 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 
 | Story ID | Story Title | Status | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------ | ------------ | ------------- | ------- |
-| 03-001 | Shell Completion Scripts | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-03-001-shell-completion | 01-001 | Parallel-safe: true | completion.rs |
-| 03-002 | Man Pages Generation | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-002-man-pages | 01-001 | Parallel-safe: true | docs/ |
+| 03-001 | Shell Completion Scripts | [x] Done | feature/current/20260707-cli-rust-standards/story-03-001-shell-completion | 01-001 | Parallel-safe: true | completion.rs |
+| 03-002 | Man Pages Generation | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-03-002-man-pages | 01-001 | Parallel-safe: true | docs/ |
 | 03-003 | Cross-Platform Path Handling | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-003-cross-platform-paths | 01-003 | Parallel-safe: true | io.rs |
 | 03-004 | Security Features Implementation | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-004-security-features | 01-002 | Parallel-safe: true | config.rs |
 | 03-005 | Resource Limits | [ ] Todo | feature/current/20260707-cli-rust-standards/story-03-005-resource-limits | 02-004 | Parallel-safe: true | daemon.rs |

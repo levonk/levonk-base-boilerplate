@@ -69,6 +69,59 @@ Dry run mode automatically bypasses confirmation prompts since no changes are ma
 {{ project_slug }} --dry-run delete important_file.txt
 ```
 
+### Man Pages
+
+The CLI includes traditional Unix man pages for comprehensive documentation.
+
+#### Viewing Man Pages
+
+You can view the man page in two ways:
+
+```bash
+# Using the --man flag
+{{ project_slug }} --man
+
+# Or using the man command (after installation)
+man {{ project_slug }}
+```
+
+#### Generating Man Pages
+
+Man pages are generated from templates during the build process:
+
+```bash
+# Generate man pages
+just generate-man-pages
+
+# Validate man page format
+just validate-man-pages
+```
+
+#### Installing Man Pages
+
+To install man pages system-wide (requires sudo):
+
+```bash
+just install-man-pages
+```
+
+This installs the man page to `/usr/local/share/man/man1/` and updates the man database.
+
+#### Man Page Sections
+
+The man page includes the following sections:
+- **NAME**: Command name and brief description
+- **SYNOPSIS**: Command usage syntax
+- **DESCRIPTION**: Detailed description of the command
+- **OPTIONS**: All available command-line options
+- **COMMANDS**: Available subcommands
+- **ENVIRONMENT**: Environment variables that affect behavior
+- **FILES**: Configuration and data file locations
+- **EXAMPLES**: Usage examples
+- **EXIT STATUS**: Exit code meanings
+- **BUGS**: Where to report bugs
+- **SEE ALSO**: Related documentation
+
 ## Development
 
 This project uses **devbox** for environment management and **just** for task running.

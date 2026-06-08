@@ -1,0 +1,9 @@
+fn main() {
+    // Generate version info with vergen
+    vergen::EmitBuilder::builder()
+        .all_build()
+        .all_git()
+        .gitcl()
+        .emit()
+        .expect("Failed to emit vergen directives");
+}

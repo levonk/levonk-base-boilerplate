@@ -1,0 +1,153 @@
+.\" Man page for {{ project_slug }}
+.\" Contact: {{ author_email }}
+.TH {{ project_slug | upper }} 1 "{{ date_now }}" "{{ project_slug }}" "User Commands"
+.SH NAME
+{{ project_slug }} \- {{ description }}
+.SH SYNOPSIS
+.B {{ project_slug }}
+[\fIOPTION\fR] [\fICOMMAND\fR]
+.SH DESCRIPTION
+{{ project_slug }} is a command-line tool that {{ description }}.
+.PP
+It provides a modern, user-friendly interface with support for configuration,
+logging, and various output formats.
+.SH OPTIONS
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Print help information
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version information
+.TP
+\fB\-\-config\fR=\fIPATH\fR
+Path to configuration file (default: ~/.config/{{ project_slug }}/config.toml)
+.TP
+\fB\-\-color\fR=\fImode\fR
+Color output mode: auto, always, never (default: auto)
+.TP
+\fB\-\-no\-pager\fR
+Disable pager for long output
+.TP
+\fB\-\-verbose\fR, \fB\-v\fR
+Increase verbosity (can be used multiple times)
+.TP
+\fB\-\-quiet\fR, \fB\-q\fR
+Decrease verbosity (suppress non-error output)
+.TP
+\fB\-\-debug\fR
+Enable debug output
+.TP
+\fB\-\-install\fR
+Install shell completions and initialize configuration
+.TP
+\fB\-\-uninstall\fR
+Remove shell completions and configuration
+.TP
+\fB\-\-man\fR
+Display this man page
+.SH COMMANDS
+.TP
+\fBconfig\fR
+Manage configuration (show, reset, validate)
+.TP
+\fBdaemon\fR
+Manage daemon processes (start, stop, restart, status, list-jobs, cancel-job)
+.TP
+\fBcompletion\fR
+Generate shell completion scripts (bash, zsh, fish, elvish, powershell)
+.TP
+\fBdoctor\fR
+Run diagnostics and health checks (all, config, daemon, terminal)
+.SH ENVIRONMENT
+.TP
+\fB{{ project_slug | upper }}_DEBUG\fR
+Enable debug mode
+.TP
+\fB{{ project_slug | upper }}_LOG\fR
+Set log level (error, warn, info, debug, trace)
+.TP
+\fB{{ project_slug | upper }}_QUIET\fR
+Enable quiet mode
+.TP
+\fBNO_COLOR\fR
+Disable colored output (takes precedence over --color)
+.TP
+\fBRUST_LOG\fR
+Set Rust tracing log level
+.SH FILES
+.TP
+\fI~/.config/{{ project_slug }}/config.toml\fR
+User configuration file
+.TP
+\fI~/.local/share/{{ project_slug }}/\fR
+Data directory for logs, cache, etc.
+.SH EXAMPLES
+.PP
+Show help:
+.PP
+.RS
+.nf
+{{ project_slug }} --help
+.fi
+.RE
+.PP
+Run with verbose output:
+.PP
+.RS
+.nf
+{{ project_slug }} --verbose
+.fi
+.RE
+.PP
+Show configuration:
+.PP
+.RS
+.nf
+{{ project_slug }} config show
+.fi
+.RE
+.PP
+Generate shell completions:
+.PP
+.RS
+.nf
+{{ project_slug }} completion bash
+.fi
+.RE
+.PP
+Run diagnostics:
+.PP
+.RS
+.nf
+{{ project_slug }} doctor all
+.fi
+.RE
+.SH EXIT STATUS
+.TP
+0
+Success
+.TP
+1
+General error
+.TP
+2
+Usage error (invalid arguments)
+.TP
+3
+Configuration error
+.TP
+4
+Network error
+.TP
+5
+Permission error
+.TP
+124
+Timeout
+.TP
+130
+Interrupted (SIGINT)
+.SH BUGS
+Report bugs at: {{ repository_url }}/issues
+.SH SEE ALSO
+The full documentation is available at: {{ documentation_url }}

@@ -3,6 +3,7 @@ pub mod signals;
 pub mod daemon;
 pub mod terminal;
 pub mod completion;
+pub mod man;
 
 {% if enable_tui -%}
 pub mod tui;
@@ -20,6 +21,7 @@ pub use signals::SignalHandler;
 pub use daemon::{DaemonManager, DaemonConfig, Job, JobStatus};
 pub use terminal::{TerminalInfo, TerminalSize, ResizeHandler, get_terminal_size};
 pub use completion::{generate_completion, get_completion_path, install_completion};
+pub use man::ManHandler;
 
 {% if enable_tui -%}
 pub use tui::{TuiConfig, TuiHandler, TuiError, init_tui_mode, terminal_supports_tui};

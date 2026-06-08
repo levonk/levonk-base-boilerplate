@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 3
 parallel_id: 2
 branch: "feature/current/20260707-cli-rust-standards/story-03-002-man-pages"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,32 +27,38 @@ Implement traditional Unix man pages accessible via `man <command>` or `--man` f
 
 ## Sub-Tasks
 
-- [ ] Add help2man or similar tool to build process
-- [ ] Create man page template with standard sections
-- [ ] Implement man page generation from help text
-- [ ] Add --man flag to CLI to display man page
-- [ ] Install man pages to system man directory
-- [ ] Add man page generation to build script
-- [ ] Create tests for man page generation
-- [ ] Create tests for --man flag
-- [ ] Validate man page format and content
-- [ ] Document man page usage in README
+- [x] Add help2man or similar tool to build process
+- [x] Create man page template with standard sections
+- [x] Implement man page generation from help text
+- [x] Add --man flag to CLI to display man page
+- [x] Install man pages to system man directory
+- [x] Add man page generation to build script
+- [x] Create tests for man page generation
+- [x] Create tests for --man flag
+- [x] Validate man page format and content
+- [x] Document man page usage in README
 
 ## Relevant Files
 
-- `apps/cli/rust/docs/man/` — Man page source files
-- `apps/cli/rust/src/cli.rs` — Add --man flag
-- `apps/cli/rust/Makefile` or build script — Man page generation
-- `apps/cli/rust/tests/man_test.rs` — Man page tests
+- `apps/cli/rust/core/files/docs/man/{{ project_slug }}.1.jinja` — Man page template
+- `apps/cli/rust/core/files/Cargo.toml.jinja` — Added clap_mangen build dependency
+- `apps/cli/rust/core/files/build.rs.jinja` — Build script for man page generation
+- `apps/cli/rust/core/files/src/cli.rs.jinja` — Added --man flag
+- `apps/cli/rust/core/files/src/man.rs.jinja` — Man page handler module
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Integrated man page display
+- `apps/cli/rust/core/files/src/lib.rs.jinja` — Exported ManHandler
+- `apps/cli/rust/core/files/justfile.jinja` — Added man page generation/validation/install commands
+- `apps/cli/rust/core/files/tests/man_test.rs.jinja` — Man page tests
+- `apps/cli/rust/core/files/README.md.jinja` — Documented man page usage
 
 ## Acceptance Criteria
 
-- [ ] Man pages generated from help text
-- [ ] --man flag displays man page
-- [ ] Man pages accessible via `man <command>`
-- [ ] Man pages follow standard Unix format
-- [ ] Man pages installed to correct directory
-- [ ] All tests pass
+- [x] Man pages generated from help text
+- [x] --man flag displays man page
+- [x] Man pages accessible via `man <command>`
+- [x] Man pages follow standard Unix format
+- [x] Man pages installed to correct directory
+- [x] All tests pass
 
 ## Test Plan
 

@@ -98,6 +98,10 @@ pub struct Cli {
     #[arg(long, help = "Force synchronous in-process operation (disable daemon)")]
     pub no_daemon: bool,
 
+    /// Display man page
+    #[arg(long, help = "Display manual page")]
+    pub man: bool,
+
     /// Subcommand for management operations
     #[command(subcommand)]
     pub command: Option<Commands>,

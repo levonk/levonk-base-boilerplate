@@ -7,6 +7,7 @@ mod destructive;
 mod daemon;
 mod terminal;
 mod completion;
+mod man;
 
 {% if enable_tui -%}
 mod tui;
@@ -29,6 +30,7 @@ use destructive::{DestructiveOperation, detect_destructive_operation};
 use daemon::{DaemonManager, DaemonConfig, JobStatus};
 use terminal::{TerminalInfo, ResizeHandler};
 use completion::{generate_completion, install_completion, get_completion_path};
+use man::ManHandler;
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -171,6 +173,18 @@ async fn main() -> Result<()> {
             std::process::exit(1);
         }
         std::process::exit(0);
+    }
+
+    // Handle --man flag
+    if cli.man {
+        match ManHandler::display_man_page() {
+            Ok(_) => std::process::exit(0),
+            Err(e) => {
+                eprintln!("Failed to display man page: {}", e);
+                eprintln!("Try generating man pages first: just generate-man-pages");
+                std::process::exit(1);
+            }
+        }
     }
 
     {% if enable_tui -%}
