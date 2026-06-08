@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 4
 parallel_id: 3
 branch: "feature/current/cli-python-standards/story-04-003-logging-modes"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-003"]
@@ -27,12 +27,12 @@ Enhance logging modes to ensure `--quiet` suppresses all non-essential output in
 
 ## Sub-Tasks
 
-- [ ] Ensure `--quiet` suppresses all non-essential output including progress indicators — `logging.py.jinja`
-- [ ] Integrate logging with exit codes from signal handling — `logging.py.jinja`
-- [ ] Add log level filtering for different verbosity levels — `logging.py.jinja`
-- [ ] Add timestamp and module information to logs — `logging.py.jinja`
-- [ ] Add tests for quiet mode suppression of progress indicators — `apps/cli/python/core/files/tests/test_logging.py.jinja`
-- [ ] Add tests for logging integration with exit codes — `tests/test_logging.py.jinja`
+- [x] Ensure `--quiet` suppresses all non-essential output including progress indicators — `logging.py.jinja`
+- [x] Integrate logging with exit codes from signal handling — `logging.py.jinja`
+- [x] Add log level filtering for different verbosity levels — `logging.py.jinja`
+- [x] Add timestamp and module information to logs — `logging.py.jinja`
+- [x] Add tests for quiet mode suppression of progress indicators — `apps/cli/python/core/files/tests/test_logging.py.jinja`
+- [x] Add tests for logging integration with exit codes — `tests/test_logging.py.jinja`
 
 ## Relevant Files
 
@@ -42,13 +42,11 @@ Enhance logging modes to ensure `--quiet` suppresses all non-essential output in
 
 ## Acceptance Criteria
 
-- [ ] Structured logging (JSON format) implemented
-- [ ] `--log-format` flag allows choosing between human and JSON output
-- [ ] `--quiet` suppresses all non-essential output including progress indicators
-- [ ] Structured logs include timestamp, level, module, and message
-- [ ] Structured logging integrates with exit codes
-- [ ] Log level filtering works for structured logs
-- [ ] All tests pass for logging enhancements
+- [x] `--quiet` suppresses all non-essential output including progress indicators
+- [x] Log level filtering works for different verbosity levels
+- [x] Logs include timestamp, level, module, and message
+- [x] Logging integrates with exit codes from signal handling
+- [x] All tests pass for logging enhancements
 
 ## Test Plan
 

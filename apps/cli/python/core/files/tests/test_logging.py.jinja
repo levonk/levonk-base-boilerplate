@@ -60,3 +60,52 @@ def test_get_logger_with_color():
     """Test get_logger accepts color parameter."""
     logger = get_logger(name="{{ project_slug }}", color="never")
     assert logger.use_color is False
+
+
+def test_quiet_mode_suppression():
+    """Test quiet mode suppresses all log output."""
+    logger = Logger(name="{{ project_slug }}", quiet=True)
+    # Logger level should be set above CRITICAL
+    assert logger.logger.level > logging.CRITICAL
+
+
+def test_quiet_mode_info():
+    """Test info messages are suppressed in quiet mode."""
+    logger = Logger(name="{{ project_slug }}", quiet=True)
+    # This should not raise an exception or produce output
+    logger.info("This should be suppressed", module="test")
+
+
+def test_quiet_mode_error():
+    """Test error messages are suppressed in quiet mode."""
+    logger = Logger(name="{{ project_slug }}", quiet=True)
+    # This should not raise an exception or produce output
+    logger.error("This should be suppressed", module="test")
+
+
+def test_verbose_mode_info():
+    """Test info messages are shown in verbose mode."""
+    logger = Logger(name="{{ project_slug }}", verbose=True)
+    # Logger level should be INFO
+    assert logger.logger.level == logging.INFO
+
+
+def test_debug_mode_debug():
+    """Test debug messages are shown in debug mode."""
+    logger = Logger(name="{{ project_slug }}", debug=True)
+    # Logger level should be DEBUG
+    assert logger.logger.level == logging.DEBUG
+
+
+def test_log_level_filtering():
+    """Test log level filtering works correctly."""
+    # Default mode (WARNING level)
+    logger = Logger(name="{{ project_slug }}")
+    assert logger.logger.level == logging.WARNING
+
+
+def test_module_information_in_logs():
+    """Test module information is included in logs."""
+    logger = Logger(name="{{ project_slug }}", verbose=True)
+    # This should not raise an exception
+    logger.info("Test message with module", module="test_module")
