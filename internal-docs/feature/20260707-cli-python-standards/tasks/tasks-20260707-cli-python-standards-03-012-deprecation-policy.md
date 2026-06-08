@@ -26,13 +26,13 @@ Specify clear end-of-support date (minimum 6 months from announcement). Log depr
 
 ## Sub-Tasks
 
-- [ ] Implement deprecation tracking system
-- [ ] Add deprecation date specification
-- [ ] Implement deprecation warnings to stderr
-- [ ] Add minimum 6-month deprecation period
-- [ ] Implement legacy removal after date
-- [ ] Add tests for deprecation policy
-- [ ] Update documentation
+- [x] Implement deprecation tracking system
+- [x] Add deprecation date specification
+- [x] Implement deprecation warnings to stderr
+- [x] Add minimum 6-month deprecation period
+- [x] Implement legacy removal after date
+- [x] Add tests for deprecation policy
+- [x] Update documentation
 
 ## Relevant Files
 

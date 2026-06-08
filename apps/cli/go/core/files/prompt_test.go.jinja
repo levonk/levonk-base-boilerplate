@@ -23,19 +23,19 @@ func TestPromptForConfirmation_Yes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Simulate user input
-			r := strings.NewReader(tt.input)
+			// Simulate user input using pipe
+			r, w, _ := os.Pipe()
 			oldStdin := os.Stdin
 			os.Stdin = r
-			defer func() { os.Stdin = oldStdin }()
-
-			// Capture output
-			oldStdout := os.Stdout
-			rOut, wOut, _ := os.Pipe()
-			os.Stdout = wOut
 			defer func() {
-				wOut.Close()
-				os.Stdout = oldStdout
+				r.Close()
+				os.Stdin = oldStdin
+			}()
+
+			// Write input in goroutine
+			go func() {
+				w.Write([]byte(tt.input))
+				w.Close()
 			}()
 
 			cfg := PromptConfig{
@@ -46,9 +46,6 @@ func TestPromptForConfirmation_Yes(t *testing.T) {
 			}
 
 			result := PromptForConfirmation(cfg)
-
-			wOut.Close()
-			os.Stdout = oldStdout
 
 			if bool(result) != tt.expected {
 				t.Errorf("PromptForConfirmation() = %v, want %v", result, tt.expected)
@@ -74,10 +71,18 @@ func TestPromptForConfirmation_No(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := strings.NewReader(tt.input)
+			r, w, _ := os.Pipe()
 			oldStdin := os.Stdin
 			os.Stdin = r
-			defer func() { os.Stdin = oldStdin }()
+			defer func() {
+				r.Close()
+				os.Stdin = oldStdin
+			}()
+
+			go func() {
+				w.Write([]byte(tt.input))
+				w.Close()
+			}()
 
 			cfg := PromptConfig{
 				Message:  "Test prompt",
@@ -140,10 +145,18 @@ func TestPromptForConfirmation_DefaultYes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := strings.NewReader("\n")
+			r, w, _ := os.Pipe()
 			oldStdin := os.Stdin
 			os.Stdin = r
-			defer func() { os.Stdin = oldStdin }()
+			defer func() {
+				r.Close()
+				os.Stdin = oldStdin
+			}()
+
+			go func() {
+				w.Write([]byte("\n"))
+				w.Close()
+			}()
 
 			cfg := PromptConfig{
 				Message:  "Test prompt",
