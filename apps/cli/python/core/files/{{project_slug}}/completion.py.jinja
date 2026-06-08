@@ -8,7 +8,7 @@ import typer
 from {{ project_slug }}.logging import get_logger
 from {{ project_slug }}.man_page import install_man_page, uninstall_man_page
 
-logger = get_logger(name="{{ project_slug }}")
+logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
 
 
 def get_completion_dir() -> Path:

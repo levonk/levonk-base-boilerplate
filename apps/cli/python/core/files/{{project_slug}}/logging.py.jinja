@@ -122,14 +122,14 @@ class Logger:
         name: str = "{{ project_slug }}",
         quiet: bool = False,
         verbose: bool = False,
-        debug: bool = False,
+        debug_mode: bool = False,
         color: str = "auto",
         log_format: Optional[str] = None
     ):
         self.name = name
         self.quiet = quiet
         self.verbose = verbose
-        self.debug = debug
+        self.debug_mode = debug_mode
         self.color = color
         self.log_format = log_format or detect_log_format()
         self.logger = logging.getLogger(name)
@@ -184,7 +184,7 @@ class Logger:
         # Debug provides most detailed output (DEBUG level)
         # Verbose provides informational output (INFO level)
         # Default shows warnings and errors (WARNING level)
-        if self.debug:
+        if self.debug_mode:
             self.logger.setLevel(logging.DEBUG)
         elif self.verbose:
             self.logger.setLevel(logging.INFO)
@@ -291,7 +291,7 @@ def get_logger(
     name: str = "{{ project_slug }}",
     quiet: bool = False,
     verbose: bool = False,
-    debug: bool = False,
+    debug_mode: bool = False,
     color: str = "auto",
     log_format: Optional[str] = None
 ) -> Logger:
@@ -299,7 +299,7 @@ def get_logger(
     global _global_logger
 
     if _global_logger is None:
-        _global_logger = Logger(name, quiet, verbose, debug, color, log_format)
+        _global_logger = Logger(name, quiet, verbose, debug_mode, color, log_format)
 
     return _global_logger
 
@@ -308,10 +308,10 @@ def configure_logging(
     name: str = "{{ project_slug }}",
     quiet: bool = False,
     verbose: bool = False,
-    debug: bool = False,
+    debug_mode: bool = False,
     color: str = "auto",
     log_format: Optional[str] = None
 ):
     """Configure the global logger with the given settings."""
     global _global_logger
-    _global_logger = Logger(name, quiet, verbose, debug, color, log_format)
+    _global_logger = Logger(name, quiet, verbose, debug_mode, color, log_format)

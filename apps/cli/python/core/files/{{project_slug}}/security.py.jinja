@@ -4,17 +4,17 @@ import warnings
 from typing import Optional
 from {{ project_slug }}.logging import get_logger
 
-logger = get_logger(name="{{ project_slug }}")
+logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
 
 
 class SecurityManager:
     """Manages secure credential storage and retrieval."""
-    
+
     def __init__(self):
         self.keyring_available = self._check_keyring_available()
         if not self.keyring_available:
             self._warn_insecure_storage()
-    
+
     def _check_keyring_available(self) -> bool:
         """Check if keyring is available."""
         try:
@@ -22,7 +22,7 @@ class SecurityManager:
             return True
         except ImportError:
             return False
-    
+
     def _warn_insecure_storage(self):
         """Warn about insecure storage when keyring is unavailable."""
         warnings.warn(
@@ -31,16 +31,16 @@ class SecurityManager:
             UserWarning
         )
         logger.warn("Keyring not available - using insecure storage", module="security")
-    
+
     def store_credential(self, service: str, username: str, password: str) -> bool:
         """
         Store a credential securely.
-        
+
         Args:
             service: Service name (e.g., "github", "api")
             username: Username or identifier
             password: Password or secret
-            
+
         Returns:
             True if stored successfully, False otherwise
         """
@@ -59,15 +59,15 @@ class SecurityManager:
             os.environ[env_var] = password
             logger.warn(f"Credential stored in environment variable {env_var} (insecure)", module="security")
             return True
-    
+
     def get_credential(self, service: str, username: str) -> Optional[str]:
         """
         Retrieve a credential.
-        
+
         Args:
             service: Service name
             username: Username or identifier
-            
+
         Returns:
             Password if found, None otherwise
         """
@@ -88,15 +88,15 @@ class SecurityManager:
             if password:
                 logger.warn(f"Credential retrieved from environment variable {env_var} (insecure)", module="security")
             return password
-    
+
     def delete_credential(self, service: str, username: str) -> bool:
         """
         Delete a credential.
-        
+
         Args:
             service: Service name
             username: Username or identifier
-            
+
         Returns:
             True if deleted successfully, False otherwise
         """
@@ -127,11 +127,11 @@ def get_security_manager() -> SecurityManager:
 def mask_sensitive_data(data: str, mask_char: str = "*") -> str:
     """
     Mask sensitive data for logging.
-    
+
     Args:
         data: Data to mask
         mask_char: Character to use for masking
-        
+
     Returns:
         Masked data
     """
@@ -145,10 +145,10 @@ def mask_sensitive_data(data: str, mask_char: str = "*") -> str:
 def is_sensitive_key(key: str) -> bool:
     """
     Check if a key name suggests sensitive data.
-    
+
     Args:
         key: Key name to check
-        
+
     Returns:
         True if key suggests sensitive data
     """

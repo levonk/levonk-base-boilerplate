@@ -41,6 +41,12 @@ import {
     getGlobalDryRunManager,
     isDryRunEnabled,
 } from './dry-run.js';
+import {
+    confirmDelete,
+    confirmOverwrite,
+    confirmDestructive,
+    type PromptOptions,
+} from './prompts.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -73,6 +79,7 @@ program
   .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables ({{ PROJECT_SLUG }}_*)\n  3. Local project config (./.{{ project_slug }}/config.toml)\n  4. User config (~/.config/{{ project_slug }}/config.toml)\n  5. System config (/etc/{{ project_slug }}/config.toml)\n  6. Hardcoded defaults')
   .addHelpText('after', '\nLogging Options:\n  --debug       Enable debug-level logging\n  --log-format  Log format: text (default) or json\n  --quiet        Suppress all output except errors\n  --verbose      Enable verbose output with extra details\n  Environment Variables:\n  LOG_LEVEL      Set log level (debug, info, warn, error, fatal)\n  NODE_ENV       Set to "development" to enable debug mode')
   .addHelpText('after', '\nDry-Run Mode:\n  --dry-run     Preview changes without executing them\n                Shows what would be done without making any changes')
+  .addHelpText('after', '\nConfirmation Prompts:\n  --force       Bypass confirmation prompts for destructive operations\n                Use with caution in automated scripts\n  Environment Variables:\n  CONFIRM_BYPASS Set to "true" or "1" to bypass prompts in non-TTY environments')
   .addHelpText('after', '\nInstallation:\n  --install      Install CLI (generate completions, initialize config)\n  --uninstall    Uninstall CLI (remove completions, clean up config)')
   .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
   .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')

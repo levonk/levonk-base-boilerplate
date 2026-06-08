@@ -369,4 +369,85 @@ func TestConfigSchema(t *testing.T) {
 	}
 }
 
+func TestReloadConfigValid(t *testing.T) {
+	// Test that valid config is reloaded successfully
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: false\nverbose: true\ncolor: auto"
+	if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	logger := NewLogger("test")
+	err := ReloadConfig(configPath, logger)
+	if err != nil {
+		t.Errorf("ReloadConfig should succeed with valid config, got error: %v", err)
+	}
+}
+
+func TestReloadConfigInvalid(t *testing.T) {
+	// Test that invalid config is rejected and old config is kept
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: invalid" // Invalid type
+	if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	logger := NewLogger("test")
+	err := ReloadConfig(configPath, logger)
+	if err == nil {
+		t.Errorf("ReloadConfig should fail with invalid config")
+	}
+}
+
+func TestReloadConfigMissingFile(t *testing.T) {
+	// Test that missing config file is handled gracefully
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "nonexistent.yaml")
+
+	logger := NewLogger("test")
+	err := ReloadConfig(configPath, logger)
+	if err == nil {
+		t.Errorf("ReloadConfig should fail with missing config file")
+	}
+}
+
+func TestParseConfigContentFromFile(t *testing.T) {
+	// Test parsing config from file
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: false\nverbose: true\ncolor: auto"
+	if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	config, err := parseConfigContentFromFile(configPath)
+	if err != nil {
+		t.Fatalf("parseConfigContentFromFile failed: %v", err)
+	}
+
+	// Verify parsed config
+	if config["quiet"] != "false" {
+		t.Errorf("Expected quiet to be 'false', got %v", config["quiet"])
+	}
+	if config["verbose"] != "true" {
+		t.Errorf("Expected verbose to be 'true', got %v", config["verbose"])
+	}
+	if config["color"] != "auto" {
+		t.Errorf("Expected color to be 'auto', got %v", config["color"])
+	}
+}
+
+func TestParseConfigContentFromFileMissing(t *testing.T) {
+	// Test parsing missing file
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "nonexistent.yaml")
+
+	_, err := parseConfigContentFromFile(configPath)
+	if err == nil {
+		t.Errorf("parseConfigContentFromFile should fail with missing file")
+	}
+}
+
 {# vim: set ft=go: #}

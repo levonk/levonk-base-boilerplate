@@ -4,13 +4,13 @@ from typing import Optional
 from platformdirs import user_data_dir
 from {{ project_slug }}.logging import get_logger
 
-logger = get_logger(name="{{ project_slug }}")
+logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
 
 
 def generate_man_page() -> str:
     """
     Generate man page content with standard Unix man page sections.
-    
+
     Returns:
         Man page content as string
     """
@@ -131,7 +131,7 @@ Interrupted by user (SIGINT)
 def get_man_page_dir() -> Path:
     """
     Get the platform-specific man page directory.
-    
+
     Returns:
         Path to man page directory
     """
@@ -144,10 +144,10 @@ def get_man_page_dir() -> Path:
 def install_man_page(force: bool = False) -> bool:
     """
     Install man page to platform-specific location.
-    
+
     Args:
         force: If True, overwrite existing man page
-        
+
     Returns:
         True if installation succeeded, False otherwise
     """
@@ -155,19 +155,19 @@ def install_man_page(force: bool = False) -> bool:
         man_dir = get_man_page_dir()
         man_content = generate_man_page()
         man_file = man_dir / "{{ project_slug }}.1"
-        
+
         # Check if file exists
         if man_file.exists() and not force:
             logger.warn(f"Man page already exists: {man_file}", module="man")
             logger.warn("Use --force to overwrite", module="man")
             return False
-        
+
         # Write man page
         man_file.write_text(man_content)
         logger.info(f"Installed man page to {man_file}", module="man")
         logger.info("Add man page directory to MANPATH or copy to system man path", module="man")
         return True
-        
+
     except Exception as e:
         logger.error(f"Failed to install man page: {e}", module="man")
         return False
@@ -176,24 +176,24 @@ def install_man_page(force: bool = False) -> bool:
 def uninstall_man_page() -> bool:
     """
     Uninstall man page from platform-specific location.
-    
+
     Returns:
         True if uninstallation succeeded, False otherwise
     """
     try:
         man_dir = get_man_page_dir()
         man_file = man_dir / "{{ project_slug }}.1"
-        
+
         # Check if file exists
         if not man_file.exists():
             logger.warn(f"Man page not found: {man_file}", module="man")
             return False
-        
+
         # Remove man page
         man_file.unlink()
         logger.info(f"Removed man page from {man_file}", module="man")
         return True
-        
+
     except Exception as e:
         logger.error(f"Failed to uninstall man page: {e}", module="man")
         return False

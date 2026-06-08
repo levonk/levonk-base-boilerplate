@@ -1,0 +1,202 @@
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"syscall"
+	"testing"
+	"time"
+)
+
+func TestCheckHealth(t *testing.T) {
+	status := checkHealth()
+	
+	if status.Status != "healthy" {
+		t.Errorf("Expected status to be 'healthy', got '%s'", status.Status)
+	}
+	
+	if status.Version == "" {
+		t.Error("Expected version to be set")
+	}
+	
+	if status.Uptime == "" {
+		t.Error("Expected uptime to be set")
+	}
+	
+	if status.Timestamp.IsZero() {
+		t.Error("Expected timestamp to be set")
+	}
+}
+
+func TestCheckHealthNoSideEffects(t *testing.T) {
+	// Call health check multiple times to ensure no side effects
+	status1 := checkHealth()
+	status2 := checkHealth()
+	
+	// Status should always be healthy
+	if status1.Status != "healthy" || status2.Status != "healthy" {
+		t.Error("Health check should always return healthy status")
+	}
+	
+	// Uptime should increase (no side effects on state)
+	if status2.Timestamp.Before(status1.Timestamp) {
+		t.Error("Timestamp should not go backwards")
+	}
+}
+
+func TestCheckHealthResponseTime(t *testing.T) {
+	start := time.Now()
+	status := checkHealth()
+	elapsed := time.Since(start)
+	
+	if elapsed > 100*time.Millisecond {
+		t.Errorf("Health check took too long: %v (should be <100ms)", elapsed)
+	}
+	
+	if status.Status != "healthy" {
+		t.Errorf("Expected status to be 'healthy', got '%s'", status.Status)
+	}
+}
+
+func TestHealthHandler(t *testing.T) {
+	req := httptest.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	
+	healthHandler(w, req)
+	
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	}
+	
+	var status HealthStatus
+	if err := json.NewDecoder(w.Body).Decode(&status); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+	
+	if status.Status != "healthy" {
+		t.Errorf("Expected status to be 'healthy', got '%s'", status.Status)
+	}
+}
+
+func TestHealthHandlerHealthz(t *testing.T) {
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	w := httptest.NewRecorder()
+	
+	healthHandler(w, req)
+	
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestHealthHandlerResponseTime(t *testing.T) {
+	req := httptest.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	
+	start := time.Now()
+	healthHandler(w, req)
+	elapsed := time.Since(start)
+	
+	if elapsed > 100*time.Millisecond {
+		t.Errorf("Health handler took too long: %v (should be <100ms)", elapsed)
+	}
+	
+	// Check that response time header is set
+	responseTime := w.Header().Get("X-Response-Time")
+	if responseTime == "" {
+		t.Error("Expected X-Response-Time header to be set")
+	}
+}
+
+func TestHealthHandlerContentType(t *testing.T) {
+	req := httptest.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	
+	healthHandler(w, req)
+	
+	contentType := w.Header().Get("Content-Type")
+	if contentType != "application/json" {
+		t.Errorf("Expected Content-Type to be 'application/json', got '%s'", contentType)
+	}
+}
+
+func TestSetupSignalHealthCheck(t *testing.T) {
+	// This test verifies that the signal handler can be set up without panicking
+	// We can't easily test the actual signal handling in a unit test
+	
+	// Reset signal handlers if already set
+	// Note: This is a minimal test to ensure the function doesn't panic
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("SetupSignalHealthCheck panicked: %v", r)
+		}
+	}()
+	
+	SetupSignalHealthCheck()
+	
+	// Give a small delay to ensure goroutine starts
+	time.Sleep(10 * time.Millisecond)
+}
+
+func TestHealthStatusJSON(t *testing.T) {
+	status := checkHealth()
+	
+	data, err := json.Marshal(status)
+	if err != nil {
+		t.Fatalf("Failed to marshal health status: %v", err)
+	}
+	
+	var decoded HealthStatus
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("Failed to unmarshal health status: %v", err)
+	}
+	
+	if decoded.Status != status.Status {
+		t.Errorf("JSON roundtrip failed: expected status '%s', got '%s'", status.Status, decoded.Status)
+	}
+	
+	if decoded.Version != status.Version {
+		t.Errorf("JSON roundtrip failed: expected version '%s', got '%s'", status.Version, decoded.Version)
+	}
+}
+
+func TestRunHealthCheck(t *testing.T) {
+	// Test with JSON output
+	jsonOutput = true
+	defer func() { jsonOutput = false }()
+	
+	err := RunHealthCheck()
+	if err != nil {
+		t.Errorf("RunHealthCheck failed: %v", err)
+	}
+}
+
+func TestRunHealthCheckText(t *testing.T) {
+	// Test with text output
+	jsonOutput = false
+	
+	err := RunHealthCheck()
+	if err != nil {
+		t.Errorf("RunHealthCheck failed: %v", err)
+	}
+}
+
+func BenchmarkCheckHealth(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		checkHealth()
+	}
+}
+
+func BenchmarkHealthHandler(b *testing.B) {
+	req := httptest.NewRequest("GET", "/health", nil)
+	
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		w := httptest.NewRecorder()
+		healthHandler(w, req)
+	}
+}
+
+{# vim: set ft=go: #}

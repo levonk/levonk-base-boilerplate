@@ -3,16 +3,16 @@ import psutil
 from typing import Optional
 from {{ project_slug }}.logging import get_logger
 
-logger = get_logger(name="{{ project_slug }}")
+logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
 
 
 class ResourceMonitor:
     """Monitor and manage system resources."""
-    
+
     def __init__(self, max_memory_mb: Optional[int] = None, max_cpu_percent: Optional[float] = None):
         """
         Initialize resource monitor.
-        
+
         Args:
             max_memory_mb: Maximum memory in MB (None for no limit)
             max_cpu_percent: Maximum CPU usage percentage (None for no limit)
@@ -20,51 +20,51 @@ class ResourceMonitor:
         self.max_memory_mb = max_memory_mb
         self.max_cpu_percent = max_cpu_percent
         self.process = psutil.Process()
-    
+
     def get_memory_usage_mb(self) -> float:
         """Get current memory usage in MB."""
         return self.process.memory_info().rss / (1024 * 1024)
-    
+
     def get_cpu_percent(self) -> float:
         """Get current CPU usage percentage."""
         return self.process.cpu_percent()
-    
+
     def check_memory_limit(self) -> bool:
         """
         Check if memory usage exceeds limit.
-        
+
         Returns:
             True if within limit, False if exceeded
         """
         if self.max_memory_mb is None:
             return True
-        
+
         current_mb = self.get_memory_usage_mb()
         if current_mb > self.max_memory_mb:
             logger.error(f"Memory limit exceeded: {current_mb:.2f}MB > {self.max_memory_mb}MB", module="resource")
             return False
         return True
-    
+
     def check_cpu_limit(self) -> bool:
         """
         Check if CPU usage exceeds limit.
-        
+
         Returns:
             True if within limit, False if exceeded
         """
         if self.max_cpu_percent is None:
             return True
-        
+
         current_cpu = self.get_cpu_percent()
         if current_cpu > self.max_cpu_percent:
             logger.error(f"CPU limit exceeded: {current_cpu:.2f}% > {self.max_cpu_percent}%", module="resource")
             return False
         return True
-    
+
     def get_resource_info(self) -> dict:
         """
         Get current resource usage information.
-        
+
         Returns:
             Dictionary with resource usage stats
         """
@@ -74,7 +74,7 @@ class ResourceMonitor:
             "max_memory_mb": self.max_memory_mb,
             "max_cpu_percent": self.max_cpu_percent
         }
-    
+
     def log_resource_usage(self):
         """Log current resource usage."""
         info = self.get_resource_info()
@@ -87,11 +87,11 @@ class ResourceMonitor:
 def get_resource_monitor(max_memory_mb: Optional[int] = None, max_cpu_percent: Optional[float] = None) -> ResourceMonitor:
     """
     Get a resource monitor instance.
-    
+
     Args:
         max_memory_mb: Maximum memory in MB
         max_cpu_percent: Maximum CPU usage percentage
-        
+
     Returns:
         ResourceMonitor instance
     """

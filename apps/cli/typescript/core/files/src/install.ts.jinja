@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { createLogger, type Logger } from './logger.js';
 import { createDefaultConfig, getConfigFilePath, getXDGConfigPath } from './config.js';
+import { confirmDelete, confirmDestructive, type PromptOptions } from './prompts.js';
 
 export interface InstallOptions {
     projectSlug: string;
@@ -365,15 +366,24 @@ export async function uninstall(options: UninstallOptions, logger: Logger): Prom
 
     // 2. Remove config files (unless keepConfig is true)
     if (!keepConfig) {
-        if (!force) {
-            logger.warn('This will remove your configuration files.');
-            logger.warn('Use --force to proceed without confirmation.');
-            logger.info('Or use --keep-config to preserve configuration.');
+        const configPath = getConfigFilePath(projectSlug, customConfigDir);
+
+        // Confirm before removing config files
+        const promptOptions: PromptOptions = {
+            force,
+            logger,
+            verbose,
+        };
+
+        const confirmation = await confirmDelete(configPath, promptOptions);
+
+        if (!confirmation.confirmed) {
+            logger.info('Uninstall cancelled. Configuration files preserved.');
+            logger.info('Use --force to bypass confirmation or --keep-config to preserve configuration.');
             return;
         }
 
         try {
-            const configPath = getConfigFilePath(projectSlug, customConfigDir);
             await fs.unlink(configPath);
             if (verbose) {
                 logger.info(`Removed config file from ${configPath}`);

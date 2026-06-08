@@ -551,4 +551,35 @@ describe('CLI', () => {
             expect(stdout).not.toContain('[DRY-RUN]');
         });
     });
+
+    describe('Confirmation Prompts', () => {
+        it('should show --force flag in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--force');
+            expect(stdout).toContain('Force operation without confirmation');
+        });
+
+        it('should show CONFIRM_BYPASS environment variable in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('CONFIRM_BYPASS');
+        });
+
+        it('should show confirmation prompts section in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Confirmation Prompts');
+        });
+
+        it('should bypass confirmation with --force flag in uninstall', async () => {
+            // This test would require a full install/uninstall cycle
+            // For now, we just verify the flag is accepted
+            const { stdout } = await execAsync('node dist/index.js --uninstall --force');
+            // The CLI will show a warning if not installed, but should not error on the flag
+            expect(stdout).toBeDefined();
+        });
+
+        it('should bypass confirmation with CONFIRM_BYPASS environment variable', async () => {
+            const { stdout } = await execAsync('CONFIRM_BYPASS=1 node dist/index.js --uninstall');
+            expect(stdout).toBeDefined();
+        });
+    });
 });

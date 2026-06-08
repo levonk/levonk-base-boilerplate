@@ -2,16 +2,16 @@
 from typing import Set, Optional, Dict, Any
 from {{ project_slug }}.logging import get_logger
 
-logger = get_logger(name="{{ project_slug }}")
+privacy_logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
 
 
 class PrivacyManager:
     """Manages privacy mode with explicit ignore lists."""
-    
+
     def __init__(self, privacy_mode: bool = False):
         """
         Initialize privacy manager.
-        
+
         Args:
             privacy_mode: If True, enable privacy mode
         """
@@ -19,133 +19,133 @@ class PrivacyManager:
         self.anonymous_list: Set[str] = set()
         self.unknown_list: Set[str] = set()
         self.privacy_toggles: Dict[str, bool] = {}
-        
+
         # Default sensitive data patterns to ignore
         self._default_anonymous_patterns = [
             "password", "passwd", "pwd", "secret", "token", "key",
             "api_key", "apikey", "auth", "credential", "private"
         ]
-        
+
         if privacy_mode:
-            logger.info("Privacy mode enabled", module="privacy")
-    
+            privacy_logger.info("Privacy mode enabled", module="privacy")
+
     def add_to_anonymous(self, data_type: str):
         """
         Add a data type to the anonymous list (ignored entirely).
-        
+
         Args:
             data_type: Data type to ignore
         """
         self.anonymous_list.add(data_type)
         logger.debug(f"Added {data_type} to anonymous list", module="privacy")
-    
+
     def add_to_unknown(self, data_type: str):
         """
         Add a data type to the unknown list (logged but not assigned).
-        
+
         Args:
             data_type: Data type to log as unknown
         """
         self.unknown_list.add(data_type)
-        logger.debug(f"Added {data_type} to unknown list", module="privacy")
-    
+        privacy_logger.debug(f"Added {data_type} to unknown list", module="privacy")
+
     def set_privacy_toggle(self, feature: str, enabled: bool):
         """
         Set a privacy toggle for a specific feature.
-        
+
         Args:
             feature: Feature name
             enabled: Whether to enable data collection for this feature
         """
         self.privacy_toggles[feature] = enabled
-        logger.debug(f"Privacy toggle for {feature}: {enabled}", module="privacy")
-    
+        privacy_logger.debug(f"Privacy toggle for {feature}: {enabled}", module="privacy")
+
     def is_anonymous(self, data_type: str) -> bool:
         """
         Check if data type should be treated as anonymous (ignored entirely).
-        
+
         Args:
             data_type: Data type to check
-            
+
         Returns:
             True if anonymous, False otherwise
         """
         if not self.privacy_mode:
             return False
-        
+
         # Check explicit anonymous list
         if data_type in self.anonymous_list:
             return True
-        
+
         # Check default patterns
         data_type_lower = data_type.lower()
         for pattern in self._default_anonymous_patterns:
             if pattern in data_type_lower:
                 return True
-        
+
         return False
-    
+
     def is_unknown(self, data_type: str) -> bool:
         """
         Check if data type should be treated as unknown (logged but not assigned).
-        
+
         Args:
             data_type: Data type to check
-            
+
         Returns:
             True if unknown, False otherwise
         """
         if not self.privacy_mode:
             return False
-        
+
         return data_type in self.unknown_list
-    
+
     def should_collect(self, feature: str) -> bool:
         """
         Check if data collection is enabled for a feature.
-        
+
         Args:
             feature: Feature name
-            
+
         Returns:
             True if collection enabled, False otherwise
         """
         if not self.privacy_mode:
             return True
-        
+
         # Default to enabled if not explicitly set
         return self.privacy_toggles.get(feature, True)
-    
+
     def process_data(self, data_type: str, data: Any) -> Optional[str]:
         """
         Process data according to privacy settings.
-        
+
         Args:
             data_type: Type of data being processed
             data: The data to process
-            
+
         Returns:
             Processed data (or None if anonymous)
         """
         if self.is_anonymous(data_type):
             # Anonymous: ignore entirely
             return None
-        
+
         if self.is_unknown(data_type):
             # Unknown: log but don't assign
-            logger.info(f"Unknown data type: {data_type}", module="privacy")
+            privacy_logger.info(f"Unknown data type: {data_type}", module="privacy")
             return None
-        
+
         return data
 
 
 def get_privacy_manager(privacy_mode: bool = False) -> PrivacyManager:
     """
     Get or create a privacy manager instance.
-    
+
     Args:
         privacy_mode: Whether to enable privacy mode
-        
+
     Returns:
         PrivacyManager instance
     """

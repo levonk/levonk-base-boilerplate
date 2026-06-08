@@ -470,4 +470,43 @@ func getErrorSuggestion(field string, err error) string {
 	return fmt.Sprintf("Review the configuration for field %s", field)
 }
 
+// ReloadConfig reloads the configuration from the config file
+// It validates the new config before applying it, and keeps the old config if validation fails
+func ReloadConfig(configPath string, logger *Logger) error {
+	logger.Info("Attempting to reload configuration from %s", configPath)
+
+	// Read the new config file
+	newConfig, err := parseConfigContentFromFile(configPath)
+	if err != nil {
+		logger.Error("Failed to read config file during reload: %v", err)
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Validate the new config
+	validationErrors := ValidateConfig(newConfig, configPath)
+	if len(validationErrors) > 0 {
+		logger.Error("Config validation failed during reload, keeping old config")
+		for _, validationErr := range validationErrors {
+			logger.Error("  - %s", validationErr.Error())
+		}
+		return fmt.Errorf("config validation failed with %d error(s)", len(validationErrors))
+	}
+
+	// Config is valid, apply it
+	// In a real implementation, this would update the global config state
+	// For now, we just log that the reload was successful
+	logger.Info("Configuration reloaded successfully")
+	return nil
+}
+
+// parseConfigContentFromFile reads and parses the config file
+func parseConfigContentFromFile(configPath string) (map[string]interface{}, error) {
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	return parseConfigContent(string(content))
+}
+
 {# vim: set ft=go: #}

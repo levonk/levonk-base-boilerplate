@@ -27,17 +27,17 @@ Implement health check mechanism for container orchestration (Docker HEALTHCHECK
 
 ## Sub-Tasks
 
-- [ ] Add --health-check flag — `core/files/main.go.jinja`
-- [ ] Implement health check function — `core/files/health.go.jinja`
-- [ ] Add HTTP endpoint for health checks — `core/files/health.go.jinja`
-- [ ] Implement signal-based health check (SIGUSR1) — `core/files/health.go.jinja`
-- [ ] Ensure health check has no side effects — `core/files/health.go.jinja`
-- [ ] Optimize health check response time (<100ms) — `core/files/health.go.jinja`
-- [ ] Add health check to Dockerfile — `core/files/Dockerfile.jinja`
-- [ ] Test health check flag — `core/files/health_test.go.jinja`
-- [ ] Test HTTP health endpoint — `core/files/health_test.go.jinja`
-- [ ] Test signal-based health check — `core/files/health_test.go.jinja`
-- [ ] Test health check response time — `core/files/health_test.go.jinja`
+- [x] Add --health-check flag — `core/files/main.go.jinja`
+- [x] Implement health check function — `core/files/health.go.jinja`
+- [x] Add HTTP endpoint for health checks — `core/files/health.go.jinja`
+- [x] Implement signal-based health check (SIGUSR1) — `core/files/health.go.jinja`
+- [x] Ensure health check has no side effects — `core/files/health.go.jinja`
+- [x] Optimize health check response time (<100ms) — `core/files/health.go.jinja`
+- [x] Add health check to Dockerfile — `core/files/Dockerfile.jinja`
+- [x] Test health check flag — `core/files/health_test.go.jinja`
+- [x] Test HTTP health endpoint — `core/files/health_test.go.jinja`
+- [x] Test signal-based health check — `core/files/health_test.go.jinja`
+- [x] Test health check response time — `core/files/health_test.go.jinja`
 
 ## Relevant Files
 
@@ -48,13 +48,13 @@ Implement health check mechanism for container orchestration (Docker HEALTHCHECK
 
 ## Acceptance Criteria
 
-- [ ] Health check validates operational state
-- [ ] Health check has no side effects
-- [ ] Health check responds in <100ms
-- [ ] HTTP endpoint works for container probes
-- [ ] Signal-based health check works
-- [ ] Docker HEALTHCHECK instruction included
-- [ ] Health check is reliable and consistent
+- [x] Health check validates operational state
+- [x] Health check has no side effects
+- [x] Health check responds in <100ms
+- [x] HTTP endpoint works for container probes
+- [x] Signal-based health check works
+- [x] Docker HEALTHCHECK instruction included
+- [x] Health check is reliable and consistent
 
 ## Test Plan
 

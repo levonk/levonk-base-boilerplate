@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/mattn/go-isatty"
@@ -34,6 +35,7 @@ var (
 	daemonFlag bool
 	noDaemonFlag bool
 	urlFormat string
+	healthCheckFlag bool
 	logger *Logger
 	terminal *Terminal
 	version = "1.0.0"
@@ -50,6 +52,11 @@ Examples:
 		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			// Handle --health-check flag
+			if healthCheckFlag {
+				return RunHealthCheck()
+			}
 
 			// Handle --install flag
 			if installFlag {
@@ -379,6 +386,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&daemonFlag, "daemon", false, "Pre-launch daemon in background")
 	rootCmd.Flags().BoolVar(&noDaemonFlag, "no-daemon", false, "Force synchronous operation (disable daemon)")
 	rootCmd.Flags().StringVar(&urlFormat, "url-format", "auto", "URL format: auto, plain, terminal")
+	rootCmd.Flags().BoolVar(&healthCheckFlag, "health-check", false, "Run health check and exit")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }
@@ -469,6 +477,29 @@ func initConfig() {
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+
+	// Set up SIGHUP handler for config reload
+	hupChan := make(chan os.Signal, 1)
+	signal.Notify(hupChan, syscall.SIGHUP)
+	go func() {
+		for range hupChan {
+			// Reload config on SIGHUP
+			configPath := viper.ConfigFileUsed()
+			if configPath != "" {
+				if logger == nil {
+					logger = NewLogger("main")
+				}
+				if err := ReloadConfig(configPath, logger); err != nil {
+					logger.Error("Config reload failed: %v", err)
+				}
+			} else {
+				if logger == nil {
+					logger = NewLogger("main")
+				}
+				logger.Warn("No config file loaded, cannot reload")
+			}
+		}
+	}()
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		os.Exit(1)

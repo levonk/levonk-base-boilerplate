@@ -12,3 +12,6 @@ WORKDIR /app
 COPY --from=builder /app/{{ project_slug }} /usr/local/bin/
 ENTRYPOINT ["{{ project_slug }}"]
 CMD ["--help"]
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD {{ project_slug }} --health-check || exit 1
