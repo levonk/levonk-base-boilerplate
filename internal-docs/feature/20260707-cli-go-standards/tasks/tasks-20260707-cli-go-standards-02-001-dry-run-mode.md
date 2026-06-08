@@ -27,14 +27,14 @@ Implement `--dry-run` flag to preview changes without executing them. The dry-ru
 
 ## Sub-Tasks
 
-- [ ] Add --dry-run flag to root command — `core/files/main.go.jinja`
-- [ ] Create dry-run context/flag passing — `core/files/main.go.jinja`
-- [ ] Implement dry-run output formatting — `core/files/dryrun.go.jinja`
-- [ ] Add dry-run checks to file operations — `core/files/main.go.jinja`
-- [ ] Add dry-run checks to destructive operations — `core/files/main.go.jinja`
-- [ ] Test dry-run shows file operations — `core/files/dryrun_test.go.jinja`
-- [ ] Test dry-run doesn't execute changes — `core/files/dryrun_test.go.jinja`
-- [ ] Test dry-run output is clear — `core/files/dryrun_test.go.jinja`
+- [x] Add --dry-run flag to root command — `core/files/main.go.jinja`
+- [x] Create dry-run context/flag passing — `core/files/main.go.jinja`
+- [x] Implement dry-run output formatting — `core/files/dryrun.go.jinja`
+- [x] Add dry-run checks to file operations — `core/files/main.go.jinja`
+- [x] Add dry-run checks to destructive operations — `core/files/main.go.jinja`
+- [x] Test dry-run shows file operations — `core/files/dryrun_test.go.jinja`
+- [x] Test dry-run doesn't execute changes — `core/files/dryrun_test.go.jinja`
+- [x] Test dry-run output is clear — `core/files/dryrun_test.go.jinja`
 
 ## Relevant Files
 
@@ -44,12 +44,12 @@ Implement `--dry-run` flag to preview changes without executing them. The dry-ru
 
 ## Acceptance Criteria
 
-- [ ] `--dry-run` flag shows what would be done
-- [ ] Dry-run mode doesn't execute any changes
-- [ ] Dry-run output is clear and actionable
-- [ ] Dry-run applies to all file operations
-- [ ] Dry-run applies to all destructive operations
-- [ ] Dry-run output format is consistent
+- [x] `--dry-run` flag shows what would be done
+- [x] Dry-run mode doesn't execute any changes
+- [x] Dry-run output is clear and actionable
+- [x] Dry-run applies to all file operations
+- [x] Dry-run applies to all destructive operations
+- [x] Dry-run output format is consistent
 
 ## Test Plan
 

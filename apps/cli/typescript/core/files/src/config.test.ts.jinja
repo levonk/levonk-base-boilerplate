@@ -1,0 +1,322 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
+import {
+    getXDGConfigPath,
+    getConfigFilePath,
+    getProjectConfigPath,
+    getSystemConfigPath,
+    configExists,
+    ensureConfigDir,
+    getDefaultConfigTemplate,
+    createDefaultConfig,
+    loadConfig,
+    loadConfigWithPrecedence,
+    loadEnvConfig,
+    initializeConfig,
+    DEFAULT_CONFIG,
+    type ConfigOptions,
+    type ConfigWithSources,
+} from './config.js';
+
+describe('config module', () => {
+    const testSlug = 'test-cli';
+    const testConfigDir = path.join(os.tmpdir(), 'test-config', testSlug);
+    const testConfigPath = path.join(testConfigDir, 'config.toml');
+
+    beforeEach(async () => {
+        // Clean up test directory before each test
+        try {
+            await fs.rm(testConfigDir, { recursive: true, force: true });
+        } catch {
+            // Ignore if directory doesn't exist
+        }
+    });
+
+    afterEach(async () => {
+        // Clean up test directory after each test
+        try {
+            await fs.rm(testConfigDir, { recursive: true, force: true });
+        } catch {
+            // Ignore if directory doesn't exist
+        }
+    });
+
+    describe('getXDGConfigPath', () => {
+        it('should return XDG config path with project slug', () => {
+            const result = getXDGConfigPath(testSlug);
+            const expected = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), testSlug);
+            expect(result).toBe(expected);
+        });
+
+        it('should use XDG_CONFIG_HOME env var if set', () => {
+            const customXDG = '/custom/config';
+            const originalXDG = process.env.XDG_CONFIG_HOME;
+            process.env.XDG_CONFIG_HOME = customXDG;
+
+            const result = getXDGConfigPath(testSlug);
+            expect(result).toBe(path.join(customXDG, testSlug));
+
+            process.env.XDG_CONFIG_HOME = originalXDG;
+        });
+    });
+
+    describe('getConfigFilePath', () => {
+        it('should return default config path without custom path', () => {
+            const result = getConfigFilePath(testSlug);
+            const expected = path.join(getXDGConfigPath(testSlug), 'config.toml');
+            expect(result).toBe(expected);
+        });
+
+        it('should return custom path if provided', () => {
+            const customPath = '/custom/config.toml';
+            const result = getConfigFilePath(testSlug, customPath);
+            expect(result).toBe(customPath);
+        });
+    });
+
+    describe('configExists', () => {
+        it('should return false for non-existent config', async () => {
+            const result = await configExists(testConfigPath);
+            expect(result).toBe(false);
+        });
+
+        it('should return true for existing config', async () => {
+            await ensureConfigDir(testConfigDir);
+            await fs.writeFile(testConfigPath, '# test config');
+            const result = await configExists(testConfigPath);
+            expect(result).toBe(true);
+        });
+    });
+
+    describe('ensureConfigDir', () => {
+        it('should create config directory if it does not exist', async () => {
+            await ensureConfigDir(testConfigDir);
+            const stats = await fs.stat(testConfigDir);
+            expect(stats.isDirectory()).toBe(true);
+        });
+
+        it('should not error if directory already exists', async () => {
+            await ensureConfigDir(testConfigDir);
+            await expect(ensureConfigDir(testConfigDir)).resolves.not.toThrow();
+        });
+    });
+
+    describe('getDefaultConfigTemplate', () => {
+        it('should return a string with commented settings', () => {
+            const template = getDefaultConfigTemplate();
+            expect(typeof template).toBe('string');
+            expect(template).toContain('# Configuration file');
+            expect(template).toContain('# log_level = "info"');
+            expect(template).toContain('# quiet = false');
+            expect(template).toContain('# verbose = false');
+            expect(template).toContain('# color = "auto"');
+            expect(template).toContain('# json = false');
+        });
+    });
+
+    describe('createDefaultConfig', () => {
+        it('should create default config file', async () => {
+            await createDefaultConfig(testConfigPath, false);
+            const exists = await configExists(testConfigPath);
+            expect(exists).toBe(true);
+        });
+
+        it('should not overwrite existing config', async () => {
+            await ensureConfigDir(testConfigDir);
+            await fs.writeFile(testConfigPath, '# custom config');
+            await createDefaultConfig(testConfigPath, false);
+            const content = await fs.readFile(testConfigPath, 'utf-8');
+            expect(content).toBe('# custom config');
+        });
+
+        it('should log creation in verbose mode', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            await createDefaultConfig(testConfigPath, true);
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Created default config file'));
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('loadConfig', () => {
+        it('should return default config if file does not exist', async () => {
+            const config = await loadConfig(testConfigPath);
+            expect(config).toEqual(DEFAULT_CONFIG);
+        });
+
+        it('should load and parse config file', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_level = "debug"
+quiet = true
+verbose = false
+`;
+            await fs.writeFile(testConfigPath, configContent);
+            const config = await loadConfig(testConfigPath);
+            expect(config.log_level).toBe('debug');
+            expect(config.quiet).toBe(true);
+            expect(config.verbose).toBe(false);
+        });
+
+        it('should merge user config with defaults', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_level = "debug"
+quiet = true
+`;
+            await fs.writeFile(testConfigPath, configContent);
+            const config = await loadConfig(testConfigPath);
+            expect(config.log_level).toBe('debug');
+            expect(config.quiet).toBe(true);
+            expect(config.verbose).toBe(false); // Default value
+            expect(config.color).toBe('auto'); // Default value
+        });
+    });
+
+    describe('initializeConfig', () => {
+        it('should create default config if it does not exist', async () => {
+            const options: ConfigOptions = { projectSlug: testSlug };
+            const config = await initializeConfig(options, false);
+            const exists = await configExists(getConfigFilePath(testSlug));
+            expect(exists).toBe(true);
+            expect(config).toEqual(DEFAULT_CONFIG);
+        });
+
+        it('should load existing config', async () => {
+            const options: ConfigOptions = { projectSlug: testSlug };
+            // First run creates config
+            await initializeConfig(options, false);
+
+            // Modify config
+            const configPath = getConfigFilePath(testSlug);
+            const configContent = 'log_level = "debug"';
+            await fs.writeFile(configPath, configContent);
+
+            // Second run loads existing config
+            const config = await initializeConfig(options, false);
+            expect(config.log_level).toBe('debug');
+        });
+
+        it('should use custom config path if provided', async () => {
+            const customPath = path.join(testConfigDir, 'custom.toml');
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: customPath };
+            const config = await initializeConfig(options, false);
+            const exists = await configExists(customPath);
+            expect(exists).toBe(true);
+            expect(config).toEqual(DEFAULT_CONFIG);
+        });
+
+        it('should log in verbose mode', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const options: ConfigOptions = { projectSlug: testSlug };
+            await initializeConfig(options, true);
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Created default config file'));
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Loaded config from'));
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('getProjectConfigPath', () => {
+        it('should return project config path', () => {
+            const result = getProjectConfigPath(testSlug);
+            const expected = path.join(process.cwd(), `.${testSlug}`, 'config.toml');
+            expect(result).toBe(expected);
+        });
+
+        it('should use custom cwd if provided', () => {
+            const customCwd = '/custom/cwd';
+            const result = getProjectConfigPath(testSlug, customCwd);
+            const expected = path.join(customCwd, `.${testSlug}`, 'config.toml');
+            expect(result).toBe(expected);
+        });
+    });
+
+    describe('getSystemConfigPath', () => {
+        it('should return system config path', () => {
+            const result = getSystemConfigPath(testSlug);
+            const expected = path.join('/etc', testSlug, 'config.toml');
+            expect(result).toBe(expected);
+        });
+    });
+
+    describe('loadEnvConfig', () => {
+        const originalEnv = { ...process.env };
+
+        afterEach(() => {
+            // Restore environment variables
+            Object.keys(process.env).forEach(key => {
+                if (!(key in originalEnv)) {
+                    delete process.env[key];
+                }
+            });
+            Object.assign(process.env, originalEnv);
+        });
+
+        it('should load environment variables with project prefix', () => {
+            const prefix = testSlug.toUpperCase().replace(/-/g, '_');
+            process.env[`${prefix}_LOG_LEVEL`] = 'debug';
+            process.env[`${prefix}_QUIET`] = 'true';
+
+            const config = loadEnvConfig(testSlug);
+            expect(config.log_level).toBe('debug');
+            expect(config.quiet).toBe(true);
+        });
+
+        it('should convert boolean env vars correctly', () => {
+            const prefix = testSlug.toUpperCase().replace(/-/g, '_');
+            process.env[`${prefix}_QUIET`] = '1';
+            process.env[`${prefix}_VERBOSE`] = 'true';
+            process.env[`${prefix}_JSON`] = 'false';
+
+            const config = loadEnvConfig(testSlug);
+            expect(config.quiet).toBe(true);
+            expect(config.verbose).toBe(true);
+            expect(config.json).toBe(false);
+        });
+
+        it('should return empty config if no env vars set', () => {
+            const config = loadEnvConfig(testSlug);
+            expect(Object.keys(config)).toHaveLength(0);
+        });
+    });
+
+    describe('loadConfigWithPrecedence', () => {
+        it('should load config with full precedence chain', async () => {
+            const options: ConfigOptions = { projectSlug: testSlug, debug: false };
+            const config = await loadConfigWithPrecedence(options);
+
+            expect(config.log_level).toBe('info');
+            expect(config.quiet).toBe(false);
+            expect(config._sources).toBeDefined();
+        });
+
+        it('should apply CLI args with highest precedence', async () => {
+            const options: ConfigOptions = { projectSlug: testSlug, debug: false };
+            const cliArgs = { log_level: 'debug', quiet: true };
+            const config = await loadConfigWithPrecedence(options, cliArgs);
+
+            expect(config.log_level).toBe('debug');
+            expect(config.quiet).toBe(true);
+            expect(config._sources?.log_level?.source).toBe('cli');
+            expect(config._sources?.quiet?.source).toBe('cli');
+        });
+
+        it('should track config sources', async () => {
+            const options: ConfigOptions = { projectSlug: testSlug, debug: false };
+            const config = await loadConfigWithPrecedence(options);
+
+            expect(config._sources).toBeDefined();
+            expect(config._sources?.log_level?.source).toBe('defaults');
+        });
+
+        it('should log config sources in debug mode', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const options: ConfigOptions = { projectSlug: testSlug, debug: true };
+            await loadConfigWithPrecedence(options);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[config]'));
+            consoleErrorSpy.mockRestore();
+        });
+    });
+});

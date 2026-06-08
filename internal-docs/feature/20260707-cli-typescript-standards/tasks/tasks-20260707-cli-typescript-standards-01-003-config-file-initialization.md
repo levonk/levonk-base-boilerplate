@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 1
 parallel_id: 3
 branch: "feature/current/20260707-cli-typescript-standards/story-01-003-config-file-initialization"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,39 +27,38 @@ Implement automatic configuration file initialization on first run. When no conf
 
 ## Sub-Tasks
 
-- [ ] Create config module with config file detection and creation logic
-- [ ] Implement XDG config directory path resolution
-- [ ] Create default config template with all settings commented out
-- [ ] Add config file existence check on CLI initialization
-- [ ] Implement config file creation with proper permissions
-- [ ] Add TOML library to package.json.jinja dependencies
-- [ ] Create config schema with default values and descriptions
-- [ ] Add config file loading logic in index.ts
-- [ ] Add unit tests for config file detection
-- [ ] Add unit tests for config file creation
-- [ ] Add integration tests for first-run initialization
-- [ ] Update help text to mention config file location
-- [ ] Add logging for config file creation in verbose mode
+- [x] Create config module with config file detection and creation logic
+- [x] Implement XDG config directory path resolution
+- [x] Create default config template with all settings commented out
+- [x] Add config file existence check on CLI initialization
+- [x] Implement config file creation with proper permissions
+- [x] Add TOML library to package.json.jinja dependencies
+- [x] Create config schema with default values and descriptions
+- [x] Add config file loading logic in index.ts
+- [x] Add unit tests for config file detection
+- [x] Add unit tests for config file creation
+- [x] Add integration tests for first-run initialization
+- [x] Update help text to mention config file location
+- [x] Add logging for config file creation in verbose mode
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/config.ts.jinja` - New config module (to be created)
-- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI entry point with config initialization
-- `apps/cli/typescript/core/files/src/config.test.ts.jinja` - Unit tests for config module (to be created)
+- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config module with XDG path resolution, file detection, and creation logic
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI entry point with config initialization and merging
+- `apps/cli/typescript/core/files/src/config.test.ts.jinja` - Unit tests for config module
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for config initialization
-- `apps/cli/typescript/core/files/package.json.jinja` - Add TOML library dependency
-- `apps/cli/typescript/core/files/config.template.toml.jinja` - Default config template (to be created)
+- `apps/cli/typescript/core/files/package.json.jinja` - Added @iarna/toml dependency
 
 ## Acceptance Criteria
 
-- [ ] Config file is auto-created on first run if none exists
-- [ ] Config file is created in XDG directory: ~/.config/{{ project_slug }}/config.toml
-- [ ] Default config file has all settings commented out
-- [ ] Default config file includes default values and explanations
-- [ ] Config file creation respects directory permissions
-- [ ] Config file is not overwritten if it already exists
-- [ ] Config file creation is logged in verbose mode
-- [ ] Config file follows TOML format standards
+- [x] Config file is auto-created on first run if none exists
+- [x] Config file is created in XDG directory: ~/.config/{{ project_slug }}/config.toml
+- [x] Default config file has all settings commented out
+- [x] Default config file includes default values and explanations
+- [x] Config file creation respects directory permissions
+- [x] Config file is not overwritten if it already exists
+- [x] Config file creation is logged in verbose mode
+- [x] Config file follows TOML format standards
 
 ## Test Plan
 

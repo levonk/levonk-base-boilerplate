@@ -24,6 +24,7 @@ var (
 	colorMode string
 	installFlag bool
 	uninstallFlag bool
+	dryRun bool
 	logger *Logger
 	version = "1.0.0"
 
@@ -62,6 +63,14 @@ Examples:
 			logger.SetVerbose(verbose)
 			logger.SetDebug(debug)
 			logger.SetColorMode(colorMode)
+
+			// Log dry-run mode and add to context
+			if dryRun {
+				logger.Info("Dry-run mode enabled - no changes will be executed")
+				ctx = context.WithValue(ctx, "dry-run", true)
+			} else {
+				ctx = context.WithValue(ctx, "dry-run", false)
+			}
 
 			if !quiet {
 				logger.Info("Using config file: %s", viper.ConfigFileUsed())
@@ -113,13 +122,14 @@ Examples:
 
 			// Process Stdin
 			if readStdin {
+				DryRunFileOp(ctx, "read", "stdin")
 				logger.Info("Processing stdin...")
 				content, err := io.ReadAll(os.Stdin)
 				if err != nil {
 					logger.Error("Error reading stdin: %v", err)
 					return err
 				}
-				results = append(results, processContent(string(content), "stdin"))
+				results = append(results, processContent(ctx, string(content), "stdin"))
 			}
 
 			// Process Files
@@ -128,13 +138,14 @@ Examples:
 				case <-ctx.Done():
 					return ctx.Err()
 				default:
+					DryRunFileOp(ctx, "read", file)
 					logger.Info("Processing %s...", file)
 					content, err := os.ReadFile(file)
 					if err != nil {
 						logger.Error("Error reading %s: %v", file, err)
 						continue
 					}
-					results = append(results, processContent(string(content), file))
+					results = append(results, processContent(ctx, string(content), file))
 				}
 			}
 
@@ -152,8 +163,9 @@ Examples:
 	}
 )
 
-func processContent(content string, source string) map[string]interface{} {
+func processContent(ctx context.Context, content string, source string) map[string]interface{} {
 	// Dummy logic
+	DryRunLog(ctx, "Would process content from %s (length: %d)", source, len(content))
 	return map[string]interface{}{
 		"source": source,
 		"length": len(content),
@@ -176,6 +188,7 @@ func init() {
 	rootCmd.Flags().Bool("usage", false, "Show usage information")
 	rootCmd.Flags().BoolVar(&installFlag, "install", false, "Install shell completions and initialize config")
 	rootCmd.Flags().BoolVar(&uninstallFlag, "uninstall", false, "Remove shell completions and config files")
+	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without executing them")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }

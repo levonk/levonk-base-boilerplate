@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,10 +11,20 @@ import (
 
 // RunInstall handles the --install flag
 func RunInstall(cmd *cobra.Command) error {
+	ctx := cmd.Context()
+
+	if DryRunCheck(ctx, "install") {
+		DryRunLog(ctx, "Would install {{ project_slug }}")
+		DryRunLog(ctx, "Would generate and install shell completions")
+		DryRunLog(ctx, "Would initialize config file")
+		printInstallInstructions()
+		return nil
+	}
+
 	fmt.Println("Installing {{ project_slug }}...")
 
 	// Generate and install shell completions
-	if err := installCompletions(cmd); err != nil {
+	if err := installCompletions(ctx, cmd); err != nil {
 		return fmt.Errorf("failed to install completions: %w", err)
 	}
 
@@ -35,10 +46,20 @@ func RunInstall(cmd *cobra.Command) error {
 
 // RunUninstall handles the --uninstall flag
 func RunUninstall(cmd *cobra.Command) error {
+	ctx := cmd.Context()
+
+	if DryRunCheck(ctx, "uninstall") {
+		DryRunLog(ctx, "Would uninstall {{ project_slug }}")
+		DryRunLog(ctx, "Would remove shell completions")
+		DryRunLog(ctx, "Would remove config file")
+		fmt.Println("Uninstall complete.")
+		return nil
+	}
+
 	fmt.Println("Uninstalling {{ project_slug }}...")
 
 	// Remove shell completions
-	if err := uninstallCompletions(); err != nil {
+	if err := uninstallCompletions(ctx); err != nil {
 		return fmt.Errorf("failed to uninstall completions: %w", err)
 	}
 
@@ -57,7 +78,7 @@ func RunUninstall(cmd *cobra.Command) error {
 }
 
 // installCompletions generates and installs shell completion scripts
-func installCompletions(cmd *cobra.Command) error {
+func installCompletions(ctx context.Context, cmd *cobra.Command) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -65,10 +86,12 @@ func installCompletions(cmd *cobra.Command) error {
 
 	// Bash completion
 	bashCompletionDir := filepath.Join(homeDir, ".local", "share", "bash-completion", "completions")
+	DryRunFileOp(ctx, "create directory", bashCompletionDir)
 	if err := os.MkdirAll(bashCompletionDir, 0755); err != nil {
 		return err
 	}
 	bashFile := filepath.Join(bashCompletionDir, "{{ project_slug }}")
+	DryRunFileOp(ctx, "write", bashFile)
 	if err := cmd.GenBashCompletionFile(bashFile); err != nil {
 		return err
 	}
@@ -76,10 +99,12 @@ func installCompletions(cmd *cobra.Command) error {
 
 	// Zsh completion
 	zshCompletionDir := filepath.Join(homeDir, ".local", "share", "zsh", "site-functions")
+	DryRunFileOp(ctx, "create directory", zshCompletionDir)
 	if err := os.MkdirAll(zshCompletionDir, 0755); err != nil {
 		return err
 	}
 	zshFile := filepath.Join(zshCompletionDir, "_{{ project_slug }}")
+	DryRunFileOp(ctx, "write", zshFile)
 	if err := cmd.GenZshCompletionFile(zshFile); err != nil {
 		return err
 	}
@@ -87,10 +112,12 @@ func installCompletions(cmd *cobra.Command) error {
 
 	// Fish completion
 	fishCompletionDir := filepath.Join(homeDir, ".local", "share", "fish", "completions")
+	DryRunFileOp(ctx, "create directory", fishCompletionDir)
 	if err := os.MkdirAll(fishCompletionDir, 0755); err != nil {
 		return err
 	}
 	fishFile := filepath.Join(fishCompletionDir, "{{ project_slug }}.fish")
+	DryRunFileOp(ctx, "write", fishFile)
 	if err := cmd.GenFishCompletionFile(fishFile); err != nil {
 		return err
 	}
@@ -100,7 +127,7 @@ func installCompletions(cmd *cobra.Command) error {
 }
 
 // uninstallCompletions removes shell completion scripts
-func uninstallCompletions() error {
+func uninstallCompletions(ctx context.Context) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -108,6 +135,7 @@ func uninstallCompletions() error {
 
 	// Remove bash completion
 	bashFile := filepath.Join(homeDir, ".local", "share", "bash-completion", "completions", "{{ project_slug }}")
+	DryRunFileOp(ctx, "remove", bashFile)
 	if err := os.Remove(bashFile); err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -115,6 +143,7 @@ func uninstallCompletions() error {
 
 	// Remove zsh completion
 	zshFile := filepath.Join(homeDir, ".local", "share", "zsh", "site-functions", "_{{ project_slug }}")
+	DryRunFileOp(ctx, "remove", zshFile)
 	if err := os.Remove(zshFile); err != nil && !os.IsNotExist(err) {
 		return err
 	}
@@ -122,6 +151,7 @@ func uninstallCompletions() error {
 
 	// Remove fish completion
 	fishFile := filepath.Join(homeDir, ".local", "share", "fish", "completions", "{{ project_slug }}.fish")
+	DryRunFileOp(ctx, "remove", fishFile)
 	if err := os.Remove(fishFile); err != nil && !os.IsNotExist(err) {
 		return err
 	}

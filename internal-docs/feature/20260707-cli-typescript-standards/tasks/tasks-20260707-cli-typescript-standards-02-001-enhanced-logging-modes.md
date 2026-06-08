@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 2
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-02-001-enhanced-logging-modes"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,9 +27,9 @@ Add `--debug` flag for debug-level logging and enhance the existing logging syst
 
 ## Sub-Tasks
 
-- [ ] Add `--debug` flag to index.ts command line options
-- [ ] Add debug log level to logger.ts
-- [ ] Implement log level hierarchy (debug < info < warn < error < fatal)
+- [~] Add `--debug` flag to index.ts command line options
+- [~] Add debug log level to logger.ts
+- [x] Implement log level hierarchy (debug < info < warn < error < fatal)
 - [ ] Ensure --quiet flag suppresses all non-essential output including progress indicators
 - [ ] Add structured logging support (JSON format for logs)
 - [ ] Add --log-format flag to choose between text and JSON logging

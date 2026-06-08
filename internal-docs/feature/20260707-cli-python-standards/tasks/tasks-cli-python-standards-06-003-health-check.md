@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 6
 parallel_id: 3
 branch: "feature/current/cli-python-standards/story-06-003-health-check"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,8 +27,8 @@ Implement health check mechanism for container orchestration (Docker HEALTHCHECK
 
 ## Sub-Tasks
 
-- [ ] Add `include_health_check` boolean option to `copier.yml` — `apps/cli/python/core/copier.yml`
-- [ ] Create `health.py.jinja` template file with health check implementation — `apps/cli/python/core/files/{{project_slug}}/health.py.jinja`
+- [x] Add `include_health_check` boolean option to `copier.yml` — `apps/cli/python/core/copier.yml`
+- [~] Create `health.py.jinja` template file with health check implementation — `apps/cli/python/core/files/{{project_slug}}/health.py.jinja`
 - [ ] Implement signal-based health check — `health.py.jinja`
 - [ ] Implement HTTP endpoint for health check (conditional on include_health_check) — `health.py.jinja`
 - [ ] Add health check validation logic (operational state without side effects) — `health.py.jinja`

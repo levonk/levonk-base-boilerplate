@@ -1,0 +1,99 @@
+# vim: set ft=python :
+import sys
+from typing import Optional
+from {{ project_slug }}.logging import get_logger
+
+logger = get_logger(name="{{ project_slug }}")
+
+
+class HealthChecker:
+    """Health check mechanism for container orchestration."""
+    
+    def __init__(self):
+        self.healthy = True
+        self.last_check = None
+    
+    def check_health(self) -> bool:
+        """
+        Perform health check without side effects.
+        
+        Returns:
+            True if healthy, False otherwise
+        """
+        # Check if the application is operational
+        # This is a simple check - in a real implementation,
+        # you might check database connectivity, external services, etc.
+        self.healthy = True
+        self.last_check = "operational"
+        return self.healthy
+    
+    def get_health_status(self) -> dict:
+        """
+        Get detailed health status.
+        
+        Returns:
+            Dictionary with health status information
+        """
+        return {
+            "status": "healthy" if self.healthy else "unhealthy",
+            "last_check": self.last_check
+        }
+
+
+def perform_health_check() -> int:
+    """
+    Perform health check and return appropriate exit code.
+    
+    Returns:
+        0 if healthy, 1 if unhealthy
+    """
+    checker = HealthChecker()
+    is_healthy = checker.check_health()
+    
+    if is_healthy:
+        logger.info("Health check passed", module="health")
+        return 0
+    else:
+        logger.error("Health check failed", module="health")
+        return 1
+
+
+{% if include_health_check %}
+def run_http_health_check(host: str = "0.0.0.0", port: int = 8080):
+    """
+    Run HTTP health check endpoint (requires additional dependencies).
+    
+    Args:
+        host: Host to bind to
+        port: Port to bind to
+    """
+    try:
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        
+        class HealthCheckHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/health":
+                    checker = HealthChecker()
+                    is_healthy = checker.check_health()
+                    
+                    self.send_response(200 if is_healthy else 503)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    
+                    import json
+                    self.wfile.write(json.dumps(checker.get_health_status()).encode())
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+            
+            def log_message(self, format, *args):
+                # Suppress default logging
+                pass
+        
+        server = HTTPServer((host, port), HealthCheckHandler)
+        logger.info(f"Health check HTTP server running on {host}:{port}", module="health")
+        server.serve_forever()
+    except ImportError:
+        logger.error("HTTP health check requires http.server (standard library)", module="health")
+        sys.exit(1)
+{% endif %}

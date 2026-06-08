@@ -1,0 +1,369 @@
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
+import * as toml from '@iarna/toml';
+
+/**
+ * Configuration schema with default values and descriptions
+ */
+export interface Config {
+    /** Log level: error, warn, info, debug. Default: "info" */
+    log_level?: 'error' | 'warn' | 'info' | 'debug';
+    /** Suppress all output except errors. Default: false */
+    quiet?: boolean;
+    /** Enable verbose output with extra details. Default: false */
+    verbose?: boolean;
+    /** Color mode: auto, always, never. Default: "auto" */
+    color?: 'auto' | 'always' | 'never';
+    /** Output results as JSON. Default: false */
+    json?: boolean;
+    /** Custom configuration values */
+    [key: string]: any;
+}
+
+/**
+ * Config source tracking for debugging
+ */
+export interface ConfigSource {
+    source: 'defaults' | 'system' | 'user' | 'project' | 'env' | 'cli' | 'custom';
+    path?: string;
+    value?: any;
+}
+
+/**
+ * Extended config with source tracking
+ */
+export interface ConfigWithSources extends Config {
+    _sources?: Record<string, ConfigSource>;
+}
+
+/**
+ * Default configuration values
+ */
+export const DEFAULT_CONFIG: Config = {
+    log_level: 'info',
+    quiet: false,
+    verbose: false,
+    color: 'auto',
+    json: false,
+};
+
+export interface ConfigOptions {
+    projectSlug: string;
+    configPath?: string;
+    cwd?: string;
+    debug?: boolean;
+}
+
+/**
+ * Get XDG config directory path
+ * Returns ~/.config/{project_slug}/
+ */
+export function getXDGConfigPath(projectSlug: string): string {
+    const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    return path.join(xdgConfigHome, projectSlug);
+}
+
+/**
+ * Get default config file path
+ * Returns ~/.config/{project_slug}/config.toml
+ */
+export function getConfigFilePath(projectSlug: string, customPath?: string): string {
+    if (customPath) {
+        return customPath;
+    }
+    return path.join(getXDGConfigPath(projectSlug), 'config.toml');
+}
+
+/**
+ * Get local project config path
+ * Returns .{project_slug}/config.toml
+ */
+export function getProjectConfigPath(projectSlug: string, cwd: string = process.cwd()): string {
+    return path.join(cwd, `.${projectSlug}`, 'config.toml');
+}
+
+/**
+ * Get system config path
+ * Returns /etc/{project_slug}/config.toml
+ */
+export function getSystemConfigPath(projectSlug: string): string {
+    return path.join('/etc', projectSlug, 'config.toml');
+}
+
+/**
+ * Check if config file exists
+ */
+export async function configExists(configPath: string): Promise<boolean> {
+    try {
+        await fs.access(configPath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Ensure config directory exists
+ */
+export async function ensureConfigDir(configDir: string): Promise<void> {
+    try {
+        await fs.mkdir(configDir, { recursive: true });
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+            throw error;
+        }
+    }
+}
+
+/**
+ * Get default config template with all settings commented out
+ */
+export function getDefaultConfigTemplate(): string {
+    return `# Configuration file for {{ project_slug }}
+# All settings are commented out with their default values
+# Uncomment and modify as needed
+
+# Log level: error, warn, info, debug
+# Default: "info"
+# log_level = "info"
+
+# Suppress all output except errors
+# Default: false
+# quiet = false
+
+# Enable verbose output with extra details
+# Default: false
+# verbose = false
+
+# Color mode: auto, always, never
+# Default: "auto"
+# color = "auto"
+
+# Output results as JSON
+# Default: false
+# json = false
+`;
+}
+
+/**
+ * Create default config file
+ */
+export async function createDefaultConfig(configPath: string, verbose: boolean = false): Promise<void> {
+    const configDir = path.dirname(configPath);
+
+    // Ensure directory exists
+    await ensureConfigDir(configDir);
+
+    // Check if config already exists
+    if (await configExists(configPath)) {
+        if (verbose) {
+            console.error(`Config file already exists at ${configPath}`);
+        }
+        return;
+    }
+
+    // Write default config
+    const template = getDefaultConfigTemplate();
+    await fs.writeFile(configPath, template, { mode: 0o644 });
+
+    if (verbose) {
+        console.error(`Created default config file at ${configPath}`);
+    }
+}
+
+/**
+ * Load config from file and merge with defaults
+ */
+export async function loadConfig(configPath: string): Promise<Config> {
+    try {
+        const content = await fs.readFile(configPath, 'utf-8');
+        const userConfig = toml.parse(content) as Config;
+        // Merge with defaults, user config takes precedence
+        return { ...DEFAULT_CONFIG, ...userConfig };
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            // Config file doesn't exist, return defaults
+            return { ...DEFAULT_CONFIG };
+        }
+        throw error;
+    }
+}
+
+/**
+ * Deep merge two objects
+ */
+function deepMerge(target: any, source: any): any {
+    const output = { ...target };
+    if (isObject(target) && isObject(source)) {
+        Object.keys(source).forEach((key) => {
+            if (isObject(source[key])) {
+                if (!(key in target)) {
+                    Object.assign(output, { [key]: source[key] });
+                } else {
+                    output[key] = deepMerge(target[key], source[key]);
+                }
+            } else {
+                Object.assign(output, { [key]: source[key] });
+            }
+        });
+    }
+    return output;
+}
+
+function isObject(item: any): boolean {
+    return item && typeof item === 'object' && !Array.isArray(item);
+}
+
+/**
+ * Load environment variables with project prefix
+ */
+export function loadEnvConfig(projectSlug: string): Config {
+    const prefix = projectSlug.toUpperCase().replace(/-/g, '_');
+    const envConfig: Config = {};
+
+    // Map env vars to config keys
+    const envMappings: Record<string, keyof Config> = {
+        [`${prefix}_LOG_LEVEL`]: 'log_level',
+        [`${prefix}_QUIET`]: 'quiet',
+        [`${prefix}_VERBOSE`]: 'verbose',
+        [`${prefix}_COLOR`]: 'color',
+        [`${prefix}_JSON`]: 'json',
+    };
+
+    for (const [envVar, configKey] of Object.entries(envMappings)) {
+        const value = process.env[envVar];
+        if (value !== undefined) {
+            // Convert string values to appropriate types
+            if (configKey === 'quiet' || configKey === 'verbose' || configKey === 'json') {
+                envConfig[configKey] = value === 'true' || value === '1';
+            } else {
+                envConfig[configKey] = value;
+            }
+        }
+    }
+
+    return envConfig;
+}
+
+/**
+ * Load config from all sources with precedence
+ * Precedence: CLI args > env vars > project config > user config > system config > defaults
+ */
+export async function loadConfigWithPrecedence(options: ConfigOptions, cliArgs?: Partial<Config>): Promise<ConfigWithSources> {
+    const configWithSources: ConfigWithSources = { ...DEFAULT_CONFIG, _sources: {} };
+    const sources = configWithSources._sources!;
+
+    // 1. Start with defaults
+    Object.keys(DEFAULT_CONFIG).forEach((key) => {
+        sources[key] = { source: 'defaults', value: DEFAULT_CONFIG[key as keyof Config] };
+    });
+
+    // 2. Load system config
+    try {
+        const systemConfigPath = getSystemConfigPath(options.projectSlug);
+        const systemConfig = await loadConfig(systemConfigPath);
+        deepMerge(configWithSources, systemConfig);
+        Object.keys(systemConfig).forEach((key) => {
+            if (systemConfig[key as keyof Config] !== undefined) {
+                sources[key] = { source: 'system', path: systemConfigPath, value: systemConfig[key as keyof Config] };
+            }
+        });
+        if (options.debug) {
+            console.error(`[config] Loaded system config from ${systemConfigPath}`);
+        }
+    } catch (error) {
+        if (options.debug && (error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            console.error(`[config] Failed to load system config: ${error}`);
+        }
+    }
+
+    // 3. Load user config (XDG)
+    try {
+        const userConfigPath = getConfigFilePath(options.projectSlug, options.configPath);
+        const userConfig = await loadConfig(userConfigPath);
+        deepMerge(configWithSources, userConfig);
+        Object.keys(userConfig).forEach((key) => {
+            if (userConfig[key as keyof Config] !== undefined) {
+                sources[key] = { source: 'user', path: userConfigPath, value: userConfig[key as keyof Config] };
+            }
+        });
+        if (options.debug) {
+            console.error(`[config] Loaded user config from ${userConfigPath}`);
+        }
+    } catch (error) {
+        if (options.debug && (error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            console.error(`[config] Failed to load user config: ${error}`);
+        }
+    }
+
+    // 4. Load project config
+    try {
+        const projectConfigPath = getProjectConfigPath(options.projectSlug, options.cwd);
+        const projectConfig = await loadConfig(projectConfigPath);
+        deepMerge(configWithSources, projectConfig);
+        Object.keys(projectConfig).forEach((key) => {
+            if (projectConfig[key as keyof Config] !== undefined) {
+                sources[key] = { source: 'project', path: projectConfigPath, value: projectConfig[key as keyof Config] };
+            }
+        });
+        if (options.debug) {
+            console.error(`[config] Loaded project config from ${projectConfigPath}`);
+        }
+    } catch (error) {
+        if (options.debug && (error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            console.error(`[config] Failed to load project config: ${error}`);
+        }
+    }
+
+    // 5. Load environment variables
+    const envConfig = loadEnvConfig(options.projectSlug);
+    deepMerge(configWithSources, envConfig);
+    Object.keys(envConfig).forEach((key) => {
+        if (envConfig[key as keyof Config] !== undefined) {
+            sources[key] = { source: 'env', value: envConfig[key as keyof Config] };
+        }
+    });
+    if (options.debug && Object.keys(envConfig).length > 0) {
+        console.error(`[config] Loaded ${Object.keys(envConfig).length} environment variables`);
+    }
+
+    // 6. Apply CLI args (highest precedence)
+    if (cliArgs) {
+        deepMerge(configWithSources, cliArgs);
+        Object.keys(cliArgs).forEach((key) => {
+            if (cliArgs[key as keyof Config] !== undefined) {
+                sources[key] = { source: 'cli', value: cliArgs[key as keyof Config] };
+            }
+        });
+        if (options.debug) {
+            console.error(`[config] Applied CLI arguments`);
+        }
+    }
+
+    return configWithSources;
+}
+
+/**
+ * Initialize config on first run
+ * Creates default config if it doesn't exist
+ */
+export async function initializeConfig(options: ConfigOptions, verbose: boolean = false): Promise<Config> {
+    const configPath = getConfigFilePath(options.projectSlug, options.configPath);
+
+    // Create default config if it doesn't exist
+    if (!await configExists(configPath)) {
+        await createDefaultConfig(configPath, verbose);
+    }
+
+    // Load config with full precedence chain
+    const config = await loadConfigWithPrecedence(options);
+
+    if (verbose) {
+        console.error(`Loaded config from ${configPath}`);
+    }
+
+    // Return config without source tracking for normal use
+    const { _sources, ...configWithoutSources } = config;
+    return configWithoutSources;
+}

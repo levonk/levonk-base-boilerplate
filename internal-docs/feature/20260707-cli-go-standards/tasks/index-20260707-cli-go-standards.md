@@ -29,7 +29,7 @@ This index summarizes all stories for the Go CLI Standards compliance implementa
 
 | Story ID | Story Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
 | -------- | ----------- | ----: | ------ | -------- | ------------- | ------------ | ---------- | ------- | ------ |
-| 02-001 | Dry-Run Mode | 02 | [ ] Todo | | true | 01-001, 01-006 | None | [main, cmd] | feature/current/20260707-cli-go-standards/story-02-001-dry-run-mode |
+| 02-001 | Dry-Run Mode | 02 | [~] In-Progress | | true | 01-001, 01-006 | None | [main, cmd] | feature/current/20260707-cli-go-standards/story-02-001-dry-run-mode |
 | 02-002 | Confirmation Prompts | 02 | [ ] Todo | | true | 01-001 | None | [main, prompt] | feature/current/20260707-cli-go-standards/story-02-002-confirmation-prompts |
 | 02-003 | Progress Indicators | 02 | [ ] Todo | | true | 01-003 | None | [progress, main] | feature/current/20260707-cli-go-standards/story-02-003-progress-indicators |
 | 02-004 | Error Message Formatting | 02 | [ ] Todo | | true | None | 03-003 | [logger, main] | feature/current/20260707-cli-go-standards/story-02-004-error-message-formatting |

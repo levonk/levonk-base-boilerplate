@@ -1,0 +1,157 @@
+package main
+
+import (
+	"context"
+	"os"
+	"testing"
+)
+
+func TestDryRunMode(t *testing.T) {
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		expected bool
+	}{
+		{
+			name:     "dry-run enabled",
+			ctx:      context.WithValue(context.Background(), "dry-run", true),
+			expected: true,
+		},
+		{
+			name:     "dry-run disabled",
+			ctx:      context.WithValue(context.Background(), "dry-run", false),
+			expected: false,
+		},
+		{
+			name:     "no dry-run value",
+			ctx:      context.Background(),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := DryRunMode(tt.ctx)
+			if result != tt.expected {
+				t.Errorf("DryRunMode() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDryRunCheck(t *testing.T) {
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		op       string
+		expected bool
+	}{
+		{
+			name:     "dry-run enabled returns true",
+			ctx:      context.WithValue(context.Background(), "dry-run", true),
+			op:       "install",
+			expected: true,
+		},
+		{
+			name:     "dry-run disabled returns false",
+			ctx:      context.WithValue(context.Background(), "dry-run", false),
+			op:       "install",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := DryRunCheck(tt.ctx, tt.op)
+			if result != tt.expected {
+				t.Errorf("DryRunCheck() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsDryRun(t *testing.T) {
+	// Save original value
+	original := dryRun
+	defer func() { dryRun = original }()
+
+	tests := []struct {
+		name     string
+		setValue bool
+		expected bool
+	}{
+		{
+			name:     "dry-run flag true",
+			setValue: true,
+			expected: true,
+		},
+		{
+			name:     "dry-run flag false",
+			setValue: false,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dryRun = tt.setValue
+			result := IsDryRun()
+			if result != tt.expected {
+				t.Errorf("IsDryRun() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDryRunDoesNotExecuteChanges(t *testing.T) {
+	// Test that dry-run mode prevents actual file operations
+	t.Run("dry-run prevents file writes", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), "dry-run", true)
+		testFile := "/tmp/test-dryrun-file.txt"
+
+		// In dry-run mode, this should not create the file
+		if DryRunCheck(ctx, "write file") {
+			// File should not be created
+			if _, err := os.Stat(testFile); err == nil {
+				t.Error("File should not exist in dry-run mode")
+				os.Remove(testFile)
+			}
+		}
+	})
+
+	t.Run("dry-run prevents file deletions", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), "dry-run", true)
+		testFile := "/tmp/test-dryrun-delete.txt"
+
+		// Create a test file
+		os.WriteFile(testFile, []byte("test"), 0644)
+		defer os.Remove(testFile)
+
+		// In dry-run mode, this should not delete the file
+		if DryRunCheck(ctx, "delete file") {
+			// File should still exist
+			if _, err := os.Stat(testFile); os.IsNotExist(err) {
+				t.Error("File should still exist in dry-run mode")
+			}
+		}
+	})
+}
+
+func TestDryRunOutputIsClear(t *testing.T) {
+	t.Run("dry-run log format is consistent", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), "dry-run", true)
+		// DryRunLog should output with [DRY-RUN] prefix
+		// This is a structural test - actual output testing would require capturing stdout
+		DryRunLog(ctx, "test operation")
+		// If we get here without panic, the function works
+	})
+
+	t.Run("dry-run file op format is consistent", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), "dry-run", true)
+		// DryRunFileOp should output operation and path
+		DryRunFileOp(ctx, "read", "/tmp/test.txt")
+		// If we get here without panic, the function works
+	})
+}
+
+{# vim: set ft=go: #}

@@ -12,6 +12,11 @@ import {
     handleError,
     EXIT_CODES,
 } from './error.js';
+import {
+    loadConfigWithPrecedence,
+    type Config,
+    type ConfigOptions,
+} from './config.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -31,9 +36,11 @@ program
   .argument('[inputs...]', 'Input files or glob patterns. Use "-" for stdin.')
   .option('-q, --quiet', 'Suppress all output except errors')
   .option('--verbose', 'Enable verbose output with extra details')
+  .option('--debug', 'Enable debug-level logging')
   .option('--usage', 'Display usage information')
   .option('--color <mode>', 'Color mode: auto, always, or never', 'auto')
-  .option('-c, --config <path>', 'Config file path', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
+  .option('-c, --config <path>', 'Config file path (default: ~/.config/{{ project_slug }}/config.toml)', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
+  .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables ({{ PROJECT_SLUG }}_*)\n  3. Local project config (./.{{ project_slug }}/config.toml)\n  4. User config (~/.config/{{ project_slug }}/config.toml)\n  5. System config (/etc/{{ project_slug }}/config.toml)\n  6. Hardcoded defaults')
   .option('--json', 'Output results as JSON')
   .action(async (inputs: string[], options) => {
       try {
@@ -42,11 +49,38 @@ program
               program.helpInformation();
               process.exit(EXIT_CODES.SUCCESS);
           }
-          // Create logger with options
+
+          // Initialize config with full precedence chain
+          const configOptions: ConfigOptions = {
+              projectSlug: '{{ project_slug }}',
+              configPath: options.config,
+              debug: options.verbose,
+          };
+
+          // Build CLI args for config precedence
+          const cliArgs: Partial<Config> = {};
+          if (options.quiet !== undefined) cliArgs.quiet = options.quiet;
+          if (options.verbose !== undefined) cliArgs.verbose = options.verbose;
+          if (options.debug !== undefined) cliArgs.debug = options.debug;
+          if (options.color !== undefined) cliArgs.color = options.color;
+          if (options.json !== undefined) cliArgs.json = options.json;
+
+          const config = await loadConfigWithPrecedence(configOptions, cliArgs);
+
+          // Use merged config (CLI args already applied via precedence)
+          const mergedOptions = {
+              quiet: config.quiet,
+              verbose: config.verbose,
+              color: config.color,
+              json: config.json,
+          };
+
+          // Create logger with merged options
           const loggerOptions: LoggerOptions = {
-              quiet: options.quiet,
-              verbose: options.verbose,
-              color: options.color,
+              quiet: mergedOptions.quiet,
+              verbose: mergedOptions.verbose,
+              debug: mergedOptions.debug,
+              color: mergedOptions.color,
               module: '{{ project_slug }}',
           };
           const logger = createLogger(loggerOptions);
@@ -105,7 +139,7 @@ program
               }
           }
 
-          if (options.json) {
+          if (mergedOptions.json) {
               console.log(JSON.stringify(results, null, 2));
           } else {
               logger.info(`Processed ${results.length} inputs.`);

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 1
 parallel_id: 4
 branch: "feature/current/20260707-cli-go-standards/story-01-004-debug-flag"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,15 +27,15 @@ Add a separate `--debug` flag for detailed diagnostic logging, distinct from the
 
 ## Sub-Tasks
 
-- [ ] Add --debug flag to root command — `core/files/main.go.jinja`
-- [ ] Add debug log level to logger — `core/files/logger.go.jinja`
-- [ ] Implement Debug logging method — `core/files/logger.go.jinja`
-- [ ] Add stack trace support in debug mode — `core/files/logger.go.jinja`
-- [ ] Add internal state logging in debug mode — `core/files/logger.go.jinja`
-- [ ] Update logger initialization to handle debug mode — `core/files/main.go.jinja`
-- [ ] Test debug flag enables debug logs — `core/files/logger_test.go.jinja`
-- [ ] Test debug mode includes stack traces — `core/files/logger_test.go.jinja`
-- [ ] Test debug is separate from verbose — `core/files/logger_test.go.jinja`
+- [x] Add --debug flag to root command — `core/files/main.go.jinja`
+- [x] Add debug log level to logger — `core/files/logger.go.jinja`
+- [x] Implement Debug logging method — `core/files/logger.go.jinja`
+- [x] Add stack trace support in debug mode — `core/files/logger.go.jinja`
+- [x] Add internal state logging in debug mode — `core/files/logger.go.jinja`
+- [x] Update logger initialization to handle debug mode — `core/files/main.go.jinja`
+- [x] Test debug flag enables debug logs — `core/files/logger_test.go.jinja`
+- [x] Test debug mode includes stack traces — `core/files/logger_test.go.jinja`
+- [x] Test debug is separate from verbose — `core/files/logger_test.go.jinja`
 
 ## Relevant Files
 
@@ -45,12 +45,12 @@ Add a separate `--debug` flag for detailed diagnostic logging, distinct from the
 
 ## Acceptance Criteria
 
-- [ ] `--debug` flag enables detailed diagnostic logging
-- [ ] Debug mode includes stack traces on errors
-- [ ] Debug mode logs internal state information
-- [ ] Debug is separate from verbose (can be used independently)
-- [ ] Debug output is clearly distinguishable from normal logs
-- [ ] Debug respects color control settings
+- [x] `--debug` flag enables detailed diagnostic logging
+- [x] Debug mode includes stack traces on errors
+- [x] Debug mode logs internal state information
+- [x] Debug is separate from verbose (can be used independently)
+- [x] Debug output is clearly distinguishable from normal logs
+- [x] Debug respects color control settings
 
 ## Test Plan
 

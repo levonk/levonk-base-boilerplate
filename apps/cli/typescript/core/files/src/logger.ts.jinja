@@ -2,18 +2,20 @@ import chalk from 'chalk';
 import supportsColor from 'supports-color';
 import process from 'process';
 
-export type LogLevel = 'info' | 'warn' | 'error' | 'fatal';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 export type ColorMode = 'auto' | 'always' | 'never';
 
 export interface LoggerOptions {
   quiet?: boolean;
   verbose?: boolean;
+  debug?: boolean;
   color?: ColorMode;
   module?: string;
 }
 
 // Color palette for log levels
 const levelColors = {
+  debug: chalk.gray,
   info: chalk.blue,
   warn: chalk.yellow,
   error: chalk.red,
@@ -67,17 +69,37 @@ function shouldUseColor(options: LoggerOptions): boolean {
   }
 }
 
+// Log level hierarchy (lower number = lower priority)
+const levelPriority: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+  fatal: 4,
+};
+
 export class Logger {
   private options: LoggerOptions;
+  private currentLevel: LogLevel;
 
   constructor(options: LoggerOptions = {}) {
     this.options = {
       quiet: false,
       verbose: false,
+      debug: false,
       color: 'auto',
       module: '{{ project_slug }}',
       ...options,
     };
+    // Set current log level based on debug flag
+    this.currentLevel = this.options.debug ? 'debug' : 'info';
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    // Always log errors and fatal regardless of level
+    if (level === 'error' || level === 'fatal') return true;
+    // Check if level is at or above current level
+    return levelPriority[level] >= levelPriority[this.currentLevel];
   }
 
   private formatMessage(
@@ -107,21 +129,31 @@ export class Logger {
     return output;
   }
 
+  debug(message: string, extra?: Record<string, unknown>): void {
+    if (!this.shouldLog('debug')) return;
+    if (this.options.quiet) return;
+    console.log(this.formatMessage('debug', message, extra));
+  }
+
   info(message: string, extra?: Record<string, unknown>): void {
+    if (!this.shouldLog('info')) return;
     if (this.options.quiet) return;
     console.log(this.formatMessage('info', message, extra));
   }
 
   warn(message: string, extra?: Record<string, unknown>): void {
+    if (!this.shouldLog('warn')) return;
     if (this.options.quiet) return;
     console.warn(this.formatMessage('warn', message, extra));
   }
 
   error(message: string, extra?: Record<string, unknown>): void {
+    if (!this.shouldLog('error')) return;
     console.error(this.formatMessage('error', message, extra));
   }
 
   fatal(message: string, extra?: Record<string, unknown>): void {
+    if (!this.shouldLog('fatal')) return;
     console.error(this.formatMessage('fatal', message, extra));
   }
 }

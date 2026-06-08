@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 1
 parallel_id: 3
 branch: "feature/current/20260707-cli-go-standards/story-01-003-proper-color-control"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,19 +27,19 @@ Replace `--no-color` flag with `--color=auto|always|never` flag following the AD
 
 ## Sub-Tasks
 
-- [ ] Add fatih/color or aurora dependency to go.mod — `core/files/go.mod.jinja`
-- [ ] Replace --no-color flag with --color=auto|always|never — `core/files/main.go.jinja`
-- [ ] Add color mode enum and constants — `core/files/logger.go.jinja`
-- [ ] Implement smart TTY detection using mattn/go-isatty — `core/files/logger.go.jinja`
-- [ ] Add NO_COLOR environment variable support — `core/files/logger.go.jinja`
-- [ ] Implement color mode precedence logic — `core/files/logger.go.jinja`
-- [ ] Add color setting to config file template — `core/files/config.default.yaml.jinja`
-- [ ] Update logger to use new color mode system with fatih/color or aurora — `core/files/logger.go.jinja`
-- [ ] Test --color=auto with TTY detection — `core/files/logger_test.go.jinja`
-- [ ] Test --color=always forces color — `core/files/logger_test.go.jinja`
-- [ ] Test --color=never disables color — `core/files/logger_test.go.jinja`
-- [ ] Test NO_COLOR env var precedence — `core/files/logger_test.go.jinja`
-- [ ] Test config file color setting — `core/files/logger_test.go.jinja`
+- [x] Add fatih/color or aurora dependency to go.mod — `core/files/go.mod.jinja`
+- [x] Replace --no-color flag with --color=auto|always|never — `core/files/main.go.jinja`
+- [x] Add color mode enum and constants — `core/files/logger.go.jinja`
+- [x] Implement smart TTY detection using mattn/go-isatty — `core/files/logger.go.jinja`
+- [x] Add NO_COLOR environment variable support — `core/files/logger.go.jinja`
+- [x] Implement color mode precedence logic — `core/files/logger.go.jinja`
+- [x] Add color setting to config file template — `core/files/config.default.yaml.jinja`
+- [x] Update logger to use new color mode system with fatih/color or aurora — `core/files/logger.go.jinja`
+- [x] Test --color=auto with TTY detection — `core/files/logger_test.go.jinja`
+- [x] Test --color=always forces color — `core/files/logger_test.go.jinja`
+- [x] Test --color=never disables color — `core/files/logger_test.go.jinja`
+- [x] Test NO_COLOR env var precedence — `core/files/logger_test.go.jinja`
+- [x] Test config file color setting — `core/files/logger_test.go.jinja`
 
 ## Relevant Files
 
@@ -51,13 +51,13 @@ Replace `--no-color` flag with `--color=auto|always|never` flag following the AD
 
 ## Acceptance Criteria
 
-- [ ] `--color=auto` enables color when TTY detected, disables otherwise
-- [ ] `--color=always` forces color output regardless of TTY
-- [ ] `--color=never` disables all color output
-- [ ] NO_COLOR environment variable takes precedence over all other settings
-- [ ] Config file color setting is respected
-- [ ] Precedence: NO_COLOR > --color flag > config > auto-detection
-- [ ] Backward compatibility maintained for existing --no-color usage
+- [x] `--color=auto` enables color when TTY detected, disables otherwise
+- [x] `--color=always` forces color output regardless of TTY
+- [x] `--color=never` disables all color output
+- [x] NO_COLOR environment variable takes precedence over all other settings
+- [x] Config file color setting is respected
+- [x] Precedence: NO_COLOR > --color flag > config > auto-detection
+- [x] Backward compatibility maintained for existing --no-color usage
 
 ## Test Plan
 

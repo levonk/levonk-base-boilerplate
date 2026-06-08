@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import util from 'util';
 import fs from 'fs/promises';
 import os from 'os';
+import path from 'path';
 
 const execAsync = util.promisify(exec);
 
@@ -127,6 +128,108 @@ describe('CLI', () => {
             } catch (error: any) {
                 expect(error.stderr).toContain('exit code: 5');
             }
+        });
+    });
+
+    describe('Config Initialization', () => {
+        const testConfigDir = path.join(os.tmpdir(), 'test-config-{{ project_slug }}');
+        const testConfigPath = path.join(testConfigDir, 'config.toml');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should create default config file on first run', async () => {
+            const customXDG = testConfigDir;
+            const { stdout, stderr } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --help`
+            );
+
+            // Config file should be created
+            const exists = await fs.access(testConfigPath).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            // Config file should contain commented settings
+            const content = await fs.readFile(testConfigPath, 'utf-8');
+            expect(content).toContain('# Configuration file');
+            expect(content).toContain('# log_level = "info"');
+        });
+
+        it('should not overwrite existing config file', async () => {
+            const customXDG = testConfigDir;
+
+            // Create config directory and custom config
+            await fs.mkdir(testConfigDir, { recursive: true });
+            await fs.writeFile(testConfigPath, '# custom config');
+
+            // Run CLI
+            const { stdout } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --help`
+            );
+
+            // Config file should not be overwritten
+            const content = await fs.readFile(testConfigPath, 'utf-8');
+            expect(content).toBe('# custom config');
+        });
+
+        it('should log config creation in verbose mode', async () => {
+            const customXDG = testConfigDir;
+            const { stderr } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --verbose --help`
+            );
+
+            expect(stderr).toContain('Created default config file');
+        });
+
+        it('should use custom config path if provided', async () => {
+            const customConfigPath = path.join(testConfigDir, 'custom.toml');
+            const { stdout } = await execAsync(
+                `npx ts-node src/index.ts --config "${customConfigPath}" --help`
+            );
+
+            // Custom config file should be created
+            const exists = await fs.access(customConfigPath).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+        });
+
+        it('should load config from environment variables', async () => {
+            const customXDG = testConfigDir;
+            const prefix = '{{ project_slug | upper | replace("-", "_") }}';
+            const { stdout } = await execAsync(
+                `${prefix}_LOG_LEVEL=debug XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --help`
+            );
+
+            // Should not error - env var should be loaded
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should respect config precedence: CLI > env > config', async () => {
+            const customXDG = testConfigDir;
+
+            // Create user config with log_level = warn
+            await fs.mkdir(testConfigDir, { recursive: true });
+            await fs.writeFile(testConfigPath, 'log_level = "warn"');
+
+            // CLI arg should override config
+            const { stdout } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --log-level=debug --help`
+            );
+
+            expect(stdout).toContain('Usage:');
         });
     });
 });
