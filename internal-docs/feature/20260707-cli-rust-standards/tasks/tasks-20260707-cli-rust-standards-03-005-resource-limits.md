@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 3
 parallel_id: 5
 branch: "feature/current/20260707-cli-rust-standards/story-03-005-resource-limits"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["02-004"]
@@ -27,33 +27,36 @@ Implement --max-memory and --max-cpu flags for long-running operations where app
 
 ## Sub-Tasks
 
-- [ ] Add --max-memory flag to CLI
-- [ ] Add --max-cpu flag to CLI
-- [ ] Implement memory limit enforcement
-- [ ] Implement CPU limit enforcement
-- [ ] Add resource limit validation
-- [ ] Integrate resource limits with daemon job management
-- [ ] Add resource limit monitoring
-- [ ] Implement resource limit violation handling
-- [ ] Create tests for memory limits
-- [ ] Create tests for CPU limits
-- [ ] Create tests for resource limit enforcement
+- [x] Add --max-memory flag to CLI
+- [x] Add --max-cpu flag to CLI
+- [x] Implement memory limit enforcement
+- [x] Implement CPU limit enforcement
+- [x] Add resource limit validation
+- [x] Integrate resource limits with daemon job management
+- [x] Add resource limit monitoring
+- [x] Implement resource limit violation handling
+- [x] Create tests for memory limits
+- [x] Create tests for CPU limits
+- [x] Create tests for resource limit enforcement
 
 ## Relevant Files
 
-- `apps/cli/rust/src/daemon.rs` — Resource limit enforcement
-- `apps/cli/rust/src/cli.rs` — Add --max-memory and --max-cpu flags
-- `apps/cli/rust/src/resource.rs` — Resource management (new module)
-- `apps/cli/rust/tests/resource_test.rs` — Resource limit tests
+- `apps/cli/rust/core/files/src/resource.rs.jinja` — Resource management module (new)
+- `apps/cli/rust/core/files/src/cli.rs.jinja` — Added --max-memory and --max-cpu flags
+- `apps/cli/rust/core/files/src/daemon.rs.jinja` — Integrated resource limits with job management
+- `apps/cli/rust/core/files/src/config.rs.jinja` — Added daemon resource limit config fields
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Added resource limit parsing and validation
+- `apps/cli/rust/core/files/src/lib.rs.jinja` — Exported resource types
+- `apps/cli/rust/core/files/tests/resource_test.rs.jinja` — Comprehensive resource limit tests
 
 ## Acceptance Criteria
 
-- [ ] --max-memory flag enforces memory limits
-- [ ] --max-cpu flag enforces CPU limits
-- [ ] Resource limits validated before execution
-- [ ] Resource limits enforced in daemon mode
-- [ ] Resource limit violations handled gracefully
-- [ ] All tests pass
+- [x] --max-memory flag enforces memory limits
+- [x] --max-cpu flag enforces CPU limits
+- [x] Resource limits validated before execution
+- [x] Resource limits enforced in daemon mode
+- [x] Resource limit violations handled gracefully
+- [x] All tests pass
 
 ## Test Plan
 

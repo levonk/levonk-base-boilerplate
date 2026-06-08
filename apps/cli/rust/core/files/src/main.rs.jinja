@@ -10,6 +10,7 @@ mod completion;
 mod man;
 mod path;
 mod security;
+mod resource;
 
 {% if enable_tui -%}
 mod tui;
@@ -33,6 +34,7 @@ use daemon::{DaemonManager, DaemonConfig, JobStatus};
 use terminal::{TerminalInfo, ResizeHandler};
 use completion::{generate_completion, install_completion, get_completion_path};
 use man::ManHandler;
+use resource::{ResourceLimits, ResourceLimiter};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -92,6 +94,13 @@ fn process_content(source: &str, content: &str, dry_run: bool, force: bool) -> R
 async fn main() -> Result<()> {
     // Parse CLI args first
     let cli = Cli::parse();
+
+    // Parse and validate resource limits
+    let resource_limits = ResourceLimits::from_cli(cli.max_memory.clone(), cli.max_cpu)?;
+    if resource_limits.has_limits() {
+        info!("Resource limits set: {:?}", resource_limits);
+        resource_limits.validate()?;
+    }
 
     // Handle subcommands
     if let Some(command) = cli.command {

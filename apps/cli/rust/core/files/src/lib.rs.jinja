@@ -6,6 +6,7 @@ pub mod completion;
 pub mod man;
 pub mod path;
 pub mod security;
+pub mod resource;
 
 {% if enable_tui -%}
 pub mod tui;
@@ -26,6 +27,7 @@ pub use completion::{generate_completion, get_completion_path, install_completio
 pub use man::ManHandler;
 pub use path::PathUtils;
 pub use security::{SecurityUtils, SecureString};
+pub use resource::{ResourceLimits, ResourceMonitor, ResourceLimiter};
 
 {% if enable_tui -%}
 pub use tui::{TuiConfig, TuiHandler, TuiError, init_tui_mode, terminal_supports_tui};

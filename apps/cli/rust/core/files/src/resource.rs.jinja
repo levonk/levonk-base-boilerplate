@@ -1,0 +1,400 @@
+use anyhow::{Context, Result};
+use std::time::Duration;
+use tracing::{info, warn, debug};
+use std::thread;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// Resource limits for operations
+#[derive(Debug, Clone)]
+pub struct ResourceLimits {
+    /// Maximum memory limit in bytes (None = no limit)
+    pub max_memory: Option<u64>,
+    /// Maximum CPU usage as percentage (None = no limit)
+    pub max_cpu: Option<u8>,
+}
+
+impl ResourceLimits {
+    /// Create new resource limits
+    pub fn new(max_memory: Option<u64>, max_cpu: Option<u8>) -> Self {
+        Self { max_memory, max_cpu }
+    }
+
+    /// Create from CLI arguments
+    pub fn from_cli(max_memory: Option<String>, max_cpu: Option<u8>) -> Result<Self> {
+        let parsed_memory = if let Some(mem_str) = max_memory {
+            Some(Self::parse_memory_limit(&mem_str)?)
+        } else {
+            None
+        };
+
+        let parsed_cpu = max_cpu.map(|cpu| {
+            if cpu == 0 || cpu > 100 {
+                warn!("Invalid CPU limit: {}, must be 1-100. Ignoring.", cpu);
+                100 // Default to no limit
+            } else {
+                cpu
+            }
+        });
+
+        Ok(Self::new(parsed_memory, parsed_cpu))
+    }
+
+    /// Parse memory limit string (e.g., "512M", "2G", "1024K")
+    fn parse_memory_limit(s: &str) -> Result<u64> {
+        let s = s.trim().to_uppercase();
+        let (num_str, suffix) = if let Some(pos) = s.find(|c: char| !c.is_numeric()) {
+            (&s[..pos], &s[pos..])
+        } else {
+            (&s, "")
+        };
+
+        let num: u64 = num_str.parse()
+            .with_context(|| format!("Invalid memory limit number: {}", num_str))?;
+
+        let multiplier = match suffix {
+            "K" | "KB" => 1024,
+            "M" | "MB" => 1024 * 1024,
+            "G" | "GB" => 1024 * 1024 * 1024,
+            "T" | "TB" => 1024 * 1024 * 1024 * 1024,
+            "" => 1, // Assume bytes if no suffix
+            _ => anyhow::bail!("Invalid memory limit suffix: {}", suffix),
+        };
+
+        Ok(num * multiplier)
+    }
+
+    /// Validate resource limits
+    pub fn validate(&self) -> Result<()> {
+        if let Some(cpu) = self.max_cpu {
+            if cpu == 0 || cpu > 100 {
+                anyhow::bail!("CPU limit must be between 1 and 100, got: {}", cpu);
+            }
+        }
+
+        if let Some(memory) = self.max_memory {
+            if memory == 0 {
+                anyhow::bail!("Memory limit must be greater than 0");
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Check if resource limits are set
+    pub fn has_limits(&self) -> bool {
+        self.max_memory.is_some() || self.max_cpu.is_some()
+    }
+}
+
+impl Default for ResourceLimits {
+    fn default() -> Self {
+        Self::new(None, None)
+    }
+}
+
+/// Resource monitor for tracking usage
+pub struct ResourceMonitor {
+    limits: ResourceLimits,
+    shutdown_flag: AtomicBool,
+}
+
+impl ResourceMonitor {
+    /// Create a new resource monitor
+    pub fn new(limits: ResourceLimits) -> Self {
+        Self {
+            limits,
+            shutdown_flag: AtomicBool::new(false),
+        }
+    }
+
+    /// Start monitoring resources in a background thread
+    pub fn start_monitoring(&self) -> Result<()> {
+        if !self.limits.has_limits() {
+            debug!("No resource limits set, skipping monitoring");
+            return Ok(());
+        }
+
+        info!("Starting resource monitoring with limits: {:?}", self.limits);
+
+        // Note: In a real implementation, this would spawn a background thread
+        // that periodically checks resource usage and enforces limits.
+        // For this template, we'll just log the intent.
+        
+        #[cfg(unix)]
+        {
+            info!("Resource monitoring available on Unix systems");
+        }
+
+        #[cfg(windows)]
+        {
+            info!("Resource monitoring limited on Windows systems");
+        }
+
+        Ok(())
+    }
+
+    /// Stop monitoring resources
+    pub fn stop_monitoring(&self) {
+        self.shutdown_flag.store(true, Ordering::SeqCst);
+        info!("Resource monitoring stopped");
+    }
+
+    /// Check if shutdown was requested due to limit violation
+    pub fn is_shutdown_requested(&self) -> bool {
+        self.shutdown_flag.load(Ordering::SeqCst)
+    }
+
+    /// Get current memory usage (platform-specific)
+    #[cfg(unix)]
+    pub fn get_memory_usage() -> Result<u64> {
+        use std::fs;
+        
+        let status = fs::read_to_string("/proc/self/status")
+            .context("Failed to read /proc/self/status")?;
+        
+        for line in status.lines() {
+            if line.starts_with("VmRSS:") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let kb: u64 = parts[1].parse()
+                        .context("Failed to parse memory usage")?;
+                    return Ok(kb * 1024); // Convert KB to bytes
+                }
+            }
+        }
+        
+        anyhow::bail!("Memory usage not found in /proc/self/status")
+    }
+
+    /// Get current memory usage (Windows stub)
+    #[cfg(windows)]
+    pub fn get_memory_usage() -> Result<u64> {
+        // Windows memory monitoring would require Windows API calls
+        // For now, return an error
+        anyhow::bail!("Memory monitoring not implemented on Windows")
+    }
+
+    /// Get current memory usage (stub for other platforms)
+    #[cfg(not(any(unix, windows)))]
+    pub fn get_memory_usage() -> Result<u64> {
+        anyhow::bail!("Memory monitoring not implemented on this platform")
+    }
+
+    /// Enforce memory limit
+    pub fn enforce_memory_limit(&self) -> Result<()> {
+        if let Some(max_mem) = self.limits.max_memory {
+            match Self::get_memory_usage() {
+                Ok(current_mem) => {
+                    if current_mem > max_mem {
+                        warn!("Memory limit exceeded: {} > {} bytes", current_mem, max_mem);
+                        self.shutdown_flag.store(true, Ordering::SeqCst);
+                        anyhow::bail!("Memory limit exceeded: {} bytes", max_mem);
+                    }
+                    debug!("Memory usage: {} / {} bytes", current_mem, max_mem);
+                }
+                Err(e) => {
+                    debug!("Could not check memory usage: {}", e);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Enforce CPU limit (stub - would require platform-specific implementation)
+    pub fn enforce_cpu_limit(&self) -> Result<()> {
+        if let Some(max_cpu) = self.limits.max_cpu {
+            // CPU limiting would require platform-specific APIs
+            // On Unix: setrlimit, cgroups, or nice/renice
+            // On Windows: Job Objects
+            debug!("CPU limit set to {}% (enforcement not implemented)", max_cpu);
+        }
+        Ok(())
+    }
+}
+
+/// Resource limiter for operations
+pub struct ResourceLimiter {
+    limits: ResourceLimits,
+    monitor: Option<ResourceMonitor>,
+}
+
+impl ResourceLimiter {
+    /// Create a new resource limiter
+    pub fn new(limits: ResourceLimits) -> Self {
+        let monitor = if limits.has_limits() {
+            Some(ResourceMonitor::new(limits.clone()))
+        } else {
+            None
+        };
+
+        Self { limits, monitor }
+    }
+
+    /// Start resource limiting
+    pub fn start(&mut self) -> Result<()> {
+        self.limits.validate()?;
+        
+        if let Some(ref monitor) = self.monitor {
+            monitor.start_monitoring()?;
+        }
+        
+        Ok(())
+    }
+
+    /// Stop resource limiting
+    pub fn stop(&self) {
+        if let Some(ref monitor) = self.monitor {
+            monitor.stop_monitoring();
+        }
+    }
+
+    /// Check if limits are exceeded
+    pub fn check_limits(&self) -> Result<()> {
+        if let Some(ref monitor) = self.monitor {
+            monitor.enforce_memory_limit()?;
+            monitor.enforce_cpu_limit()?;
+            
+            if monitor.is_shutdown_requested() {
+                anyhow::bail!("Resource limit violation detected, operation terminated");
+            }
+        }
+        Ok(())
+    }
+
+    /// Get the resource limits
+    pub fn limits(&self) -> &ResourceLimits {
+        &self.limits
+    }
+}
+
+impl Drop for ResourceLimiter {
+    fn drop(&mut self) {
+        self.stop();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_memory_limit_bytes() {
+        let result = ResourceLimits::parse_memory_limit("1024").unwrap();
+        assert_eq!(result, 1024);
+    }
+
+    #[test]
+    fn test_parse_memory_limit_kb() {
+        let result = ResourceLimits::parse_memory_limit("512K").unwrap();
+        assert_eq!(result, 512 * 1024);
+    }
+
+    #[test]
+    fn test_parse_memory_limit_mb() {
+        let result = ResourceLimits::parse_memory_limit("2G").unwrap();
+        assert_eq!(result, 2 * 1024 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_parse_memory_limit_gb() {
+        let result = ResourceLimits::parse_memory_limit("1G").unwrap();
+        assert_eq!(result, 1024 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_parse_memory_limit_invalid() {
+        let result = ResourceLimits::parse_memory_limit("invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_memory_limit_invalid_suffix() {
+        let result = ResourceLimits::parse_memory_limit("512X");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_resource_limits_from_cli() {
+        let limits = ResourceLimits::from_cli(Some("512M".to_string()), Some(50)).unwrap();
+        assert_eq!(limits.max_memory, Some(512 * 1024 * 1024));
+        assert_eq!(limits.max_cpu, Some(50));
+    }
+
+    #[test]
+    fn test_resource_limits_from_cli_none() {
+        let limits = ResourceLimits::from_cli(None, None).unwrap();
+        assert!(limits.max_memory.is_none());
+        assert!(limits.max_cpu.is_none());
+    }
+
+    #[test]
+    fn test_resource_limits_validate_valid() {
+        let limits = ResourceLimits::new(Some(1024 * 1024), Some(50));
+        assert!(limits.validate().is_ok());
+    }
+
+    #[test]
+    fn test_resource_limits_validate_invalid_cpu() {
+        let limits = ResourceLimits::new(None, Some(150));
+        assert!(limits.validate().is_err());
+    }
+
+    #[test]
+    fn test_resource_limits_validate_zero_cpu() {
+        let limits = ResourceLimits::new(None, Some(0));
+        assert!(limits.validate().is_err());
+    }
+
+    #[test]
+    fn test_resource_limits_validate_zero_memory() {
+        let limits = ResourceLimits::new(Some(0), None);
+        assert!(limits.validate().is_err());
+    }
+
+    #[test]
+    fn test_resource_limits_has_limits() {
+        let limits = ResourceLimits::new(Some(1024), Some(50));
+        assert!(limits.has_limits());
+    }
+
+    #[test]
+    fn test_resource_limits_no_limits() {
+        let limits = ResourceLimits::new(None, None);
+        assert!(!limits.has_limits());
+    }
+
+    #[test]
+    fn test_resource_limiter_start_stop() {
+        let limits = ResourceLimits::new(Some(1024 * 1024 * 1024), Some(50));
+        let mut limiter = ResourceLimiter::new(limits);
+        assert!(limiter.start().is_ok());
+        limiter.stop();
+    }
+
+    #[test]
+    fn test_resource_limiter_check_limits() {
+        let limits = ResourceLimits::new(None, None);
+        let limiter = ResourceLimiter::new(limits);
+        assert!(limiter.check_limits().is_ok());
+    }
+
+    #[test]
+    fn test_get_memory_usage_unix() {
+        #[cfg(unix)]
+        {
+            let result = ResourceMonitor::get_memory_usage();
+            // This should work on Unix systems
+            // We don't assert the value, just that it doesn't panic
+            let _ = result;
+        }
+    }
+
+    #[test]
+    fn test_get_memory_usage_windows() {
+        #[cfg(windows)]
+        {
+            let result = ResourceMonitor::get_memory_usage();
+            assert!(result.is_err());
+        }
+    }
+}

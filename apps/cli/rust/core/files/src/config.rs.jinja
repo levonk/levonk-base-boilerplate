@@ -65,6 +65,14 @@ pub struct Config {
     /// Daemon job timeout in seconds
     #[serde(default = "default_daemon_job_timeout")]
     pub daemon_job_timeout: u64,
+    
+    /// Maximum memory limit for daemon jobs (e.g., "512M", "2G")
+    #[serde(default)]
+    pub daemon_max_memory: Option<String>,
+    
+    /// Maximum CPU usage for daemon jobs (1-100)
+    #[serde(default)]
+    pub daemon_max_cpu: Option<u8>,
 }
 
 fn default_log_level() -> String {
@@ -127,6 +135,8 @@ impl Default for Config {
             daemon_auto_spawn: default_daemon_auto_spawn(),
             daemon_max_jobs: default_daemon_max_jobs(),
             daemon_job_timeout: default_daemon_job_timeout(),
+            daemon_max_memory: None,
+            daemon_max_cpu: None,
         }
     }
 }

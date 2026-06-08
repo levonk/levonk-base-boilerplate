@@ -102,6 +102,14 @@ pub struct Cli {
     #[arg(long, help = "Display manual page")]
     pub man: bool,
 
+    /// Maximum memory limit (e.g., 512M, 2G)
+    #[arg(long, value_name = "LIMIT", help = "Set maximum memory limit for operations")]
+    pub max_memory: Option<String>,
+
+    /// Maximum CPU usage as percentage (1-100)
+    #[arg(long, value_name = "PERCENT", help = "Set maximum CPU usage percentage")]
+    pub max_cpu: Option<u8>,
+
     /// Subcommand for management operations
     #[command(subcommand)]
     pub command: Option<Commands>,
