@@ -26,12 +26,12 @@ Require confirmation for destructive operations (delete, overwrite). Implement `
 
 ## Sub-Tasks
 
-- [ ] Add confirmation prompt logic
-- [ ] Implement --force flag to bypass prompts
-- [ ] Add consistent prompt format
-- [ ] Apply prompts to destructive operations
-- [ ] Add tests for confirmation prompts
-- [ ] Update documentation
+- [x] Add confirmation prompt logic
+- [x] Implement --force flag to bypass prompts
+- [x] Add consistent prompt format
+- [x] Apply prompts to destructive operations
+- [x] Add tests for confirmation prompts
+- [x] Update documentation
 
 ## Relevant Files
 
