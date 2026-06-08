@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 3
 parallel_id: 3
 branch: "feature/current/cli-python-standards/story-03-003-dry-run-confirm"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
