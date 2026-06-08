@@ -26,13 +26,13 @@ Standardize error format: `ERROR: <description> - <suggestion>`. Provide actiona
 
 ## Sub-Tasks
 
-- [ ] Implement standardized error format
-- [ ] Add actionable suggestions to errors
-- [ ] Include file and line number context
-- [ ] Define consistent error types
-- [ ] Define consistent exit codes
-- [ ] Add tests for error formatting
-- [ ] Update documentation
+- [x] Implement standardized error format
+- [x] Add actionable suggestions to errors
+- [x] Include file and line number context
+- [x] Define consistent error types
+- [x] Define consistent exit codes
+- [x] Add tests for error formatting
+- [x] Update documentation
 
 ## Relevant Files
 

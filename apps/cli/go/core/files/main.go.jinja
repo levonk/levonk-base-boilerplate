@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/mattn/go-isatty"
@@ -252,7 +253,7 @@ Examples:
 
 						if bar != nil {
 							fileInfo, _ := os.Stat(file)
-							reader := NewProgressReader(nil, bar, fileInfo.Size())
+							_ = NewProgressReader(nil, bar, fileInfo.Size())
 							// Actually read the file
 							content, err = os.ReadFile(file)
 							if err == nil {

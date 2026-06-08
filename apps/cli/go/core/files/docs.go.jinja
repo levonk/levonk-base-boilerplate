@@ -6,12 +6,13 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
 )
 
 // RunGenMan generates and displays the man page
 func RunGenMan(cmd *cobra.Command) error {
 	// Generate man page to stdout
-	header := &cobra.GenManHeader{
+	header := &doc.GenManHeader{
 		Title:   "{{ project_name }}",
 		Section: "1",
 		Date:    "2026-01-01",
@@ -20,7 +21,7 @@ func RunGenMan(cmd *cobra.Command) error {
 	}
 
 	// Generate man page for root command
-	if err := cmd.GenMan(header, os.Stdout); err != nil {
+	if err := doc.GenManTree(cmd, header, os.Stdout); err != nil {
 		return fmt.Errorf("failed to generate man page: %w", err)
 	}
 
@@ -29,7 +30,7 @@ func RunGenMan(cmd *cobra.Command) error {
 
 // GenManToFile generates a man page file for installation
 func GenManToFile(cmd *cobra.Command, destDir string) error {
-	header := &cobra.GenManHeader{
+	header := &doc.GenManHeader{
 		Title:   "{{ project_name }}",
 		Section: "1",
 		Date:    "2026-01-01",
@@ -44,7 +45,7 @@ func GenManToFile(cmd *cobra.Command, destDir string) error {
 
 	// Generate man page file
 	manFile := filepath.Join(destDir, "{{ project_slug }}.1")
-	if err := cmd.GenManFile(header, manFile); err != nil {
+	if err := doc.GenManTree(cmd, header, manFile); err != nil {
 		return fmt.Errorf("failed to generate man page file: %w", err)
 	}
 
