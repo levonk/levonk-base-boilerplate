@@ -26,13 +26,13 @@ Implement `--dry-run` flag to preview changes without executing them. Show exact
 
 ## Sub-Tasks
 
-- [ ] Add --dry-run flag to CLI argument parser
-- [ ] Implement dry-run mode in command execution
-- [ ] Add preview output for operations
-- [ ] Apply dry-run to all file operations
-- [ ] Apply dry-run to destructive actions
-- [ ] Add tests for dry-run mode
-- [ ] Update documentation
+- [x] Add --dry-run flag to CLI argument parser
+- [x] Implement dry-run mode in command execution
+- [x] Add preview output for operations
+- [x] Apply dry-run to all file operations
+- [x] Apply dry-run to destructive actions
+- [x] Add tests for dry-run mode
+- [x] Update documentation
 
 ## Relevant Files
 
