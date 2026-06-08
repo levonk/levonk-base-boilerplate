@@ -1,0 +1,173 @@
+# vim: set ft=python :
+import os
+from pathlib import Path
+from typing import Optional
+from urllib.parse import quote
+
+
+def format_error(description: str, suggestion: str) -> str:
+    """Format error message with description and actionable suggestion.
+    
+    Format: ERROR: <description> - <suggestion>
+    
+    Args:
+        description: The error description
+        suggestion: Actionable suggestion to fix the error
+        
+    Returns:
+        Formatted error message
+    """
+    return f"ERROR: {description} - {suggestion}"
+
+
+def format_file_reference_vscode(file_path: Path, line: Optional[int] = None, column: Optional[int] = None) -> str:
+    """Format file reference in VSCode-compatible format.
+    
+    Format: file:///absolute/path/to/file:line:column
+    
+    Args:
+        file_path: Absolute path to the file
+        line: Optional line number
+        column: Optional column number
+        
+    Returns:
+        VSCode-compatible file reference
+    """
+    # Ensure absolute path
+    abs_path = file_path.absolute()
+    
+    # Convert to file:// URI format
+    file_uri = abs_path.as_uri()
+    
+    # Add line and column if provided
+    if line is not None:
+        file_uri += f":{line}"
+        if column is not None:
+            file_uri += f":{column}"
+    
+    return file_uri
+
+
+def format_file_reference_standard(file_path: Path, line: Optional[int] = None, column: Optional[int] = None) -> str:
+    """Format file reference in standard terminal format.
+    
+    Format: /absolute/path/to/file:line:column
+    
+    Args:
+        file_path: Absolute path to the file
+        line: Optional line number
+        column: Optional column number
+        
+    Returns:
+        Standard file reference
+    """
+    # Ensure absolute path
+    abs_path = str(file_path.absolute())
+    
+    # Add line and column if provided
+    if line is not None:
+        abs_path += f":{line}"
+        if column is not None:
+            abs_path += f":{column}"
+    
+    return abs_path
+
+
+def format_url(url: str) -> str:
+    """Format URL with proper encoding for browser compatibility.
+    
+    Args:
+        url: The URL to format
+        
+    Returns:
+        Properly encoded URL
+    """
+    # Ensure URL has scheme
+    if not url.startswith(("http://", "https://", "file://")):
+        # Assume it's a file path
+        if os.path.exists(url):
+            url = Path(url).as_uri()
+    
+    return url
+
+
+def format_file_not_found_error(file_path: Path) -> str:
+    """Format file not found error with actionable suggestion.
+    
+    Args:
+        file_path: The file that was not found
+        
+    Returns:
+        Formatted error message
+    """
+    ref = format_file_reference_standard(file_path)
+    return format_error(
+        f"File not found: {ref}",
+        "Check the file path and ensure the file exists"
+    )
+
+
+def format_permission_denied_error(file_path: Path) -> str:
+    """Format permission denied error with actionable suggestion.
+    
+    Args:
+        file_path: The file with permission issues
+        
+    Returns:
+        Formatted error message
+    """
+    ref = format_file_reference_standard(file_path)
+    return format_error(
+        f"Permission denied: {ref}",
+        "Check file permissions or run with appropriate privileges"
+    )
+
+
+def format_validation_error(field: str, value: str, reason: str) -> str:
+    """Format validation error with actionable suggestion.
+    
+    Args:
+        field: The field that failed validation
+        value: The invalid value
+        reason: The reason for validation failure
+        
+    Returns:
+        Formatted error message
+    """
+    return format_error(
+        f"Validation failed for {field}: {value}",
+        f"Reason: {reason} - Provide a valid value"
+    )
+
+
+def format_network_error(url: str, reason: str) -> str:
+    """Format network error with actionable suggestion.
+    
+    Args:
+        url: The URL that failed
+        reason: The reason for network failure
+        
+    Returns:
+        Formatted error message
+    """
+    return format_error(
+        f"Network error accessing {url}",
+        f"Reason: {reason} - Check your connection and URL"
+    )
+
+
+def format_config_error(config_path: Path, reason: str) -> str:
+    """Format configuration error with actionable suggestion.
+    
+    Args:
+        config_path: The configuration file path
+        reason: The reason for config error
+        
+    Returns:
+        Formatted error message
+    """
+    ref = format_file_reference_standard(config_path)
+    return format_error(
+        f"Configuration error in {ref}",
+        f"Reason: {reason} - Check your configuration file"
+    )

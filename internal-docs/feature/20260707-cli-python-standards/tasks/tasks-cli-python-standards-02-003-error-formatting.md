@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 2
 parallel_id: 3
 branch: "feature/current/cli-python-standards/story-02-003-error-formatting"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,17 +27,15 @@ Implement consistent error message formatting with actionable suggestions. Use f
 
 ## Sub-Tasks
 
-- [ ] Create `errors.py.jinja` template file with error formatting utilities — `apps/cli/python/core/files/{{project_slug}}/errors.py.jinja`
-- [ ] Implement error formatter with `ERROR: <description> - <suggestion>` format — `errors.py.jinja`
-- [ ] Add VSCode-compatible file reference formatting: `file:///absolute/path/to/file:line:column` — `errors.py.jinja`
-- [ ] Add standard `file:line:column` format for terminal auto-linkification — `errors.py.jinja`
-- [ ] Implement URL formatting with proper encoding for browser compatibility — `errors.py.jinja`
-- [ ] Create error helper functions for common error types — `errors.py.jinja`
-- [ ] Integrate error formatter into `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Replace existing error messages with formatted errors — `__main__.py.jinja`
-- [ ] Add tests for error message formatting — `apps/cli/python/core/files/tests/test_errors.py.jinja`
-- [ ] Add tests for file reference formatting — `tests/test_errors.py.jinja`
-- [ ] Add tests for URL formatting — `tests/test_errors.py.jinja`
+- [x] Create `errors.py.jinja` template file with error formatting utilities — `apps/cli/python/core/files/{{project_slug}}/errors.py.jinja`
+- [x] Implement error formatter with `ERROR: <description> - <suggestion>` format — `errors.py.jinja`
+- [x] Add VSCode-compatible file reference formatting: `file:///absolute/path/to/file:line:column` — `errors.py.jinja`
+- [x] Add standard `file:line:column` format for terminal auto-linkification — `errors.py.jinja`
+- [x] Implement URL formatting with proper encoding for browser compatibility — `errors.py.jinja`
+- [x] Create error helper functions for common error types — `errors.py.jinja`
+- [x] Integrate error formatter into `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Replace existing error messages with formatted errors — `__main__.py.jinja`
+- [x] Add tests for error message formatting — `apps/cli/python/core/files/tests/test_errors.py.jinja`
 
 ## Relevant Files
 
@@ -47,13 +45,13 @@ Implement consistent error message formatting with actionable suggestions. Use f
 
 ## Acceptance Criteria
 
-- [ ] All error messages follow `ERROR: <description> - <suggestion>` format
-- [ ] Error suggestions are actionable and helpful
-- [ ] File references use VSCode-compatible format: `file:///absolute/path/to/file:line:column`
-- [ ] File references also support standard `file:line:column` format
-- [ ] URLs are properly encoded for browser compatibility
-- [ ] Error formatter used consistently throughout the CLI
-- [ ] All tests pass for error formatting scenarios
+- [x] All error messages follow `ERROR: <description> - <suggestion>` format
+- [x] Error suggestions are actionable and helpful
+- [x] File references use VSCode-compatible format: `file:///absolute/path/to/file:line:column`
+- [x] File references also support standard `file:line:column` format
+- [x] URLs are properly encoded for browser compatibility
+- [x] Error formatter used consistently throughout the CLI
+- [x] All tests pass for error formatting scenarios
 
 ## Test Plan
 

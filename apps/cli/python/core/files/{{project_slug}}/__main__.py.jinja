@@ -11,6 +11,7 @@ from platformdirs import user_config_dir
 
 from {{ project_slug }}.logging import configure_logging, get_logger
 from {{ project_slug }}.completion import install_all_completions, uninstall_all_completions
+from {{ project_slug }}.errors import format_file_not_found_error, format_permission_denied_error
 {% if include_advanced_config %}
 from {{ project_slug }}.config import ConfigManager, get_config_manager
 {% endif %}
@@ -217,11 +218,11 @@ def process(
                 results.append(process_content(content, file_path))
         except FileNotFoundError:
             if not quiet:
-                logger.error(f"File not found: {file_path}", module="io")
+                logger.error(format_file_not_found_error(Path(file_path)), module="io")
             sys.exit(EXIT_FILE_NOT_FOUND)
         except PermissionError:
             if not quiet:
-                logger.error(f"Permission denied: {file_path}", module="io")
+                logger.error(format_permission_denied_error(Path(file_path)), module="io")
             sys.exit(EXIT_PERMISSION_DENIED)
         except Exception as e:
             if not quiet:
