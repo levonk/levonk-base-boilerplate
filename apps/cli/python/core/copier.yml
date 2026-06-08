@@ -95,3 +95,8 @@ include_privacy:
   type: bool
   help: Include privacy mode with anonymous lists?
   default: false
+
+include_audit:
+  type: bool
+  help: Include audit logging with retention?
+  default: false

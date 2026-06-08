@@ -1,0 +1,309 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"strings"
+	"testing"
+)
+
+// TestPromptForConfirmation_Yes tests that "y" or "yes" returns true
+func TestPromptForConfirmation_Yes(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"lowercase y", "y\n", true},
+		{"lowercase yes", "yes\n", true},
+		{"uppercase Y", "Y\n", true},
+		{"uppercase YES", "YES\n", true},
+		{"mixed case Yes", "Yes\n", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Simulate user input
+			r := strings.NewReader(tt.input)
+			oldStdin := os.Stdin
+			os.Stdin = r
+			defer func() { os.Stdin = oldStdin }()
+
+			// Capture output
+			oldStdout := os.Stdout
+			rOut, wOut, _ := os.Pipe()
+			os.Stdout = wOut
+			defer func() { os.Stdout = oldStdout }()
+
+			cfg := PromptConfig{
+				Message:  "Test prompt",
+				Force:    false,
+				Quiet:    false,
+				DefaultYes: false,
+			}
+
+			result := PromptForConfirmation(cfg)
+
+			wOut.Close()
+			os.Stdout = oldStdout
+
+			if bool(result) != tt.expected {
+				t.Errorf("PromptForConfirmation() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPromptForConfirmation_No tests that non-affirmative responses return false
+func TestPromptForConfirmation_No(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{"lowercase n", "n\n", false},
+		{"lowercase no", "no\n", false},
+		{"uppercase N", "N\n", false},
+		{"uppercase NO", "NO\n", false},
+		{"random text", "maybe\n", false},
+		{"empty string", "\n", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := strings.NewReader(tt.input)
+			oldStdin := os.Stdin
+			os.Stdin = r
+			defer func() { os.Stdin = oldStdin }()
+
+			cfg := PromptConfig{
+				Message:  "Test prompt",
+				Force:    false,
+				Quiet:    false,
+				DefaultYes: false,
+			}
+
+			result := PromptForConfirmation(cfg)
+
+			if bool(result) != tt.expected {
+				t.Errorf("PromptForConfirmation() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPromptForConfirmation_Force tests that force flag bypasses prompt
+func TestPromptForConfirmation_Force(t *testing.T) {
+	cfg := PromptConfig{
+		Message:  "Test prompt",
+		Force:    true,
+		Quiet:    false,
+		DefaultYes: false,
+	}
+
+	result := PromptForConfirmation(cfg)
+
+	if !bool(result) {
+		t.Errorf("PromptForConfirmation() with force=true should return true, got %v", result)
+	}
+}
+
+// TestPromptForConfirmation_Quiet tests that quiet flag returns safe default (no)
+func TestPromptForConfirmation_Quiet(t *testing.T) {
+	cfg := PromptConfig{
+		Message:  "Test prompt",
+		Force:    false,
+		Quiet:    true,
+		DefaultYes: false,
+	}
+
+	result := PromptForConfirmation(cfg)
+
+	if bool(result) {
+		t.Errorf("PromptForConfirmation() with quiet=true should return false (safe default), got %v", result)
+	}
+}
+
+// TestPromptForConfirmation_DefaultYes tests that empty response uses default
+func TestPromptForConfirmation_DefaultYes(t *testing.T) {
+	tests := []struct {
+		name       string
+		defaultYes bool
+		expected   bool
+	}{
+		{"default yes", true, true},
+		{"default no", false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := strings.NewReader("\n")
+			oldStdin := os.Stdin
+			os.Stdin = r
+			defer func() { os.Stdin = oldStdin }()
+
+			cfg := PromptConfig{
+				Message:  "Test prompt",
+				Force:    false,
+				Quiet:    false,
+				DefaultYes: tt.defaultYes,
+			}
+
+			result := PromptForConfirmation(cfg)
+
+			if bool(result) != tt.expected {
+				t.Errorf("PromptForConfirmation() with defaultYes=%v = %v, want %v", tt.defaultYes, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPromptForDelete tests the delete-specific prompt
+func TestPromptForDelete(t *testing.T) {
+	tests := []struct {
+		name     string
+		target   string
+		force    bool
+		quiet    bool
+		input    string
+		expected bool
+	}{
+		{"normal delete with yes", "file.txt", false, false, "y\n", true},
+		{"normal delete with no", "file.txt", false, false, "n\n", false},
+		{"force bypasses prompt", "file.txt", true, false, "", true},
+		{"quiet returns safe default", "file.txt", false, true, "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.input != "" {
+				r := strings.NewReader(tt.input)
+				oldStdin := os.Stdin
+				os.Stdin = r
+				defer func() { os.Stdin = oldStdin }()
+			}
+
+			result := PromptForDelete(tt.target, tt.force, tt.quiet)
+
+			if bool(result) != tt.expected {
+				t.Errorf("PromptForDelete() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPromptForOverwrite tests the overwrite-specific prompt
+func TestPromptForOverwrite(t *testing.T) {
+	tests := []struct {
+		name     string
+		target   string
+		force    bool
+		quiet    bool
+		input    string
+		expected bool
+	}{
+		{"normal overwrite with yes", "file.txt", false, false, "yes\n", true},
+		{"normal overwrite with no", "file.txt", false, false, "no\n", false},
+		{"force bypasses prompt", "file.txt", true, false, "", true},
+		{"quiet returns safe default", "file.txt", false, true, "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.input != "" {
+				r := strings.NewReader(tt.input)
+				oldStdin := os.Stdin
+				os.Stdin = r
+				defer func() { os.Stdin = oldStdin }()
+			}
+
+			result := PromptForOverwrite(tt.target, tt.force, tt.quiet)
+
+			if bool(result) != tt.expected {
+				t.Errorf("PromptForOverwrite() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPromptForDestructive tests the generic destructive prompt
+func TestPromptForDestructive(t *testing.T) {
+	tests := []struct {
+		name       string
+		operation  string
+		target     string
+		force      bool
+		quiet      bool
+		input      string
+		expected   bool
+	}{
+		{"destructive with yes", "delete", "file.txt", false, false, "Y\n", true},
+		{"destructive with no", "delete", "file.txt", false, false, "N\n", false},
+		{"force bypasses prompt", "delete", "file.txt", true, false, "", true},
+		{"quiet returns safe default", "delete", "file.txt", false, true, "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.input != "" {
+				r := strings.NewReader(tt.input)
+				oldStdin := os.Stdin
+				os.Stdin = r
+				defer func() { os.Stdin = oldStdin }()
+			}
+
+			result := PromptForDestructive(tt.operation, tt.target, tt.force, tt.quiet)
+
+			if bool(result) != tt.expected {
+				t.Errorf("PromptForDestructive() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPromptFormat tests that the prompt message is formatted correctly
+func TestPromptFormat(t *testing.T) {
+	tests := []struct {
+		name       string
+		message    string
+		defaultYes bool
+		expected   string
+	}{
+		{"default no prompt", "Delete file.txt?", false, "Delete file.txt? [y/N]? "},
+		{"default yes prompt", "Continue?", true, "Continue? [Y/n]? "},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := strings.NewReader("n\n")
+			oldStdin := os.Stdin
+			os.Stdin = r
+			defer func() { os.Stdin = oldStdin }()
+
+			// Capture stdout
+			oldStdout := os.Stdout
+			var buf bytes.Buffer
+			rOut, wOut, _ := os.Pipe()
+			os.Stdout = wOut
+			defer func() { os.Stdout = oldStdout }()
+
+			cfg := PromptConfig{
+				Message:  tt.message,
+				Force:    false,
+				Quiet:    false,
+				DefaultYes: tt.defaultYes,
+			}
+
+			PromptForConfirmation(cfg)
+
+			wOut.Close()
+			os.Stdout = oldStdout
+			buf.ReadFrom(rOut)
+
+			output := buf.String()
+			if !strings.Contains(output, tt.expected) {
+				t.Errorf("Prompt format incorrect. Expected to contain %q, got %q", tt.expected, output)
+			}
+		})
+	}
+}

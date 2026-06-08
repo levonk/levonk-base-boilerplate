@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 3
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-03-001-install-uninstall-flags"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-003"]
@@ -27,7 +27,7 @@ Add `--install` and `--uninstall` flags to handle CLI installation tasks. The `-
 
 ## Sub-Tasks
 
-- [ ] Create install module with installation logic
+- [x] Create install module with installation logic
 - [ ] Add `--install` flag to index.ts
 - [ ] Add `--uninstall` flag to index.ts
 - [ ] Implement shell completion script generation (delegates to completion module)
@@ -44,7 +44,7 @@ Add `--install` and `--uninstall` flags to handle CLI installation tasks. The `-
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/install.ts.jinja` - New install module (to be created)
+- `apps/cli/typescript/core/files/src/install.ts.jinja` - Install module with installation/uninstallation logic
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with install/uninstall flags
 - `apps/cli/typescript/core/files/src/install.test.ts.jinja` - Unit tests for install module (to be created)
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for install/uninstall

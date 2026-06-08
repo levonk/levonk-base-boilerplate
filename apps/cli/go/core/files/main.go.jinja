@@ -25,6 +25,7 @@ var (
 	installFlag bool
 	uninstallFlag bool
 	dryRun bool
+	force bool
 	logger *Logger
 	version = "1.0.0"
 
@@ -149,6 +150,18 @@ Examples:
 				}
 			}
 
+			// Check for destructive operations and prompt for confirmation
+			if !force && !quiet {
+				// Example: If we were deleting files, we would prompt here
+				// This is a placeholder for when delete/overwrite operations are added
+				// if hasDeleteOperations {
+				// 	if !PromptForDelete(target, force, quiet) {
+				// 		logger.Info("Operation cancelled by user")
+				// 		return nil
+				// 	}
+				// }
+			}
+
 			// Output Strategy
 			if jsonOutput {
 				enc := json.NewEncoder(os.Stdout)
@@ -189,6 +202,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&installFlag, "install", false, "Install shell completions and initialize config")
 	rootCmd.Flags().BoolVar(&uninstallFlag, "uninstall", false, "Remove shell completions and config files")
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without executing them")
+	rootCmd.Flags().BoolVarP(&force, "force", "f", false, "Bypass confirmation prompts for destructive operations")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }

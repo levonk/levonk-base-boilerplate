@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 2
 parallel_id: 1
 branch: "feature/current/20260707-cli-go-standards/story-02-001-dry-run-mode"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-006"]

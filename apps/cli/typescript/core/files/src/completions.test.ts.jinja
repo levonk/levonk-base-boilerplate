@@ -1,0 +1,241 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Command } from 'commander';
+import fs from 'fs/promises';
+import path from 'path';
+import {
+    generateCompletionScript,
+    writeCompletionScript,
+    getCompletionInstallInstructions,
+    validateCompletionScript,
+    type CompletionOptions,
+    type ShellType,
+} from './completions.js';
+
+describe('completions', () => {
+    let program: Command;
+
+    beforeEach(() => {
+        program = new Command();
+        program.name('{{ project_slug }}');
+        program.description('{{ description }}');
+        program.version('1.0.0');
+        program.option('--quiet', 'Suppress all output except errors');
+        program.option('--verbose', 'Enable verbose output with extra details');
+        program.option('--debug', 'Enable debug-level logging');
+        program.option('--color <mode>', 'Color mode: auto, always, or never', 'auto');
+        program.option('--config <path>', 'Config file path');
+        program.option('--json', 'Output results as JSON');
+    });
+
+    describe('generateCompletionScript', () => {
+        it('should generate bash completion script', () => {
+            const options: CompletionOptions = { shell: 'bash' };
+            const script = generateCompletionScript(program, options);
+
+            expect(script).toContain('# Bash completion');
+            expect(script).toContain('complete -F');
+            expect(script).toContain('{{ project_slug }}');
+        });
+
+        it('should generate zsh completion script', () => {
+            const options: CompletionOptions = { shell: 'zsh' };
+            const script = generateCompletionScript(program, options);
+
+            expect(script).toContain('#compdef {{ project_slug }}');
+            expect(script).toContain('_arguments');
+            expect(script).toContain('--help');
+        });
+
+        it('should generate fish completion script', () => {
+            const options: CompletionOptions = { shell: 'fish' };
+            const script = generateCompletionScript(program, options);
+
+            expect(script).toContain('# Fish completion');
+            expect(script).toContain('complete -c {{ project_slug }}');
+            expect(script).toContain('-l help');
+        });
+
+        it('should throw error for unsupported shell type', () => {
+            const options: CompletionOptions = { shell: 'unknown' as ShellType };
+            expect(() => generateCompletionScript(program, options)).toThrow(
+                'Unsupported shell type: unknown'
+            );
+        });
+    });
+
+    describe('writeCompletionScript', () => {
+        const mockLogger = {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+        };
+
+        beforeEach(() => {
+            vi.clearAllMocks();
+        });
+
+        it('should write completion script to file', async () => {
+            const options: CompletionOptions = {
+                shell: 'bash',
+                outputDir: '/tmp/test-completions',
+            };
+
+            vi.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
+            vi.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
+
+            await writeCompletionScript(program, options, mockLogger as any);
+
+            expect(fs.mkdir).toHaveBeenCalledWith('/tmp/test-completions', {
+                recursive: true,
+            });
+            expect(fs.writeFile).toHaveBeenCalled();
+            expect(mockLogger.info).toHaveBeenCalled();
+        });
+
+        it('should output to stdout when stdout option is true', async () => {
+            const options: CompletionOptions = {
+                shell: 'bash',
+                stdout: true,
+            };
+
+            const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+            await writeCompletionScript(program, options, mockLogger as any);
+
+            expect(consoleLogSpy).toHaveBeenCalled();
+            expect(fs.mkdir).not.toHaveBeenCalled();
+            expect(fs.writeFile).not.toHaveBeenCalled();
+
+            consoleLogSpy.mockRestore();
+        });
+
+        it('should use default output directory when not specified', async () => {
+            const options: CompletionOptions = { shell: 'bash' };
+
+            vi.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
+            vi.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
+
+            await writeCompletionScript(program, options, mockLogger as any);
+
+            expect(fs.mkdir).toHaveBeenCalledWith(
+                path.join(process.cwd(), 'completions'),
+                { recursive: true }
+            );
+        });
+
+        it('should throw error when write fails', async () => {
+            const options: CompletionOptions = { shell: 'bash' };
+
+            vi.spyOn(fs, 'mkdir').mockRejectedValue(new Error('Permission denied'));
+
+            await expect(
+                writeCompletionScript(program, options, mockLogger as any)
+            ).rejects.toThrow('Failed to write completion script');
+        });
+    });
+
+    describe('getCompletionInstallInstructions', () => {
+        it('should return bash installation instructions', () => {
+            const instructions = getCompletionInstallInstructions('bash', '{{ project_slug }}');
+
+            expect(instructions).toContain('Bash completion installation');
+            expect(instructions).toContain('~/.bashrc');
+            expect(instructions).toContain('{{ project_slug }}.bash');
+        });
+
+        it('should return zsh installation instructions', () => {
+            const instructions = getCompletionInstallInstructions('zsh', '{{ project_slug }}');
+
+            expect(instructions).toContain('Zsh completion installation');
+            expect(instructions).toContain('~/.zshrc');
+            expect(instructions).toContain('{{ project_slug }}.zsh');
+        });
+
+        it('should return fish installation instructions', () => {
+            const instructions = getCompletionInstallInstructions('fish', '{{ project_slug }}');
+
+            expect(instructions).toContain('Fish completion installation');
+            expect(instructions).toContain('~/.config/fish/completions');
+            expect(instructions).toContain('{{ project_slug }}.fish');
+        });
+
+        it('should throw error for unsupported shell type', () => {
+            expect(() =>
+                getCompletionInstallInstructions('unknown' as ShellType, '{{ project_slug }}')
+            ).toThrow('Unsupported shell type: unknown');
+        });
+    });
+
+    describe('validateCompletionScript', () => {
+        it('should validate bash completion script', () => {
+            const script = `# Bash completion
+complete -F _test_completion test`;
+            const result = validateCompletionScript(script, 'bash');
+
+            expect(result.valid).toBe(true);
+            expect(result.errors).toHaveLength(0);
+        });
+
+        it('should fail validation for bash script without complete function', () => {
+            const script = `# Bash completion
+# Missing complete function`;
+            const result = validateCompletionScript(script, 'bash');
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Missing bash complete function');
+        });
+
+        it('should validate zsh completion script', () => {
+            const script = `#compdef test
+_arguments --help`;
+            const result = validateCompletionScript(script, 'zsh');
+
+            expect(result.valid).toBe(true);
+            expect(result.errors).toHaveLength(0);
+        });
+
+        it('should fail validation for zsh script without compdef', () => {
+            const script = `# Zsh completion
+# Missing compdef`;
+            const result = validateCompletionScript(script, 'zsh');
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Missing zsh compdef directive');
+        });
+
+        it('should validate fish completion script', () => {
+            const script = `# Fish completion
+complete -c test -l help`;
+            const result = validateCompletionScript(script, 'fish');
+
+            expect(result.valid).toBe(true);
+            expect(result.errors).toHaveLength(0);
+        });
+
+        it('should fail validation for fish script without complete command', () => {
+            const script = `# Fish completion
+# Missing complete command`;
+            const result = validateCompletionScript(script, 'fish');
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Missing fish complete command');
+        });
+
+        it('should fail validation for empty script', () => {
+            const script = '';
+            const result = validateCompletionScript(script, 'bash');
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Script is empty');
+        });
+
+        it('should fail validation for whitespace-only script', () => {
+            const script = '   \n  \n  ';
+            const result = validateCompletionScript(script, 'bash');
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Script is empty');
+        });
+    });
+});

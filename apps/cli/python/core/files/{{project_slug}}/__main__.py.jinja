@@ -19,6 +19,7 @@ from {{ project_slug }}.terminal import get_terminal_size, should_use_pager, pag
 from {{ project_slug }}.resource import get_resource_monitor
 from {{ project_slug }}.health import perform_health_check
 from {{ project_slug }}.privacy import get_privacy_manager
+from {{ project_slug }}.audit import get_audit_logger
 {% if include_tui %}
 from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
 {% endif %}
@@ -129,6 +130,7 @@ def process(
     max_memory: Optional[int] = typer.Option(None, "--max-memory", help="Maximum memory usage in MB"),
     max_cpu: Optional[float] = typer.Option(None, "--max-cpu", help="Maximum CPU usage percentage"),
     privacy_mode: bool = typer.Option(False, "--privacy-mode", help="Enable privacy mode with anonymous lists"),
+    audit_log: bool = typer.Option(False, "--audit-log", help="Enable audit logging with SQLite"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
@@ -213,6 +215,13 @@ def process(
         privacy_manager = get_privacy_manager(privacy_mode=True)
         if not quiet:
             logger.info("Privacy mode enabled with anonymous lists", module="privacy")
+
+    # Initialize audit logger if audit logging enabled
+    audit_logger = None
+    if audit_log:
+        audit_logger = get_audit_logger()
+        if not quiet:
+            logger.info("Audit logging enabled with SQLite", module="audit")
 
 {% if include_tui %}
     # Handle TUI mode
@@ -384,6 +393,14 @@ def process(
                     with open(file_path, 'r', encoding='utf-8') as f:
                         content = f.read()
                         results.append(process_content(content, file_path))
+
+                        # Log audit event
+                        if audit_logger:
+                            audit_logger.log(
+                                action="process_file",
+                                resource=file_path,
+                                details={"input_count": len(inputs)}
+                            )
                 except FileNotFoundError:
                     if not quiet:
                         logger.error(format_file_not_found_error(Path(file_path)), module="io")

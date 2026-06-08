@@ -232,4 +232,84 @@ describe('CLI', () => {
             expect(stdout).toContain('Usage:');
         });
     });
+
+    describe('Completion Scripts', () => {
+        const testCompletionsDir = path.join(os.tmpdir(), 'test-completions-{{ project_slug }}');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testCompletionsDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testCompletionsDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should generate bash completion script', async () => {
+            const { stdout } = await execAsync(
+                `npx ts-node src/index.ts --completion bash --output-dir "${testCompletionsDir}"`
+            );
+
+            const bashScript = path.join(testCompletionsDir, '{{ project_slug }}.bash');
+            const exists = await fs.access(bashScript).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            const content = await fs.readFile(bashScript, 'utf-8');
+            expect(content).toContain('# Bash completion');
+            expect(content).toContain('complete -F');
+        });
+
+        it('should generate zsh completion script', async () => {
+            const { stdout } = await execAsync(
+                `npx ts-node src/index.ts --completion zsh --output-dir "${testCompletionsDir}"`
+            );
+
+            const zshScript = path.join(testCompletionsDir, '{{ project_slug }}.zsh');
+            const exists = await fs.access(zshScript).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            const content = await fs.readFile(zshScript, 'utf-8');
+            expect(content).toContain('#compdef {{ project_slug }}');
+        });
+
+        it('should generate fish completion script', async () => {
+            const { stdout } = await execAsync(
+                `npx ts-node src/index.ts --completion fish --output-dir "${testCompletionsDir}"`
+            );
+
+            const fishScript = path.join(testCompletionsDir, '{{ project_slug }}.fish');
+            const exists = await fs.access(fishScript).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            const content = await fs.readFile(fishScript, 'utf-8');
+            expect(content).toContain('# Fish completion');
+        });
+
+        it('should output completion script to stdout with --stdout flag', async () => {
+            const { stdout } = await execAsync(
+                'npx ts-node src/index.ts --completion bash --stdout'
+            );
+
+            expect(stdout).toContain('# Bash completion');
+            expect(stdout).toContain('complete -F');
+        });
+
+        it('should show completion installation instructions', async () => {
+            const { stdout } = await execAsync(
+                'npx ts-node src/index.ts --completion-install bash'
+            );
+
+            expect(stdout).toContain('Bash completion installation');
+            expect(stdout).toContain('~/.bashrc');
+        });
+    });
 });

@@ -1,0 +1,137 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/mattn/go-isatty"
+)
+
+// PromptType represents the type of confirmation prompt
+type PromptType string
+
+const (
+	PromptTypeDelete   PromptType = "delete"
+	PromptTypeOverwrite PromptType = "overwrite"
+	PromptTypeDestructive PromptType = "destructive"
+)
+
+// PromptResult represents the user's response to a prompt
+type PromptResult bool
+
+const (
+	PromptYes PromptResult = true
+	PromptNo  PromptResult = false
+)
+
+// PromptConfig holds configuration for confirmation prompts
+type PromptConfig struct {
+	Type        PromptType
+	Message     string
+	Force       bool
+	Quiet       bool
+	DefaultYes  bool
+}
+
+// PromptForConfirmation prompts the user for confirmation before a destructive operation
+// Returns true if the user confirms, false if they decline
+// If force is true, returns true without prompting
+// If quiet is true, returns false (safe default) without prompting
+func PromptForConfirmation(cfg PromptConfig) PromptResult {
+	// If force flag is set, bypass the prompt
+	if cfg.Force {
+		return PromptYes
+	}
+
+	// If quiet mode is set, use safe default (no)
+	if cfg.Quiet {
+		return PromptNo
+	}
+
+	// If not a TTY, use safe default (no)
+	if !isatty.IsTerminal(os.Stdin.Fd()) {
+		return PromptNo
+	}
+
+	// Build the prompt message
+	var prompt string
+	if cfg.DefaultYes {
+		prompt = fmt.Sprintf("%s [Y/n]? ", cfg.Message)
+	} else {
+		prompt = fmt.Sprintf("%s [y/N]? ", cfg.Message)
+	}
+
+	// Print the prompt
+	fmt.Print(prompt)
+
+	// Read user input
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		// On error, use safe default (no)
+		return PromptNo
+	}
+
+	// Trim whitespace and convert to lowercase
+	response = strings.TrimSpace(strings.ToLower(response))
+
+	// Handle empty response (use default)
+	if response == "" {
+		if cfg.DefaultYes {
+			return PromptYes
+		}
+		return PromptNo
+	}
+
+	// Check for affirmative responses
+	affirmative := []string{"y", "yes", "Y", "YES"}
+	for _, aff := range affirmative {
+		if response == aff {
+			return PromptYes
+		}
+	}
+
+	// Default to no for any other response
+	return PromptNo
+}
+
+// PromptForDelete prompts the user before deleting files
+func PromptForDelete(target string, force, quiet bool) PromptResult {
+	message := fmt.Sprintf("Delete %s?", target)
+	cfg := PromptConfig{
+		Type:    PromptTypeDelete,
+		Message: message,
+		Force:   force,
+		Quiet:   quiet,
+		DefaultYes: false, // Safe default: no
+	}
+	return PromptForConfirmation(cfg)
+}
+
+// PromptForOverwrite prompts the user before overwriting files
+func PromptForOverwrite(target string, force, quiet bool) PromptResult {
+	message := fmt.Sprintf("Overwrite %s?", target)
+	cfg := PromptConfig{
+		Type:    PromptTypeOverwrite,
+		Message: message,
+		Force:   force,
+		Quiet:   quiet,
+		DefaultYes: false, // Safe default: no
+	}
+	return PromptForConfirmation(cfg)
+}
+
+// PromptForDestructive prompts the user before any destructive operation
+func PromptForDestructive(operation, target string, force, quiet bool) PromptResult {
+	message := fmt.Sprintf("%s %s?", operation, target)
+	cfg := PromptConfig{
+		Type:    PromptTypeDestructive,
+		Message: message,
+		Force:   force,
+		Quiet:   quiet,
+		DefaultYes: false, // Safe default: no
+	}
+	return PromptForConfirmation(cfg)
+}

@@ -30,7 +30,7 @@ Add `--debug` flag for debug-level logging and enhance the existing logging syst
 - [~] Add `--debug` flag to index.ts command line options
 - [~] Add debug log level to logger.ts
 - [x] Implement log level hierarchy (debug < info < warn < error < fatal)
-- [ ] Ensure --quiet flag suppresses all non-essential output including progress indicators
+- [x] Ensure --quiet flag suppresses all non-essential output including progress indicators
 - [ ] Add structured logging support (JSON format for logs)
 - [ ] Add --log-format flag to choose between text and JSON logging
 - [ ] Update LoggerOptions interface to include debug and log format options
