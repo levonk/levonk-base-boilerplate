@@ -26,13 +26,13 @@ Auto-pager for long output. Respect `PAGER` environment variable (default to `le
 
 ## Sub-Tasks
 
-- [ ] Add pager integration logic
-- [ ] Respect PAGER environment variable
-- [ ] Implement --no-pager flag
-- [ ] Detect terminal height
-- [ ] Auto-pager long output
-- [ ] Add tests for pager integration
-- [ ] Update documentation
+- [x] Add pager integration logic
+- [x] Respect PAGER environment variable
+- [x] Implement --no-pager flag
+- [x] Detect terminal height
+- [x] Auto-pager long output
+- [x] Add tests for pager integration
+- [x] Update documentation
 
 ## Relevant Files
 
