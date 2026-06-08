@@ -298,7 +298,7 @@ program
           }
 
           // Restore console functions if they were suppressed
-          if (mergedOptions.json && originalLog && originalError && originalWarn) {
+          if ((mergedOptions.json || options.quiet === true) && originalLog && originalError && originalWarn) {
               console.log = originalLog;
               console.error = originalError;
               console.warn = originalWarn;
