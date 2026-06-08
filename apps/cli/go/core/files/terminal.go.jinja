@@ -1,0 +1,185 @@
+package main
+
+import (
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+
+	"golang.org/x/term"
+)
+
+const (
+	// DefaultTerminalWidth is the fallback width when terminal size cannot be detected
+	DefaultTerminalWidth = 80
+)
+
+// Terminal manages terminal size detection and resize events
+type Terminal struct {
+	width     int
+	height    int
+	mu        sync.RWMutex
+	resizeCh  chan os.Signal
+	onResize  func(width, height int)
+	listening bool
+}
+
+// NewTerminal creates a new Terminal instance and detects initial size
+func NewTerminal() *Terminal {
+	t := &Terminal{
+		width:    DefaultTerminalWidth,
+		height:   24,
+		resizeCh: make(chan os.Signal, 1),
+	}
+
+	// Detect initial terminal size
+	t.detectSize()
+
+	return t
+}
+
+// detectSize attempts to detect the current terminal size
+func (t *Terminal) detectSize() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	// Try to get terminal size from stdout
+	if isTerminal := term.IsTerminal(int(os.Stdout.Fd())); isTerminal {
+		width, height, err := term.GetSize(int(os.Stdout.Fd()))
+		if err == nil && width > 0 {
+			t.width = width
+			t.height = height
+			return
+		}
+	}
+
+	// Fallback to stderr if stdout is not a terminal
+	if isTerminal := term.IsTerminal(int(os.Stderr.Fd())); isTerminal {
+		width, height, err := term.GetSize(int(os.Stderr.Fd()))
+		if err == nil && width > 0 {
+			t.width = width
+			t.height = height
+			return
+		}
+	}
+
+	// Fallback to stdin if stdout/stderr are not terminals
+	if isTerminal := term.IsTerminal(int(os.Stdin.Fd())); isTerminal {
+		width, height, err := term.GetSize(int(os.Stdin.Fd()))
+		if err == nil && width > 0 {
+			t.width = width
+			t.height = height
+			return
+		}
+	}
+
+	// Use defaults if no terminal detected
+	t.width = DefaultTerminalWidth
+	t.height = 24
+}
+
+// GetWidth returns the current terminal width
+func (t *Terminal) GetWidth() int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.width
+}
+
+// GetHeight returns the current terminal height
+func (t *Terminal) GetHeight() int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.height
+}
+
+// StartResizeHandling begins listening for terminal resize events
+func (t *Terminal) StartResizeHandling(callback func(width, height int)) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.listening {
+		return
+	}
+
+	t.onResize = callback
+	t.listening = true
+
+	// Notify on SIGWINCH (terminal resize signal)
+	signal.Notify(t.resizeCh, syscall.SIGWINCH)
+
+	go t.handleResize()
+}
+
+// StopResizeHandling stops listening for resize events
+func (t *Terminal) StopResizeHandling() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if !t.listening {
+		return
+	}
+
+	signal.Stop(t.resizeCh)
+	close(t.resizeCh)
+	t.listening = false
+}
+
+// handleResize processes resize events
+func (t *Terminal) handleResize() {
+	for range t.resizeCh {
+		oldWidth := t.GetWidth()
+		oldHeight := t.GetHeight()
+
+		// Re-detect terminal size
+		t.detectSize()
+
+		newWidth := t.GetWidth()
+		newHeight := t.GetHeight()
+
+		// Call callback if size changed
+		if t.onResize != (func(int, int))(nil) && (oldWidth != newWidth || oldHeight != newHeight) {
+			t.onResize(newWidth, newHeight)
+		}
+	}
+}
+
+// FormatForWidth formats text to fit within the terminal width
+// It wraps text at the specified margin (default: terminal width - 2)
+func (t *Terminal) FormatForWidth(text string, margin ...int) string {
+	t.mu.RLock()
+	width := t.width
+	t.mu.RUnlock()
+
+	// Use custom margin if provided, otherwise use terminal width - 2
+	m := width - 2
+	if len(margin) > 0 && margin[0] > 0 {
+		m = margin[0]
+	}
+
+	// If text is shorter than margin, return as-is
+	if len(text) <= m {
+		return text
+	}
+
+	// Simple truncation with ellipsis for now
+	// TODO: Implement proper word wrapping if needed
+	if m > 3 {
+		return text[:m-3] + "..."
+	}
+	return text[:m]
+}
+
+// IsTerminal returns true if running in a terminal environment
+func IsTerminal() bool {
+	return term.IsTerminal(int(os.Stdout.Fd())) ||
+		term.IsTerminal(int(os.Stderr.Fd())) ||
+		term.IsTerminal(int(os.Stdin.Fd()))
+}
+
+// GetTerminalWidth returns the terminal width with fallback to default
+func GetTerminalWidth() int {
+	t := NewTerminal()
+	return t.GetWidth()
+}
+
+{# vim: set ft=go: #}

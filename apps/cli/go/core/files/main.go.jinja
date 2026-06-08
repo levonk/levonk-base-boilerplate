@@ -30,6 +30,7 @@ var (
 	force bool
 	noPager bool
 	logger *Logger
+	terminal *Terminal
 	version = "1.0.0"
 
 	rootCmd = &cobra.Command{
@@ -72,6 +73,12 @@ Examples:
 			logger.SetVerbose(verbose)
 			logger.SetDebug(debug)
 			logger.SetColorMode(colorMode)
+
+			// Initialize terminal size detection
+			terminal = NewTerminal()
+			if !quiet {
+				logger.Debug("Terminal size detected: %dx%d", terminal.GetWidth(), terminal.GetHeight())
+			}
 
 			// Log dry-run mode and add to context
 			if dryRun {
