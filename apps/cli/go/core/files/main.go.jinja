@@ -20,6 +20,8 @@ var (
 	quiet bool
 	verbose bool
 	noColor bool
+	installFlag bool
+	uninstallFlag bool
 	logger *Logger
 	version = "1.0.0"
 
@@ -35,6 +37,16 @@ Examples:
 		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			// Handle --install flag
+			if installFlag {
+				return RunInstall(cmd)
+			}
+
+			// Handle --uninstall flag
+			if uninstallFlag {
+				return RunUninstall(cmd)
+			}
 
 			// Handle --usage flag
 			usage, _ := cmd.Flags().GetBool("usage")
@@ -158,6 +170,8 @@ func init() {
 
 	// Local flags
 	rootCmd.Flags().Bool("usage", false, "Show usage information")
+	rootCmd.Flags().BoolVar(&installFlag, "install", false, "Install shell completions and initialize config")
+	rootCmd.Flags().BoolVar(&uninstallFlag, "uninstall", false, "Remove shell completions and config files")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }

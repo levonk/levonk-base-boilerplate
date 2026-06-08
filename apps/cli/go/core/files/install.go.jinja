@@ -1,0 +1,146 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/spf13/cobra"
+)
+
+// RunInstall handles the --install flag
+func RunInstall(cmd *cobra.Command) error {
+	fmt.Println("Installing {{ project_slug }}...")
+
+	// Generate and install shell completions
+	if err := installCompletions(cmd); err != nil {
+		return fmt.Errorf("failed to install completions: %w", err)
+	}
+
+	// Initialize config file
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to get config directory: %w", err)
+	}
+	configPath := filepath.Join(configDir, "{{ project_slug }}", "config.yaml")
+	if err := InitConfigIfNeeded(configPath); err != nil {
+		return fmt.Errorf("failed to initialize config: %w", err)
+	}
+
+	// Print installation instructions
+	printInstallInstructions()
+
+	return nil
+}
+
+// RunUninstall handles the --uninstall flag
+func RunUninstall(cmd *cobra.Command) error {
+	fmt.Println("Uninstalling {{ project_slug }}...")
+
+	// Remove shell completions
+	if err := uninstallCompletions(); err != nil {
+		return fmt.Errorf("failed to uninstall completions: %w", err)
+	}
+
+	// Remove config file
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return fmt.Errorf("failed to get config directory: %w", err)
+	}
+	configPath := filepath.Join(configDir, "{{ project_slug }}", "config.yaml")
+	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove config file: %w", err)
+	}
+
+	fmt.Println("Uninstall complete.")
+	return nil
+}
+
+// installCompletions generates and installs shell completion scripts
+func installCompletions(cmd *cobra.Command) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	// Bash completion
+	bashCompletionDir := filepath.Join(homeDir, ".local", "share", "bash-completion", "completions")
+	if err := os.MkdirAll(bashCompletionDir, 0755); err != nil {
+		return err
+	}
+	bashFile := filepath.Join(bashCompletionDir, "{{ project_slug }}")
+	if err := cmd.GenBashCompletionFile(bashFile); err != nil {
+		return err
+	}
+	fmt.Printf("Installed bash completion to %s\n", bashFile)
+
+	// Zsh completion
+	zshCompletionDir := filepath.Join(homeDir, ".local", "share", "zsh", "site-functions")
+	if err := os.MkdirAll(zshCompletionDir, 0755); err != nil {
+		return err
+	}
+	zshFile := filepath.Join(zshCompletionDir, "_{{ project_slug }}")
+	if err := cmd.GenZshCompletionFile(zshFile); err != nil {
+		return err
+	}
+	fmt.Printf("Installed zsh completion to %s\n", zshFile)
+
+	// Fish completion
+	fishCompletionDir := filepath.Join(homeDir, ".local", "share", "fish", "completions")
+	if err := os.MkdirAll(fishCompletionDir, 0755); err != nil {
+		return err
+	}
+	fishFile := filepath.Join(fishCompletionDir, "{{ project_slug }}.fish")
+	if err := cmd.GenFishCompletionFile(fishFile); err != nil {
+		return err
+	}
+	fmt.Printf("Installed fish completion to %s\n", fishFile)
+
+	return nil
+}
+
+// uninstallCompletions removes shell completion scripts
+func uninstallCompletions() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	// Remove bash completion
+	bashFile := filepath.Join(homeDir, ".local", "share", "bash-completion", "completions", "{{ project_slug }}")
+	if err := os.Remove(bashFile); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	fmt.Printf("Removed bash completion from %s\n", bashFile)
+
+	// Remove zsh completion
+	zshFile := filepath.Join(homeDir, ".local", "share", "zsh", "site-functions", "_{{ project_slug }}")
+	if err := os.Remove(zshFile); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	fmt.Printf("Removed zsh completion from %s\n", zshFile)
+
+	// Remove fish completion
+	fishFile := filepath.Join(homeDir, ".local", "share", "fish", "completions", "{{ project_slug }}.fish")
+	if err := os.Remove(fishFile); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	fmt.Printf("Removed fish completion from %s\n", fishFile)
+
+	return nil
+}
+
+// printInstallInstructions displays post-installation instructions
+func printInstallInstructions() {
+	fmt.Println("\nInstallation complete!")
+	fmt.Println("\nTo enable shell completions, add the following to your shell configuration:")
+	fmt.Println("\nFor bash:")
+	fmt.Println("  source ~/.local/share/bash-completion/completions/{{ project_slug }}")
+	fmt.Println("\nFor zsh:")
+	fmt.Println("  fpath=(~/.local/share/zsh/site-functions $fpath)")
+	fmt.Println("  autoload -U compinit && compinit")
+	fmt.Println("\nFor fish:")
+	fmt.Println("  Completions are automatically loaded from ~/.local/share/fish/completions/")
+	fmt.Println("\nConfig file initialized at: ~/.config/{{ project_slug }}/config.yaml")
+}
+{# vim: set ft=go: #}
