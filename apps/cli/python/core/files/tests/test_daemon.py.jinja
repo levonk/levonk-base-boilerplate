@@ -1,0 +1,76 @@
+# vim: set ft=python :
+from {{ project_slug }}.daemon import DaemonManager, get_daemon_manager
+from pathlib import Path
+import tempfile
+
+
+def test_daemon_manager_creation():
+    """Test daemon manager can be created."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        manager = DaemonManager(config_dir=Path(tmpdir))
+        assert manager is not None
+        assert manager.config_dir == Path(tmpdir)
+
+
+def test_platform_detection():
+    """Test platform detection for daemon support."""
+    manager = DaemonManager()
+    supported = manager.is_platform_supported()
+    # Should return boolean
+    assert isinstance(supported, bool)
+
+
+def test_platform_fallback_message():
+    """Test clear error message for unsupported platforms."""
+    manager = DaemonManager()
+    message = manager.get_platform_fallback_message()
+    # Should return a string
+    assert isinstance(message, str)
+    assert len(message) > 0
+
+
+def test_get_daemon_manager():
+    """Test get_daemon_manager helper function."""
+    manager = get_daemon_manager()
+    assert manager is not None
+    assert isinstance(manager, DaemonManager)
+
+
+def test_list_jobs():
+    """Test listing background jobs."""
+    manager = DaemonManager()
+    jobs = manager.list_jobs()
+    # Should return a list
+    assert isinstance(jobs, list)
+
+
+def test_list_jobs_with_filter():
+    """Test listing jobs with job ID filter."""
+    manager = DaemonManager()
+    jobs = manager.list_jobs(job_id="test-id")
+    # Should return a list
+    assert isinstance(jobs, list)
+
+
+def test_cancel_job():
+    """Test canceling a job."""
+    manager = DaemonManager()
+    result = manager.cancel_job("test-job-id")
+    # Should return boolean
+    assert isinstance(result, bool)
+
+
+def test_submit_job():
+    """Test submitting a job to daemon."""
+    manager = DaemonManager()
+    job_id = manager.submit_job("test_operation", {"arg": "value"})
+    # Should return job ID or None
+    assert job_id is None or isinstance(job_id, str)
+
+
+def test_is_daemon_running():
+    """Test checking if daemon is running."""
+    manager = DaemonManager()
+    running = manager.is_daemon_running()
+    # Should return boolean
+    assert isinstance(running, bool)

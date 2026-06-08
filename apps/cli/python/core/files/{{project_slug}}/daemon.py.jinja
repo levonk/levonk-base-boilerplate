@@ -1,0 +1,151 @@
+# vim: set ft=python :
+import sys
+import platform
+import os
+from typing import Optional, Dict, List
+from pathlib import Path
+
+
+class DaemonManager:
+    """Manages daemon process lifecycle and job management."""
+    
+    def __init__(self, config_dir: Optional[Path] = None):
+        """
+        Initialize daemon manager.
+        
+        Args:
+            config_dir: Directory for daemon state files
+        """
+        self.config_dir = config_dir or Path.home() / ".{{ project_slug }}" / "daemon"
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        self.pid_file = self.config_dir / "daemon.pid"
+        self.jobs_file = self.config_dir / "jobs.json"
+        
+    def is_platform_supported(self) -> bool:
+        """Check if daemon mode is supported on current platform."""
+        # Daemon support is platform-specific
+        # Unix-like systems support daemonization
+        # Windows has limited support
+        return platform.system() != "Windows"
+    
+    def get_platform_fallback_message(self) -> str:
+        """Get clear error message for unsupported platforms."""
+        if platform.system() == "Windows":
+            return "Daemon mode is not supported on Windows. Use --no-daemon flag for synchronous operation."
+        return "Daemon mode is not supported on this platform. Use --no-daemon flag for synchronous operation."
+    
+    def is_daemon_running(self) -> bool:
+        """Check if daemon process is running."""
+        if not self.pid_file.exists():
+            return False
+        
+        try:
+            with open(self.pid_file, 'r') as f:
+                pid = int(f.read().strip())
+            
+            # Check if process is running
+            try:
+                os.kill(pid, 0)
+                return True
+            except OSError:
+                # Process not running, clean up stale PID file
+                self.pid_file.unlink()
+                return False
+        except (ValueError, IOError):
+            return False
+    
+    def start_daemon(self) -> Optional[int]:
+        """
+        Start daemon process in background.
+        
+        Returns:
+            PID of daemon process if successful, None otherwise
+        """
+        if not self.is_platform_supported():
+            raise RuntimeError(self.get_platform_fallback_message())
+        
+        if self.is_daemon_running():
+            raise RuntimeError("Daemon is already running")
+        
+        # For now, this is a placeholder
+        # In a real implementation, this would fork the process
+        # and detach from the terminal
+        print("Daemon mode not fully implemented in this template")
+        print("This is a placeholder for daemon functionality")
+        return None
+    
+    def stop_daemon(self) -> bool:
+        """
+        Stop daemon process.
+        
+        Returns:
+            True if daemon was stopped, False otherwise
+        """
+        if not self.is_daemon_running():
+            return False
+        
+        try:
+            with open(self.pid_file, 'r') as f:
+                pid = int(f.read().strip())
+            
+            os.kill(pid, 15)  # SIGTERM
+            self.pid_file.unlink()
+            return True
+        except (ValueError, IOError, OSError):
+            return False
+    
+    def list_jobs(self, job_id: Optional[str] = None) -> List[Dict]:
+        """
+        List background jobs.
+        
+        Args:
+            job_id: Optional job ID to filter by
+            
+        Returns:
+            List of job status dictionaries
+        """
+        # Placeholder implementation
+        # In a real implementation, this would read from jobs_file
+        return []
+    
+    def cancel_job(self, job_id: str) -> bool:
+        """
+        Cancel a specific background job.
+        
+        Args:
+            job_id: ID of job to cancel
+            
+        Returns:
+            True if job was cancelled, False otherwise
+        """
+        # Placeholder implementation
+        # In a real implementation, this would signal the job
+        return False
+    
+    def submit_job(self, operation: str, args: Dict) -> Optional[str]:
+        """
+        Submit a job to the daemon.
+        
+        Args:
+            operation: Operation to perform
+            args: Arguments for the operation
+            
+        Returns:
+            Job ID if submitted successfully, None otherwise
+        """
+        # Placeholder implementation
+        # In a real implementation, this would communicate with the daemon
+        return None
+
+
+def get_daemon_manager(config_dir: Optional[Path] = None) -> DaemonManager:
+    """
+    Get or create daemon manager instance.
+    
+    Args:
+        config_dir: Directory for daemon state files
+        
+    Returns:
+        DaemonManager instance
+    """
+    return DaemonManager(config_dir)

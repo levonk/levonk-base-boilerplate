@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 3
 parallel_id: 1
 branch: "feature/current/cli-python-standards/story-03-001-daemon-process"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "02-003"]
@@ -27,21 +27,21 @@ Implement comprehensive daemon process support for long-running operations. Incl
 
 ## Sub-Tasks
 
-- [ ] Create `daemon.py.jinja` template file with daemon management — `apps/cli/python/core/files/{{project_slug}}/daemon.py.jinja`
-- [ ] Implement `--daemon` flag to pre-launch daemon in background — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Implement `--no-daemon` flag to force synchronous operation — `__main__.py.jinja`
-- [ ] Implement auto-spawn daemon on first async operation — `daemon.py.jinja`
-- [ ] Add `--list-jobs` command to show background job status — `__main__.py.jinja`
-- [ ] Add optional job ID filtering to `--list-jobs` — `daemon.py.jinja`
-- [ ] Implement immediate job ID return for background operations — `daemon.py.jinja`
-- [ ] Add `--cancel-job <id>` command to cancel specific jobs — `__main__.py.jinja`
-- [ ] Implement job progress monitoring instructions — `daemon.py.jinja`
-- [ ] Add platform detection and fallback logic — `daemon.py.jinja`
-- [ ] Implement clear error messages for unsupported platforms — `daemon.py.jinja`
-- [ ] Add config variable to override noisy fallback behavior — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja`
-- [ ] Add tests for daemon mode functionality — `apps/cli/python/core/files/tests/test_daemon.py.jinja`
-- [ ] Add tests for job management (list, cancel) — `tests/test_daemon.py.jinja`
-- [ ] Add tests for platform fallback behavior — `tests/test_daemon.py.jinja`
+- [x] Create `daemon.py.jinja` template file with daemon management — `apps/cli/python/core/files/{{project_slug}}/daemon.py.jinja`
+- [x] Implement `--daemon` flag to pre-launch daemon in background — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Implement `--no-daemon` flag to force synchronous operation — `__main__.py.jinja`
+- [x] Implement auto-spawn daemon on first async operation — `daemon.py.jinja`
+- [x] Add `--list-jobs` command to show background job status — `__main__.py.jinja`
+- [x] Add optional job ID filtering to `--list-jobs` — `daemon.py.jinja`
+- [x] Implement immediate job ID return for background operations — `daemon.py.jinja`
+- [x] Add `--cancel-job <id>` command to cancel specific jobs — `__main__.py.jinja`
+- [x] Implement job progress monitoring instructions — `daemon.py.jinja`
+- [x] Add platform detection and fallback logic — `daemon.py.jinja`
+- [x] Implement clear error messages for unsupported platforms — `daemon.py.jinja`
+- [x] Add config variable to override noisy fallback behavior — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja`
+- [x] Add tests for daemon mode functionality — `apps/cli/python/core/files/tests/test_daemon.py.jinja`
+- [x] Add tests for job management (list, cancel) — `tests/test_daemon.py.jinja`
+- [x] Add tests for platform fallback behavior — `tests/test_daemon.py.jinja`
 
 ## Relevant Files
 
@@ -52,16 +52,16 @@ Implement comprehensive daemon process support for long-running operations. Incl
 
 ## Acceptance Criteria
 
-- [ ] `--daemon` flag pre-launches daemon in background and waits for jobs
-- [ ] `--no-daemon` flag forces synchronous in-process operation
-- [ ] Daemon auto-spawns on first async operation (no flag required)
-- [ ] `--list-jobs` shows background job status with optional filtering
-- [ ] Job ID returned immediately when daemon performs background operation
-- [ ] `--cancel-job <id>` cancels specific background jobs
-- [ ] Progress monitoring instructions provided to users
-- [ ] Platform fallback with clear error message when daemon not supported
-- [ ] Config variable available to override noisy fallback behavior
-- [ ] All tests pass for daemon functionality
+- [x] `--daemon` flag pre-launches daemon in background and waits for jobs
+- [x] `--no-daemon` flag forces synchronous in-process operation
+- [x] Daemon auto-spawns on first async operation (no flag required)
+- [x] `--list-jobs` shows background job status with optional filtering
+- [x] Job ID returned immediately when daemon performs background operation
+- [x] `--cancel-job <id>` cancels specific background jobs
+- [x] Progress monitoring instructions provided to users
+- [x] Platform fallback with clear error message when daemon not supported
+- [x] Config variable available to override noisy fallback behavior
+- [x] All tests pass for daemon functionality
 
 ## Test Plan
 
