@@ -1,0 +1,309 @@
+use anyhow::{Context, Result};
+use std::path::{Path, PathBuf};
+
+/// Cross-platform path utilities
+pub struct PathUtils;
+
+impl PathUtils {
+    /// Normalize a path to use platform-appropriate separators
+    /// Converts all separators to the platform's preferred separator
+    pub fn normalize(path: &str) -> String {
+        let platform_sep = std::path::MAIN_SEPARATOR;
+        let forward_sep = '/';
+        let backward_sep = '\\';
+        
+        if platform_sep == forward_sep {
+            // Unix-like: convert backslashes to forward slashes
+            path.replace(backward_sep, forward_sep)
+        } else {
+            // Windows: convert forward slashes to backslashes
+            // But preserve UNC paths (\\server\share) and drive letters (C:\)
+            Self::normalize_windows(path)
+        }
+    }
+
+    /// Normalize path for Windows, preserving UNC paths and drive letters
+    fn normalize_windows(path: &str) -> String {
+        let chars: Vec<char> = path.chars().collect();
+        let mut result = String::new();
+        let mut i = 0;
+
+        while i < chars.len() {
+            // Preserve UNC path prefix (\\)
+            if i + 1 < chars.len() && chars[i] == '\\' && chars[i + 1] == '\\' {
+                result.push('\\');
+                result.push('\\');
+                i += 2;
+                continue;
+            }
+
+            // Preserve drive letter colon (C:)
+            if i + 1 < chars.len() && chars[i].is_ascii_alphabetic() && chars[i + 1] == ':' {
+                result.push(chars[i]);
+                result.push(':');
+                i += 2;
+                continue;
+            }
+
+            // Convert forward slashes to backslashes
+            if chars[i] == '/' {
+                result.push('\\');
+            } else {
+                result.push(chars[i]);
+            }
+            i += 1;
+        }
+
+        result
+    }
+
+    /// Convert a path to use forward slashes (useful for URLs, config files)
+    pub fn to_forward_slashes(path: &Path) -> String {
+        path.to_string_lossy().replace('\\', "/")
+    }
+
+    /// Convert a path to use backslashes (useful for Windows-specific contexts)
+    pub fn to_backward_slashes(path: &Path) -> String {
+        path.to_string_lossy().replace('/', "\\")
+    }
+
+    /// Check if a path is absolute on the current platform
+    pub fn is_absolute(path: &str) -> bool {
+        if cfg!(windows) {
+            // Windows: starts with drive letter (C:\) or UNC path (\\)
+            path.len() >= 2 && path.chars().nth(1) == Some(':') && path.chars().nth(0).map(|c| c.is_ascii_alphabetic()).unwrap_or(false)
+                || path.starts_with("\\\\")
+        } else {
+            // Unix: starts with /
+            path.starts_with('/')
+        }
+    }
+
+    /// Check if a path is a UNC path (Windows network path)
+    pub fn is_unc_path(path: &str) -> bool {
+        path.starts_with("\\\\")
+    }
+
+    /// Check if a path is a URL
+    pub fn is_url(path: &str) -> bool {
+        path.starts_with("http://") || path.starts_with("https://") || path.starts_with("file://")
+    }
+
+    /// Join path components with platform-appropriate separator
+    pub fn join(components: &[&str]) -> String {
+        components.iter().filter(|c| !c.is_empty()).collect::<Vec<_>>().join(&std::path::MAIN_SEPARATOR.to_string())
+    }
+
+    /// Get the parent directory of a path
+    pub fn parent(path: &Path) -> Option<&Path> {
+        path.parent()
+    }
+
+    /// Get the file name from a path
+    pub fn file_name(path: &Path) -> Option<&str> {
+        path.file_name().and_then(|s| s.to_str())
+    }
+
+    /// Get the file extension from a path
+    pub fn extension(path: &Path) -> Option<&str> {
+        path.extension().and_then(|s| s.to_str())
+    }
+
+    /// Get the stem (file name without extension) from a path
+    pub fn file_stem(path: &Path) -> Option<&str> {
+        path.file_stem().and_then(|s| s.to_str())
+    }
+
+    /// Validate a path for security (prevent path traversal)
+    pub fn validate_safe(path: &Path) -> Result<()> {
+        let path_str = path.to_string_lossy();
+        
+        // Check for path traversal attempts
+        if path_str.contains("..") {
+            anyhow::bail!("Path traversal detected: {}", path_str);
+        }
+
+        // On Windows, check for drive traversal
+        if cfg!(windows) {
+            if path_str.contains(":\\") && !path_str.starts_with(r"C:\") && !path_str.starts_with(r"D:\") {
+                // Allow common drive letters but detect suspicious patterns
+                let chars: Vec<char> = path_str.chars().collect();
+                for (i, &c) in chars.iter().enumerate() {
+                    if c == ':' && i > 0 && chars[i - 1].is_ascii_alphabetic() {
+                        // This is a drive letter, check if it's at the start
+                        if i != 1 {
+                            anyhow::bail!("Suspicious drive letter position: {}", path_str);
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Convert a user-provided path string to a PathBuf with normalization
+    pub fn from_user_input(input: &str) -> Result<PathBuf> {
+        let normalized = Self::normalize(input);
+        let path = PathBuf::from(&normalized);
+        Self::validate_safe(&path)?;
+        Ok(path)
+    }
+
+    /// Expand a tilde (~) to the home directory
+    pub fn expand_tilde(path: &str) -> String {
+        if path.starts_with('~') {
+            if let Some(home) = directories::UserDirs::new() {
+                let home_dir = home.home_dir();
+                return path.replacen('~', &home_dir.to_string_lossy(), 1);
+            }
+        }
+        path.to_string()
+    }
+
+    /// Convert a path to be relative to the current directory if possible
+    pub fn make_relative_if_possible(path: &Path) -> PathBuf {
+        if let Ok(current_dir) = std::env::current_dir() {
+            if let Ok(rel_path) = path.strip_prefix(&current_dir) {
+                return rel_path.to_path_buf();
+            }
+        }
+        path.to_path_buf()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normalize_unix() {
+        if cfg!(unix) {
+            assert_eq!(PathUtils::normalize("foo/bar"), "foo/bar");
+            assert_eq!(PathUtils::normalize("foo\\bar"), "foo/bar");
+            assert_eq!(PathUtils::normalize("foo/bar\\baz"), "foo/bar/baz");
+        }
+    }
+
+    #[test]
+    fn test_normalize_windows() {
+        if cfg!(windows) {
+            assert_eq!(PathUtils::normalize("foo\\bar"), "foo\\bar");
+            assert_eq!(PathUtils::normalize("foo/bar"), "foo\\bar");
+            assert_eq!(PathUtils::normalize("foo/bar\\baz"), "foo\\bar\\baz");
+        }
+    }
+
+    #[test]
+    fn test_normalize_windows_unc() {
+        if cfg!(windows) {
+            assert_eq!(PathUtils::normalize("\\\\server\\share"), "\\\\server\\share");
+            assert_eq!(PathUtils::normalize("\\\\server/share"), "\\\\server\\share");
+        }
+    }
+
+    #[test]
+    fn test_normalize_windows_drive() {
+        if cfg!(windows) {
+            assert_eq!(PathUtils::normalize("C:\\foo"), "C:\\foo");
+            assert_eq!(PathUtils::normalize("C:/foo"), "C:\\foo");
+        }
+    }
+
+    #[test]
+    fn test_to_forward_slashes() {
+        let path = Path::new("foo\\bar\\baz");
+        assert_eq!(PathUtils::to_forward_slashes(path), "foo/bar/baz");
+    }
+
+    #[test]
+    fn test_to_backward_slashes() {
+        let path = Path::new("foo/bar/baz");
+        assert_eq!(PathUtils::to_backward_slashes(path), "foo\\bar\\baz");
+    }
+
+    #[test]
+    fn test_is_absolute_unix() {
+        if cfg!(unix) {
+            assert!(PathUtils::is_absolute("/foo/bar"));
+            assert!(!PathUtils::is_absolute("foo/bar"));
+        }
+    }
+
+    #[test]
+    fn test_is_absolute_windows() {
+        if cfg!(windows) {
+            assert!(PathUtils::is_absolute("C:\\foo"));
+            assert!(PathUtils::is_absolute("\\\\server\\share"));
+            assert!(!PathUtils::is_absolute("foo\\bar"));
+        }
+    }
+
+    #[test]
+    fn test_is_unc_path() {
+        assert!(PathUtils::is_unc_path("\\\\server\\share"));
+        assert!(!PathUtils::is_unc_path("C:\\foo"));
+        assert!(!PathUtils::is_unc_path("/foo/bar"));
+    }
+
+    #[test]
+    fn test_is_url() {
+        assert!(PathUtils::is_url("http://example.com"));
+        assert!(PathUtils::is_url("https://example.com"));
+        assert!(PathUtils::is_url("file:///path/to/file"));
+        assert!(!PathUtils::is_url("/path/to/file"));
+    }
+
+    #[test]
+    fn test_join() {
+        let result = PathUtils::join(&["foo", "bar", "baz"]);
+        let expected = format!("foo{}bar{}baz", std::path::MAIN_SEPARATOR, std::path::MAIN_SEPARATOR);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_file_name() {
+        let path = Path::new("/foo/bar/baz.txt");
+        assert_eq!(PathUtils::file_name(path), Some("baz.txt"));
+    }
+
+    #[test]
+    fn test_extension() {
+        let path = Path::new("/foo/bar/baz.txt");
+        assert_eq!(PathUtils::extension(path), Some("txt"));
+    }
+
+    #[test]
+    fn test_file_stem() {
+        let path = Path::new("/foo/bar/baz.txt");
+        assert_eq!(PathUtils::file_stem(path), Some("baz"));
+    }
+
+    #[test]
+    fn test_validate_safe() {
+        let safe_path = Path::new("/foo/bar");
+        assert!(PathUtils::validate_safe(safe_path).is_ok());
+
+        let unsafe_path = Path::new("/foo/../bar");
+        assert!(PathUtils::validate_safe(unsafe_path).is_err());
+    }
+
+    #[test]
+    fn test_from_user_input() {
+        let result = PathUtils::from_user_input("foo/bar").unwrap();
+        assert_eq!(result, PathBuf::from("foo/bar"));
+    }
+
+    #[test]
+    fn test_from_user_input_traversal() {
+        let result = PathUtils::from_user_input("foo/../bar");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_expand_tilde() {
+        let result = PathUtils::expand_tilde("~/foo");
+        assert!(result.starts_with('/'));
+        assert!(result.contains("foo"));
+    }
+}

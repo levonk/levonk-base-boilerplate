@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 3
 parallel_id: 2
 branch: "feature/current/20260707-cli-rust-standards/story-03-002-man-pages"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 3
 parallel_id: 3
 branch: "feature/current/20260707-cli-rust-standards/story-03-003-cross-platform-paths"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-003"]
@@ -27,33 +27,35 @@ Implement cross-platform path handling that works consistently across Windows/Li
 
 ## Sub-Tasks
 
-- [ ] Review existing path handling code
-- [ ] Add path normalization for cross-platform consistency
-- [ ] Implement platform-appropriate separator detection
-- [ ] Add forward slash support on Windows
-- [ ] Add backward slash support on Unix systems
-- [ ] Implement path conversion utilities
-- [ ] Update globbing to handle cross-platform paths
-- [ ] Add path validation for all platforms
-- [ ] Create tests for Windows path handling
-- [ ] Create tests for Linux path handling
-- [ ] Create tests for macOS path handling
-- [ ] Create tests for slash handling (forward/backward)
+- [x] Review existing path handling code
+- [x] Add path normalization for cross-platform consistency
+- [x] Implement platform-appropriate separator detection
+- [x] Add forward slash support on Windows
+- [x] Add backward slash support on Unix systems
+- [x] Implement path conversion utilities
+- [x] Update globbing to handle cross-platform paths
+- [x] Add path validation for all platforms
+- [x] Create tests for Windows path handling
+- [x] Create tests for Linux path handling
+- [x] Create tests for macOS path handling
+- [x] Create tests for slash handling (forward/backward)
 
 ## Relevant Files
 
-- `apps/cli/rust/src/io.rs` — Path handling utilities
-- `apps/cli/rust/src/path.rs` — Cross-platform path module (new)
-- `apps/cli/rust/tests/path_test.rs` — Path handling tests
+- `apps/cli/rust/core/files/src/path.rs.jinja` — Cross-platform path module (new)
+- `apps/cli/rust/core/files/src/io.rs.jinja` — Updated to use PathUtils for normalization
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Added path module
+- `apps/cli/rust/core/files/src/lib.rs.jinja` — Exported PathUtils
+- `apps/cli/rust/core/files/tests/path_test.rs.jinja` — Comprehensive cross-platform path tests
 
 ## Acceptance Criteria
 
-- [ ] Paths handled consistently across Windows/Linux/macOS
-- [ ] Platform-appropriate separators used
-- [ ] Forward slashes work on Windows
-- [ ] Backward slashes work on Unix systems
-- [ ] Path normalization working
-- [ ] All tests pass
+- [x] Paths handled consistently across Windows/Linux/macOS
+- [x] Platform-appropriate separators used
+- [x] Forward slashes work on Windows
+- [x] Backward slashes work on Unix systems
+- [x] Path normalization working
+- [x] All tests pass
 
 ## Test Plan
 

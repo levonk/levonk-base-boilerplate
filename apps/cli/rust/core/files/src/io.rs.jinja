@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use serde::Serialize;
 use tracing::{debug, info, warn};
+use crate::path::PathUtils;
 
 /// Color mode for output
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -249,7 +250,10 @@ impl InputHandler {
                     if input == "-" {
                         None  // stdin handled separately
                     } else {
-                        Some(PathBuf::from(input))
+                        // Normalize path for cross-platform consistency
+                        let normalized = PathUtils::normalize(input);
+                        let expanded = PathUtils::expand_tilde(&normalized);
+                        Some(PathBuf::from(expanded))
                     }
                 })
                 .collect();
@@ -261,7 +265,10 @@ impl InputHandler {
 
     /// Expand glob patterns in file paths
     pub fn expand_globs(&self, pattern: &str) -> Result<Vec<PathBuf>> {
-        let pattern_obj = Pattern::new(pattern)
+        // Normalize pattern for cross-platform consistency
+        let normalized_pattern = PathUtils::normalize(pattern);
+        
+        let pattern_obj = Pattern::new(&normalized_pattern)
             .with_context(|| format!("Invalid glob pattern: {}", pattern))?;
 
         let current_dir = std::env::current_dir()?;
@@ -273,8 +280,9 @@ impl InputHandler {
         {
             let path = entry.path();
             if let Ok(rel_path) = path.strip_prefix(&current_dir) {
-                let rel_str = rel_path.to_str().unwrap_or("");
-                if pattern_obj.matches(rel_str) {
+                // Use forward slashes for pattern matching (glob standard)
+                let path_str = PathUtils::to_forward_slashes(rel_path);
+                if pattern_obj.matches(&path_str) {
                     matches.push(path.to_path_buf());
                 }
             }
