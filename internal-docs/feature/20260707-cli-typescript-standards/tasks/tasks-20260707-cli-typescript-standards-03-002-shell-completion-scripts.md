@@ -39,7 +39,7 @@ Generate shell completion scripts for bash, zsh, and fish using commander's buil
 - [x] Add unit tests for fish completion generation
 - [x] Add integration tests for completion script installation
 - [x] Update help text to include completion setup instructions
-- [~] Add completion script version tracking
+- [x] Add completion script version tracking
 
 ## Relevant Files
 
@@ -50,14 +50,14 @@ Generate shell completion scripts for bash, zsh, and fish using commander's buil
 
 ## Acceptance Criteria
 
-- [ ] Bash completion script is generated correctly
-- [ ] Zsh completion script is generated correctly
-- [ ] Fish completion script is generated correctly
-- [ ] Completions match current command structure
-- [ ] Completion scripts include all subcommands and options
-- [ ] Completion installation instructions are clear
-- [ ] Completion scripts are validated for syntax errors
-- [ ] Completion scripts work with expected shell behavior
+- [x] Bash completion script is generated correctly
+- [x] Zsh completion script is generated correctly
+- [x] Fish completion script is generated correctly
+- [x] Completions match current command structure
+- [x] Completion scripts include all subcommands and options
+- [x] Completion installation instructions are clear
+- [x] Completion scripts are validated for syntax errors
+- [x] Completion scripts work with expected shell behavior
 
 ## Test Plan
 
