@@ -27,8 +27,8 @@ Implement daemon process support for long-running tasks with comprehensive job m
 
 ## Sub-Tasks
 
-- [ ] Add kardianos/service or fvbock/endless dependency to go.mod — `core/files/go.mod.jinja`
-- [ ] Add --daemon and --no-daemon flags — `core/files/main.go.jinja`
+- [x] Add kardianos/service or fvbock/endless dependency to go.mod — `core/files/go.mod.jinja`
+- [x] Add --daemon and --no-daemon flags — `core/files/main.go.jinja`
 - [ ] Create daemon process manager using kardianos/service or fvbock/endless — `core/files/daemon.go.jinja`
 - [ ] Implement auto-spawn daemon logic — `core/files/daemon.go.jinja`
 - [ ] Implement job queue management — `core/files/daemon.go.jinja`

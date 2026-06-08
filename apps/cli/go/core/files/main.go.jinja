@@ -31,6 +31,9 @@ var (
 	noPager bool
 	interactiveFlag bool
 	tuiFlag bool
+	daemonFlag bool
+	noDaemonFlag bool
+	urlFormat string
 	logger *Logger
 	terminal *Terminal
 	version = "1.0.0"
@@ -328,6 +331,30 @@ func processWithNetworkProgress(ctx context.Context, url string, quiet bool) ([]
 	return nil, nil
 }
 
+// GetURLFormat determines the URL format based on the url-format flag and terminal capabilities
+func GetURLFormat() URLFormat {
+	switch urlFormat {
+	case "plain":
+		return FormatPlain
+	case "terminal":
+		return FormatTerminal
+	case "auto":
+		// Auto-detect: use terminal linking if stdout is a terminal
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return FormatTerminal
+		}
+		return FormatPlain
+	default:
+		return FormatPlain
+	}
+}
+
+// FormatOutputURL formats a URL for output based on the current configuration
+func FormatOutputURL(rawURL string) string {
+	format := GetURLFormat()
+	return FormatURL(rawURL, format)
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -349,6 +376,9 @@ func init() {
 	rootCmd.Flags().BoolVar(&noPager, "no-pager", false, "Disable automatic paging for long output")
 	rootCmd.Flags().BoolVar(&interactiveFlag, "interactive", false, "Launch interactive TUI mode")
 	rootCmd.Flags().BoolVar(&tuiFlag, "tui", false, "Launch TUI mode (alias for --interactive)")
+	rootCmd.Flags().BoolVar(&daemonFlag, "daemon", false, "Pre-launch daemon in background")
+	rootCmd.Flags().BoolVar(&noDaemonFlag, "no-daemon", false, "Force synchronous operation (disable daemon)")
+	rootCmd.Flags().StringVar(&urlFormat, "url-format", "auto", "URL format: auto, plain, terminal")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }

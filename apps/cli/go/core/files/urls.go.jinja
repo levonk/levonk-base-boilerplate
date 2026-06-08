@@ -1,0 +1,133 @@
+package main
+
+import (
+	"fmt"
+	"net/url"
+	"strings"
+)
+
+// URLFormat represents the format for URL display
+type URLFormat int
+
+const (
+	// FormatPlain displays URLs as plain text
+	FormatPlain URLFormat = iota
+	// FormatTerminal displays URLs with terminal linking (OSC 8)
+	FormatTerminal
+)
+
+// URL represents a URL with formatting capabilities
+type URL struct {
+	Original string
+	Encoded  string
+	Valid    bool
+}
+
+// NewURL creates a new URL from a string
+func NewURL(rawURL string) *URL {
+	u := &URL{
+		Original: rawURL,
+	}
+
+	// Validate and encode the URL
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		u.Valid = false
+		u.Encoded = rawURL
+		return u
+	}
+
+	// Ensure scheme is present
+	if parsed.Scheme == "" {
+		parsed.Scheme = "https"
+	}
+
+	// Encode the URL properly
+	u.Encoded = parsed.String()
+	u.Valid = true
+
+	return u
+}
+
+// FormatPlain returns the URL as plain text
+func (u *URL) FormatPlain() string {
+	if u == nil {
+		return ""
+	}
+	return u.Encoded
+}
+
+// FormatTerminal returns the URL with terminal linking (OSC 8 escape sequence)
+// Format: \x1b]8;;url\x1b\\text\x1b]8;;\x1b\\
+func (u *URL) FormatTerminal() string {
+	if u == nil {
+		return ""
+	}
+
+	if !u.Valid {
+		return u.Encoded
+	}
+
+	// OSC 8 escape sequence for terminal linking
+	// \x1b]8;;URL\x1b\\TEXT\x1b]8;;\x1b\\
+	return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", u.Encoded, u.Encoded)
+}
+
+// Format returns the URL in the specified format
+func (u *URL) Format(format URLFormat) string {
+	switch format {
+	case FormatPlain:
+		return u.FormatPlain()
+	case FormatTerminal:
+		return u.FormatTerminal()
+	default:
+		return u.FormatPlain()
+	}
+}
+
+// ValidateURL checks if a string is a valid URL
+func ValidateURL(rawURL string) bool {
+	u := NewURL(rawURL)
+	return u.Valid
+}
+
+// EncodeURL encodes a URL properly
+func EncodeURL(rawURL string) string {
+	u := NewURL(rawURL)
+	return u.Encoded
+}
+
+// FormatURL formats a URL with the specified format
+func FormatURL(rawURL string, format URLFormat) string {
+	u := NewURL(rawURL)
+	return u.Format(format)
+}
+
+// FormatURLWithLabel formats a URL with a custom label for terminal linking
+func FormatURLWithLabel(rawURL string, label string, format URLFormat) string {
+	u := NewURL(rawURL)
+	if u == nil || !u.Valid {
+		return label
+	}
+
+	switch format {
+	case FormatTerminal:
+		// OSC 8 escape sequence with custom label
+		return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", u.Encoded, label)
+	case FormatPlain:
+		return fmt.Sprintf("%s (%s)", label, u.Encoded)
+	default:
+		return fmt.Sprintf("%s (%s)", label, u.Encoded)
+	}
+}
+
+// StripTerminalLinks removes terminal linking escape sequences from a string
+func StripTerminalLinks(text string) string {
+	// Remove OSC 8 escape sequences: \x1b]8;;URL\x1b\\
+	// This is a simple implementation - may need refinement for edge cases
+	result := strings.ReplaceAll(text, "\x1b]8;;", "")
+	result = strings.ReplaceAll(result, "\x1b\\", "")
+	return result
+}
+
+{# vim: set ft=go: #}

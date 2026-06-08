@@ -1,6 +1,6 @@
 /**
  * Error Types and Exit Code Definitions
- * 
+ *
  * This module defines standard error types and exit codes according to CLI Tool Standards ADR requirement #8.
  * Exit codes follow Unix conventions:
  * - 0: Success
@@ -46,8 +46,8 @@ export class CLIError extends Error {
      * Get a formatted error message with exit code information
      */
     getFormattedMessage(): string {
-        const contextStr = this.context 
-            ? ` ${JSON.stringify(this.context)}` 
+        const contextStr = this.context
+            ? ` ${JSON.stringify(this.context)}`
             : '';
         return `${this.name}: ${this.message} (exit code: ${this.exitCode})${contextStr}`;
     }
@@ -113,7 +113,7 @@ export class PermissionDeniedError extends CLIError {
  * @param logger - Optional logger for error output
  */
 export function handleError(error: unknown, logger?: { error: (message: string) => void }): never {
-    let exitCode = EXIT_CODES.GENERIC_ERROR;
+    let exitCode: number = EXIT_CODES.GENERIC_ERROR;
     let message = 'An unexpected error occurred';
 
     if (error instanceof CLIError) {
@@ -137,7 +137,7 @@ export function handleError(error: unknown, logger?: { error: (message: string) 
 /**
  * Determine if an error is a specific CLI error type
  */
-export function isCLIError(error: unknown, errorClass: new (...args: unknown[]) => CLIError): error is CLIError {
+export function isCLIError(error: unknown, errorClass: new (message: string, context?: Record<string, unknown>) => CLIError): error is CLIError {
     return error instanceof errorClass;
 }
 

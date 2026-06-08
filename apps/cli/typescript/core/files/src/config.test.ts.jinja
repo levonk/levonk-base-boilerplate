@@ -293,7 +293,7 @@ quiet = true
 
         it('should apply CLI args with highest precedence', async () => {
             const options: ConfigOptions = { projectSlug: testSlug, debug: false };
-            const cliArgs = { log_level: 'debug', quiet: true };
+            const cliArgs = { log_level: 'debug' as const, quiet: true };
             const config = await loadConfigWithPrecedence(options, cliArgs);
 
             expect(config.log_level).toBe('debug');

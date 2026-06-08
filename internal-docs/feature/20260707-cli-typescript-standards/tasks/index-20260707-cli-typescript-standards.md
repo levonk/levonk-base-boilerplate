@@ -6,40 +6,40 @@ This index provides a summary of all stories for implementing CLI Tool Standards
 
 ## Story Summary
 
-| Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
-| -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 01-001 | Enhanced Color Control | feature/current/20260707-cli-typescript-standards/story-01-001-enhanced-color-control | None | Parallel-safe: true | [x] Done | logger.ts |
-| 01-002 | Standard Exit Codes | feature/current/20260707-cli-typescript-standards/story-01-002-standard-exit-codes | None | Parallel-safe: true | [x] Done | index.ts, error handling |
-| 01-003 | Configuration File Initialization | feature/current/20260707-cli-typescript-standards/story-01-003-config-file-initialization | None | Parallel-safe: true | [x] Done | config/ |
-| 02-001 | Enhanced Logging Modes | feature/current/20260707-cli-typescript-standards/story-02-001-enhanced-logging-modes | 01-001 | Parallel-safe: true | [x] Done | logger.ts |
-| 02-002 | Configuration Precedence Chain | feature/current/20260707-cli-typescript-standards/story-02-002-config-precedence-chain | 01-003 | Parallel-safe: true | [x] Done | config/ |
-| 03-001 | Install/Uninstall Flags | feature/current/20260707-cli-typescript-standards/story-03-001-install-uninstall-flags | 01-003 | Parallel-safe: true | [x] Done | index.ts, install/ |
-| 03-002 | Shell Completion Scripts | feature/current/20260707-cli-typescript-standards/story-03-002-shell-completion-scripts | None | Parallel-safe: true | [x] Done | completions/ |
-| 03-003 | Man Pages | feature/current/20260707-cli-typescript-standards/story-03-003-man-pages | None | Parallel-safe: true | [x] Done | docs/ |
-| 04-001 | Dry-Run Mode | feature/current/20260707-cli-typescript-standards/story-04-001-dry-run-mode | None | Parallel-safe: true | index.ts, dry-run/ |
-| 04-002 | Confirmation Prompts | feature/current/20260707-cli-typescript-standards/story-04-002-confirmation-prompts | None | Parallel-safe: true | index.ts, prompts/ |
-| 04-003 | Progress Indicators | feature/current/20260707-cli-typescript-standards/story-04-003-progress-indicators | 02-001 | Parallel-safe: true | progress/ |
-| 04-004 | Pager Integration | feature/current/20260707-cli-typescript-standards/story-04-004-pager-integration | None | Parallel-safe: true | pager/ |
-| 04-005 | Terminal Size Awareness | feature/current/20260707-cli-typescript-standards/story-04-005-terminal-size-awareness | None | Parallel-safe: true | terminal/ |
-| 05-001 | TUI Mode | feature/current/20260707-cli-typescript-standards/story-05-001-tui-mode | None | Parallel-safe: true | tui/ |
-| 05-002 | Daemon Process Support | feature/current/20260707-cli-typescript-standards/story-05-002-daemon-process-support | None | Parallel-safe: false | daemon/ |
-| 05-003 | File Reference Formatting | feature/current/20260707-cli-typescript-standards/story-05-003-file-reference-formatting | 01-002 | Parallel-safe: true | logger.ts, error handling |
-| 05-004 | URL Formatting | feature/current/20260707-cli-typescript-standards/story-05-004-url-formatting | None | Parallel-safe: true | utils/ |
-| 06-001 | Configuration Validation | feature/current/20260707-cli-typescript-standards/story-06-001-config-validation | 02-002 | Parallel-safe: true | config/, validation/ |
-| 06-002 | Config Auto-Migration | feature/current/20260707-cli-typescript-standards/story-06-002-config-auto-migration | 02-002 | Parallel-safe: true | config/ |
-| 06-003 | Credential/Secret Handling | feature/current/20260707-cli-typescript-standards/story-06-003-credential-secret-handling | None | Parallel-safe: true | secrets/ |
-| 06-004 | Signal-Based Config Reload | feature/current/20260707-cli-typescript-standards/story-06-004-signal-based-config-reload | 02-002, 06-001 | Parallel-safe: true | config/ |
-| 07-001 | Cross-Platform Path Handling | feature/current/20260707-cli-typescript-standards/story-07-001-cross-platform-path-handling | None | Parallel-safe: true | utils/ |
-| 07-002 | Resource Limits | feature/current/20260707-cli-typescript-standards/story-07-002-resource-limits | None | Parallel-safe: true | resources/ |
-| 07-003 | Collection vs Processing Separation | feature/current/20260707-cli-typescript-standards/story-07-003-collection-processing-separation | 05-002 | Parallel-safe: true | daemon/, processing/ |
-| 08-001 | Error Message Formatting | feature/current/20260707-cli-typescript-standards/story-08-001-error-message-formatting | 01-002, 05-003 | Parallel-safe: true | error handling |
-| 08-002 | Health Checks for Containers | feature/current/20260707-cli-typescript-standards/story-08-002-health-checks-containers | None | Parallel-safe: true | health/ |
-| 08-003 | Privacy Mode | feature/current/20260707-cli-typescript-standards/story-08-003-privacy-mode | 02-001 | Parallel-safe: true | logger.ts, config/ |
-| 08-004 | Audit Logging | feature/current/20260707-cli-typescript-standards/story-08-004-audit-logging | 02-001 | Parallel-safe: true | audit/ |
-| 08-005 | Legacy Deprecation Policy | feature/current/20260707-cli-typescript-standards/story-08-005-legacy-deprecation-policy | None | Parallel-safe: true | config/, deprecation/ |
-| 09-001 | Comprehensive Test Coverage | feature/current/20260707-cli-typescript-standards/story-09-001-comprehensive-test-coverage | 01-001, 01-002, 01-003, 02-001, 02-002, 03-001, 03-002, 03-003, 04-001, 04-002, 04-003, 04-004, 04-005, 05-001, 05-002, 05-003, 05-004, 06-001, 06-002, 06-003, 06-004, 07-001, 07-002, 07-003, 08-001, 08-002, 08-003, 08-004, 08-005 | Parallel-safe: false | All modules |
-| 09-002 | Subcommand Organization | feature/current/20260707-cli-typescript-standards/story-09-002-subcommand-organization | None | Parallel-safe: true | index.ts |
-| 09-003 | Final Documentation and Validation | feature/current/20260707-cli-typescript-standards/story-09-003-final-documentation-validation | 01-001, 01-002, 01-003, 02-001, 02-002, 03-001, 03-002, 03-003, 04-001, 04-002, 04-003, 04-004, 04-005, 05-001, 05-002, 05-003, 05-004, 06-001, 06-002, 06-003, 06-004, 07-001, 07-002, 07-003, 08-001, 08-002, 08-003, 08-004, 08-005 | Parallel-safe: false | All modules |
+| Story ID | Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
+|---|---|---|---|---|---|---|---|---|---|
+| 01-001 | Enhanced Color Control | 01 | [x] Done | | true | — | 02-001 | logger.ts | feature/current/20260707-cli-typescript-standards/story-01-001-enhanced-color-control |
+| 01-002 | Standard Exit Codes | 01 | [x] Done | | true | — | 05-003, 08-001 | index.ts, error handling | feature/current/20260707-cli-typescript-standards/story-01-002-standard-exit-codes |
+| 01-003 | Configuration File Initialization | 01 | [x] Done | | true | — | 02-002, 03-001 | config/ | feature/current/20260707-cli-typescript-standards/story-01-003-config-file-initialization |
+| 02-001 | Enhanced Logging Modes | 02 | [x] Done | | true | 01-001 | 04-003, 08-003, 08-004 | logger.ts | feature/current/20260707-cli-typescript-standards/story-02-001-enhanced-logging-modes |
+| 02-002 | Configuration Precedence Chain | 02 | [x] Done | | true | 01-003 | 06-001, 06-002, 06-004 | config/ | feature/current/20260707-cli-typescript-standards/story-02-002-config-precedence-chain |
+| 03-001 | Install/Uninstall Flags | 03 | [x] Done | | true | 01-003 | 09-001, 09-003 | index.ts, install/ | feature/current/20260707-cli-typescript-standards/story-03-001-install-uninstall-flags |
+| 03-002 | Shell Completion Scripts | 03 | [x] Done | | true | — | 09-001, 09-003 | completions/ | feature/current/20260707-cli-typescript-standards/story-03-002-shell-completion-scripts |
+| 03-003 | Man Pages | 03 | [x] Done | | true | — | 09-001, 09-003 | docs/ | feature/current/20260707-cli-typescript-standards/story-03-003-man-pages |
+| 04-001 | Dry-Run Mode | 04 | [x] Done | | true | — | 09-001, 09-003 | index.ts, dry-run/ | feature/current/20260707-cli-typescript-standards/story-04-001-dry-run-mode |
+| 04-002 | Confirmation Prompts | 04 | [ ] Todo | | true | — | 09-001, 09-003 | index.ts, prompts/ | feature/current/20260707-cli-typescript-standards/story-04-002-confirmation-prompts |
+| 04-003 | Progress Indicators | 04 | [ ] Todo | | true | 02-001 | 09-001, 09-003 | progress/ | feature/current/20260707-cli-typescript-standards/story-04-003-progress-indicators |
+| 04-004 | Pager Integration | 04 | [ ] Todo | | true | — | 09-001, 09-003 | pager/ | feature/current/20260707-cli-typescript-standards/story-04-004-pager-integration |
+| 04-005 | Terminal Size Awareness | 04 | [ ] Todo | | true | — | 09-001, 09-003 | terminal/ | feature/current/20260707-cli-typescript-standards/story-04-005-terminal-size-awareness |
+| 05-001 | TUI Mode | 05 | [ ] Todo | | true | — | 09-001, 09-003 | tui/ | feature/current/20260707-cli-typescript-standards/story-05-001-tui-mode |
+| 05-002 | Daemon Process Support | 05 | [ ] Todo | | false | — | 07-003, 09-001, 09-003 | daemon/ | feature/current/20260707-cli-typescript-standards/story-05-002-daemon-process-support |
+| 05-003 | File Reference Formatting | 05 | [ ] Todo | | true | 01-002 | 08-001, 09-001, 09-003 | logger.ts, error handling | feature/current/20260707-cli-typescript-standards/story-05-003-file-reference-formatting |
+| 05-004 | URL Formatting | 05 | [ ] Todo | | true | — | 09-001, 09-003 | utils/ | feature/current/20260707-cli-typescript-standards/story-05-004-url-formatting |
+| 06-001 | Configuration Validation | 06 | [ ] Todo | | true | 02-002 | 06-004, 09-001, 09-003 | config/, validation/ | feature/current/20260707-cli-typescript-standards/story-06-001-config-validation |
+| 06-002 | Config Auto-Migration | 06 | [ ] Todo | | true | 02-002 | 09-001, 09-003 | config/ | feature/current/20260707-cli-typescript-standards/story-06-002-config-auto-migration |
+| 06-003 | Credential/Secret Handling | 06 | [ ] Todo | | true | — | 09-001, 09-003 | secrets/ | feature/current/20260707-cli-typescript-standards/story-06-003-credential-secret-handling |
+| 06-004 | Signal-Based Config Reload | 06 | [ ] Todo | | true | 02-002, 06-001 | 09-001, 09-003 | config/ | feature/current/20260707-cli-typescript-standards/story-06-004-signal-based-config-reload |
+| 07-001 | Cross-Platform Path Handling | 07 | [ ] Todo | | true | — | 09-001, 09-003 | utils/ | feature/current/20260707-cli-typescript-standards/story-07-001-cross-platform-path-handling |
+| 07-002 | Resource Limits | 07 | [ ] Todo | | true | — | 09-001, 09-003 | resources/ | feature/current/20260707-cli-typescript-standards/story-07-002-resource-limits |
+| 07-003 | Collection vs Processing Separation | 07 | [ ] Todo | | true | 05-002 | 09-001, 09-003 | daemon/, processing/ | feature/current/20260707-cli-typescript-standards/story-07-003-collection-processing-separation |
+| 08-001 | Error Message Formatting | 08 | [ ] Todo | | true | 01-002, 05-003 | 09-001, 09-003 | error handling | feature/current/20260707-cli-typescript-standards/story-08-001-error-message-formatting |
+| 08-002 | Health Checks for Containers | 08 | [ ] Todo | | true | — | 09-001, 09-003 | health/ | feature/current/20260707-cli-typescript-standards/story-08-002-health-checks-containers |
+| 08-003 | Privacy Mode | 08 | [ ] Todo | | true | 02-001 | 09-001, 09-003 | logger.ts, config/ | feature/current/20260707-cli-typescript-standards/story-08-003-privacy-mode |
+| 08-004 | Audit Logging | 08 | [ ] Todo | | true | 02-001 | 09-001, 09-003 | audit/ | feature/current/20260707-cli-typescript-standards/story-08-004-audit-logging |
+| 08-005 | Legacy Deprecation Policy | 08 | [ ] Todo | | true | — | 09-001, 09-003 | config/, deprecation/ | feature/current/20260707-cli-typescript-standards/story-08-005-legacy-deprecation-policy |
+| 09-001 | Comprehensive Test Coverage | 09 | [ ] Todo | | false | 01-001, 01-002, 01-003, 02-001, 02-002, 03-001, 03-002, 03-003, 04-001, 04-002, 04-003, 04-004, 04-005, 05-001, 05-002, 05-003, 05-004, 06-001, 06-002, 06-003, 06-004, 07-001, 07-002, 07-003, 08-001, 08-002, 08-003, 08-004, 08-005 | — | All modules | feature/current/20260707-cli-typescript-standards/story-09-001-comprehensive-test-coverage |
+| 09-002 | Subcommand Organization | 09 | [ ] Todo | | true | — | 09-003 | index.ts | feature/current/20260707-cli-typescript-standards/story-09-002-subcommand-organization |
+| 09-003 | Final Documentation and Validation | 09 | [ ] Todo | | false | 01-001, 01-002, 01-003, 02-001, 02-002, 03-001, 03-002, 03-003, 04-001, 04-002, 04-003, 04-004, 04-005, 05-001, 05-002, 05-003, 05-004, 06-001, 06-002, 06-003, 06-004, 07-001, 07-002, 07-003, 08-001, 08-002, 08-003, 08-004, 08-005 | — | All modules | feature/current/20260707-cli-typescript-standards/story-09-003-final-documentation-validation |
 
 ## Phase Overview
 

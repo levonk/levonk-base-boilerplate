@@ -8,34 +8,39 @@ import path from 'path';
 const execAsync = util.promisify(exec);
 
 describe('CLI', () => {
+    beforeAll(async () => {
+        // Build the project before running integration tests
+        await execAsync('pnpm build');
+    });
+
     it('should show help', async () => {
-        const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+        const { stdout } = await execAsync('node dist/index.js --help');
         expect(stdout).toContain('Usage:');
     });
 
     describe('--color flag', () => {
         it('should accept --color=auto', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --color=auto --help');
+            const { stdout } = await execAsync('node dist/index.js --color=auto --help');
             expect(stdout).toContain('Usage:');
         });
 
         it('should accept --color=always', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --color=always --help');
+            const { stdout } = await execAsync('node dist/index.js --color=always --help');
             expect(stdout).toContain('Usage:');
         });
 
         it('should accept --color=never', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --color=never --help');
+            const { stdout } = await execAsync('node dist/index.js --color=never --help');
             expect(stdout).toContain('Usage:');
         });
 
         it('should default to auto mode when no --color flag is provided', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            const { stdout } = await execAsync('node dist/index.js --help');
             expect(stdout).toContain('Usage:');
         });
 
         it('should show color option in help text', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            const { stdout } = await execAsync('node dist/index.js --help');
             expect(stdout).toContain('--color');
         });
     });
@@ -52,12 +57,12 @@ describe('CLI', () => {
         });
 
         it('should respect NO_COLOR environment variable', async () => {
-            const { stdout } = await execAsync('NO_COLOR=1 npx ts-node src/index.ts --help');
+            const { stdout } = await execAsync('NO_COLOR=1 node dist/index.js --help');
             expect(stdout).toContain('Usage:');
         });
 
         it('should prioritize NO_COLOR over --color flag', async () => {
-            const { stdout } = await execAsync('NO_COLOR=1 npx ts-node src/index.ts --color=always --help');
+            const { stdout } = await execAsync('NO_COLOR=1 node dist/index.js --color=always --help');
             expect(stdout).toContain('Usage:');
         });
     });
@@ -79,13 +84,13 @@ describe('CLI', () => {
         });
 
         it('should exit with code 0 on success', async () => {
-            const { stdout } = await execAsync(`npx ts-node src/index.ts "${tempFile}"`);
+            const { stdout } = await execAsync(`node dist/index.js "${tempFile}"`);
             expect(stdout).toContain('Processed 1 inputs');
         });
 
         it('should exit with code 2 on usage error (no inputs)', async () => {
             try {
-                await execAsync('npx ts-node src/index.ts', { stdio: 'pipe' });
+                await execAsync('node dist/index.js');
                 expect.fail('Should have thrown an error');
             } catch (error: any) {
                 expect(error.code).toBe(2);
@@ -95,7 +100,7 @@ describe('CLI', () => {
 
         it('should exit with code 5 on file not found', async () => {
             try {
-                await execAsync('npx ts-node src/index.ts /nonexistent/file.txt', { stdio: 'pipe' });
+                await execAsync('node dist/index.js /nonexistent/file.txt');
                 expect.fail('Should have thrown an error');
             } catch (error: any) {
                 expect(error.code).toBe(5);
@@ -110,7 +115,7 @@ describe('CLI', () => {
             await fs.chmod(noPermFile, 0o000);
 
             try {
-                await execAsync(`npx ts-node src/index.ts "${noPermFile}"`, { stdio: 'pipe' });
+                await execAsync(`node dist/index.js "${noPermFile}"`);
                 expect.fail('Should have thrown an error');
             } catch (error: any) {
                 expect(error.code).toBe(6);
@@ -123,7 +128,7 @@ describe('CLI', () => {
 
         it('should include exit code in error messages', async () => {
             try {
-                await execAsync('npx ts-node src/index.ts /nonexistent/file.txt', { stdio: 'pipe' });
+                await execAsync('node dist/index.js /nonexistent/file.txt');
                 expect.fail('Should have thrown an error');
             } catch (error: any) {
                 expect(error.stderr).toContain('exit code: 5');
@@ -156,7 +161,7 @@ describe('CLI', () => {
         it('should create default config file on first run', async () => {
             const customXDG = testConfigDir;
             const { stdout, stderr } = await execAsync(
-                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --help`
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --help`
             );
 
             // Config file should be created
@@ -178,7 +183,7 @@ describe('CLI', () => {
 
             // Run CLI
             const { stdout } = await execAsync(
-                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --help`
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --help`
             );
 
             // Config file should not be overwritten
@@ -189,7 +194,7 @@ describe('CLI', () => {
         it('should log config creation in verbose mode', async () => {
             const customXDG = testConfigDir;
             const { stderr } = await execAsync(
-                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --verbose --help`
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --verbose --help`
             );
 
             expect(stderr).toContain('Created default config file');
@@ -198,7 +203,7 @@ describe('CLI', () => {
         it('should use custom config path if provided', async () => {
             const customConfigPath = path.join(testConfigDir, 'custom.toml');
             const { stdout } = await execAsync(
-                `npx ts-node src/index.ts --config "${customConfigPath}" --help`
+                `node dist/index.js --config "${customConfigPath}" --help`
             );
 
             // Custom config file should be created
@@ -210,7 +215,7 @@ describe('CLI', () => {
             const customXDG = testConfigDir;
             const prefix = '{{ project_slug | upper | replace("-", "_") }}';
             const { stdout } = await execAsync(
-                `${prefix}_LOG_LEVEL=debug XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --help`
+                `${prefix}_LOG_LEVEL=debug XDG_CONFIG_HOME="${customXDG}" node dist/index.js --help`
             );
 
             // Should not error - env var should be loaded
@@ -226,7 +231,7 @@ describe('CLI', () => {
 
             // CLI arg should override config
             const { stdout } = await execAsync(
-                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --log-level=debug --help`
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --log-level=debug --help`
             );
 
             expect(stdout).toContain('Usage:');
@@ -256,7 +261,7 @@ describe('CLI', () => {
 
         it('should generate bash completion script', async () => {
             const { stdout } = await execAsync(
-                `npx ts-node src/index.ts --completion bash --output-dir "${testCompletionsDir}"`
+                `node dist/index.js --completion bash --output-dir "${testCompletionsDir}"`
             );
 
             const bashScript = path.join(testCompletionsDir, '{{ project_slug }}.bash');
@@ -270,7 +275,7 @@ describe('CLI', () => {
 
         it('should generate zsh completion script', async () => {
             const { stdout } = await execAsync(
-                `npx ts-node src/index.ts --completion zsh --output-dir "${testCompletionsDir}"`
+                `node dist/index.js --completion zsh --output-dir "${testCompletionsDir}"`
             );
 
             const zshScript = path.join(testCompletionsDir, '{{ project_slug }}.zsh');
@@ -283,7 +288,7 @@ describe('CLI', () => {
 
         it('should generate fish completion script', async () => {
             const { stdout } = await execAsync(
-                `npx ts-node src/index.ts --completion fish --output-dir "${testCompletionsDir}"`
+                `node dist/index.js --completion fish --output-dir "${testCompletionsDir}"`
             );
 
             const fishScript = path.join(testCompletionsDir, '{{ project_slug }}.fish');
@@ -296,7 +301,7 @@ describe('CLI', () => {
 
         it('should output completion script to stdout with --stdout flag', async () => {
             const { stdout } = await execAsync(
-                'npx ts-node src/index.ts --completion bash --stdout'
+                'node dist/index.js --completion bash --stdout'
             );
 
             expect(stdout).toContain('# Bash completion');
@@ -305,7 +310,7 @@ describe('CLI', () => {
 
         it('should show completion installation instructions', async () => {
             const { stdout } = await execAsync(
-                'npx ts-node src/index.ts --completion-install bash'
+                'node dist/index.js --completion-install bash'
             );
 
             expect(stdout).toContain('Bash completion installation');
@@ -336,7 +341,7 @@ describe('CLI', () => {
 
         it('should generate man page', async () => {
             const { stdout } = await execAsync(
-                `npx ts-node src/index.ts --man --man-output-dir "${testManDir}"`
+                `node dist/index.js --man --man-output-dir "${testManDir}"`
             );
 
             const manFile = path.join(testManDir, '{{ project_slug }}.1');
@@ -351,7 +356,7 @@ describe('CLI', () => {
 
         it('should output man page to stdout with --stdout flag', async () => {
             const { stdout } = await execAsync(
-                'npx ts-node src/index.ts --man --stdout'
+                'node dist/index.js --man --stdout'
             );
 
             expect(stdout).toContain('.TH');
@@ -361,7 +366,7 @@ describe('CLI', () => {
 
         it('should show man page installation instructions', async () => {
             const { stdout } = await execAsync(
-                'npx ts-node src/index.ts --man-install'
+                'node dist/index.js --man-install'
             );
 
             expect(stdout).toContain('Man page installation');
@@ -386,43 +391,43 @@ describe('CLI', () => {
         });
 
         it('should accept --debug flag', async () => {
-            const { stdout } = await execAsync(`npx ts-node src/index.ts --debug "${tempFile}"`);
+            const { stdout } = await execAsync(`node dist/index.js --debug "${tempFile}"`);
             expect(stdout).toContain('Processed 1 inputs');
         });
 
         it('should accept --log-format=json flag', async () => {
-            const { stdout } = await execAsync(`npx ts-node src/index.ts --log-format=json "${tempFile}"`);
+            const { stdout } = await execAsync(`node dist/index.js --log-format=json "${tempFile}"`);
             expect(stdout).toContain('Processed 1 inputs');
         });
 
         it('should accept --log-format=text flag', async () => {
-            const { stdout } = await execAsync(`npx ts-node src/index.ts --log-format=text "${tempFile}"`);
+            const { stdout } = await execAsync(`node dist/index.js --log-format=text "${tempFile}"`);
             expect(stdout).toContain('Processed 1 inputs');
         });
 
         it('should accept --quiet flag', async () => {
-            const { stdout } = await execAsync(`npx ts-node src/index.ts --quiet "${tempFile}"`);
+            const { stdout } = await execAsync(`node dist/index.js --quiet "${tempFile}"`);
             // Quiet mode should suppress info output
             expect(stdout).not.toContain('Processing');
         });
 
         it('should accept --verbose flag', async () => {
-            const { stdout } = await execAsync(`npx ts-node src/index.ts --verbose "${tempFile}"`);
+            const { stdout } = await execAsync(`node dist/index.js --verbose "${tempFile}"`);
             expect(stdout).toContain('Processed 1 inputs');
         });
 
         it('should accept combination of --debug and --log-format=json', async () => {
-            const { stdout } = await execAsync(`npx ts-node src/index.ts --debug --log-format=json "${tempFile}"`);
+            const { stdout } = await execAsync(`node dist/index.js --debug --log-format=json "${tempFile}"`);
             expect(stdout).toContain('Processed 1 inputs');
         });
 
         it('should accept combination of --quiet and --log-format=json', async () => {
-            const { stdout } = await execAsync(`npx ts-node src/index.ts --quiet --log-format=json "${tempFile}"`);
+            const { stdout } = await execAsync(`node dist/index.js --quiet --log-format=json "${tempFile}"`);
             expect(stdout).not.toContain('Processing');
         });
 
         it('should show logging options in help text', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            const { stdout } = await execAsync('node dist/index.js --help');
             expect(stdout).toContain('--debug');
             expect(stdout).toContain('--log-format');
             expect(stdout).toContain('--quiet');
@@ -430,12 +435,12 @@ describe('CLI', () => {
         });
 
         it('should show LOG_LEVEL environment variable in help text', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            const { stdout } = await execAsync('node dist/index.js --help');
             expect(stdout).toContain('LOG_LEVEL');
         });
 
         it('should show NODE_ENV environment variable in help text', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            const { stdout } = await execAsync('node dist/index.js --help');
             expect(stdout).toContain('NODE_ENV');
         });
     });
@@ -464,7 +469,7 @@ describe('CLI', () => {
         it('should accept --install flag', async () => {
             const customXDG = testConfigDir;
             const { stdout } = await execAsync(
-                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --install --skip-completions`
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --install --skip-completions`
             );
             expect(stdout).toContain('installed successfully');
         });
@@ -474,20 +479,76 @@ describe('CLI', () => {
 
             // First install
             await execAsync(
-                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --install --skip-completions`
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --install --skip-completions`
             );
 
             // Then uninstall
             const { stdout } = await execAsync(
-                `XDG_CONFIG_HOME="${customXDG}" npx ts-node src/index.ts --uninstall --force`
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --uninstall --force`
             );
             expect(stdout).toContain('uninstalled successfully');
         });
 
         it('should show install options in help text', async () => {
-            const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+            const { stdout } = await execAsync('node dist/index.js --help');
             expect(stdout).toContain('--install');
             expect(stdout).toContain('--uninstall');
+        });
+    });
+
+    describe('Dry-Run Mode', () => {
+        let tempFile: string;
+
+        beforeEach(async () => {
+            tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.unlink(tempFile);
+            } catch {
+                // Ignore if file doesn't exist
+            }
+        });
+
+        it('should accept --dry-run flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --dry-run "${tempFile}"`);
+            expect(stdout).toContain('[DRY-RUN]');
+        });
+
+        it('should show dry-run indicator in output', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --dry-run "${tempFile}"`);
+            expect(stdout).toContain('[DRY-RUN] Mode enabled - no changes were made');
+        });
+
+        it('should include dry-run status in JSON output', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --dry-run --json "${tempFile}"`);
+            const output = JSON.parse(stdout);
+            expect(output.dryRun).toBe(true);
+        });
+
+        it('should not show dry-run indicator when flag is not set', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFile}"`);
+            expect(stdout).not.toContain('[DRY-RUN]');
+        });
+
+        it('should include dry-run: false in JSON when flag is not set', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --json "${tempFile}"`);
+            const output = JSON.parse(stdout);
+            expect(output.dryRun).toBe(false);
+        });
+
+        it('should show dry-run option in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--dry-run');
+            expect(stdout).toContain('Preview changes without executing them');
+        });
+
+        it('should process files normally without --dry-run flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+            expect(stdout).not.toContain('[DRY-RUN]');
         });
     });
 });

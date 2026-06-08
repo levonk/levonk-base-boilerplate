@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 4
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-04-001-dry-run-mode"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,25 +27,25 @@ Add `--dry-run` flag to preview changes without executing them. Show exactly wha
 
 ## Sub-Tasks
 
-- [ ] Create dry-run module with dry-run context management
-- [ ] Add `--dry-run` flag to index.ts
-- [ ] Implement dry-run context propagation through the application
-- [ ] Add dry-run logging for file operations
-- [ ] Add dry-run logging for network calls
-- [ ] Add dry-run logging for state changes
-- [ ] Implement no-op wrappers for destructive operations
-- [ ] Add dry-run indicator in output
-- [ ] Add unit tests for dry-run context
-- [ ] Add unit tests for dry-run operation logging
-- [ ] Add integration tests for dry-run flag behavior
-- [ ] Update help text to document dry-run mode
-- [ ] Add dry-run status to JSON output mode
+- [x] Create dry-run module with dry-run context management
+- [x] Add `--dry-run` flag to index.ts
+- [x] Implement dry-run context propagation through the application
+- [x] Add dry-run logging for file operations
+- [x] Add dry-run logging for network calls
+- [x] Add dry-run logging for state changes
+- [x] Implement no-op wrappers for destructive operations
+- [x] Add dry-run indicator in output
+- [x] Add unit tests for dry-run context
+- [x] Add unit tests for dry-run operation logging
+- [x] Add integration tests for dry-run flag behavior
+- [x] Update help text to document dry-run mode
+- [x] Add dry-run status to JSON output mode
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/dry-run.ts.jinja` - New dry-run module (to be created)
+- `apps/cli/typescript/core/files/src/dry-run.ts.jinja` - Dry-run module with context management
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with dry-run flag
-- `apps/cli/typescript/core/files/src/dry-run.test.ts.jinja` - Unit tests for dry-run (to be created)
+- `apps/cli/typescript/core/files/src/dry-run.test.ts.jinja` - Unit tests for dry-run
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for dry-run
 
 ## Acceptance Criteria

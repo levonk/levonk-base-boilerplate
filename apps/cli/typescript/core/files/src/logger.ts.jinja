@@ -38,9 +38,9 @@ const moduleColors = [
 ];
 
 // Module name to color mapping
-const moduleColorMap = new Map<string, typeof chalk.Chalk>();
+const moduleColorMap = new Map<string, typeof chalk>();
 
-function getModuleColor(moduleName: string): typeof chalk.Chalk {
+function getModuleColor(moduleName: string): typeof chalk {
   if (!moduleColorMap.has(moduleName)) {
     const index = moduleColorMap.size % moduleColors.length;
     moduleColorMap.set(moduleName, moduleColors[index]);
