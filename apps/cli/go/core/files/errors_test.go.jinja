@@ -68,16 +68,19 @@ func TestErrorContext(t *testing.T) {
 	}
 
 	if err.Context != nil {
-		if err.Context.File == "" {
-			t.Error("Expected context file to be set")
+		if err.Context.Reference == nil {
+			t.Error("Expected context reference to be set")
 		}
-		if err.Context.Line == 0 {
-			t.Error("Expected context line to be set")
+		if err.Context.Reference != nil && err.Context.Reference.Path == "" {
+			t.Error("Expected context reference path to be set")
+		}
+		if err.Context.Reference != nil && err.Context.Reference.Line == 0 {
+			t.Error("Expected context reference line to be set")
 		}
 	}
 
 	// The formatted error should include context
-	if err.Context != nil && err.Context.File != "" {
+	if err.Context != nil && err.Context.Reference != nil && err.Context.Reference.Path != "" {
 		if !strings.Contains(result, "file:") {
 			t.Errorf("Error() should include file context, got %v", result)
 		}

@@ -248,18 +248,19 @@ func TestDaemonManager_PlatformFallback(t *testing.T) {
 }
 
 func TestJob_IDGeneration(t *testing.T) {
-	jq := NewJobQueue()
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
 
-	job1, _ := jq.CreateJob("echo", []string{"1"})
-	job2, _ := jq.CreateJob("echo", []string{"2"})
+	job1, _ := dm.CreateJob("echo", []string{"1"})
+	job2, _ := dm.CreateJob("echo", []string{"2"})
 
 	assert.NotEqual(t, job1.ID, job2.ID, "Job IDs should be unique")
 
 	// Clean up
-	jq.mu.Lock()
-	delete(jq.jobs, job1.ID)
-	delete(jq.jobs, job2.ID)
-	jq.mu.Unlock()
+	dm.jobQueue.mu.Lock()
+	delete(dm.jobQueue.jobs, job1.ID)
+	delete(dm.jobQueue.jobs, job2.ID)
+	dm.jobQueue.mu.Unlock()
 }
 
 func TestJob_Metadata(t *testing.T) {

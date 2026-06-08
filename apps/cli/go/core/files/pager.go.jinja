@@ -137,9 +137,8 @@ func (p *Pager) Finish() {
 	}
 
 	// Close the pipe writer to signal EOF to pager
-	if pw, ok := p.terminal.(*os.File); ok {
-		pw.Close()
-	}
+	p.terminal.Close()
+
 
 	// Restore original stdout
 	os.Stdout = p.original
@@ -268,7 +267,7 @@ func GetTerminalSizeWithFallback() (width, height int) {
 
 // GetWinsize returns the terminal window size using syscall
 func GetWinsize() (rows, cols uint16, err error) {
-	ws, err := term.GetSize(int(os.Stdout.Fd()))
+	ws, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		return 24, 80, err
 	}

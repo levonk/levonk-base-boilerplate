@@ -13,10 +13,11 @@ import (
 // RunGenMan generates and displays the man page
 func RunGenMan(cmd *cobra.Command) error {
 	// Generate man page to stdout
+	date := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	header := &doc.GenManHeader{
 		Title:   "{{ project_name }}",
 		Section: "1",
-		Date:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		Date:    &date,
 		Source:  "{{ project_name }}",
 		Manual:  "User Commands",
 	}
@@ -31,10 +32,11 @@ func RunGenMan(cmd *cobra.Command) error {
 
 // GenManToFile generates a man page file for installation
 func GenManToFile(cmd *cobra.Command, destDir string) error {
+	date := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	header := &doc.GenManHeader{
 		Title:   "{{ project_name }}",
 		Section: "1",
-		Date:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		Date:    &date,
 		Source:  "{{ project_name }}",
 		Manual:  "User Commands",
 	}
@@ -46,7 +48,13 @@ func GenManToFile(cmd *cobra.Command, destDir string) error {
 
 	// Generate man page file
 	manFile := filepath.Join(destDir, "{{ project_slug }}.1")
-	if err := doc.GenMan(cmd, header, manFile); err != nil {
+	f, err := os.Create(manFile)
+	if err != nil {
+		return fmt.Errorf("failed to create man page file: %w", err)
+	}
+	defer f.Close()
+
+	if err := doc.GenMan(cmd, header, f); err != nil {
 		return fmt.Errorf("failed to generate man page file: %w", err)
 	}
 

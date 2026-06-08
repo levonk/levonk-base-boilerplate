@@ -26,12 +26,12 @@ Ensure all URLs are browser-compatible. Use standard HTTP/HTTPS URLs with proper
 
 ## Sub-Tasks
 
-- [ ] Implement URL validation
-- [ ] Implement URL encoding
-- [ ] Ensure HTTP/HTTPS protocol
-- [ ] Add smart terminal linking
-- [ ] Add tests for URL formatting
-- [ ] Update documentation
+- [x] Implement URL validation
+- [x] Implement URL encoding
+- [x] Ensure HTTP/HTTPS protocol
+- [x] Add smart terminal linking
+- [x] Add tests for URL formatting
+- [x] Update documentation
 
 ## Relevant Files
 
