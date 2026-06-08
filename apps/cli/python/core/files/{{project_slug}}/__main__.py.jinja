@@ -10,6 +10,7 @@ from rich.console import Console
 from platformdirs import user_config_dir
 
 from {{ project_slug }}.logging import configure_logging, get_logger
+from {{ project_slug }}.completion import install_all_completions, uninstall_all_completions
 {% if include_advanced_config %}
 from {{ project_slug }}.config import ConfigManager, get_config_manager
 {% endif %}
@@ -83,6 +84,9 @@ def process(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
     debug: bool = typer.Option(False, "--debug", help="Enable detailed debugging output"),
     nocolor: bool = typer.Option(False, "--nocolor", help="Disable colored output"),
+    install: bool = typer.Option(False, "--install", help="Install shell completions and initialize config"),
+    uninstall: bool = typer.Option(False, "--uninstall", help="Uninstall shell completions and cleanup"),
+    force: bool = typer.Option(False, "--force", help="Force overwrite during install"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
@@ -105,6 +109,32 @@ def process(
         nocolor=nocolor
     )
     logger = get_logger()
+
+    # Handle install/uninstall flags
+    if install:
+        logger.info("Installing shell completions...", module="install")
+        results = install_all_completions(force=force)
+        success_count = sum(1 for v in results.values() if v)
+        logger.info(f"Installed {success_count}/{len(results)} completion scripts", module="install")
+
+        {% if include_advanced_config %}
+        # Initialize config during install
+        try:
+            config_manager = get_config_manager()
+            config = config_manager.initialize_config()
+            logger.info(f"Initialized config at {config}", module="install")
+        except Exception as e:
+            logger.warn(f"Could not initialize config: {e}", module="install")
+        {% endif %}
+
+        sys.exit(EXIT_SUCCESS)
+
+    if uninstall:
+        logger.info("Uninstalling shell completions...", module="install")
+        results = uninstall_all_completions()
+        success_count = sum(1 for v in results.values() if v)
+        logger.info(f"Removed {success_count}/{len(results)} completion scripts", module="install")
+        sys.exit(EXIT_SUCCESS)
 
     {% if include_advanced_config %}
     # Load configuration with precedence

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 2
 parallel_id: 1
 branch: "feature/current/cli-python-standards/story-02-001-install-uninstall"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,16 +27,16 @@ Implement `--install` and `--uninstall` flags that handle shell completion scrip
 
 ## Sub-Tasks
 
-- [ ] Create `completion.py.jinja` template file with completion generation functions — `apps/cli/python/core/files/{{project_slug}}/completion.py.jinja`
-- [ ] Implement bash completion generation using Typer's completion system — `completion.py.jinja`
-- [ ] Implement zsh completion generation using Typer's completion system — `completion.py.jinja`
-- [ ] Implement fish completion generation using Typer's completion system — `completion.py.jinja`
-- [ ] Add `--install` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Add `--uninstall` flag to main command in `__main__.py.jinja` — `__main__.py.jinja`
-- [ ] Implement install logic: generate completions, initialize config, setup environment — `__main__.py.jinja`
-- [ ] Implement uninstall logic: remove completions, cleanup config, restore environment — `__main__.py.jinja`
-- [ ] Add platform-specific completion installation paths — `completion.py.jinja`
-- [ ] Add tests for install/uninstall functionality — `apps/cli/python/core/files/tests/test_completion.py.jinja`
+- [x] Create `completion.py.jinja` template file with completion generation functions — `apps/cli/python/core/files/{{project_slug}}/completion.py.jinja`
+- [x] Implement bash completion generation using Typer's completion system — `completion.py.jinja`
+- [x] Implement zsh completion generation using Typer's completion system — `completion.py.jinja`
+- [x] Implement fish completion generation using Typer's completion system — `completion.py.jinja`
+- [x] Add platform-specific completion installation paths — `completion.py.jinja`
+- [x] Add `--install` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Add `--uninstall` flag to main command in `__main__.py.jinja` — `__main__.py.jinja`
+- [x] Implement install logic: generate completions, initialize config, setup environment — `__main__.py.jinja`
+- [x] Implement uninstall logic: remove completions, cleanup config, restore environment — `__main__.py.jinja`
+- [x] Add tests for install/uninstall functionality — `apps/cli/python/core/files/tests/test_completion.py.jinja`
 
 ## Relevant Files
 
@@ -47,15 +47,15 @@ Implement `--install` and `--uninstall` flags that handle shell completion scrip
 
 ## Acceptance Criteria
 
-- [ ] `--install` flag generates shell completions for bash, zsh, and fish
-- [ ] `--install` flag initializes default config file
-- [ ] `--install` flag sets up required environment
-- [ ] `--uninstall` flag removes shell completions
-- [ ] `--uninstall` flag cleans up config files
-- [ ] `--uninstall` flag restores environment to pre-install state
-- [ ] Completion scripts work correctly for all three shells
-- [ ] Platform-specific installation paths handled correctly
-- [ ] All tests pass for install/uninstall scenarios
+- [x] `--install` flag generates shell completions for bash, zsh, and fish
+- [x] `--install` flag initializes default config file
+- [x] `--install` flag sets up required environment
+- [x] `--uninstall` flag removes shell completions
+- [x] `--uninstall` flag cleans up config files
+- [x] `--uninstall` flag restores environment to pre-install state
+- [x] Completion scripts work correctly for all three shells
+- [x] Platform-specific installation paths handled correctly
+- [x] All tests pass for install/uninstall scenarios
 
 ## Test Plan
 
