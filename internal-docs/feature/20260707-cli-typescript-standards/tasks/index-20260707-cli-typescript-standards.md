@@ -15,7 +15,7 @@ This index provides a summary of all stories for implementing CLI Tool Standards
 | 02-002 | Configuration Precedence Chain | feature/current/20260707-cli-typescript-standards/story-02-002-config-precedence-chain | 01-003 | Parallel-safe: true | [x] Done | config/ |
 | 03-001 | Install/Uninstall Flags | feature/current/20260707-cli-typescript-standards/story-03-001-install-uninstall-flags | 01-003 | Parallel-safe: true | [~] In-Progress | index.ts, install/ |
 | 03-002 | Shell Completion Scripts | feature/current/20260707-cli-typescript-standards/story-03-002-shell-completion-scripts | None | Parallel-safe: true | [x] Done | completions/ |
-| 03-003 | Man Pages | feature/current/20260707-cli-typescript-standards/story-03-003-man-pages | None | Parallel-safe: true | docs/ |
+| 03-003 | Man Pages | feature/current/20260707-cli-typescript-standards/story-03-003-man-pages | None | Parallel-safe: true | [~] In-Progress | docs/ |
 | 04-001 | Dry-Run Mode | feature/current/20260707-cli-typescript-standards/story-04-001-dry-run-mode | None | Parallel-safe: true | index.ts, dry-run/ |
 | 04-002 | Confirmation Prompts | feature/current/20260707-cli-typescript-standards/story-04-002-confirmation-prompts | None | Parallel-safe: true | index.ts, prompts/ |
 | 04-003 | Progress Indicators | feature/current/20260707-cli-typescript-standards/story-04-003-progress-indicators | 02-001 | Parallel-safe: true | progress/ |

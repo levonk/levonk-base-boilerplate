@@ -27,19 +27,19 @@ Generate traditional Unix man pages for the CLI tool. Make man pages accessible 
 
 ## Sub-Tasks
 
-- [ ] Create man page generation module
-- [ ] Define man page structure and sections
-- [ ] Implement man page generation from command structure
-- [ ] Add `--man` flag to index.ts
-- [ ] Generate man page for main command
-- [ ] Generate man pages for subcommands
-- [ ] Add man page installation logic
-- [ ] Include examples in man pages
-- [ ] Include all command options in man pages
-- [ ] Add unit tests for man page generation
-- [ ] Add integration tests for --man flag
-- [ ] Update help text to reference man pages
-- [ ] Add man page to install/uninstall process
+- [x] Create man page generation module
+- [x] Define man page structure and sections
+- [x] Implement man page generation from command structure
+- [x] Add `--man` flag to index.ts
+- [x] Generate man page for main command
+- [x] Generate man pages for subcommands
+- [x] Add man page installation logic
+- [x] Include examples in man pages
+- [x] Include all command options in man pages
+- [x] Add unit tests for man page generation
+- [x] Add integration tests for --man flag
+- [x] Update help text to reference man pages
+- [x] Add man page to install/uninstall process
 
 ## Relevant Files
 
@@ -51,14 +51,14 @@ Generate traditional Unix man pages for the CLI tool. Make man pages accessible 
 
 ## Acceptance Criteria
 
-- [ ] Man page is generated for main command
-- [ ] Man pages are generated for all subcommands
-- [ ] `--man` flag displays man page content
-- [ ] Man pages include all command options
-- [ ] Man pages include usage examples
-- [ ] Man pages follow standard Unix man page format
-- [ ] Man pages are installed in correct location
-- [ ] Man pages are accessible via `man <command>`
+- [x] Man page is generated for main command
+- [x] Man pages are generated for all subcommands
+- [x] `--man` flag displays man page content
+- [x] Man pages include all command options
+- [x] Man pages include usage examples
+- [x] Man pages follow standard Unix man page format
+- [x] Man pages are installed in correct location
+- [x] Man pages are accessible via `man <command>`
 
 ## Test Plan
 
