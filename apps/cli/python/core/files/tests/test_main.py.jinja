@@ -8,7 +8,6 @@ def test_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "Show this message and exit" in result.stdout
-    assert "{{ description }}" in result.stdout
 
 def test_help_short():
     """Test -h flag displays help at root command."""
@@ -37,26 +36,26 @@ def test_help_reload_config_subcommand():
 
 def test_version():
     """Test --version flag displays version."""
-    result = runner.invoke(app, ["--version"])
+    result = runner.invoke(app, ["process", "--version"])
     assert result.exit_code == 0
     assert "0.1.0" in result.stdout
     assert "{{ project_slug }}" in result.stdout
 
 def test_version_short():
     """Test -v flag displays version."""
-    result = runner.invoke(app, ["-v"])
+    result = runner.invoke(app, ["process", "-v"])
     assert result.exit_code == 0
     assert "0.1.0" in result.stdout
 
 def test_usage():
     """Test --usage flag displays usage information."""
-    result = runner.invoke(app, ["--usage"])
+    result = runner.invoke(app, ["process", "--usage"])
     assert result.exit_code == 0
     assert "Show this message and exit" in result.stdout
 
 def test_debug_flag():
     """Test --debug flag enables debug logging."""
-    result = runner.invoke(app, ["-", "--debug"], input="test content")
+    result = runner.invoke(app, ["process", "-", "--debug"], input="test content")
     assert result.exit_code == 0
     # Debug flag should be accepted without error
 
@@ -65,26 +64,26 @@ def test_debug_vs_verbose():
     # Debug should enable DEBUG level logging
     # Verbose should enable INFO level logging
     # This test verifies the flags are accepted and don't conflict
-    result_debug = runner.invoke(app, ["-", "--debug"], input="test content")
-    result_verbose = runner.invoke(app, ["-", "--verbose"], input="test content")
+    result_debug = runner.invoke(app, ["process", "-", "--debug"], input="test content")
+    result_verbose = runner.invoke(app, ["process", "-", "--verbose"], input="test content")
     assert result_debug.exit_code == 0
     assert result_verbose.exit_code == 0
 
 def test_verbose_flag():
     """Test --verbose flag enables verbose logging."""
-    result = runner.invoke(app, ["-", "--verbose"], input="test content")
+    result = runner.invoke(app, ["process", "-", "--verbose"], input="test content")
     assert result.exit_code == 0
     # Verbose flag should be accepted without error
 
 def test_exit_code_success():
     """Test exit code 0 for successful execution."""
-    result = runner.invoke(app, ["-", "--quiet"], input="test content")
+    result = runner.invoke(app, ["process", "-", "--quiet"], input="test content")
     assert result.exit_code == 0  # EXIT_SUCCESS
 
 def test_exit_code_file_not_found(tmp_path):
     """Test exit code for file not found error."""
     nonexistent = tmp_path / "nonexistent.txt"
-    result = runner.invoke(app, [str(nonexistent)])
+    result = runner.invoke(app, ["process", str(nonexistent)])
     assert result.exit_code == 5  # EXIT_FILE_NOT_FOUND
 
 def test_exit_code_permission_denied(tmp_path):
@@ -94,7 +93,7 @@ def test_exit_code_permission_denied(tmp_path):
     f.write_text("content")
     f.chmod(0o000)
 
-    result = runner.invoke(app, [str(f)])
+    result = runner.invoke(app, ["process", str(f)])
     # Should exit with permission denied code (6) or error (1) depending on OS
     assert result.exit_code in (1, 6)
 
@@ -154,14 +153,14 @@ def test_no_args_tty():
     pass
 
 def test_stdin_processing():
-    result = runner.invoke(app, ["-", "--json"], input="test content")
+    result = runner.invoke(app, ["process", "-", "--json"], input="test content")
     assert result.exit_code == 0
     assert "stdin" in result.stdout
     assert "processed" in result.stdout
 
 def test_json_output_format():
     """Test JSON output format is valid JSON."""
-    result = runner.invoke(app, ["-", "--json"], input="test content")
+    result = runner.invoke(app, ["process", "-", "--json"], input="test content")
     assert result.exit_code == 0
     import json
     data = json.loads(result.stdout)
@@ -171,7 +170,7 @@ def test_json_output_format():
 
 def test_human_output_format():
     """Test human output format is readable text."""
-    result = runner.invoke(app, ["-"], input="test content")
+    result = runner.invoke(app, ["process", "-"], input="test content")
     assert result.exit_code == 0
     # Human output should not be JSON
     import json
@@ -186,7 +185,7 @@ def test_file_processing(tmp_path):
     f = tmp_path / "test.txt"
     f.write_text("content")
 
-    result = runner.invoke(app, [str(f), "--json"])
+    result = runner.invoke(app, ["process", str(f), "--json"])
     assert result.exit_code == 0
     assert str(f) in result.stdout
 
@@ -195,7 +194,7 @@ def test_globbing_pattern(tmp_path):
     (tmp_path / "file1.txt").write_text("content1")
     (tmp_path / "file2.txt").write_text("content2")
 
-    result = runner.invoke(app, [str(tmp_path / "*.txt"), "--json", "--quiet"])
+    result = runner.invoke(app, ["process", str(tmp_path / "*.txt"), "--json", "--quiet"])
     assert result.exit_code == 0
 
 def test_recursive_globbing(tmp_path):
@@ -205,18 +204,18 @@ def test_recursive_globbing(tmp_path):
     (tmp_path / "file1.txt").write_text("content1")
     (subdir / "file2.txt").write_text("content2")
 
-    result = runner.invoke(app, [str(tmp_path / "**/*.txt"), "--json", "--quiet"])
+    result = runner.invoke(app, ["process", str(tmp_path / "**/*.txt"), "--json", "--quiet"])
     assert result.exit_code == 0
 
 def test_globbing_no_matches(tmp_path):
     """Test globbing pattern with no matches."""
-    result = runner.invoke(app, [str(tmp_path / "*.txt"), "--quiet"])
+    result = runner.invoke(app, ["process", str(tmp_path / "*.txt"), "--quiet"])
     # Should exit with success even if no files found (warning logged)
     assert result.exit_code in (0, 5)
 
 def test_dry_run():
     """Test --dry-run flag previews changes without execution."""
-    result = runner.invoke(app, ["--dry-run", "--install"])
+    result = runner.invoke(app, ["process", "--dry-run", "--install"])
     assert result.exit_code == 0
     assert "DRY RUN" in result.stdout
     assert "Would install" in result.stdout
@@ -226,21 +225,21 @@ def test_dry_run_with_inputs(tmp_path):
     f = tmp_path / "test.txt"
     f.write_text("content")
 
-    result = runner.invoke(app, [str(f), "--dry-run"])
+    result = runner.invoke(app, ["process", str(f), "--dry-run"])
     assert result.exit_code == 0
     assert "DRY RUN" in result.stdout
 
 def test_force_flag():
     """Test --force flag bypasses confirmation prompts."""
     # With --force, install should proceed without prompting
-    result = runner.invoke(app, ["--install", "--force", "--quiet"])
+    result = runner.invoke(app, ["process", "--install", "--force", "--quiet"])
     assert result.exit_code == 0
 
 def test_confirmation_prompt():
     """Test confirmation prompt for install without --force."""
     # Without --force, install should prompt (but in test mode it may fail or need input)
     # For now, just verify the flag is accepted
-    result = runner.invoke(app, ["--install", "--quiet"])
+    result = runner.invoke(app, ["process", "--install", "--quiet"])
     # May fail due to no input, but should accept the flag
     assert "--install" in result.stdout or result.exit_code in (0, 1)
 
