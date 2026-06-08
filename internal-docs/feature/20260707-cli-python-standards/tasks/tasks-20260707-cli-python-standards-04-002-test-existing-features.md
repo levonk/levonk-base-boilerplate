@@ -26,17 +26,17 @@ Ensure tests for existing CLI features (pre-existing in the boilerplate) are com
 
 ## Sub-Tasks
 
-- [ ] Add tests for --verbose flag
-- [ ] Add tests for --quiet flag
-- [ ] Add tests for --no-color flag
-- [ ] Add tests for globbing patterns
-- [ ] Add tests for stdin handling
-- [ ] Add tests for SIGINT handling (exit code 130)
-- [ ] Add tests for environment variable naming
-- [ ] Add tests for cross-platform path handling
-- [ ] Add tests for subcommand organization
-- [ ] Verify existing tests pass
-- [ ] Update documentation
+- [x] Add tests for --verbose flag
+- [x] Add tests for --quiet flag
+- [x] Add tests for --no-color flag
+- [x] Add tests for globbing patterns
+- [x] Add tests for stdin handling
+- [x] Add tests for SIGINT handling (exit code 130)
+- [x] Add tests for environment variable naming
+- [x] Add tests for cross-platform path handling
+- [x] Add tests for subcommand organization
+- [x] Verify existing tests pass
+- [x] Update documentation
 
 ## Relevant Files
 

@@ -36,26 +36,30 @@ func TestTUIModelNavigation(t *testing.T) {
 	model := NewTUIModel([]string{"a", "b", "c"})
 
 	// Test down navigation
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	model = newModel.(TUIModel)
 	if model.cursor != 1 {
 		t.Errorf("Expected cursor at 1 after down, got %d", model.cursor)
 	}
 
 	// Test up navigation
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	model = newModel.(TUIModel)
 	if model.cursor != 0 {
 		t.Errorf("Expected cursor at 0 after up, got %d", model.cursor)
 	}
 
 	// Test boundary - up at top
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	model = newModel.(TUIModel)
 	if model.cursor != 0 {
 		t.Errorf("Expected cursor to stay at 0, got %d", model.cursor)
 	}
 
 	// Test boundary - down at bottom
 	model.cursor = 2
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	model = newModel.(TUIModel)
 	if model.cursor != 2 {
 		t.Errorf("Expected cursor to stay at 2, got %d", model.cursor)
 	}
@@ -65,7 +69,8 @@ func TestTUIModelEdit(t *testing.T) {
 	model := NewTUIModel([]string{"original"})
 
 	// Enter edit mode
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e")})
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e")})
+	model = newModel.(TUIModel)
 	if !model.editing {
 		t.Error("Expected editing to be true")
 	}
@@ -75,19 +80,22 @@ func TestTUIModelEdit(t *testing.T) {
 	}
 
 	// Type characters
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("modified")})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("modified")})
+	model = newModel.(TUIModel)
 	if model.editValue != "originalmodified" {
 		t.Errorf("Expected editValue to be 'originalmodified', got '%s'", model.editValue)
 	}
 
 	// Backspace
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	model = newModel.(TUIModel)
 	if model.editValue != "originalmodifie" {
 		t.Errorf("Expected editValue to be 'originalmodifie', got '%s'", model.editValue)
 	}
 
 	// Save with Enter
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = newModel.(TUIModel)
 	if model.editing {
 		t.Error("Expected editing to be false after Enter")
 	}
@@ -102,7 +110,8 @@ func TestTUIModelDelete(t *testing.T) {
 
 	// Delete middle item
 	model.cursor = 1
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	model = newModel.(TUIModel)
 
 	if len(model.args) != 2 {
 		t.Errorf("Expected 2 args after delete, got %d", len(model.args))
@@ -117,22 +126,26 @@ func TestTUIModelConfirm(t *testing.T) {
 	model := NewTUIModel([]string{"a", "b"})
 
 	// Enter confirm mode
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = newModel.(TUIModel)
 	if !model.confirming {
 		t.Error("Expected confirming to be true")
 	}
 
 	// Cancel with N
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	model = newModel.(TUIModel)
 	if model.confirming {
 		t.Error("Expected confirming to be false after N")
 	}
 
 	// Enter confirm mode again
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = newModel.(TUIModel)
 
 	// Confirm with Y
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	model = newModel.(TUIModel)
 	if !model.quitting {
 		t.Error("Expected quitting to be true after Y")
 	}
@@ -141,7 +154,8 @@ func TestTUIModelConfirm(t *testing.T) {
 func TestTUIModelQuit(t *testing.T) {
 	model := NewTUIModel([]string{"a"})
 
-	model, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	model = newModel.(TUIModel)
 	if !model.quitting {
 		t.Error("Expected quitting to be true after q")
 	}
