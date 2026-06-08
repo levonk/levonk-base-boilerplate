@@ -4,11 +4,11 @@ title: "ADR: CLI Tool Standards"
 adr-id: "20260607001"
 slug: "20260607001-cli-tool-standards"
 url: "/internal-docs/adr/adr-20260607001-cli-tool-standards.md"
-synopsis: "Defines comprehensive cross-language standards for CLI programs: standard arguments, configuration management with auto-initialization and auto-migration, install/uninstall functionality, input/output discipline with color control (--color=auto|always|never, config setting, NO_COLOR support), logging modes with structured logging and format auto-detection, signal handling including config reload, TUI mode, dry-run, progress indicators, daemon processes (--daemon/--no-daemon flags with auto-spawning and explicit control) with platform fallback, error formatting, shell completion, man pages, pager integration, cross-platform compatibility, security, resource management, collection vs processing separation, health checks for containers, privacy mode with anonymous lists, audit logging with retention, and legacy deprecation policy."
+synopsis: "Defines comprehensive cross-language standards for CLI programs: standard arguments, configuration management with auto-initialization and auto-migration, install/uninstall functionality, input/output discipline with color control (--color=auto|always|never, config setting, NO_COLOR support), logging modes with structured logging and format auto-detection, signal handling including config reload, TUI mode, dry-run, progress indicators, daemon processes (--daemon/--no-daemon flags with auto-spawning and explicit control) with platform fallback, error formatting, shell completion, man pages, pager integration, cross-platform compatibility, security, resource management, collection vs processing separation, health checks for containers, privacy mode with anonymous lists, audit logging with retention, legacy deprecation policy, and agent mode standards (AXI: token-efficient TOON output, minimal schemas, content truncation, pre-computed aggregates, definitive empty states, structured errors, session integrations, content-first no-args, contextual disclosure)."
 author: "https://github.com/levonk"
 date-created: "2026-06-07"
-date-updated: "2026-07-07"
-version: "3.4.0"
+date-updated: "2026-06-07"
+version: "4.0.0"
 status: "accepted"
 aliases: []
 tags: ["doc/architecture/adr", "adr", "cli", "boilerplate", "tooling", "standard"]
@@ -32,9 +32,11 @@ CLI tools are part of the repo's public interface and automation surface. Withou
 
 The monorepo also maintains multiple production-grade CLI boilerplates (Python, Rust, Go, TypeScript, Bash, PowerShell, C#, Java, Ruby). The existing [ADR 20250131001: Universal Shared Partials System](./adr-20250131001-universal-shared-partials-system.md) provides a template infrastructure but does not define what CLI programs must do.
 
+Additionally, the rise of autonomous AI agents (Claude Code, Codex, OpenCode, etc.) that interact with CLIs via shell execution creates new requirements. Traditional human-centric CLI design (verbose help, interactive prompts, rich formatting) is suboptimal for agent consumption. The [Agent eXperience Interface (AXI)](https://github.com/kunchenguid/axi/blob/main/.agents/skills/axi/SKILL.md) specification defines ergonomic standards for agent-facing CLIs, emphasizing token efficiency, structured output, and session integrations.
+
 ## Decision
 
-Adopt a unified cross-language standard for CLI program behavior.
+Adopt a unified cross-language standard for CLI program behavior with **agent mode as the default**. CLIs must be optimized for autonomous agent consumption while preserving human-friendly features via explicit mode selection.
 
 All CLI programs **must** provide:
 
@@ -74,7 +76,7 @@ All CLI programs **must** provide:
 24. **Cross-Platform Path Handling**: Consistent path handling across Windows/Linux/macOS. Use platform-appropriate separators and handle both forward and backward slashes.
 25. **Credential/Secret Handling**: Secure handling of sensitive data with no logging of secrets, secure storage options, and clear warnings about insecure config methods.
 26. **Resource Limits**: Memory/CPU usage guidelines for long-running operations. Provide `--max-memory` and `--max-cpu` flags where applicable.
-27. **Testing**: Language-appropriate tests covering help output, globbing, stdin, config precedence, json vs human output, exit-code behavior, standard arguments, config file initialization, shell completion, error handling, and daemon mode where feasible.
+27. **Testing**: Language-appropriate tests covering help output, globbing, stdin, config precedence, json vs human output, exit-code behavior, standard arguments, config file initialization, shell completion, error handling, daemon mode, and agent mode (TOON output, minimal schemas, content truncation, pre-computed aggregates, empty states, structured errors, content-first no-args, contextual disclosure) where feasible.
 28. **Collection vs Processing Separation**: For CLIs that collect data and perform analysis, separate collection (daemon/background) from processing (offline analysis). Allow data collection in one environment and processing in another. Provide export commands for collected data and analysis commands that operate on exported data without requiring the collection daemon.
 29. **Config File Auto-Migration**: When config schema evolves, auto-migrate legacy configs to new format on first run. Create backup of old config (`.bak` suffix), log migration actions, and validate migrated config before use. Support both legacy and new formats for at least one release cycle with deprecation warnings.
 30. **Structured Logging with Format Auto-Detection**: Use structured logging (JSON or structured text) with format auto-detection based on TTY. Support language-native env filters (e.g., `RUST_LOG`, `NODE_ENV`, `LOG_LEVEL`). Log level resolution: env vars > CLI flags > config file > defaults.
@@ -83,6 +85,134 @@ All CLI programs **must** provide:
 33. **Privacy Mode with Anonymous Lists**: For CLIs that collect sensitive data, support privacy mode with explicit ignore lists (identifiers to never log or process). Distinguish between "unknown" (logged but not assigned) and "anonymous" (ignored entirely). Configurable privacy toggles to disable specific data collection.
 34. **Audit Logging with Retention**: For CLIs that process significant data, provide optional append-only audit log (SQLite or similar) with configurable retention period. Auto-prune old data on startup. Support export commands for external analysis.
 35. **Legacy Deprecation Policy**: When introducing breaking changes or legacy format deprecation, specify a clear end-of-support date (minimum 6 months from announcement). Log deprecation warnings to stderr during the deprecation period. Remove legacy support only after the specified date.
+
+## Agent Mode Standards (AXI)
+
+All CLI programs **must** support agent mode as the default behavior, following the [Agent eXperience Interface (AXI)](https://github.com/kunchenguid/axi/blob/main/.agents/skills/axi/SKILL.md) specification. Agent mode optimizes for autonomous agent consumption via shell execution, while human mode preserves user-friendly features.
+
+### Mode Selection
+
+- **Default**: Agent mode (no flags required)
+- **Human mode**: Triggered via `--human` flag, `--interactive` flag, TUI mode, or auto-detection when TTY is present and no agent session is detected
+- **Config setting**: `mode = "agent" | "human"` in config file
+- **Environment variable**: `MYTOOL_MODE=agent|human` (highest precedence after CLI args)
+
+### Agent Mode Requirements
+
+36. **Token-Efficient Output (TOON Format)**: Use [TOON (Token-Oriented Object Notation)](https://toonformat.dev/) as the output format on stdout in agent mode. TOON provides ~40% token savings over equivalent JSON while remaining readable by agents. Convert to TOON at the output boundary — keep internal logic on JSON. Human mode continues using JSON or human-readable formats.
+
+   ```
+   tasks[2]{id,title,status,assignee}:
+     "1",Fix auth bug,open,alice
+     "2",Add pagination,closed,bob
+   ```
+
+37. **Minimal Default Schemas**: Every field in stdout costs tokens — multiplied by row count in collections. Default to the smallest schema that lets the agent decide what to do next: typically an identifier, a title, and a status.
+   - Default list schemas: 3-4 fields, not 10
+   - Default limits: high enough to cover common cases in one call (if most repos have <100 labels, default to 100, not 30)
+   - Long-form content (bodies, descriptions) belongs in detail views, not lists
+   - Offer a `--fields` flag to let agents request additional fields explicitly
+
+38. **Content Truncation**: Detail views often contain large text fields. Omitting them forces agents to hunt; including them wastes tokens. Truncate by default and tell the agent how to get the full version.
+   - Never omit large fields entirely — include a truncated preview
+   - Show the total size so the agent knows how much it's missing
+   - Suggest the escape hatch (`--full`) only when content is actually truncated
+   - Choose a truncation limit that covers most use cases (500-1500 chars)
+
+   ```
+   task:
+     number: 42
+     title: Fix auth bug
+     state: open
+     body: First 500 chars of the issue body...
+       ... (truncated, 8432 chars total)
+   help[1]: Run `tasks view 42 --full` to see complete body
+   ```
+
+39. **Pre-computed Aggregates**: The most expensive token cost is often not a longer response — it's a follow-up call. If your backend has data that agents commonly need as a next step, compute it and include it.
+   - **Aggregate counts**: include the **total count** in list output, not just the page size. Agents need "how many are there?" and will paginate if the answer isn't definitive.
+   - **Derived status fields**: when the next step almost always involves checking related state, include a lightweight summary inline. Only include derived fields your backend can provide cheaply — a summary ("3/3 passed"), not the full data.
+
+   ```
+   count: 30 of 847 total
+   tasks[30]{number,title,state}:
+     1,Fix auth bug,open
+     ...
+   ```
+
+40. **Definitive Empty States**: When the answer is "nothing", say so explicitly. Ambiguous empty output causes agents to re-run with different flags to verify. State the zero with context. Make it clear the command succeeded — the absence of results is the answer.
+
+   ```
+   $ tasks list --state closed
+   tasks: 0 closed tasks found in this repository
+   ```
+
+41. **Structured Errors & Exit Codes**:
+   - **Idempotent mutations**: Don't error when the desired state already exists. If the agent closes something already closed, acknowledge and move on with exit code 0. Reserve non-zero exit codes for situations where the agent's intent genuinely cannot be satisfied.
+   - **Structured errors on stdout**: Errors go to **stdout** in the same structured format as normal output, so the agent can read and act on them. Include what went wrong and an actionable suggestion. Never let raw dependency output (API errors, stack traces) leak through.
+   - **No interactive prompts**: Every operation must be completable with flags alone. If a required value is missing, fail immediately with a clear error — don't prompt for it. Suppress prompts from wrapped tools.
+   - **Output channels**: stdout = structured output (data, errors, suggestions); stderr = debug logging, progress indicators, diagnostics (agents don't read this). Exit codes: 0 = success (including no-ops), 1 = error, 2 = usage error.
+
+   ```
+   $ tasks close 42
+   task: #42 already closed (no-op)    # exit 0
+
+   error: --title is required
+   help: tasks create --title "..." [--body "..."]
+   ```
+
+42. **Ambient Context via Session Integrations**: Register your tool into the agent's session lifecycle so every conversation starts with relevant state already visible — before the agent takes any action.
+   - **Default app targets**: by default, support Claude Code, Codex, and OpenCode. Do not hard-code a single agent integration when the tool can reasonably support multiple agents.
+   - **Explicit opt-in**: register hooks or plugins only from a user-invoked setup command, not from ordinary CLI commands.
+   - **Portable commands**: hook commands should use a PATH-verified binary name when it resolves to the current executable, and fall back to the full absolute path otherwise.
+   - **Path repair**: setup commands should check existing hooks and update the executable path if it has changed (e.g., after reinstall or relocation).
+   - **Idempotent**: repeated installs with the same path are silent no-ops.
+   - **Directory-scoped**: show only state relevant to the current working directory.
+   - **Token-budget-aware**: this context loads on _every_ session — ruthlessly minimize it. Include just enough for the agent to orient and act; deep data belongs in explicit invocations.
+   - **Lifecycle capture**: use session-end hooks to capture what happened (transcripts, files touched, specs referenced) so future session-start context gets richer over time.
+
+   **Integration specifics**:
+   - **Claude Code**: use native hooks in `~/.claude/settings.json` or project `.claude/settings.json`. Prefer `SessionStart` to inject compact context via stdout.
+   - **Codex**: use native hooks in `~/.codex/hooks.json` or `<repo>/.codex/hooks.json`, and ensure `[features].hooks = true` in `config.toml`. Prefer `SessionStart` for ambient context via stdout.
+   - **OpenCode**: use a managed plugin in `~/.config/opencode/plugins/`. Prefer ambient system-context injection for the home view rather than adding a custom tool.
+
+43. **Installable Agent Skill (Secondary)**: The session hook is the primary integration, but offer an installable [Agent Skill](https://agentskills.io) as a secondary discovery path. It loads on demand when the agent recognizes a matching task, carries no per-session token cost, and works in any agent that supports the skill format.
+   - **Single source of truth**: generate `SKILL.md` from the same content your no-args home view prints, so the skill never drifts from the CLI's own guidance. Add a `--check` build step to CI that fails if the committed skill is stale.
+   - **Strip live state**: a skill is static, so omit dynamic data (open sessions, current items) that only the hook can show.
+   - **Non-interactive commands**: rewrite command examples to a form the agent can run without a global install (e.g. `npx -y mytool ...`), since a skill may be installed without the binary on PATH.
+   - **Trigger-shaped frontmatter**: include `name` and a `description` written as a trigger — terse and outcome-focused so the agent loads it on the right intent.
+   - **Document both paths**: in your README, present the hook and the skill as two ways to achieve the same thing, and make clear the user only needs one.
+
+44. **Content First**: Running your CLI with no arguments should show the most relevant live content — not a usage manual. When an agent sees actual state it can act immediately. When it sees help text, it has to make a second call.
+
+   ```
+   $ tasks
+   tasks[3]{id,title,status}:
+     1,Fix auth bug,open
+     2,Add pagination,open
+     3,Update docs,closed
+   help[2]:
+     Run `tasks view <id>` to see full details
+     Run `tasks create --title "..."` to add a task
+   ```
+
+45. **Contextual Disclosure**: Include **a few next steps** that follow logically from the current output. The agent discovers your CLI's surface area organically by using it, not by reading a manual upfront.
+   - **Relevant**: after an open item → suggest closing; after an empty list → suggest creating; after a list → suggest viewing
+   - **Actionable**: every suggestion is a complete command (or template) carrying forward any disambiguating flags from the current invocation (e.g., `--repo`, `--source`)
+   - **Concise**: 2-4 suggestions maximum, ranked by relevance
+   - **Structured**: use a `help[]` array in TOON output for machine parsing
+
+### Human Mode Preservation
+
+Human mode retains all existing user-friendly features:
+- TUI mode via `--interactive` or `--tui`
+- Rich colors and formatting (respecting `--color` settings)
+- Pager integration for long output
+- Interactive confirmation prompts (unless `--force` is used)
+- Progress bars and spinners
+- Detailed help text and usage manuals
+- Man pages and shell completion
+- All existing human-centric behaviors
 
 CLI boilerplates **must** implement these standards and additionally provide:
 
@@ -224,6 +354,7 @@ Boilerplates are the enforcement mechanism and reference implementation. Requiri
 
 - Review 6 months after adoption (2026-12-07)
 - Annually thereafter or when major language ecosystem changes occur
+- Review when AXI specification updates or new agent platforms emerge
 
 ## Notes
 
@@ -233,6 +364,9 @@ Boilerplates are the enforcement mechanism and reference implementation. Requiri
 
 ## References
 
+- [Agent eXperience Interface (AXI) Specification](https://github.com/kunchenguid/axi/blob/main/.agents/skills/axi/SKILL.md)
+- [TOON Format Specification](https://toonformat.dev/reference/spec.html)
+- [Agent Skills Registry](https://agentskills.io)
 - [Job-Aide CLI Standards ADR](https://github.com/lrepo52/job-aide/blob/main/internal-docs/adr/adr-20251210001-cli-standards-and-boilerplates.md)
 - [12 Factor App: Config](https://12factor.net/config)
 - [POSIX Exit Codes](https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_08_02)
