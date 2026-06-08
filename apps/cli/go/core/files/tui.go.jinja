@@ -1,0 +1,241 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+// TUIModel represents the state of the TUI application
+type TUIModel struct {
+	args         []string
+	cursor       int
+	selected     map[int]bool
+	editing      bool
+	editIndex    int
+	editValue    string
+	confirming   bool
+	quitting     bool
+}
+
+// TUIStyles holds styling for the TUI
+var TUIStyles = struct {
+	header,
+	normal,
+	selected,
+	cursor,
+	footer lipgloss.Style
+}{
+	header: lipgloss.NewStyle().
+		Foreground(lipgloss.Color("6")).
+		Bold(true).
+		Padding(0, 1),
+	normal: lipgloss.NewStyle().
+		Padding(0, 1),
+	selected: lipgloss.NewStyle().
+		Foreground(lipgloss.Color("2")).
+		Padding(0, 1),
+	cursor: lipgloss.NewStyle().
+		Foreground(lipgloss.Color("5")).
+		Bold(true),
+	footer: lipgloss.NewStyle().
+		Foreground(lipgloss.Color("8")).
+		Italic(true),
+}
+
+// TUIInit initializes the TUI model
+func (m TUIModel) Init() tea.Cmd {
+	return nil
+}
+
+// TUIUpdate handles messages and updates the model
+func (m TUIModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if m.editing {
+			return m.handleEdit(msg)
+		}
+		if m.confirming {
+			return m.handleConfirm(msg)
+		}
+		return m.handleNavigation(msg)
+	}
+	return m, nil
+}
+
+func (m TUIModel) handleNavigation(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "ctrl+c", "q":
+		m.quitting = true
+		return m, tea.Quit
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case "down", "j":
+		if m.cursor < len(m.args)-1 {
+			m.cursor++
+		}
+	case "enter":
+		if len(m.args) > 0 {
+			m.confirming = true
+		}
+	case "e":
+		if len(m.args) > 0 {
+			m.editing = true
+			m.editIndex = m.cursor
+			m.editValue = m.args[m.cursor]
+		}
+	case "d":
+		if len(m.args) > 0 {
+			m.args = append(m.args[:m.cursor], m.args[m.cursor+1:]...)
+			if m.cursor >= len(m.args) && m.cursor > 0 {
+				m.cursor--
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m TUIModel) handleEdit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEnter:
+		m.args[m.editIndex] = m.editValue
+		m.editing = false
+		m.editValue = ""
+	case tea.KeyEsc:
+		m.editing = false
+		m.editValue = ""
+	case tea.KeyBackspace:
+		if len(m.editValue) > 0 {
+			m.editValue = m.editValue[:len(m.editValue)-1]
+		}
+	case tea.KeyRunes:
+		m.editValue += string(msg.Runes)
+	}
+	return m, nil
+}
+
+func (m TUIModel) handleConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "Y":
+		m.quitting = true
+		return m, tea.Quit
+	case "n", "N", "esc":
+		m.confirming = false
+	}
+	return m, nil
+}
+
+// TUIView renders the TUI interface
+func (m TUIModel) View() string {
+	if m.quitting {
+		return ""
+	}
+
+	var s strings.Builder
+
+	s.WriteString(TUIStyles.header.Render("Interactive TUI Mode"))
+	s.WriteString("\n\n")
+
+	if m.editing {
+		s.WriteString(m.renderEditView())
+	} else if m.confirming {
+		s.WriteString(m.renderConfirmView())
+	} else {
+		s.WriteString(m.renderMainView())
+	}
+
+	s.WriteString("\n")
+	s.WriteString(TUIStyles.footer.Render(m.renderFooter()))
+
+	return s.String()
+}
+
+func (m TUIModel) renderMainView() string {
+	var s strings.Builder
+
+	if len(m.args) == 0 {
+		s.WriteString("No arguments to display.\n")
+		s.WriteString("Press 'q' to quit.\n")
+		return s.String()
+	}
+
+	s.WriteString("Arguments:\n\n")
+
+	for i, arg := range m.args {
+		cursor := " "
+		if m.cursor == i {
+			cursor = ">"
+		}
+
+		line := fmt.Sprintf("%s [%d] %s", cursor, i+1, arg)
+		if m.cursor == i {
+			s.WriteString(TUIStyles.cursor.Render(line))
+		} else {
+			s.WriteString(TUIStyles.normal.Render(line))
+		}
+		s.WriteString("\n")
+	}
+
+	return s.String()
+}
+
+func (m TUIModel) renderEditView() string {
+	var s strings.Builder
+
+	s.WriteString(fmt.Sprintf("Editing argument %d:\n", m.editIndex+1))
+	s.WriteString("\n")
+	s.WriteString(TUIStyles.selected.Render(m.editValue))
+	s.WriteString("\n\n")
+	s.WriteString("Press Enter to save, Esc to cancel\n")
+
+	return s.String()
+}
+
+func (m TUIModel) renderConfirmView() string {
+	var s strings.Builder
+
+	s.WriteString("Execute with these arguments?\n\n")
+	for i, arg := range m.args {
+		s.WriteString(fmt.Sprintf("  [%d] %s\n", i+1, arg))
+	}
+	s.WriteString("\n")
+	s.WriteString("[Y]es  [N]o")
+
+	return s.String()
+}
+
+func (m TUIModel) renderFooter() string {
+	if m.editing {
+		return "Editing mode"
+	}
+	if m.confirming {
+		return "Confirm execution"
+	}
+	return "↑/↓: Navigate | Enter: Execute | E: Edit | D: Delete | Q: Quit"
+}
+
+// NewTUIModel creates a new TUI model with the given arguments
+func NewTUIModel(args []string) TUIModel {
+	return TUIModel{
+		args:     args,
+		cursor:   0,
+		selected: make(map[int]bool),
+	}
+}
+
+// RunTUI launches the TUI application and returns the modified arguments
+func RunTUI(args []string) ([]string, error) {
+	model := NewTUIModel(args)
+	p := tea.NewProgram(model)
+	finalModel, err := p.Run()
+	if err != nil {
+		return nil, err
+	}
+	return finalModel.(TUIModel).args, nil
+}
+
+{# vim: set ft=go: #}

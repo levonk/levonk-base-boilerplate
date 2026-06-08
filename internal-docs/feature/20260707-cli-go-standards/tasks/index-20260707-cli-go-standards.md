@@ -34,14 +34,14 @@ This index summarizes all stories for the Go CLI Standards compliance implementa
 | 02-003 | Progress Indicators | 02 | [x] Done | | true | 01-003 | None | [progress, main] | feature/current/20260707-cli-go-standards/story-02-003-progress-indicators |
 | 02-004 | Error Message Formatting | 02 | [x] Done | | true | None | 03-003 | [logger, main] | feature/current/20260707-cli-go-standards/story-02-004-error-message-formatting |
 | 02-005 | Man Pages | 02 | [x] Done | | true | None | None | [docs, main] | feature/current/20260707-cli-go-standards/story-02-005-man-pages |
-| 02-006 | Pager Integration | 02 | [~] In-Progress | | true | None | None | [main, output] | feature/current/20260707-cli-go-standards/story-02-006-pager-integration |
-| 02-007 | Terminal Size Awareness | 02 | [ ] Todo | | true | None | 04-001 | [main, terminal] | feature/current/20260707-cli-go-standards/story-02-007-terminal-size-awareness |
+| 02-006 | Pager Integration | 02 | [x] Done | | true | None | None | [main, output] | feature/current/20260707-cli-go-standards/story-02-006-pager-integration |
+| 02-007 | Terminal Size Awareness | 02 | [x] Done | | true | None | 04-001 | [main, terminal] | feature/current/20260707-cli-go-standards/story-02-007-terminal-size-awareness |
 
 ### Phase 03: Advanced Features (Advanced Priority - Week 2)
 
 | Story ID | Story Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
 | -------- | ----------- | ----: | ------ | -------- | ------------- | ------------ | ---------- | ------- | ------ |
-| 03-001 | TUI Mode | 03 | [ ] Todo | | true | 01-001, 01-006 | None | [tui, main] | feature/current/20260707-cli-go-standards/story-03-001-tui-mode |
+| 03-001 | TUI Mode | 03 | [~] In-Progress | | true | 01-001, 01-006 | None | [tui, main] | feature/current/20260707-cli-go-standards/story-03-001-tui-mode |
 | 03-002 | Daemon Process Support | 03 | [ ] Todo | | false | 01-001, 01-006 | None | [daemon, main] | feature/current/20260707-cli-go-standards/story-03-002-daemon-process-support |
 | 03-003 | File Reference Formatting | 03 | [ ] Todo | | true | 02-004 | None | [main, output] | feature/current/20260707-cli-go-standards/story-03-003-file-reference-formatting |
 | 03-004 | URL Formatting | 03 | [ ] Todo | | true | None | None | [main, output] | feature/current/20260707-cli-go-standards/story-03-004-url-formatting |

@@ -2,7 +2,9 @@
   "name": "levonk-base-boilerplate",
   "version": "0.1.0",
   "description": "Development environment for boilerplate scaffolding",
-  "packages": [],
+  "packages": [
+    "copier@latest"
+  ],
   "shell": {
     "init_hook": []
   }

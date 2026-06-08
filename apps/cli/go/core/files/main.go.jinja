@@ -29,6 +29,8 @@ var (
 	dryRun bool
 	force bool
 	noPager bool
+	interactiveFlag bool
+	tuiFlag bool
 	logger *Logger
 	terminal *Terminal
 	version = "1.0.0"
@@ -65,6 +67,15 @@ Examples:
 			usage, _ := cmd.Flags().GetBool("usage")
 			if usage {
 				return cmd.Usage()
+			}
+
+			// Handle TUI mode
+			if interactiveFlag || tuiFlag {
+				modifiedArgs, err := RunTUI(args)
+				if err != nil {
+					return fmt.Errorf("TUI error: %w", err)
+				}
+				args = modifiedArgs
 			}
 
 			// Initialize logger
@@ -336,6 +347,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without executing them")
 	rootCmd.Flags().BoolVarP(&force, "force", "f", false, "Bypass confirmation prompts for destructive operations")
 	rootCmd.Flags().BoolVar(&noPager, "no-pager", false, "Disable automatic paging for long output")
+	rootCmd.Flags().BoolVar(&interactiveFlag, "interactive", false, "Launch interactive TUI mode")
+	rootCmd.Flags().BoolVar(&tuiFlag, "tui", false, "Launch TUI mode (alias for --interactive)")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }
