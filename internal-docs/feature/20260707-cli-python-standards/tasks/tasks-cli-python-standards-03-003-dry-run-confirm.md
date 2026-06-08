@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 3
 parallel_id: 3
 branch: "feature/current/cli-python-standards/story-03-003-dry-run-confirm"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,14 +27,14 @@ Implement dry-run mode to preview changes without execution, and confirmation pr
 
 ## Sub-Tasks
 
-- [ ] Add `--dry-run` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Implement dry-run logic to show what would be done without executing — `__main__.py.jinja`
-- [ ] Add `--force` flag to bypass confirmation prompts — `__main__.py.jinja`
-- [ ] Implement confirmation prompts for destructive operations (delete, overwrite) — `__main__.py.jinja`
-- [ ] Apply dry-run to all destructive operations — `__main__.py.jinja`
-- [ ] Add tests for dry-run mode — `apps/cli/python/core/files/tests/test_main.py.jinja`
-- [ ] Add tests for confirmation prompts — `tests/test_main.py.jinja`
-- [ ] Add tests for --force flag behavior — `tests/test_main.py.jinja`
+- [x] Add `--dry-run` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Add `--force` flag to bypass confirmation prompts — `__main__.py.jinja`
+- [x] Implement dry-run logic to show what would be done without executing — `__main__.py.jinja`
+- [x] Implement confirmation prompts for destructive operations (delete, overwrite) — `__main__.py.jinja`
+- [x] Apply dry-run to all destructive operations — `__main__.py.jinja`
+- [x] Add tests for dry-run mode — `apps/cli/python/core/files/tests/test_main.py.jinja`
+- [x] Add tests for confirmation prompts — `tests/test_main.py.jinja`
+- [x] Add tests for --force flag behavior — `tests/test_main.py.jinja`
 
 ## Relevant Files
 
@@ -43,12 +43,12 @@ Implement dry-run mode to preview changes without execution, and confirmation pr
 
 ## Acceptance Criteria
 
-- [ ] `--dry-run` flag shows exactly what would be done without making changes
-- [ ] Dry-run applies to all destructive operations
-- [ ] Confirmation prompts required for destructive operations
-- [ ] `--force` flag bypasses confirmation prompts
-- [ ] Dry-run output is clear and actionable
-- [ ] All tests pass for dry-run and confirmation scenarios
+- [x] `--dry-run` flag shows exactly what would be done without making changes
+- [x] Dry-run applies to all destructive operations
+- [x] Confirmation prompts required for destructive operations
+- [x] `--force` flag bypasses confirmation prompts
+- [x] Dry-run output is clear and actionable
+- [x] All tests pass for dry-run and confirmation scenarios
 
 ## Test Plan
 

@@ -79,6 +79,24 @@ def process_content(content: str, source: str, module: str = "processor"):
     return {"source": source, "length": len(content), "status": "processed"}
 
 
+def confirm_destructive_action(action: str, force: bool = False) -> bool:
+    """
+    Prompt user for confirmation before destructive operations.
+
+    Args:
+        action: Description of the destructive action
+        force: If True, bypass confirmation (use --force flag)
+
+    Returns:
+        True if action should proceed, False otherwise
+    """
+    if force:
+        return True
+
+    response = input(f"{action} Continue? [y/N] ")
+    return response.lower() == 'y'
+
+
 @app.command()
 def process(
     inputs: Optional[List[str]] = typer.Argument(None, help="Input files or glob patterns. Use '-' for stdin."),
@@ -90,10 +108,11 @@ def process(
     color: str = typer.Option("auto", "--color", help="Color mode: auto, always, or never"),
     install: bool = typer.Option(False, "--install", help="Install shell completions and initialize config"),
     uninstall: bool = typer.Option(False, "--uninstall", help="Uninstall shell completions and cleanup"),
-    force: bool = typer.Option(False, "--force", help="Force overwrite during install"),
 {% if include_tui %}
     interactive: bool = typer.Option(False, "--interactive", "--tui", help="Launch TUI mode for interactive configuration"),
 {% endif %}
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without executing"),
+    force: bool = typer.Option(False, "--force", help="Force overwrite during install and bypass confirmation prompts"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
@@ -152,8 +171,23 @@ def process(
             sys.exit(EXIT_SUCCESS)
 {% endif %}
 
+    # Handle dry-run mode
+    if dry_run:
+        logger.info("DRY RUN: Previewing changes without execution", module="dry-run")
+        # Show what would be done
+        if install:
+            logger.info("Would install shell completions", module="dry-run")
+        if uninstall:
+            logger.info("Would uninstall shell completions", module="dry-run")
+        if inputs:
+            logger.info(f"Would process {len(inputs)} input(s)", module="dry-run")
+        sys.exit(EXIT_SUCCESS)
+
     # Handle install/uninstall flags
     if install:
+        if not confirm_destructive_action("This will install shell completions.", force):
+            logger.info("Install cancelled by user", module="install")
+            sys.exit(EXIT_SUCCESS)
         logger.info("Installing shell completions...", module="install")
         results = install_all_completions(force=force)
         success_count = sum(1 for v in results.values() if v)
@@ -172,6 +206,9 @@ def process(
         sys.exit(EXIT_SUCCESS)
 
     if uninstall:
+        if not confirm_destructive_action("This will uninstall shell completions.", force):
+            logger.info("Uninstall cancelled by user", module="install")
+            sys.exit(EXIT_SUCCESS)
         logger.info("Uninstalling shell completions...", module="install")
         results = uninstall_all_completions()
         success_count = sum(1 for v in results.values() if v)
