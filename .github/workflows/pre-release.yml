@@ -5,6 +5,10 @@ on:
 
 concurrency: pre-release-${{ github.ref }}
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   rc:
     runs-on: ubuntu-latest
