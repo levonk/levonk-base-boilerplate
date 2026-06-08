@@ -26,14 +26,14 @@ Implement configuration file validation on load. Report clear, specific error me
 
 ## Sub-Tasks
 
-- [ ] Define config schema/validation rules
-- [ ] Implement config validation on load
-- [ ] Add line number tracking for errors
-- [ ] Implement error message formatting
-- [ ] Add suggestions for fixing errors
-- [ ] Add schema validation
-- [ ] Add tests for config validation
-- [ ] Update documentation
+- [x] Define config schema/validation rules
+- [x] Implement config validation on load
+- [x] Add line number tracking for errors
+- [x] Implement error message formatting
+- [x] Add suggestions for fixing errors
+- [x] Add schema validation
+- [x] Add tests for config validation
+- [x] Update documentation
 
 ## Relevant Files
 
