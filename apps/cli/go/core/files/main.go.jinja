@@ -37,6 +37,9 @@ var (
 	urlFormat string
 	healthCheckFlag bool
 	privacyFlag bool
+	auditExportFile string
+	auditExportSince string
+	auditExportTypes string
 	logger *Logger
 	terminal *Terminal
 	version = "1.0.0"
@@ -57,6 +60,11 @@ Examples:
 			// Handle --health-check flag
 			if healthCheckFlag {
 				return RunHealthCheck()
+			}
+
+			// Handle --audit-export flag
+			if auditExportFile != "" {
+				return RunAuditExport(ctx)
 			}
 
 			// Handle --install flag
@@ -305,6 +313,54 @@ func processContent(ctx context.Context, content string, source string) map[stri
 	}
 }
 
+// RunAuditExport exports audit log to a file
+func RunAuditExport(ctx context.Context) error {
+	// Get audit configuration
+	auditEnabled := viper.GetBool("audit.enabled")
+	if !auditEnabled {
+		return fmt.Errorf("audit logging is not enabled")
+	}
+
+	// Get audit database path
+	auditPath, err := GetDefaultAuditPath()
+	if err != nil {
+		return WrapError(err, ErrorTypeConfig, "Failed to get audit path", "Check user config directory")
+	}
+
+	// Initialize audit logger
+	retentionDays := viper.GetInt("audit.retention_days")
+	auditLogger, err := NewAuditLogger(auditPath, retentionDays, logger)
+	if err != nil {
+		return WrapError(err, ErrorTypeConfig, "Failed to initialize audit logger", "Check audit database permissions")
+	}
+	defer auditLogger.Close()
+
+	// Parse filters
+	var since time.Time
+	if auditExportSince != "" {
+		since, err = time.Parse("2006-01-02", auditExportSince)
+		if err != nil {
+			return WrapError(err, ErrorTypeConfig, "Invalid date format for --audit-since", "Use YYYY-MM-DD format")
+		}
+	}
+
+	var eventTypes []string
+	if auditExportTypes != "" {
+		eventTypes = strings.Split(auditExportTypes, ",")
+		for i := range eventTypes {
+			eventTypes[i] = strings.TrimSpace(eventTypes[i])
+		}
+	}
+
+	// Export events
+	if err := auditLogger.ExportEvents(ctx, auditExportFile, eventTypes, since); err != nil {
+		return WrapError(err, ErrorTypeFile, "Failed to export audit events", "Check output file path and permissions")
+	}
+
+	logger.Info("Audit log exported to %s", auditExportFile)
+	return nil
+}
+
 // processWithNetworkProgress is a placeholder for network operations with progress tracking
 // This function demonstrates how to use progress bars for network operations
 // Example usage:
@@ -390,6 +446,9 @@ func init() {
 	rootCmd.Flags().StringVar(&urlFormat, "url-format", "auto", "URL format: auto, plain, terminal")
 	rootCmd.Flags().BoolVar(&healthCheckFlag, "health-check", false, "Run health check and exit")
 	rootCmd.Flags().BoolVar(&privacyFlag, "privacy", false, "Enable privacy mode to ignore sensitive identifiers")
+	rootCmd.Flags().StringVar(&auditExportFile, "audit-export", "", "Export audit log to specified file")
+	rootCmd.Flags().StringVar(&auditExportSince, "audit-since", "", "Export audit events since this date (YYYY-MM-DD)")
+	rootCmd.Flags().StringVar(&auditExportTypes, "audit-types", "", "Comma-separated list of event types to export")
 
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }

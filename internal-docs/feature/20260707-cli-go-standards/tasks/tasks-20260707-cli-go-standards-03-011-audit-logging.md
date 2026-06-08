@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 3
 parallel_id: 11
 branch: "feature/current/20260707-cli-go-standards/story-03-011-audit-logging"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,17 +27,17 @@ Implement optional append-only audit log using SQLite for significant data proce
 
 ## Sub-Tasks
 
-- [ ] Add SQLite dependency to go.mod — `core/files/go.mod.jinja`
-- [ ] Create audit logging utility — `core/files/audit.go.jinja`
-- [ ] Implement append-only audit log schema — `core/files/audit.go.jinja`
-- [ ] Add configurable retention period — `core/files/audit.go.jinja`
-- [ ] Implement auto-prune on startup — `core/files/audit.go.jinja`
-- [ ] Add audit export command — `core/files/main.go.jinja`
-- [ ] Add audit settings to config file — `core/files/config.default.yaml.jinja`
-- [ ] Test audit log creation — `core/files/audit_test.go.jinja`
-- [ ] Test retention period works — `core/files/audit_test.go.jinja`
-- [ ] Test auto-prune on startup — `core/files/audit_test.go.jinja`
-- [ ] Test audit export command — `core/files/audit_test.go.jinja`
+- [x] Add SQLite dependency to go.mod — `core/files/go.mod.jinja`
+- [x] Create audit logging utility — `core/files/audit.go.jinja`
+- [x] Implement append-only audit log schema — `core/files/audit.go.jinja`
+- [x] Add configurable retention period — `core/files/audit.go.jinja`
+- [x] Implement auto-prune on startup — `core/files/audit.go.jinja`
+- [x] Add audit export command — `core/files/main.go.jinja`
+- [x] Add audit settings to config file — `core/files/config.default.yaml.jinja`
+- [x] Test audit log creation — `core/files/audit_test.go.jinja`
+- [x] Test retention period works — `core/files/audit_test.go.jinja`
+- [x] Test auto-prune on startup — `core/files/audit_test.go.jinja`
+- [x] Test audit export command — `core/files/audit_test.go.jinja`
 
 ## Relevant Files
 
@@ -49,12 +49,12 @@ Implement optional append-only audit log using SQLite for significant data proce
 
 ## Acceptance Criteria
 
-- [ ] Audit log is append-only
-- [ ] Audit log includes timestamp, event type, source, metadata
-- [ ] Retention period is configurable
-- [ ] Auto-prune works on startup
-- [ ] Audit export command works
-- [ ] Audit logging is optional (configurable)
+- [x] Audit log is append-only
+- [x] Audit log includes timestamp, event type, source, metadata
+- [x] Retention period is configurable
+- [x] Auto-prune works on startup
+- [x] Audit export command works
+- [x] Audit logging is optional (configurable)
 
 ## Test Plan
 

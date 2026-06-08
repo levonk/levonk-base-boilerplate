@@ -1,0 +1,263 @@
+package main
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	_ "modernc.org/sqlite"
+)
+
+// AuditLogger manages append-only audit logging with SQLite
+type AuditLogger struct {
+	db             *sql.DB
+	enabled        bool
+	retentionDays  int
+	dbPath         string
+	logger         *Logger
+}
+
+// AuditEvent represents an audit log entry
+type AuditEvent struct {
+	ID        int64     `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+	EventType string    `json:"event_type"`
+	Source    string    `json:"source"`
+	Metadata  string    `json:"metadata"` // JSON-encoded metadata
+}
+
+// NewAuditLogger creates a new audit logger instance
+func NewAuditLogger(dbPath string, retentionDays int, logger *Logger) (*AuditLogger, error) {
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create audit directory: %w", err)
+	}
+
+	// Open database connection
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open audit database: %w", err)
+	}
+
+	// Enable WAL mode for better concurrency
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to enable WAL mode: %w", err)
+	}
+
+	auditLogger := &AuditLogger{
+		db:            db,
+		enabled:       true,
+		retentionDays: retentionDays,
+		dbPath:        dbPath,
+		logger:        logger,
+	}
+
+	// Initialize schema
+	if err := auditLogger.initSchema(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to initialize audit schema: %w", err)
+	}
+
+	return auditLogger, nil
+}
+
+// initSchema creates the append-only audit log table
+func (a *AuditLogger) initSchema() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS audit_events (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		timestamp DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+		event_type TEXT NOT NULL,
+		source TEXT NOT NULL,
+		metadata TEXT
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_events(timestamp);
+	CREATE INDEX IF NOT EXISTS idx_audit_event_type ON audit_events(event_type);
+	`
+
+	_, err := a.db.Exec(query)
+	return err
+}
+
+// LogEvent records an audit event
+func (a *AuditLogger) LogEvent(ctx context.Context, eventType, source string, metadata map[string]interface{}) error {
+	if !a.enabled {
+		return nil
+	}
+
+	// Serialize metadata to JSON
+	metadataJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	query := `
+	INSERT INTO audit_events (event_type, source, metadata)
+	VALUES (?, ?, ?)
+	`
+
+	result, err := a.db.ExecContext(ctx, query, eventType, source, string(metadataJSON))
+	if err != nil {
+		return fmt.Errorf("failed to insert audit event: %w", err)
+	}
+
+	id, _ := result.LastInsertId()
+	if a.logger != nil {
+		a.logger.Debug("Audit event logged: ID=%d, Type=%s, Source=%s", id, eventType, source)
+	}
+
+	return nil
+}
+
+// PruneOldEvents removes events older than the retention period
+func (a *AuditLogger) PruneOldEvents(ctx context.Context) error {
+	if a.retentionDays <= 0 {
+		if a.logger != nil {
+			a.logger.Debug("Audit pruning disabled (retention days <= 0)")
+		}
+		return nil
+	}
+
+	cutoffDate := time.Now().AddDate(0, 0, -a.retentionDays)
+	query := `DELETE FROM audit_events WHERE timestamp < ?`
+
+	result, err := a.db.ExecContext(ctx, query, cutoffDate.Format("2006-01-02 15:04:05"))
+	if err != nil {
+		return fmt.Errorf("failed to prune audit events: %w", err)
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if a.logger != nil {
+		a.logger.Info("Pruned %d audit events older than %d days", rowsAffected, a.retentionDays)
+	}
+
+	return nil
+}
+
+// ExportEvents exports audit events to JSON format
+func (a *AuditLogger) ExportEvents(ctx context.Context, outputPath string, eventTypes []string, since time.Time) error {
+	query := `SELECT id, timestamp, event_type, source, metadata FROM audit_events WHERE 1=1`
+	args := []interface{}{}
+	argIndex := 1
+
+	// Filter by event types if specified
+	if len(eventTypes) > 0 {
+		placeholders := make([]string, len(eventTypes))
+		for i, et := range eventTypes {
+			placeholders[i] = "?"
+			args = append(args, et)
+		}
+		query += fmt.Sprintf(" AND event_type IN (%s)", placeholders)
+		argIndex += len(eventTypes)
+	}
+
+	// Filter by timestamp if specified
+	if !since.IsZero() {
+		query += fmt.Sprintf(" AND timestamp >= ?")
+		args = append(args, since.Format("2006-01-02 15:04:05"))
+		argIndex++
+	}
+
+	query += " ORDER BY timestamp ASC"
+
+	rows, err := a.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to query audit events: %w", err)
+	}
+	defer rows.Close()
+
+	events := []AuditEvent{}
+	for rows.Next() {
+		var event AuditEvent
+		var timestampStr string
+		err := rows.Scan(&event.ID, &timestampStr, &event.EventType, &event.Source, &event.Metadata)
+		if err != nil {
+			return fmt.Errorf("failed to scan audit event: %w", err)
+		}
+
+		event.Timestamp, err = time.Parse("2006-01-02 15:04:05", timestampStr)
+		if err != nil {
+			return fmt.Errorf("failed to parse timestamp: %w", err)
+		}
+
+		events = append(events, event)
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error iterating audit events: %w", err)
+	}
+
+	// Write to output file
+	outputData, err := json.MarshalIndent(events, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal audit events: %w", err)
+	}
+
+	if err := os.WriteFile(outputPath, outputData, 0644); err != nil {
+		return fmt.Errorf("failed to write audit export: %w", err)
+	}
+
+	if a.logger != nil {
+		a.logger.Info("Exported %d audit events to %s", len(events), outputPath)
+	}
+
+	return nil
+}
+
+// GetEventCount returns the total number of audit events
+func (a *AuditLogger) GetEventCount(ctx context.Context) (int64, error) {
+	var count int64
+	err := a.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM audit_events").Scan(&count)
+	return count, err
+}
+
+// SetEnabled enables or disables audit logging
+func (a *AuditLogger) SetEnabled(enabled bool) {
+	a.enabled = enabled
+	if a.logger != nil {
+		a.logger.Debug("Audit logging %s", map[bool]string{true: "enabled", false: "disabled"}[enabled])
+	}
+}
+
+// IsEnabled returns whether audit logging is enabled
+func (a *AuditLogger) IsEnabled() bool {
+	return a.enabled
+}
+
+// SetRetentionDays sets the retention period in days
+func (a *AuditLogger) SetRetentionDays(days int) {
+	a.retentionDays = days
+	if a.logger != nil {
+		a.logger.Debug("Audit retention period set to %d days", days)
+	}
+}
+
+// GetRetentionDays returns the current retention period
+func (a *AuditLogger) GetRetentionDays() int {
+	return a.retentionDays
+}
+
+// Close closes the database connection
+func (a *AuditLogger) Close() error {
+	if a.db != nil {
+		return a.db.Close()
+	}
+	return nil
+}
+
+// GetDefaultAuditPath returns the default path for the audit database
+func GetDefaultAuditPath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(configDir, "{{ project_slug }}", "audit.db"), nil
+}
+
+{# vim: set ft=go: #}
