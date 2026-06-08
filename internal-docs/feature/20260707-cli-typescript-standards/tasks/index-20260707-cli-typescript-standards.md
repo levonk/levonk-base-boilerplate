@@ -18,7 +18,7 @@ This index provides a summary of all stories for implementing CLI Tool Standards
 | 03-003 | Man Pages | 03 | [x] Done | | true | — | 09-001, 09-003 | docs/ | feature/current/20260707-cli-typescript-standards/story-03-003-man-pages |
 | 04-001 | Dry-Run Mode | 04 | [x] Done | | true | — | 09-001, 09-003 | index.ts, dry-run/ | feature/current/20260707-cli-typescript-standards/story-04-001-dry-run-mode |
 | 04-002 | Confirmation Prompts | 04 | [x] Done | | true | — | 09-001, 09-003 | index.ts, prompts/ | feature/current/20260707-cli-typescript-standards/story-04-002-confirmation-prompts |
-| 04-003 | Progress Indicators | 04 | [~] In-Progress | | true | 02-001 | 09-001, 09-003 | progress/ | feature/current/20260707-cli-typescript-standards/story-04-003-progress-indicators |
+| 04-003 | Progress Indicators | 04 | [x] Done | | true | 02-001 | 09-001, 09-003 | progress/ | feature/current/20260707-cli-typescript-standards/story-04-003-progress-indicators |
 | 04-004 | Pager Integration | 04 | [ ] Todo | | true | — | 09-001, 09-003 | pager/ | feature/current/20260707-cli-typescript-standards/story-04-004-pager-integration |
 | 04-005 | Terminal Size Awareness | 04 | [ ] Todo | | true | — | 09-001, 09-003 | terminal/ | feature/current/20260707-cli-typescript-standards/story-04-005-terminal-size-awareness |
 | 05-001 | TUI Mode | 05 | [ ] Todo | | true | — | 09-001, 09-003 | tui/ | feature/current/20260707-cli-typescript-standards/story-05-001-tui-mode |
