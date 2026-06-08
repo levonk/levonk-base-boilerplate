@@ -27,15 +27,15 @@ Generate shell completion scripts for bash, zsh, and fish using cobra's built-in
 
 ## Sub-Tasks
 
-- [ ] Add completion command to cobra root — `core/files/main.go.jinja`
-- [ ] Implement bash completion generation — `core/files/completion.go.jinja`
-- [ ] Implement zsh completion generation — `core/files/completion.go.jinja`
-- [ ] Implement fish completion generation — `core/files/completion.go.jinja`
-- [ ] Add completion installation instructions — `core/files/completion.go.jinja`
-- [ ] Test bash completion works — `core/files/completion_test.go.jinja`
-- [ ] Test zsh completion works — `core/files/completion_test.go.jinja`
-- [ ] Test fish completion works — `core/files/completion_test.go.jinja`
-- [ ] Test completions update with command changes — `core/files/completion_test.go.jinja`
+- [x] Add completion command to cobra root — `core/files/main.go.jinja`
+- [x] Implement bash completion generation — `core/files/completion.go.jinja`
+- [x] Implement zsh completion generation — `core/files/completion.go.jinja`
+- [x] Implement fish completion generation — `core/files/completion.go.jinja`
+- [x] Add completion installation instructions — `core/files/completion.go.jinja`
+- [x] Test bash completion works — `core/files/completion_test.go.jinja`
+- [x] Test zsh completion works — `core/files/completion_test.go.jinja`
+- [x] Test fish completion works — `core/files/completion_test.go.jinja`
+- [x] Test completions update with command changes — `core/files/completion_test.go.jinja`
 
 ## Relevant Files
 
@@ -45,11 +45,11 @@ Generate shell completion scripts for bash, zsh, and fish using cobra's built-in
 
 ## Acceptance Criteria
 
-- [ ] Shell completion scripts generated for bash, zsh, and fish
-- [ ] Completions are auto-generated from cobra command structure
-- [ ] Completion command provides installation instructions
-- [ ] Completions work for all subcommands and flags
-- [ ] Completions update when command structure changes
+- [x] Shell completion scripts generated for bash, zsh, and fish
+- [x] Completions are auto-generated from cobra command structure
+- [x] Completion command provides installation instructions
+- [x] Completions work for all subcommands and flags
+- [x] Completions update when command structure changes
 
 ## Test Plan
 
