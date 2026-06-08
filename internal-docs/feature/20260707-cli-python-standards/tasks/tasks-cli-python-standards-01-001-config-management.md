@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 1
 parallel_id: 1
 branch: "feature/current/cli-python-standards/story-01-001-config-management"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -36,7 +36,7 @@ Implement a comprehensive configuration management system that supports config f
 - [x] Update `copier.yml` to add `include_advanced_config` boolean option — `apps/cli/python/core/copier.yml`
 - [x] Update `pyproject.toml.jinja` to add pydantic and toml dependencies — `apps/cli/python/core/files/pyproject.toml.jinja`
 - [x] Integrate ConfigManager into `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [~] Add tests for config initialization, validation, and migration — `apps/cli/python/core/files/tests/test_config.py.jinja`
+- [x] Add tests for config initialization, validation, and migration — `apps/cli/python/core/files/tests/test_config.py.jinja`
 
 ## Relevant Files
 
@@ -48,13 +48,13 @@ Implement a comprehensive configuration management system that supports config f
 
 ## Acceptance Criteria
 
-- [ ] Config file is auto-created with commented default settings on first run
-- [ ] Config validation provides clear error messages with line numbers
-- [ ] Config auto-migration creates `.bak` backup and logs migration actions
-- [ ] Configuration precedence follows: CLI args > env vars > local config > user config > system config > defaults
-- [ ] TOML format is primary with YAML support for complex structures
-- [ ] Config manager supports both legacy and new formats for one release cycle
-- [ ] All tests pass with 90%+ coverage for config module
+- [x] Config file is auto-created with commented default settings on first run
+- [x] Config validation provides clear error messages with line numbers
+- [x] Config auto-migration creates `.bak` backup and logs migration actions
+- [x] Configuration precedence follows: CLI args > env vars > local config > user config > system config > defaults
+- [x] TOML format is primary with YAML support for complex structures
+- [x] Config manager supports both legacy and new formats for one release cycle
+- [x] All tests pass with 90%+ coverage for config module
 
 ## Test Plan
 

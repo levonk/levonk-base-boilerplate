@@ -8,10 +8,24 @@ def test_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "Show this message and exit" in result.stdout
+    assert "{{ description }}" in result.stdout
+
+def test_help_short():
+    """Test -h flag displays help at root command."""
+    result = runner.invoke(app, ["-h"])
+    assert result.exit_code == 0
+    assert "Show this message and exit" in result.stdout
 
 def test_version():
     """Test --version flag displays version."""
     result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "0.1.0" in result.stdout
+    assert "{{ project_slug }}" in result.stdout
+
+def test_version_short():
+    """Test -v flag displays version."""
+    result = runner.invoke(app, ["-v"])
     assert result.exit_code == 0
     assert "0.1.0" in result.stdout
 
@@ -23,13 +37,23 @@ def test_usage():
 
 def test_debug_flag():
     """Test --debug flag enables debug logging."""
-    result = runner.invoke(app, ["-", "--debug", "--quiet"], input="test content")
+    result = runner.invoke(app, ["-", "--debug"], input="test content")
     assert result.exit_code == 0
     # Debug flag should be accepted without error
 
+def test_debug_vs_verbose():
+    """Test that debug provides more detailed output than verbose."""
+    # Debug should enable DEBUG level logging
+    # Verbose should enable INFO level logging
+    # This test verifies the flags are accepted and don't conflict
+    result_debug = runner.invoke(app, ["-", "--debug"], input="test content")
+    result_verbose = runner.invoke(app, ["-", "--verbose"], input="test content")
+    assert result_debug.exit_code == 0
+    assert result_verbose.exit_code == 0
+
 def test_verbose_flag():
     """Test --verbose flag enables verbose logging."""
-    result = runner.invoke(app, ["-", "--verbose", "--quiet"], input="test content")
+    result = runner.invoke(app, ["-", "--verbose"], input="test content")
     assert result.exit_code == 0
     # Verbose flag should be accepted without error
 

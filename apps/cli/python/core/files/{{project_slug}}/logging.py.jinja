@@ -125,12 +125,15 @@ class Logger:
         self.logger.handlers.clear()
 
         # Set log level based on verbosity and debug
+        # Debug provides most detailed output (DEBUG level)
+        # Verbose provides informational output (INFO level)
+        # Default shows warnings and errors (WARNING level)
         if self.debug:
             self.logger.setLevel(logging.DEBUG)
         elif self.verbose:
-            self.logger.setLevel(logging.DEBUG)
-        else:
             self.logger.setLevel(logging.INFO)
+        else:
+            self.logger.setLevel(logging.WARNING)
 
         # If quiet, suppress all output
         if self.quiet:

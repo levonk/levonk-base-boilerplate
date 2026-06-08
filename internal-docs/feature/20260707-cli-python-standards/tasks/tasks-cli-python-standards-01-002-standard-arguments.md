@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 1
 parallel_id: 2
 branch: "feature/current/cli-python-standards/story-01-002-standard-arguments"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,13 +27,13 @@ Enhance standard CLI arguments to ensure `--help`, `--version`, and `--usage` wo
 
 ## Sub-Tasks
 
-- [ ] Add `--debug` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Ensure `--help`/`-h` works at root command and all subcommands — `__main__.py.jinja`
-- [ ] Ensure `--version`/`-v` works at root command and all subcommands — `__main__.py.jinja`
-- [ ] Ensure `--usage` works at root command and all subcommands — `__main__.py.jinja`
-- [ ] Implement debug logging level separate from verbose — `apps/cli/python/core/files/{{project_slug}}/logging.py.jinja`
-- [ ] Add tests for standard arguments at root and subcommand level — `apps/cli/python/core/files/tests/test_main.py.jinja`
-- [ ] Add tests for debug flag behavior — `tests/test_main.py.jinja`
+- [x] Add `--debug` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Ensure `--help`/`-h` works at root command and all subcommands — `__main__.py.jinja`
+- [x] Ensure `--version`/`-v` works at root command and all subcommands — `__main__.py.jinja`
+- [x] Ensure `--usage` works at root command and all subcommands — `__main__.py.jinja`
+- [x] Implement debug logging level separate from verbose — `apps/cli/python/core/files/{{project_slug}}/logging.py.jinja`
+- [x] Add tests for standard arguments at root and subcommand level — `apps/cli/python/core/files/tests/test_main.py.jinja`
+- [x] Add tests for debug flag behavior — `tests/test_main.py.jinja`
 
 ## Relevant Files
 
@@ -43,12 +43,12 @@ Enhance standard CLI arguments to ensure `--help`, `--version`, and `--usage` wo
 
 ## Acceptance Criteria
 
-- [ ] `--help`/`-h` displays help at root command and all subcommands
-- [ ] `--version`/`-v` displays version at root command and all subcommands
-- [ ] `--usage` displays brief usage summary at root command and all subcommands
-- [ ] `--debug` flag enables detailed debugging output separate from `--verbose`
-- [ ] Debug logging provides more detailed output than verbose mode
-- [ ] All tests pass for standard arguments and debug flag
+- [x] `--help`/`-h` displays help at root command and all subcommands
+- [x] `--version`/`-v` displays version at root command and all subcommands
+- [x] `--usage` displays brief usage summary at root command and all subcommands
+- [x] `--debug` flag enables detailed debugging output separate from `--verbose`
+- [x] Debug logging provides more detailed output than verbose mode
+- [x] All tests pass for standard arguments and debug flag
 
 ## Test Plan
 
