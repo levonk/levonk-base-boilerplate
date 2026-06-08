@@ -1,0 +1,215 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"runtime"
+	"strings"
+)
+
+// Exit codes
+const (
+	ExitSuccess     = 0  // Successful execution
+	ExitError       = 1  // General error
+	ExitUsage       = 2  // Incorrect command usage
+	ExitInterrupt   = 130 // Interrupted by SIGINT
+	ExitConfigError = 3  // Configuration error
+	ExitFileError   = 4  // File operation error
+)
+
+// ErrorType represents the category of error
+type ErrorType int
+
+const (
+	ErrorTypeGeneral ErrorType = iota
+	ErrorTypeConfig
+	ErrorTypeFile
+	ErrorTypeNetwork
+	ErrorTypePermission
+	ErrorTypeValidation
+)
+
+// ErrorContext provides additional context for errors
+type ErrorContext struct {
+	File     string
+	Line     int
+	Function string
+	Module   string
+}
+
+// AppError represents a structured application error
+type AppError struct {
+	Type       ErrorType
+	Message    string
+	Suggestion string
+	Context    *ErrorContext
+	Err        error
+}
+
+// Error implements the error interface
+func (e *AppError) Error() string {
+	return formatError(e)
+}
+
+// NewAppError creates a new application error
+func NewAppError(errorType ErrorType, message string, suggestion string) *AppError {
+	return &AppError{
+		Type:       errorType,
+		Message:    message,
+		Suggestion: suggestion,
+		Context:    getErrorContext(),
+	}
+}
+
+// WrapError wraps an existing error with additional context
+func WrapError(err error, errorType ErrorType, message string, suggestion string) *AppError {
+	return &AppError{
+		Type:       errorType,
+		Message:    message,
+		Suggestion: suggestion,
+		Context:    getErrorContext(),
+		Err:        err,
+	}
+}
+
+// getErrorContext captures the current call context
+func getErrorContext() *ErrorContext {
+	pc, file, line, ok := runtime.Caller(2)
+	if !ok {
+		return nil
+	}
+
+	fn := runtime.FuncForPC(pc)
+	if fn == nil {
+		return nil
+	}
+
+	return &ErrorContext{
+		File:     file,
+		Line:     line,
+		Function: fn.Name(),
+		Module:   extractModuleFromFunction(fn.Name()),
+	}
+}
+
+// extractModuleFromFunction extracts the module name from a function name
+func extractModuleFromFunction(funcName string) string {
+	parts := strings.Split(funcName, "/")
+	if len(parts) > 0 {
+		lastPart := parts[len(parts)-1]
+		dotIndex := strings.Index(lastPart, ".")
+		if dotIndex > 0 {
+			return lastPart[:dotIndex]
+		}
+		return lastPart
+	}
+	return "unknown"
+}
+
+// formatError formats an error according to the standard format
+// Format: ERROR: <description> - <suggestion>
+func formatError(err *AppError) string {
+	var builder strings.Builder
+
+	builder.WriteString("ERROR: ")
+	builder.WriteString(err.Message)
+
+	if err.Suggestion != "" {
+		builder.WriteString(" - ")
+		builder.WriteString(err.Suggestion)
+	}
+
+	// Add context if available
+	if err.Context != nil {
+		if err.Context.File != "" {
+			builder.WriteString(fmt.Sprintf(" (file: %s", err.Context.File))
+			if err.Context.Line > 0 {
+				builder.WriteString(fmt.Sprintf(":%d", err.Context.Line))
+			}
+			builder.WriteString(")")
+		}
+	}
+
+	// Add wrapped error if present
+	if err.Err != nil {
+		builder.WriteString(fmt.Sprintf(": %v", err.Err))
+	}
+
+	return builder.String()
+}
+
+// GetSuggestionForError returns a helpful suggestion for common error types
+func GetSuggestionForError(errorType ErrorType, message string) string {
+	switch errorType {
+	case ErrorTypeConfig:
+		return "Check your configuration file at $HOME/.config/{{ project_slug }}/config.yaml"
+	case ErrorTypeFile:
+		if strings.Contains(strings.ToLower(message), "permission") {
+			return "Check file permissions and ensure you have read/write access"
+		}
+		if strings.Contains(strings.ToLower(message), "not found") {
+			return "Verify the file path and ensure the file exists"
+		}
+		return "Check the file path and ensure it exists and is accessible"
+	case ErrorTypeNetwork:
+		return "Check your network connection and ensure the URL is correct"
+	case ErrorTypePermission:
+		return "Run with appropriate permissions or check file/directory ownership"
+	case ErrorTypeValidation:
+		return "Review the input values and ensure they meet the required format"
+	default:
+		return "Review the error details and try again"
+	}
+}
+
+// ExitWithError logs an error and exits with the appropriate exit code
+func ExitWithError(err error) {
+	if appErr, ok := err.(*AppError); ok {
+		fmt.Fprintf(os.Stderr, "%s\n", appErr.Error())
+		os.Exit(getExitCodeForErrorType(appErr.Type))
+	} else {
+		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
+		os.Exit(ExitError)
+	}
+}
+
+// getExitCodeForErrorType returns the appropriate exit code for an error type
+func getExitCodeForErrorType(errorType ErrorType) int {
+	switch errorType {
+	case ErrorTypeConfig:
+		return ExitConfigError
+	case ErrorTypeFile:
+		return ExitFileError
+	default:
+		return ExitError
+	}
+}
+
+// Common error constructors for convenience
+
+// NewConfigError creates a configuration error
+func NewConfigError(message string) *AppError {
+	return NewAppError(ErrorTypeConfig, message, GetSuggestionForError(ErrorTypeConfig, message))
+}
+
+// NewFileError creates a file operation error
+func NewFileError(message string) *AppError {
+	return NewAppError(ErrorTypeFile, message, GetSuggestionForError(ErrorTypeFile, message))
+}
+
+// NewNetworkError creates a network error
+func NewNetworkError(message string) *AppError {
+	return NewAppError(ErrorTypeNetwork, message, GetSuggestionForError(ErrorTypeNetwork, message))
+}
+
+// NewPermissionError creates a permission error
+func NewPermissionError(message string) *AppError {
+	return NewAppError(ErrorTypePermission, message, GetSuggestionForError(ErrorTypePermission, message))
+}
+
+// NewValidationError creates a validation error
+func NewValidationError(message string) *AppError {
+	return NewAppError(ErrorTypeValidation, message, GetSuggestionForError(ErrorTypeValidation, message))
+}
+
+{# vim: set ft=go: #}

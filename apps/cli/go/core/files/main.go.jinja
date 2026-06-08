@@ -127,8 +127,7 @@ Examples:
 				logger.Info("Processing stdin...")
 				content, err := io.ReadAll(os.Stdin)
 				if err != nil {
-					logger.Error("Error reading stdin: %v", err)
-					return err
+					return WrapError(err, ErrorTypeFile, "Failed to read from stdin", "Ensure stdin is properly connected")
 				}
 				results = append(results, processContent(ctx, string(content), "stdin"))
 			}
@@ -184,7 +183,7 @@ Examples:
 						}
 
 						if err != nil {
-							logger.Error("Error reading %s: %v", file, err)
+							logger.ErrorApp(WrapError(err, ErrorTypeFile, fmt.Sprintf("Failed to read file '%s' with progress bar", file), "Check file permissions and ensure the file exists"))
 							continue
 						}
 						results = append(results, processContent(ctx, string(content), file))
@@ -205,7 +204,7 @@ Examples:
 						logger.Info("Processing %s...", file)
 						content, err := os.ReadFile(file)
 						if err != nil {
-							logger.Error("Error reading %s: %v", file, err)
+							logger.ErrorApp(WrapError(err, ErrorTypeFile, fmt.Sprintf("Failed to read file '%s' without progress bar", file), "Check file permissions and ensure the file exists"))
 							continue
 						}
 						results = append(results, processContent(ctx, string(content), file))
@@ -316,7 +315,7 @@ func initConfig() {
 		// Use full precedence chain
 		configPaths, err := GetConfigPrecedence()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: Failed to get config precedence: %v\n", err)
+			logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to get config precedence", "Check config directory permissions"))
 		}
 
 		// Add all config paths to viper (in order of precedence)
@@ -338,7 +337,7 @@ func initConfig() {
 
 	// Initialize config file if it doesn't exist (first run)
 	if err := InitConfigIfNeeded(configPath); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize config file: %v\n", err)
+		logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to initialize config file", "Check config directory permissions and disk space"))
 	}
 
 	// Set environment variable prefix
@@ -349,18 +348,22 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err != nil {
 		// Config file not found is not an error - we'll use defaults
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			fmt.Fprintf(os.Stderr, "Warning: Failed to read config file: %v\n", err)
+			logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to read config file", "Check config file syntax and permissions"))
 		}
 	} else {
 		// Validate the loaded configuration
 		config := viper.AllSettings()
 		validationErrors := ValidateConfig(config, configPath)
 		if len(validationErrors) > 0 {
-			fmt.Fprintf(os.Stderr, "Configuration validation errors:\n")
+			errMsg := fmt.Sprintf("Configuration validation failed with %d error(s)", len(validationErrors))
+			suggestion := "Review the configuration file and fix the validation errors"
+			validationErr := NewValidationError(errMsg)
+			validationErr.Suggestion = suggestion
+			logger.ErrorApp(validationErr)
 			for _, validationErr := range validationErrors {
-				fmt.Fprintf(os.Stderr, "  - %s\n", validationErr.Error())
+				logger.Error("  - %s", validationErr.Error())
 			}
-			os.Exit(1)
+			os.Exit(ExitConfigError)
 		}
 	}
 

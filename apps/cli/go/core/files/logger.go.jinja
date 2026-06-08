@@ -272,10 +272,27 @@ func (l *Logger) Error(format string, args ...interface{}) {
 	l.log(LevelError, format, args...)
 }
 
+// ErrorApp logs an AppError with proper formatting
+func (l *Logger) ErrorApp(err *AppError) {
+	if err == nil {
+		return
+	}
+	l.log(LevelError, "%s", err.Error())
+}
+
 // Fatal logs a fatal message and exits
 func (l *Logger) Fatal(format string, args ...interface{}) {
 	l.log(LevelFatal, format, args...)
 	os.Exit(1)
+}
+
+// FatalApp logs an AppError and exits with the appropriate exit code
+func (l *Logger) FatalApp(err *AppError) {
+	if err == nil {
+		return
+	}
+	l.log(LevelFatal, "%s", err.Error())
+	os.Exit(getExitCodeForErrorType(err.Type))
 }
 
 // Debug logs a debug message (only in debug mode)

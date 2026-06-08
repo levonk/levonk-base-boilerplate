@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 2
 parallel_id: 3
 branch: "feature/current/20260707-cli-go-standards/story-02-003-progress-indicators"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-003"]

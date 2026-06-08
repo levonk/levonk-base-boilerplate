@@ -27,16 +27,16 @@ Standardize error message format to `ERROR: <description> - <suggestion>` with a
 
 ## Sub-Tasks
 
-- [ ] Define error message format constants — `core/files/errors.go.jinja`
-- [ ] Create error formatting function — `core/files/errors.go.jinja`
-- [ ] Add suggestion generation for common errors — `core/files/errors.go.jinja`
-- [ ] Update logger to use new error format — `core/files/logger.go.jinja`
-- [ ] Add context (file, line) to errors — `core/files/errors.go.jinja`
-- [ ] Define standard exit codes — `core/files/errors.go.jinja`
-- [ ] Update error handling throughout codebase — `core/files/main.go.jinja`
-- [ ] Test error format is consistent — `core/files/errors_test.go.jinja`
-- [ ] Test suggestions are helpful — `core/files/errors_test.go.jinja`
-- [ ] Test exit codes are correct — `core/files/errors_test.go.jinja`
+- [x] Define error message format constants — `core/files/errors.go.jinja`
+- [x] Create error formatting function — `core/files/errors.go.jinja`
+- [x] Add suggestion generation for common errors — `core/files/errors.go.jinja`
+- [x] Update logger to use new error format — `core/files/logger.go.jinja`
+- [x] Add context (file, line) to errors — `core/files/errors.go.jinja`
+- [x] Define standard exit codes — `core/files/errors.go.jinja`
+- [x] Update error handling throughout codebase — `core/files/main.go.jinja`
+- [x] Test error format is consistent — `core/files/errors_test.go.jinja`
+- [x] Test suggestions are helpful — `core/files/errors_test.go.jinja`
+- [x] Test exit codes are correct — `core/files/errors_test.go.jinja`
 
 ## Relevant Files
 
@@ -47,12 +47,12 @@ Standardize error message format to `ERROR: <description> - <suggestion>` with a
 
 ## Acceptance Criteria
 
-- [ ] Error messages follow `ERROR: <description> - <suggestion>` format
-- [ ] Errors include actionable suggestions
-- [ ] Errors include context (file, line) where applicable
-- [ ] Exit codes are consistent (0, 1, 2, 130 for SIGINT)
-- [ ] Error types are consistent across codebase
-- [ ] Error messages are clear and helpful
+- [x] Error messages follow `ERROR: <description> - <suggestion>` format
+- [x] Errors include actionable suggestions
+- [x] Errors include context (file, line) where applicable
+- [x] Exit codes are consistent (0, 1, 2, 130 for SIGINT)
+- [x] Error types are consistent across codebase
+- [x] Error messages are clear and helpful
 
 ## Test Plan
 
