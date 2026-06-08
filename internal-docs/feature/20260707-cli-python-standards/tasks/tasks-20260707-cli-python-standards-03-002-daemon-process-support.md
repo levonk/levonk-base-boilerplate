@@ -26,15 +26,15 @@ Implement `--daemon` and `--no-daemon` flags as opposites. Auto-spawn daemon on 
 
 ## Sub-Tasks
 
-- [ ] Add daemon process implementation
-- [ ] Implement --daemon flag
-- [ ] Implement --no-daemon flag
-- [ ] Implement auto-spawn on async operations
-- [ ] Implement --list-jobs command
-- [ ] Implement --cancel-job command
-- [ ] Return job ID for background operations
-- [ ] Add tests for daemon mode
-- [ ] Update documentation
+- [x] Add daemon process implementation
+- [x] Implement --daemon flag
+- [x] Implement --no-daemon flag
+- [x] Implement auto-spawn on async operations
+- [x] Implement --list-jobs command
+- [x] Implement --cancel-job command
+- [x] Return job ID for background operations
+- [x] Add tests for daemon mode
+- [x] Update documentation
 
 ## Relevant Files
 
