@@ -55,7 +55,7 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 | Story ID | Story Title | Status | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------ | ------------ | ------------- | ------- |
 | 04-001 | Comprehensive Testing Suite | [ ] Todo | feature/current/20260707-cli-rust-standards/story-04-001-testing-suite | 01-001, 01-002, 01-003, 01-004 | Parallel-safe: false | tests/ |
-| 04-002 | Collection/Processing Separation | [ ] Todo | feature/current/20260707-cli-rust-standards/story-04-002-collection-processing | 02-004 | Parallel-safe: true | daemon.rs |
+| 04-002 | Collection/Processing Separation | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-04-002-collection-processing | 02-004 | Parallel-safe: true | daemon.rs |
 | 04-003 | Privacy Mode with Anonymous Lists | [ ] Todo | feature/current/20260707-cli-rust-standards/story-04-003-privacy-mode | 01-002 | Parallel-safe: true | privacy.rs |
 | 04-004 | Audit Logging with Retention | [ ] Todo | feature/current/20260707-cli-rust-standards/story-04-004-audit-logging | 01-002 | Parallel-safe: true | audit.rs |
 | 04-005 | Legacy Deprecation Policy | [ ] Todo | feature/current/20260707-cli-rust-standards/story-04-005-deprecation-policy | 01-002 | Parallel-safe: true | deprecation.rs |

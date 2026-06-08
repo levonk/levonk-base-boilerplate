@@ -73,6 +73,14 @@ pub struct Config {
     /// Maximum CPU usage for daemon jobs (1-100)
     #[serde(default)]
     pub daemon_max_cpu: Option<u8>,
+    
+    /// Daemon mode (execution, collection, processing)
+    #[serde(default = "default_daemon_mode")]
+    pub daemon_mode: String,
+    
+    /// Data storage path for collection mode
+    #[serde(default)]
+    pub daemon_data_storage_path: Option<PathBuf>,
 }
 
 fn default_log_level() -> String {
@@ -119,6 +127,10 @@ fn default_daemon_job_timeout() -> u64 {
     300
 }
 
+fn default_daemon_mode() -> String {
+    "execution".to_string()
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
@@ -137,6 +149,8 @@ impl Default for Config {
             daemon_job_timeout: default_daemon_job_timeout(),
             daemon_max_memory: None,
             daemon_max_cpu: None,
+            daemon_mode: default_daemon_mode(),
+            daemon_data_storage_path: None,
         }
     }
 }

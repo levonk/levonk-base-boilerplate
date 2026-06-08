@@ -223,6 +223,60 @@ pub enum Commands {
         #[arg(long, help = "Check terminal size and capabilities")]
         terminal: bool,
     },
+
+    /// Export collected data to portable formats
+    ///
+    /// # Examples
+    ///
+    /// Export to JSON:
+    ///   {{ project_slug }} export --format json --output data.json
+    ///
+    /// Export to CSV:
+    ///   {{ project_slug }} export --format csv --output data.csv
+    Export {
+        /// Export format (json, csv, yaml)
+        #[arg(long, value_name = "FORMAT", help = "Export format (json, csv, yaml)")]
+        format: Option<String>,
+
+        /// Output file path
+        #[arg(long, value_name = "PATH", help = "Output file path for exported data")]
+        output: Option<PathBuf>,
+
+        /// Include metadata in export
+        #[arg(long, help = "Include metadata in export")]
+        include_metadata: bool,
+
+        /// Compress output file
+        #[arg(long, help = "Compress output file")]
+        compress: bool,
+    },
+
+    /// Process exported data offline
+    ///
+    /// # Examples
+    ///
+    /// Analyze data:
+    ///   {{ project_slug }} process --input data.json --operation analyze
+    ///
+    /// Filter data:
+    ///   {{ project_slug }} process --input data.json --operation filter --filter-config '{"record_type": "test"}'
+    Process {
+        /// Input data file path
+        #[arg(long, value_name = "PATH", help = "Input data file path")]
+        input: PathBuf,
+
+        /// Processing operation (filter, aggregate, transform, analyze)
+        #[arg(long, value_name = "OP", help = "Processing operation (filter, aggregate, transform, analyze)")]
+        operation: String,
+
+        /// Output file path for results
+        #[arg(long, value_name = "PATH", help = "Output file path for processing results")]
+        output: Option<PathBuf>,
+
+        /// Operation-specific configuration (JSON)
+        #[arg(long, value_name = "JSON", help = "Operation-specific configuration as JSON")]
+        operation_config: Option<String>,
+    },
 }
 
 impl Cli {

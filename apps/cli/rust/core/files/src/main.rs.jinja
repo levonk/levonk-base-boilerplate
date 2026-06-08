@@ -11,6 +11,8 @@ mod man;
 mod path;
 mod security;
 mod resource;
+mod export;
+mod processor;
 
 {% if enable_tui -%}
 mod tui;
@@ -35,6 +37,8 @@ use terminal::{TerminalInfo, ResizeHandler};
 use completion::{generate_completion, install_completion, get_completion_path};
 use man::ManHandler;
 use resource::{ResourceLimits, ResourceLimiter};
+use export::{DataExporter, ExportConfig, ExportFormat, DataImporter, ImportConfig};
+use processor::{DataProcessor, ProcessingConfig, ProcessingOperation};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -282,11 +286,19 @@ async fn main() -> Result<()> {
     signal_handler.run().await?;
 
     // Initialize daemon manager
+    let daemon_mode = match config.daemon_mode.as_str() {
+        "collection" => daemon::DaemonMode::Collection,
+        "processing" => daemon::DaemonMode::Processing,
+        _ => daemon::DaemonMode::Execution,
+    };
+    
     let daemon_config = DaemonConfig {
         enabled: config.daemon_enabled && !cli.no_daemon,
         auto_spawn: config.daemon_auto_spawn && !cli.no_daemon,
         max_jobs: config.daemon_max_jobs,
         job_timeout: config.daemon_job_timeout,
+        mode: daemon_mode,
+        data_storage_path: config.daemon_data_storage_path.map(|p| p.to_string_lossy().to_string()),
         ..Default::default()
     };
     let daemon_manager = Arc::new(DaemonManager::new(daemon_config));
@@ -541,6 +553,97 @@ async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
 
             if !all && !config && !daemon && !terminal {
                 println!("Use --all, --config, --daemon, or --terminal with doctor subcommand");
+            }
+        }
+
+        Commands::Export { format, output, include_metadata, compress } => {
+            println!("Exporting data...");
+            
+            let export_format = match format.as_deref() {
+                Some("csv") => ExportFormat::Csv,
+                Some("yaml") => ExportFormat::Yaml,
+                Some("json") | None => ExportFormat::Json,
+                Some(other) => {
+                    eprintln!("Unknown format: {}. Use json, csv, or yaml", other);
+                    std::process::exit(1);
+                }
+            };
+            
+            let output_path = output.unwrap_or_else(|| PathBuf::from("export.json"));
+            
+            let export_config = ExportConfig {
+                format: export_format,
+                output_path: output_path.clone(),
+                include_metadata,
+                compress,
+            };
+            
+            let exporter = DataExporter::new(export_config);
+            
+            // For the template, we create sample data
+            let sample_records = vec![
+                export::DataRecord {
+                    id: "sample-1".to_string(),
+                    timestamp: chrono::Utc::now().to_rfc3339(),
+                    record_type: "sample".to_string(),
+                    data: serde_json::json!({"message": "sample data"}),
+                    metadata: None,
+                },
+            ];
+            
+            match exporter.export(sample_records) {
+                Ok(manifest) => {
+                    println!("Export completed successfully");
+                    println!("  Format: {:?}", manifest.format);
+                    println!("  Records: {}", manifest.record_count);
+                    println!("  Output: {:?}", output_path);
+                }
+                Err(e) => {
+                    eprintln!("Export failed: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        Commands::Process { input, operation, output, operation_config } => {
+            println!("Processing data...");
+            
+            let processing_operation = match operation.to_lowercase().as_str() {
+                "filter" => ProcessingOperation::Filter,
+                "aggregate" => ProcessingOperation::Aggregate,
+                "transform" => ProcessingOperation::Transform,
+                "analyze" => ProcessingOperation::Analyze,
+                _ => {
+                    eprintln!("Unknown operation: {}. Use filter, aggregate, transform, or analyze", operation);
+                    std::process::exit(1);
+                }
+            };
+            
+            let op_config = operation_config
+                .and_then(|s| serde_json::from_str(&s).ok())
+                .unwrap_or(serde_json::Value::Null);
+            
+            let processing_config = ProcessingConfig {
+                input_path: input.clone(),
+                output_path: output,
+                operation: processing_operation,
+                operation_config: op_config,
+            };
+            
+            let processor = DataProcessor::new(processing_config);
+            
+            match processor.process() {
+                Ok(result) => {
+                    println!("Processing completed successfully");
+                    println!("  Operation: {}", result.analysis_type);
+                    if cli.json {
+                        println!("{}", serde_json::to_string_pretty(&result.result)?);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Processing failed: {}", e);
+                    std::process::exit(1);
+                }
             }
         }
     }

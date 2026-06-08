@@ -8,6 +8,17 @@ use tracing::{debug, error, info, warn};
 use crate::resource::{ResourceLimits, ResourceLimiter};
 use crate::health::{HealthConfig, HealthManager};
 
+/// Daemon mode
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DaemonMode {
+    /// Standard execution mode
+    Execution,
+    /// Data collection mode
+    Collection,
+    /// Offline processing mode
+    Processing,
+}
+
 /// Daemon configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DaemonConfig {
@@ -27,6 +38,10 @@ pub struct DaemonConfig {
     pub max_cpu: Option<u8>,
     /// Health check configuration
     pub health_config: Option<HealthConfig>,
+    /// Daemon mode (execution, collection, or processing)
+    pub mode: DaemonMode,
+    /// Data storage path for collection mode
+    pub data_storage_path: Option<String>,
 }
 
 impl Default for DaemonConfig {
@@ -40,6 +55,8 @@ impl Default for DaemonConfig {
             max_memory: None,
             max_cpu: None,
             health_config: Some(HealthConfig::default()),
+            mode: DaemonMode::Execution,
+            data_storage_path: None,
         }
     }
 }
@@ -52,6 +69,17 @@ pub enum JobStatus {
     Completed,
     Failed,
     Cancelled,
+}
+
+/// Job type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum JobType {
+    /// Standard execution job
+    Execution,
+    /// Data collection job
+    Collection,
+    /// Offline processing job
+    Processing,
 }
 
 /// Job information
@@ -67,6 +95,10 @@ pub struct Job {
     pub completed_at: Option<String>,
     /// Resource limits for this job
     pub resource_limits: Option<ResourceLimits>,
+    /// Job type (execution, collection, or processing)
+    pub job_type: JobType,
+    /// Data path for collection/processing jobs
+    pub data_path: Option<String>,
 }
 
 impl Job {
@@ -82,6 +114,42 @@ impl Job {
             started_at: None,
             completed_at: None,
             resource_limits,
+            job_type: JobType::Execution,
+            data_path: None,
+        }
+    }
+
+    pub fn new_collection(id: String, command: String, data_path: String, resource_limits: Option<ResourceLimits>) -> Self {
+        let now = chrono::Utc::now().to_rfc3339();
+        Self {
+            id,
+            command,
+            status: JobStatus::Pending,
+            output: String::new(),
+            error: None,
+            created_at: now,
+            started_at: None,
+            completed_at: None,
+            resource_limits,
+            job_type: JobType::Collection,
+            data_path: Some(data_path),
+        }
+    }
+
+    pub fn new_processing(id: String, command: String, data_path: String, resource_limits: Option<ResourceLimits>) -> Self {
+        let now = chrono::Utc::now().to_rfc3339();
+        Self {
+            id,
+            command,
+            status: JobStatus::Pending,
+            output: String::new(),
+            error: None,
+            created_at: now,
+            started_at: None,
+            completed_at: None,
+            resource_limits,
+            job_type: JobType::Processing,
+            data_path: Some(data_path),
         }
     }
 }
@@ -191,6 +259,64 @@ impl DaemonManager {
         }
 
         info!("Submitted job: {}", job_id);
+        self.execute_job(job_id.clone()).await?;
+
+        Ok(job_id)
+    }
+
+    /// Submit a collection job to the daemon
+    pub async fn submit_collection_job(&self, command: String, data_path: String, resource_limits: Option<ResourceLimits>) -> Result<String> {
+        if !self.is_running().await && self.config.auto_spawn {
+            info!("Auto-spawning daemon for collection job submission");
+            self.start().await?;
+        }
+
+        if !self.is_running().await {
+            return Err(anyhow::anyhow!("Daemon is not running and auto-spawn is disabled"));
+        }
+
+        if self.config.mode != DaemonMode::Collection {
+            warn!("Daemon is not in collection mode, job may not behave as expected");
+        }
+
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let job = Job::new_collection(job_id.clone(), command, data_path, resource_limits);
+
+        {
+            let mut jobs = self.jobs.write().await;
+            jobs.insert(job_id.clone(), job);
+        }
+
+        info!("Submitted collection job: {}", job_id);
+        self.execute_job(job_id.clone()).await?;
+
+        Ok(job_id)
+    }
+
+    /// Submit a processing job to the daemon
+    pub async fn submit_processing_job(&self, command: String, data_path: String, resource_limits: Option<ResourceLimits>) -> Result<String> {
+        if !self.is_running().await && self.config.auto_spawn {
+            info!("Auto-spawning daemon for processing job submission");
+            self.start().await?;
+        }
+
+        if !self.is_running().await {
+            return Err(anyhow::anyhow!("Daemon is not running and auto-spawn is disabled"));
+        }
+
+        if self.config.mode != DaemonMode::Processing {
+            warn!("Daemon is not in processing mode, job may not behave as expected");
+        }
+
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let job = Job::new_processing(job_id.clone(), command, data_path, resource_limits);
+
+        {
+            let mut jobs = self.jobs.write().await;
+            jobs.insert(job_id.clone(), job);
+        }
+
+        info!("Submitted processing job: {}", job_id);
         self.execute_job(job_id.clone()).await?;
 
         Ok(job_id)

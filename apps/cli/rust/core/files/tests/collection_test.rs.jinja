@@ -1,0 +1,511 @@
+use anyhow::Result;
+use std::path::PathBuf;
+use tempfile::TempDir;
+use {{ project_slug }}::export::{DataExporter, DataImporter, ExportConfig, ImportConfig, ExportFormat, DataRecord, ExportManifest};
+use {{ project_slug }}::processor::{DataProcessor, ProcessingConfig, ProcessingOperation, FilterCriteria, AggregationSpec, TransformationSpec};
+
+#[test]
+fn test_export_config_defaults() {
+    let config = ExportConfig::default();
+    assert_eq!(config.format, ExportFormat::Json);
+    assert_eq!(config.output_path, PathBuf::from("export.json"));
+    assert!(config.include_metadata);
+    assert!(!config.compress);
+}
+
+#[test]
+fn test_export_json_format() {
+    let temp_dir = TempDir::new().unwrap();
+    let output_path = temp_dir.path().join("test_export.json");
+    
+    let config = ExportConfig {
+        format: ExportFormat::Json,
+        output_path: output_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(config);
+    let records = vec![
+        DataRecord {
+            id: "test-1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({"key": "value"}),
+            metadata: None,
+        },
+        DataRecord {
+            id: "test-2".to_string(),
+            timestamp: "2024-01-02T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({"key": "value2"}),
+            metadata: Some(serde_json::json!({"meta": "data"})),
+        },
+    ];
+    
+    let result = exporter.export(records);
+    assert!(result.is_ok());
+    
+    let manifest = result.unwrap();
+    assert_eq!(manifest.record_count, 2);
+    assert_eq!(manifest.format, ExportFormat::Json);
+    assert!(output_path.exists());
+    
+    // Verify file content
+    let content = std::fs::read_to_string(&output_path).unwrap();
+    assert!(content.contains("\"manifest\""));
+    assert!(content.contains("\"records\""));
+}
+
+#[test]
+fn test_export_csv_format() {
+    let temp_dir = TempDir::new().unwrap();
+    let output_path = temp_dir.path().join("test_export.csv");
+    
+    let config = ExportConfig {
+        format: ExportFormat::Csv,
+        output_path: output_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(config);
+    let records = vec![
+        DataRecord {
+            id: "test-1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({"key": "value"}),
+            metadata: None,
+        },
+    ];
+    
+    let result = exporter.export(records);
+    assert!(result.is_ok());
+    
+    let manifest = result.unwrap();
+    assert_eq!(manifest.record_count, 1);
+    assert_eq!(manifest.format, ExportFormat::Csv);
+    assert!(output_path.exists());
+    
+    // Verify CSV format
+    let content = std::fs::read_to_string(&output_path).unwrap();
+    assert!(content.starts_with("id,timestamp,record_type,data,metadata"));
+}
+
+#[test]
+fn test_export_yaml_format() {
+    let temp_dir = TempDir::new().unwrap();
+    let output_path = temp_dir.path().join("test_export.yaml");
+    
+    let config = ExportConfig {
+        format: ExportFormat::Yaml,
+        output_path: output_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(config);
+    let records = vec![
+        DataRecord {
+            id: "test-1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({"key": "value"}),
+            metadata: None,
+        },
+    ];
+    
+    let result = exporter.export(records);
+    assert!(result.is_ok());
+    
+    let manifest = result.unwrap();
+    assert_eq!(manifest.record_count, 1);
+    assert_eq!(manifest.format, ExportFormat::Yaml);
+    assert!(output_path.exists());
+}
+
+#[test]
+fn test_import_json() {
+    let temp_dir = TempDir::new().unwrap();
+    let output_path = temp_dir.path().join("test_export.json");
+    
+    // First export some data
+    let export_config = ExportConfig {
+        format: ExportFormat::Json,
+        output_path: output_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(export_config);
+    let records = vec![
+        DataRecord {
+            id: "test-1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({"key": "value"}),
+            metadata: None,
+        },
+    ];
+    
+    exporter.export(records).unwrap();
+    
+    // Now import it back
+    let import_config = ImportConfig {
+        input_path: output_path.clone(),
+        format: None,
+    };
+    
+    let importer = DataImporter::new(import_config);
+    let (imported_records, manifest) = importer.import().unwrap();
+    
+    assert_eq!(imported_records.len(), 1);
+    assert_eq!(imported_records[0].id, "test-1");
+    assert_eq!(manifest.record_count, 1);
+}
+
+#[test]
+fn test_import_csv() {
+    let temp_dir = TempDir::new().unwrap();
+    let output_path = temp_dir.path().join("test_export.csv");
+    
+    // First export some data
+    let export_config = ExportConfig {
+        format: ExportFormat::Csv,
+        output_path: output_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(export_config);
+    let records = vec![
+        DataRecord {
+            id: "test-1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({"key": "value"}),
+            metadata: None,
+        },
+    ];
+    
+    exporter.export(records).unwrap();
+    
+    // Now import it back
+    let import_config = ImportConfig {
+        input_path: output_path.clone(),
+        format: Some(ExportFormat::Csv),
+    };
+    
+    let importer = DataImporter::new(import_config);
+    let (imported_records, manifest) = importer.import().unwrap();
+    
+    assert_eq!(imported_records.len(), 1);
+    assert_eq!(imported_records[0].id, "test-1");
+    assert_eq!(manifest.format, ExportFormat::Csv);
+}
+
+#[test]
+fn test_processing_config_defaults() {
+    let config = ProcessingConfig::default();
+    assert_eq!(config.input_path, PathBuf::from("export.json"));
+    assert!(config.output_path.is_none());
+    assert_eq!(config.operation, ProcessingOperation::Analyze);
+}
+
+#[test]
+fn test_filter_operation() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_path = temp_dir.path().join("input.json");
+    
+    // Create test data
+    let export_config = ExportConfig {
+        format: ExportFormat::Json,
+        output_path: input_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(export_config);
+    let records = vec![
+        DataRecord {
+            id: "1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "type_a".to_string(),
+            data: serde_json::json!({}),
+            metadata: None,
+        },
+        DataRecord {
+            id: "2".to_string(),
+            timestamp: "2024-01-02T00:00:00Z".to_string(),
+            record_type: "type_b".to_string(),
+            data: serde_json::json!({}),
+            metadata: None,
+        },
+    ];
+    
+    exporter.export(records).unwrap();
+    
+    // Process with filter
+    let filter_criteria = FilterCriteria {
+        record_type: Some("type_a".to_string()),
+        time_range: None,
+        expression: None,
+    };
+    
+    let processing_config = ProcessingConfig {
+        input_path: input_path.clone(),
+        output_path: None,
+        operation: ProcessingOperation::Filter,
+        operation_config: serde_json::to_value(filter_criteria).unwrap(),
+    };
+    
+    let processor = DataProcessor::new(processing_config);
+    let result = processor.process();
+    
+    assert!(result.is_ok());
+    let analysis = result.unwrap();
+    assert_eq!(analysis.analysis_type, "filter");
+    
+    let result_data = analysis.result.as_object().unwrap();
+    assert_eq!(result_data.get("filtered_count").unwrap().as_i64().unwrap(), 1);
+    assert_eq!(result_data.get("original_count").unwrap().as_i64().unwrap(), 2);
+}
+
+#[test]
+fn test_aggregate_operation() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_path = temp_dir.path().join("input.json");
+    
+    // Create test data
+    let export_config = ExportConfig {
+        format: ExportFormat::Json,
+        output_path: input_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(export_config);
+    let records = vec![
+        DataRecord {
+            id: "1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({}),
+            metadata: None,
+        },
+    ];
+    
+    exporter.export(records).unwrap();
+    
+    // Process with aggregate
+    let agg_spec = AggregationSpec {
+        field: "value".to_string(),
+        function: "count".to_string(),
+        group_by: None,
+    };
+    
+    let processing_config = ProcessingConfig {
+        input_path: input_path.clone(),
+        output_path: None,
+        operation: ProcessingOperation::Aggregate,
+        operation_config: serde_json::to_value(agg_spec).unwrap(),
+    };
+    
+    let processor = DataProcessor::new(processing_config);
+    let result = processor.process();
+    
+    assert!(result.is_ok());
+    let analysis = result.unwrap();
+    assert_eq!(analysis.analysis_type, "aggregate");
+}
+
+#[test]
+fn test_transform_operation() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_path = temp_dir.path().join("input.json");
+    
+    // Create test data
+    let export_config = ExportConfig {
+        format: ExportFormat::Json,
+        output_path: input_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(export_config);
+    let records = vec![
+        DataRecord {
+            id: "1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({}),
+            metadata: None,
+        },
+    ];
+    
+    exporter.export(records).unwrap();
+    
+    // Process with transform
+    let transform_spec = TransformationSpec {
+        field: "record_type".to_string(),
+        function: "uppercase".to_string(),
+        parameters: None,
+    };
+    
+    let processing_config = ProcessingConfig {
+        input_path: input_path.clone(),
+        output_path: None,
+        operation: ProcessingOperation::Transform,
+        operation_config: serde_json::to_value(transform_spec).unwrap(),
+    };
+    
+    let processor = DataProcessor::new(processing_config);
+    let result = processor.process();
+    
+    assert!(result.is_ok());
+    let analysis = result.unwrap();
+    assert_eq!(analysis.analysis_type, "transform");
+}
+
+#[test]
+fn test_analyze_operation() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_path = temp_dir.path().join("input.json");
+    
+    // Create test data
+    let export_config = ExportConfig {
+        format: ExportFormat::Json,
+        output_path: input_path.clone(),
+        include_metadata: false,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(export_config);
+    let records = vec![
+        DataRecord {
+            id: "1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "type_a".to_string(),
+            data: serde_json::json!({}),
+            metadata: None,
+        },
+        DataRecord {
+            id: "2".to_string(),
+            timestamp: "2024-01-02T00:00:00Z".to_string(),
+            record_type: "type_b".to_string(),
+            data: serde_json::json!({}),
+            metadata: None,
+        },
+    ];
+    
+    exporter.export(records).unwrap();
+    
+    // Process with analyze
+    let processing_config = ProcessingConfig {
+        input_path: input_path.clone(),
+        output_path: None,
+        operation: ProcessingOperation::Analyze,
+        operation_config: serde_json::Value::Null,
+    };
+    
+    let processor = DataProcessor::new(processing_config);
+    let result = processor.process();
+    
+    assert!(result.is_ok());
+    let analysis = result.unwrap();
+    assert_eq!(analysis.analysis_type, "analyze");
+    
+    let result_data = analysis.result.as_object().unwrap();
+    assert_eq!(result_data.get("total_records").unwrap().as_i64().unwrap(), 2);
+    
+    let type_dist = result_data.get("record_type_distribution").unwrap().as_object().unwrap();
+    assert_eq!(type_dist.get("type_a").unwrap().as_i64().unwrap(), 1);
+    assert_eq!(type_dist.get("type_b").unwrap().as_i64().unwrap(), 1);
+}
+
+#[test]
+fn test_cross_environment_workflow() {
+    let temp_dir = TempDir::new().unwrap();
+    
+    // Step 1: Export data (collection environment)
+    let export_path = temp_dir.path().join("collection_export.json");
+    let export_config = ExportConfig {
+        format: ExportFormat::Json,
+        output_path: export_path.clone(),
+        include_metadata: true,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(export_config);
+    let records = vec![
+        DataRecord {
+            id: "collected-1".to_string(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            record_type: "collected".to_string(),
+            data: serde_json::json!({"source": "collection"}),
+            metadata: Some(serde_json::json!({"env": "collection"})),
+        },
+    ];
+    
+    let manifest = exporter.export(records).unwrap();
+    assert_eq!(manifest.record_count, 1);
+    
+    // Step 2: Import data (processing environment)
+    let import_config = ImportConfig {
+        input_path: export_path.clone(),
+        format: None,
+    };
+    
+    let importer = DataImporter::new(import_config);
+    let (imported_records, imported_manifest) = importer.import().unwrap();
+    assert_eq!(imported_records.len(), 1);
+    
+    // Step 3: Process data (analysis environment)
+    let processing_config = ProcessingConfig {
+        input_path: export_path.clone(),
+        output_path: None,
+        operation: ProcessingOperation::Analyze,
+        operation_config: serde_json::Value::Null,
+    };
+    
+    let processor = DataProcessor::new(processing_config);
+    let analysis_result = processor.process().unwrap();
+    
+    assert_eq!(analysis_result.analysis_type, "analyze");
+    assert!(analysis_result.result.as_object().unwrap().contains_key("total_records"));
+}
+
+#[test]
+fn test_export_with_metadata() {
+    let temp_dir = TempDir::new().unwrap();
+    let output_path = temp_dir.path().join("test_export.json");
+    
+    let config = ExportConfig {
+        format: ExportFormat::Json,
+        output_path: output_path.clone(),
+        include_metadata: true,
+        compress: false,
+    };
+    
+    let exporter = DataExporter::new(config);
+    let records = vec![
+        DataRecord {
+            id: "test-1".to_string(),
+            timestamp: "2024-01-01T00:00:00Z".to_string(),
+            record_type: "test".to_string(),
+            data: serde_json::json!({"key": "value"}),
+            metadata: None,
+        },
+    ];
+    
+    let result = exporter.export(records);
+    assert!(result.is_ok());
+    
+    let manifest = result.unwrap();
+    assert!(manifest.metadata.is_some());
+    
+    let metadata = manifest.metadata.unwrap();
+    assert!(metadata.as_object().unwrap().contains_key("exported_by"));
+    assert!(metadata.as_object().unwrap().contains_key("hostname"));
+}

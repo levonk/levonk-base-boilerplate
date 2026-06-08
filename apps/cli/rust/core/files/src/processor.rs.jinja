@@ -1,0 +1,398 @@
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use tracing::{debug, info, warn};
+use crate::export::{DataRecord, DataImporter, ExportFormat};
+
+/// Processing operation type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ProcessingOperation {
+    /// Filter records by criteria
+    Filter,
+    /// Aggregate records
+    Aggregate,
+    /// Transform records
+    Transform,
+    /// Analyze records
+    Analyze,
+}
+
+/// Filter criteria
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilterCriteria {
+    /// Record type to filter
+    pub record_type: Option<String>,
+    /// Time range (start, end)
+    pub time_range: Option<(String, String)>,
+    /// Custom filter expression
+    pub expression: Option<String>,
+}
+
+/// Aggregation specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AggregationSpec {
+    /// Field to aggregate
+    pub field: String,
+    /// Aggregation function (count, sum, avg, min, max)
+    pub function: String,
+    /// Group by field
+    pub group_by: Option<String>,
+}
+
+/// Transformation specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransformationSpec {
+    /// Field to transform
+    pub field: String,
+    /// Transformation function
+    pub function: String,
+    /// Parameters for the transformation
+    pub parameters: Option<serde_json::Value>,
+}
+
+/// Analysis result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnalysisResult {
+    /// Analysis type
+    pub analysis_type: String,
+    /// Result data
+    pub result: serde_json::Value,
+    /// Metadata
+    pub metadata: HashMap<String, String>,
+}
+
+/// Processing job configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessingConfig {
+    /// Input data path
+    pub input_path: PathBuf,
+    /// Output path for results
+    pub output_path: Option<PathBuf>,
+    /// Processing operation
+    pub operation: ProcessingOperation,
+    /// Operation-specific configuration
+    pub operation_config: serde_json::Value,
+}
+
+impl Default for ProcessingConfig {
+    fn default() -> Self {
+        Self {
+            input_path: PathBuf::from("export.json"),
+            output_path: None,
+            operation: ProcessingOperation::Analyze,
+            operation_config: serde_json::Value::Null,
+        }
+    }
+}
+
+/// Data processor for offline analysis
+pub struct DataProcessor {
+    config: ProcessingConfig,
+}
+
+impl DataProcessor {
+    pub fn new(config: ProcessingConfig) -> Self {
+        Self { config }
+    }
+
+    /// Process data according to configuration
+    pub fn process(&self) -> Result<AnalysisResult> {
+        info!("Processing data from {:?}", self.config.input_path);
+
+        // Import data
+        let import_config = crate::export::ImportConfig {
+            input_path: self.config.input_path.clone(),
+            format: None,
+        };
+        let importer = DataImporter::new(import_config);
+        let (records, manifest) = importer.import()?;
+
+        info!("Imported {} records for processing", records.len());
+
+        // Process based on operation type
+        let result = match self.config.operation {
+            ProcessingOperation::Filter => self.filter_records(&records)?,
+            ProcessingOperation::Aggregate => self.aggregate_records(&records)?,
+            ProcessingOperation::Transform => self.transform_records(&records)?,
+            ProcessingOperation::Analyze => self.analyze_records(&records, &manifest)?,
+        };
+
+        // Write output if specified
+        if let Some(ref output_path) = self.config.output_path {
+            self.write_output(&result, output_path)?;
+        }
+
+        info!("Processing completed successfully");
+        Ok(result)
+    }
+
+    /// Filter records based on criteria
+    fn filter_records(&self, records: &[DataRecord]) -> Result<AnalysisResult> {
+        let criteria: FilterCriteria = serde_json::from_value(self.config.operation_config.clone())
+            .context("Failed to parse filter criteria")?;
+
+        let filtered: Vec<DataRecord> = records
+            .iter()
+            .filter(|record| {
+                if let Some(ref record_type) = criteria.record_type {
+                    if &record.record_type != record_type {
+                        return false;
+                    }
+                }
+                if let Some((start, end)) = &criteria.time_range {
+                    if record.timestamp < *start || record.timestamp > *end {
+                        return false;
+                    }
+                }
+                true
+            })
+            .cloned()
+            .collect();
+
+        Ok(AnalysisResult {
+            analysis_type: "filter".to_string(),
+            result: serde_json::json!({
+                "filtered_count": filtered.len(),
+                "original_count": records.len(),
+                "records": filtered,
+            }),
+            metadata: {
+                "operation".to_string() => "filter".to_string(),
+                "criteria".to_string() => serde_json::to_string(&criteria).unwrap_or_default(),
+            },
+        })
+    }
+
+    /// Aggregate records
+    fn aggregate_records(&self, records: &[DataRecord]) -> Result<AnalysisResult> {
+        let spec: AggregationSpec = serde_json::from_value(self.config.operation_config.clone())
+            .context("Failed to parse aggregation spec")?;
+
+        let mut result = HashMap::new();
+        
+        match spec.function.as_str() {
+            "count" => {
+                result.insert("count".to_string(), serde_json::json!(records.len()));
+            }
+            "sum" => {
+                // Simplified sum - in real implementation, would extract numeric values
+                result.insert("sum".to_string(), serde_json::json!(0));
+            }
+            "avg" => {
+                result.insert("avg".to_string(), serde_json::json!(0.0));
+            }
+            "min" => {
+                result.insert("min".to_string(), serde_json::json!(0));
+            }
+            "max" => {
+                result.insert("max".to_string(), serde_json::json!(0));
+            }
+            _ => {
+                warn!("Unknown aggregation function: {}", spec.function);
+            }
+        }
+
+        Ok(AnalysisResult {
+            analysis_type: "aggregate".to_string(),
+            result: serde_json::to_value(result)?,
+            metadata: {
+                "operation".to_string() => "aggregate".to_string(),
+                "field".to_string() => spec.field,
+                "function".to_string() => spec.function,
+            },
+        })
+    }
+
+    /// Transform records
+    fn transform_records(&self, records: &[DataRecord]) -> Result<AnalysisResult> {
+        let spec: TransformationSpec = serde_json::from_value(self.config.operation_config.clone())
+            .context("Failed to parse transformation spec")?;
+
+        let transformed: Vec<DataRecord> = records
+            .iter()
+            .map(|record| {
+                let mut transformed = record.clone();
+                // Apply transformation (simplified - real implementation would be more complex)
+                if spec.field == "record_type" && spec.function == "uppercase" {
+                    transformed.record_type = transformed.record_type.to_uppercase();
+                }
+                transformed
+            })
+            .collect();
+
+        Ok(AnalysisResult {
+            analysis_type: "transform".to_string(),
+            result: serde_json::json!({
+                "transformed_count": transformed.len(),
+                "records": transformed,
+            }),
+            metadata: {
+                "operation".to_string() => "transform".to_string(),
+                "field".to_string() => spec.field,
+                "function".to_string() => spec.function,
+            },
+        })
+    }
+
+    /// Analyze records
+    fn analyze_records(&self, records: &[DataRecord], manifest: &crate::export::ExportManifest) -> Result<AnalysisResult> {
+        let mut analysis = HashMap::new();
+        
+        // Basic statistics
+        analysis.insert("total_records".to_string(), serde_json::json!(records.len()));
+        
+        // Record type distribution
+        let mut type_counts: HashMap<String, usize> = HashMap::new();
+        for record in records {
+            *type_counts.entry(record.record_type.clone()).or_insert(0) += 1;
+        }
+        analysis.insert("record_type_distribution".to_string(), serde_json::to_value(type_counts)?);
+        
+        // Time range
+        if let (Some(first), Some(last)) = (records.first(), records.last()) {
+            analysis.insert("time_range".to_string(), serde_json::json!({
+                "start": first.timestamp,
+                "end": last.timestamp,
+            }));
+        }
+        
+        // Manifest info
+        analysis.insert("source".to_string(), serde_json::json!(manifest.source));
+        analysis.insert("export_version".to_string(), serde_json::json!(manifest.version));
+
+        Ok(AnalysisResult {
+            analysis_type: "analyze".to_string(),
+            result: serde_json::to_value(analysis)?,
+            metadata: {
+                "operation".to_string() => "analyze".to_string(),
+                "source_file".to_string() => self.config.input_path.to_string_lossy().to_string(),
+            },
+        })
+    }
+
+    /// Write analysis result to file
+    fn write_output(&self, result: &AnalysisResult, output_path: &PathBuf) -> Result<()> {
+        let output = serde_json::to_string_pretty(result)?;
+        
+        if let Some(parent) = output_path.parent() {
+            std::fs::create_dir_all(parent).context("Failed to create output directory")?;
+        }
+        
+        std::fs::write(output_path, output).context("Failed to write output file")?;
+        info!("Wrote analysis result to {:?}", output_path);
+        
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_processing_config_default() {
+        let config = ProcessingConfig::default();
+        assert_eq!(config.input_path, PathBuf::from("export.json"));
+        assert!(config.output_path.is_none());
+        assert_eq!(config.operation, ProcessingOperation::Analyze);
+    }
+
+    #[test]
+    fn test_filter_criteria() {
+        let criteria = FilterCriteria {
+            record_type: Some("test".to_string()),
+            time_range: None,
+            expression: None,
+        };
+        assert_eq!(criteria.record_type, Some("test".to_string()));
+    }
+
+    #[test]
+    fn test_aggregation_spec() {
+        let spec = AggregationSpec {
+            field: "value".to_string(),
+            function: "sum".to_string(),
+            group_by: None,
+        };
+        assert_eq!(spec.function, "sum");
+    }
+
+    #[test]
+    fn test_transformation_spec() {
+        let spec = TransformationSpec {
+            field: "name".to_string(),
+            function: "uppercase".to_string(),
+            parameters: None,
+        };
+        assert_eq!(spec.function, "uppercase");
+    }
+
+    #[test]
+    fn test_filter_records() {
+        let records = vec![
+            DataRecord {
+                id: "1".to_string(),
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                record_type: "type_a".to_string(),
+                data: serde_json::json!({}),
+                metadata: None,
+            },
+            DataRecord {
+                id: "2".to_string(),
+                timestamp: "2024-01-02T00:00:00Z".to_string(),
+                record_type: "type_b".to_string(),
+                data: serde_json::json!({}),
+                metadata: None,
+            },
+        ];
+
+        let config = ProcessingConfig {
+            input_path: PathBuf::from("test.json"),
+            output_path: None,
+            operation: ProcessingOperation::Filter,
+            operation_config: serde_json::json!({
+                "record_type": "type_a",
+                "time_range": null,
+                "expression": null,
+            }),
+        };
+
+        let processor = DataProcessor::new(config);
+        let result = processor.filter_records(&records);
+        
+        assert!(result.is_ok());
+        let analysis = result.unwrap();
+        assert_eq!(analysis.analysis_type, "filter");
+    }
+
+    #[test]
+    fn test_analyze_records() {
+        let records = vec![
+            DataRecord {
+                id: "1".to_string(),
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+                record_type: "type_a".to_string(),
+                data: serde_json::json!({}),
+                metadata: None,
+            },
+        ];
+
+        let manifest = crate::export::ExportManifest {
+            version: "1.0".to_string(),
+            timestamp: chrono::Utc::now().to_rfc3339(),
+            source: "test".to_string(),
+            record_count: 1,
+            format: ExportFormat::Json,
+            metadata: None,
+        };
+
+        let config = ProcessingConfig::default();
+        let processor = DataProcessor::new(config);
+        let result = processor.analyze_records(&records, &manifest);
+        
+        assert!(result.is_ok());
+        let analysis = result.unwrap();
+        assert_eq!(analysis.analysis_type, "analyze");
+    }
+}

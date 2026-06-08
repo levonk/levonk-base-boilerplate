@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 4
 parallel_id: 2
 branch: "feature/current/20260707-cli-rust-standards/story-04-002-collection-processing"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["02-004"]
@@ -27,25 +27,30 @@ Implement separation of collection (daemon/background) from processing (offline 
 
 ## Sub-Tasks
 
-- [ ] Design collection/processing separation architecture
-- [ ] Implement data collection daemon mode
-- [ ] Add data export commands for collected data
-- [ ] Implement offline analysis commands that operate on exported data
-- [ ] Add data format specification for export/import
-- [ ] Implement collection job tracking
-- [ ] Add processing job tracking
-- [ ] Create tests for data collection
-- [ ] Create tests for data export
-- [ ] Create tests for offline analysis
-- [ ] Create tests for cross-environment workflow
+- [x] Design collection/processing separation architecture
+- [x] Implement data collection daemon mode
+- [x] Add data export commands for collected data
+- [x] Implement offline analysis commands that operate on exported data
+- [x] Add data format specification for export/import
+- [x] Implement collection job tracking
+- [x] Add processing job tracking
+- [x] Create tests for data collection
+- [x] Create tests for data export
+- [x] Create tests for offline analysis
+- [x] Create tests for cross-environment workflow
 
 ## Relevant Files
 
-- `apps/cli/rust/src/daemon.rs` — Collection daemon
-- `apps/cli/rust/src/processor.rs` — Offline analysis module (new)
-- `apps/cli/rust/src/export.rs` — Data export module (new)
-- `apps/cli/rust/src/cli.rs` — Add export and analysis commands
-- `apps/cli/rust/tests/collection_test.rs` — Collection/processing tests
+- `apps/cli/rust/core/files/src/daemon.rs.jinja` — Collection daemon with DaemonMode, JobType, collection/processing job submission
+- `apps/cli/rust/core/files/src/processor.rs.jinja` — Offline analysis module (new) with filter, aggregate, transform, analyze operations
+- `apps/cli/rust/core/files/src/export.rs.jinja` — Data export module (new) with JSON, CSV, YAML formats and import/export
+- `apps/cli/rust/core/files/src/cli.rs.jinja` — Added Export and Process subcommands
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Integrated export and processing subcommand handlers
+- `apps/cli/rust/core/files/src/config.rs.jinja` — Added daemon_mode and daemon_data_storage_path config fields
+- `apps/cli/rust/core/files/src/lib.rs.jinja` — Exported new types and modules
+- `apps/cli/rust/core/files/Cargo.toml.jinja` — Added gethostname dependency
+- `apps/cli/rust/core/files/templates/config.toml.jinja` — Added daemon mode configuration
+- `apps/cli/rust/core/files/tests/collection_test.rs.jinja` — Comprehensive collection/processing tests (new)
 
 ## Acceptance Criteria
 

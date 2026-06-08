@@ -8,6 +8,8 @@ pub mod man;
 pub mod path;
 pub mod security;
 pub mod resource;
+pub mod export;
+pub mod processor;
 
 {% if enable_tui -%}
 pub mod tui;
@@ -22,7 +24,7 @@ pub use logging::{
 };
 
 pub use signals::SignalHandler;
-pub use daemon::{DaemonManager, DaemonConfig, Job, JobStatus};
+pub use daemon::{DaemonManager, DaemonConfig, Job, JobStatus, DaemonMode, JobType};
 pub use health::{HealthManager, HealthConfig, HealthStatus, HealthResponse, HealthCheck, ConfigValidation};
 pub use terminal::{TerminalInfo, TerminalSize, ResizeHandler, get_terminal_size};
 pub use completion::{generate_completion, get_completion_path, install_completion};
@@ -30,6 +32,8 @@ pub use man::ManHandler;
 pub use path::PathUtils;
 pub use security::{SecurityUtils, SecureString};
 pub use resource::{ResourceLimits, ResourceMonitor, ResourceLimiter};
+pub use export::{DataExporter, DataImporter, ExportConfig, ImportConfig, ExportFormat, DataRecord, ExportManifest};
+pub use processor::{DataProcessor, ProcessingConfig, ProcessingOperation, AnalysisResult};
 
 {% if enable_tui -%}
 pub use tui::{TuiConfig, TuiHandler, TuiError, init_tui_mode, terminal_supports_tui};
