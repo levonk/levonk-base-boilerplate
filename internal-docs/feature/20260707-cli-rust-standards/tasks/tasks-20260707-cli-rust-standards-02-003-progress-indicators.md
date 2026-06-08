@@ -27,8 +27,8 @@ Implement progress bars or spinners for long-running operations, with respect fo
 
 ## Sub-Tasks
 
-- [ ] Add indicatif dependency to Cargo.toml
-- [ ] Create progress indicator utilities in cli.rs
+- [x] Add indicatif dependency to Cargo.toml
+- [~] Create progress indicator utilities in cli.rs
 - [ ] Implement progress bar for operations with known progress
 - [ ] Implement spinner for operations with unknown duration
 - [ ] Add progress indicator integration with command execution
@@ -40,10 +40,9 @@ Implement progress bars or spinners for long-running operations, with respect fo
 
 ## Relevant Files
 
-- `apps/cli/rust/src/cli.rs` — Progress indicator utilities
-- `apps/cli/rust/src/executor.rs` — Integrate progress with execution
-- `apps/cli/rust/Cargo.toml` — indicatif dependency
-- `apps/cli/rust/tests/progress_test.rs` — Progress indicator tests
+- `apps/cli/rust/core/files/src/cli.rs.jinja` — Progress indicator utilities, Progress struct with bar/spinner methods
+- `apps/cli/rust/core/files/Cargo.toml.jinja` — indicatif dependency (already present)
+- `apps/cli/rust/core/files/tests/progress_test.rs.jinja` — Progress indicator tests (to be created)
 
 ## Acceptance Criteria
 

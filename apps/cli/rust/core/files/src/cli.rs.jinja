@@ -1,6 +1,8 @@
 use clap::Parser;
 use anyhow::Result;
 use std::path::PathBuf;
+use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+use std::time::Duration;
 
 /// {{ description }}
 #[derive(Parser)]
@@ -81,5 +83,67 @@ impl Cli {
         use clap::CommandFactory;
         println!("{} {}", Self::command().get_name().to_string(), Self::command().get_version().to_string());
         Ok(())
+    }
+
+    /// Check if progress indicators should be shown
+    pub fn show_progress(&self) -> bool {
+        !self.quiet && atty::is(atty::Stream::Stdout)
+    }
+}
+
+/// Progress indicator utilities
+pub struct Progress {
+    quiet: bool,
+    multi: MultiProgress,
+}
+
+impl Progress {
+    /// Create a new progress indicator manager
+    pub fn new(quiet: bool) -> Self {
+        Self {
+            quiet,
+            multi: MultiProgress::new(),
+        }
+    }
+
+    /// Create a progress bar for operations with known progress
+    pub fn bar(&self, len: u64, message: &str) -> Option<ProgressBar> {
+        if self.quiet {
+            return None;
+        }
+
+        let bar = self.multi.add(ProgressBar::new(len));
+        bar.set_style(
+            ProgressStyle::default_bar()
+                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
+                .unwrap()
+                .progress_chars("#>-"),
+        );
+        bar.set_message(message);
+        bar.enable_steady_tick(Duration::from_millis(100));
+        Some(bar)
+    }
+
+    /// Create a spinner for operations with unknown duration
+    pub fn spinner(&self, message: &str) -> Option<ProgressBar> {
+        if self.quiet {
+            return None;
+        }
+
+        let spinner = self.multi.add(ProgressBar::new_spinner());
+        spinner.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.green} {msg}")
+                .unwrap()
+                .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
+        );
+        spinner.set_message(message);
+        spinner.enable_steady_tick(Duration::from_millis(100));
+        Some(spinner)
+    }
+
+    /// Clear all progress indicators
+    pub fn clear(&self) {
+        self.multi.clear().ok();
     }
 }
