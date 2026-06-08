@@ -7,6 +7,7 @@ from platformdirs import user_config_dir, user_data_dir
 import typer
 from {{ project_slug }}.__main__ import app
 from {{ project_slug }}.logging import get_logger
+from {{ project_slug }}.man_page import install_man_page, uninstall_man_page
 
 logger = get_logger(name="{{ project_slug }}")
 
@@ -14,10 +15,10 @@ logger = get_logger(name="{{ project_slug }}")
 def get_completion_dir() -> Path:
     """Get the platform-specific completion directory."""
     home = Path.home()
-    
+
     # Detect shell and return appropriate completion directory
     shell = os.environ.get("SHELL", "")
-    
+
     if "zsh" in shell:
         # Zsh completions typically go in ~/.zsh/completions or use fpath
         zsh_dir = home / ".zsh" / "completions"
@@ -57,7 +58,7 @@ def install_completion(shell: str, force: bool = False) -> bool:
     try:
         completion_dir = get_completion_dir()
         completion_script = generate_completion_script(shell)
-        
+
         # Determine filename based on shell
         if shell == "bash":
             filename = "{{ project_slug }}.bash"
@@ -67,20 +68,20 @@ def install_completion(shell: str, force: bool = False) -> bool:
             filename = "{{ project_slug }}.fish"
         else:
             filename = "{{ project_slug }}"
-        
+
         completion_file = completion_dir / filename
-        
+
         # Check if file exists
         if completion_file.exists() and not force:
             logger.warn(f"Completion file already exists: {completion_file}", module="completion")
             logger.warn("Use --force to overwrite", module="completion")
             return False
-        
+
         # Write completion script
         completion_file.write_text(completion_script)
         logger.info(f"Installed {shell} completion to {completion_file}", module="completion")
         return True
-        
+
     except Exception as e:
         logger.error(f"Failed to install {shell} completion: {e}", module="completion")
         return False
@@ -90,7 +91,7 @@ def uninstall_completion(shell: str) -> bool:
     """Uninstall completion script for the specified shell."""
     try:
         completion_dir = get_completion_dir()
-        
+
         # Determine filename based on shell
         if shell == "bash":
             filename = "{{ project_slug }}.bash"
@@ -100,40 +101,42 @@ def uninstall_completion(shell: str) -> bool:
             filename = "{{ project_slug }}.fish"
         else:
             filename = "{{ project_slug }}"
-        
+
         completion_file = completion_dir / filename
-        
+
         # Check if file exists
         if not completion_file.exists():
             logger.warn(f"Completion file not found: {completion_file}", module="completion")
             return False
-        
+
         # Remove completion script
         completion_file.unlink()
         logger.info(f"Removed {shell} completion from {completion_file}", module="completion")
         return True
-        
+
     except Exception as e:
         logger.error(f"Failed to uninstall {shell} completion: {e}", module="completion")
         return False
 
 
 def install_all_completions(force: bool = False) -> dict:
-    """Install completion scripts for all supported shells."""
+    """Install completion scripts for all supported shells and man page."""
     results = {
         "bash": install_completion("bash", force),
         "zsh": install_completion("zsh", force),
-        "fish": install_completion("fish", force)
+        "fish": install_completion("fish", force),
+        "man_page": install_man_page(force)
     }
     return results
 
 
 def uninstall_all_completions() -> dict:
-    """Uninstall completion scripts for all supported shells."""
+    """Uninstall completion scripts for all supported shells and man page."""
     results = {
         "bash": uninstall_completion("bash"),
         "zsh": uninstall_completion("zsh"),
-        "fish": uninstall_completion("fish")
+        "fish": uninstall_completion("fish"),
+        "man_page": uninstall_man_page()
     }
     return results
 

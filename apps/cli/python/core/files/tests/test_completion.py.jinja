@@ -8,6 +8,12 @@ from {{ project_slug }}.completion import (
     generate_completion_script,
     get_completion_dir
 )
+from {{ project_slug }}.man_page import (
+    generate_man_page,
+    install_man_page,
+    uninstall_man_page,
+    get_man_page_dir
+)
 from pathlib import Path
 import tempfile
 import shutil
@@ -89,3 +95,43 @@ def test_uninstall_all_completions():
     assert "bash" in results
     assert "zsh" in results
     assert "fish" in results
+
+
+def test_generate_man_page():
+    """Test man page generation."""
+    man_content = generate_man_page()
+    assert man_content is not None
+    assert len(man_content) > 0
+    assert "{{ project_slug }}" in man_content
+    assert "{{ description }}" in man_content
+    assert "NAME" in man_content
+    assert "SYNOPSIS" in man_content
+    assert "DESCRIPTION" in man_content
+    assert "OPTIONS" in man_content
+
+
+def test_get_man_page_dir():
+    """Test man page directory resolution."""
+    man_dir = get_man_page_dir()
+    assert man_dir is not None
+    assert man_dir.exists()
+
+
+def test_install_man_page():
+    """Test man page installation."""
+    result = install_man_page(force=True)
+    assert result is True
+
+
+def test_uninstall_man_page():
+    """Test man page uninstallation."""
+    result = uninstall_man_page()
+    assert result is True
+
+
+def test_man_flag():
+    """Test --man flag displays man page."""
+    result = runner.invoke(app, ["--man"])
+    assert result.exit_code == 0
+    assert "{{ project_slug }}" in result.stdout
+    assert "NAME" in result.stdout

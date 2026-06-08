@@ -14,6 +14,7 @@ from {{ project_slug }}.completion import install_all_completions, uninstall_all
 from {{ project_slug }}.errors import format_file_not_found_error, format_permission_denied_error
 from {{ project_slug }}.progress import progress_bar
 from {{ project_slug }}.daemon import get_daemon_manager
+from {{ project_slug }}.man_page import print_man_page
 {% if include_tui %}
 from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
 {% endif %}
@@ -119,6 +120,7 @@ def process(
     no_daemon: bool = typer.Option(False, "--no-daemon", help="Force synchronous operation (no daemon)"),
     list_jobs: bool = typer.Option(False, "--list-jobs", help="List background jobs"),
     cancel_job: Optional[str] = typer.Option(None, "--cancel-job", help="Cancel a specific background job by ID"),
+    man: bool = typer.Option(False, "--man", help="Display man page"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
@@ -185,6 +187,10 @@ def process(
         # Force synchronous mode
         if not quiet:
             logger.info("Running in synchronous mode (--no-daemon)", module="daemon")
+
+    if man:
+        print_man_page()
+        sys.exit(EXIT_SUCCESS)
 
 {% if include_tui %}
     # Handle TUI mode
