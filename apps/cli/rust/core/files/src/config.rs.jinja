@@ -48,6 +48,22 @@ pub struct Config {
     /// Enable experimental features
     #[serde(default = "default_experimental")]
     pub experimental: bool,
+    
+    /// Daemon mode enabled
+    #[serde(default = "default_daemon_enabled")]
+    pub daemon_enabled: bool,
+    
+    /// Daemon auto-spawn on async operations
+    #[serde(default = "default_daemon_auto_spawn")]
+    pub daemon_auto_spawn: bool,
+    
+    /// Maximum number of daemon jobs
+    #[serde(default = "default_daemon_max_jobs")]
+    pub daemon_max_jobs: usize,
+    
+    /// Daemon job timeout in seconds
+    #[serde(default = "default_daemon_job_timeout")]
+    pub daemon_job_timeout: u64,
 }
 
 fn default_log_level() -> String {
@@ -78,6 +94,22 @@ fn default_experimental() -> bool {
     false
 }
 
+fn default_daemon_enabled() -> bool {
+    true
+}
+
+fn default_daemon_auto_spawn() -> bool {
+    true
+}
+
+fn default_daemon_max_jobs() -> usize {
+    10
+}
+
+fn default_daemon_job_timeout() -> u64 {
+    300
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
@@ -90,6 +122,10 @@ impl Default for Config {
             max_concurrent: default_max_concurrent(),
             timeout: default_timeout(),
             experimental: default_experimental(),
+            daemon_enabled: default_daemon_enabled(),
+            daemon_auto_spawn: default_daemon_auto_spawn(),
+            daemon_max_jobs: default_daemon_max_jobs(),
+            daemon_job_timeout: default_daemon_job_timeout(),
         }
     }
 }

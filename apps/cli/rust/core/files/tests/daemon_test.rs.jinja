@@ -1,0 +1,188 @@
+use anyhow::Result;
+use {{ project_slug }}::daemon::{DaemonManager, DaemonConfig, Job, JobStatus};
+
+#[test]
+fn test_daemon_config_default() {
+    let config = DaemonConfig::default();
+    assert!(config.enabled);
+    assert!(config.auto_spawn);
+    assert_eq!(config.max_jobs, 10);
+    assert_eq!(config.job_timeout, 300);
+    assert!(config.socket_path.is_none());
+}
+
+#[test]
+fn test_daemon_config_custom() {
+    let config = DaemonConfig {
+        enabled: false,
+        auto_spawn: false,
+        max_jobs: 5,
+        job_timeout: 600,
+        socket_path: Some("/tmp/test.sock".to_string()),
+    };
+    assert!(!config.enabled);
+    assert!(!config.auto_spawn);
+    assert_eq!(config.max_jobs, 5);
+    assert_eq!(config.job_timeout, 600);
+    assert_eq!(config.socket_path, Some("/tmp/test.sock".to_string()));
+}
+
+#[test]
+fn test_job_creation() {
+    let job = Job::new("test-id".to_string(), "echo hello".to_string());
+    assert_eq!(job.id, "test-id");
+    assert_eq!(job.command, "echo hello");
+    assert_eq!(job.status, JobStatus::Pending);
+    assert!(job.output.is_empty());
+    assert!(job.error.is_none());
+    assert!(!job.created_at.is_empty());
+    assert!(job.started_at.is_none());
+    assert!(job.completed_at.is_none());
+}
+
+#[test]
+fn test_job_status_transitions() {
+    let mut job = Job::new("test-id".to_string(), "echo hello".to_string());
+    assert_eq!(job.status, JobStatus::Pending);
+    
+    job.status = JobStatus::Running;
+    job.started_at = Some(chrono::Utc::now().to_rfc3339());
+    assert_eq!(job.status, JobStatus::Running);
+    assert!(job.started_at.is_some());
+    
+    job.status = JobStatus::Completed;
+    job.output = "hello".to_string();
+    job.completed_at = Some(chrono::Utc::now().to_rfc3339());
+    assert_eq!(job.status, JobStatus::Completed);
+    assert_eq!(job.output, "hello");
+    assert!(job.completed_at.is_some());
+}
+
+#[test]
+fn test_job_failed() {
+    let mut job = Job::new("test-id".to_string(), "false".to_string());
+    job.status = JobStatus::Failed;
+    job.error = Some("Command failed".to_string());
+    job.completed_at = Some(chrono::Utc::now().to_rfc3339());
+    assert_eq!(job.status, JobStatus::Failed);
+    assert_eq!(job.error, Some("Command failed".to_string()));
+}
+
+#[test]
+fn test_job_cancelled() {
+    let mut job = Job::new("test-id".to_string(), "sleep 100".to_string());
+    job.status = JobStatus::Cancelled;
+    job.completed_at = Some(chrono::Utc::now().to_rfc3339());
+    assert_eq!(job.status, JobStatus::Cancelled);
+}
+
+#[tokio::test]
+async fn test_daemon_manager_creation() {
+    let config = DaemonConfig::default();
+    let manager = DaemonManager::new(config);
+    assert!(!manager.is_running().await);
+}
+
+#[tokio::test]
+async fn test_daemon_manager_disabled() {
+    let config = DaemonConfig {
+        enabled: false,
+        auto_spawn: false,
+        ..Default::default()
+    };
+    let manager = DaemonManager::new(config);
+    assert!(!manager.is_running().await);
+    
+    // Starting should fail when disabled
+    let result = manager.start().await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_list_jobs_empty() {
+    let config = DaemonConfig::default();
+    let manager = DaemonManager::new(config);
+    let jobs = manager.list_jobs(None).await;
+    assert!(jobs.is_empty());
+}
+
+#[tokio::test]
+async fn test_list_jobs_with_filter() {
+    let config = DaemonConfig::default();
+    let manager = DaemonManager::new(config);
+    
+    let jobs_pending = manager.list_jobs(Some(JobStatus::Pending)).await;
+    assert!(jobs_pending.is_empty());
+    
+    let jobs_running = manager.list_jobs(Some(JobStatus::Running)).await;
+    assert!(jobs_running.is_empty());
+}
+
+#[tokio::test]
+async fn test_cancel_nonexistent_job() {
+    let config = DaemonConfig::default();
+    let manager = DaemonManager::new(config);
+    let result = manager.cancel_job("nonexistent-id").await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_get_nonexistent_job() {
+    let config = DaemonConfig::default();
+    let manager = DaemonManager::new(config);
+    let job = manager.get_job("nonexistent-id").await;
+    assert!(job.is_none());
+}
+
+#[tokio::test]
+async fn test_job_submission_disabled_auto_spawn() {
+    let config = DaemonConfig {
+        enabled: false,
+        auto_spawn: false,
+        ..Default::default()
+    };
+    let manager = DaemonManager::new(config);
+    let result = manager.submit_job("echo test".to_string()).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_cleanup_old_jobs() {
+    let config = DaemonConfig::default();
+    let manager = DaemonManager::new(config);
+    
+    // This should not panic even with no jobs
+    manager.cleanup_old_jobs(3600).await;
+    
+    let jobs = manager.list_jobs(None).await;
+    assert!(jobs.is_empty());
+}
+
+#[test]
+fn test_job_serialization() {
+    let job = Job::new("test-id".to_string(), "echo hello".to_string());
+    let json = serde_json::to_string(&job).unwrap();
+    let deserialized: Job = serde_json::from_str(&json).unwrap();
+    assert_eq!(deserialized.id, job.id);
+    assert_eq!(deserialized.command, job.command);
+    assert_eq!(deserialized.status, job.status);
+}
+
+#[test]
+fn test_daemon_config_serialization() {
+    let config = DaemonConfig::default();
+    let json = serde_json::to_string(&config).unwrap();
+    let deserialized: DaemonConfig = serde_json::from_str(&json).unwrap();
+    assert_eq!(deserialized.enabled, config.enabled);
+    assert_eq!(deserialized.auto_spawn, config.auto_spawn);
+    assert_eq!(deserialized.max_jobs, config.max_jobs);
+    assert_eq!(deserialized.job_timeout, config.job_timeout);
+}
+
+#[test]
+fn test_job_status_serialization() {
+    let status = JobStatus::Running;
+    let json = serde_json::to_string(&status).unwrap();
+    let deserialized: JobStatus = serde_json::from_str(&json).unwrap();
+    assert_eq!(deserialized, status);
+}

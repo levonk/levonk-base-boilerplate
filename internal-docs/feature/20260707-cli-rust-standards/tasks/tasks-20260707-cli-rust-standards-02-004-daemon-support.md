@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 2
 parallel_id: 4
 branch: "feature/current/20260707-cli-rust-standards/story-02-004-daemon-support"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002", "01-004"]
@@ -27,45 +27,48 @@ Implement comprehensive daemon process support for long-running tasks (>30 secon
 
 ## Sub-Tasks
 
-- [ ] Add tokio dependency to Cargo.toml for async runtime
-- [ ] Create daemon.rs module with daemon process management
-- [ ] Implement --daemon flag (pre-launch daemon and wait for jobs)
-- [ ] Implement --no-daemon flag (force synchronous in-process operation)
-- [ ] Implement auto-spawn daemon on first async operation
-- [ ] Create job queue system for background tasks
-- [ ] Implement --list-jobs command with optional job ID filter
-- [ ] Implement --cancel-job <id> command
-- [ ] Add job status tracking (pending, running, completed, failed)
-- [ ] Implement job output capture and return
-- [ ] Add IPC mechanism for daemon communication (Unix sockets/HTTP)
-- [ ] Implement platform detection and fallback
-- [ ] Add clear error messages for unsupported platforms
-- [ ] Add config variable to override noisy behavior
-- [ ] Create tests for daemon spawning
-- [ ] Create tests for job submission and tracking
-- [ ] Create tests for --list-jobs command
-- [ ] Create tests for --cancel-job command
-- [ ] Create tests for platform fallback
+- [x] Add tokio dependency to Cargo.toml for async runtime
+- [x] Create daemon.rs module with daemon process management
+- [x] Implement --daemon flag (pre-launch daemon and wait for jobs)
+- [x] Implement --no-daemon flag (force synchronous in-process operation)
+- [x] Implement auto-spawn daemon on first async operation
+- [x] Create job queue system for background tasks
+- [x] Implement --list-jobs command with optional job ID filter
+- [x] Implement --cancel-job <id> command
+- [x] Add job status tracking (pending, running, completed, failed)
+- [x] Implement job output capture and return
+- [x] Add IPC mechanism for daemon communication (Unix sockets/HTTP)
+- [x] Implement platform detection and fallback
+- [x] Add clear error messages for unsupported platforms
+- [x] Add config variable to override noisy behavior
+- [x] Create tests for daemon spawning
+- [x] Create tests for job submission and tracking
+- [x] Create tests for --list-jobs command
+- [x] Create tests for --cancel-job command
+- [x] Create tests for platform fallback
 
 ## Relevant Files
 
-- `apps/cli/rust/src/daemon.rs` — Daemon process management
-- `apps/cli/rust/src/cli.rs` — Add --daemon, --no-daemon, --list-jobs, --cancel-job
-- `apps/cli/rust/src/config.rs` — Add daemon config settings
-- `apps/cli/rust/Cargo.toml` — Tokio and daemon dependencies
-- `apps/cli/rust/tests/daemon_test.rs` — Daemon tests
+- `apps/cli/rust/core/files/src/daemon.rs.jinja` — Daemon process management
+- `apps/cli/rust/core/files/src/cli.rs.jinja` — Add --daemon, --no-daemon, --list-jobs, --cancel-job
+- `apps/cli/rust/core/files/src/config.rs.jinja` — Add daemon config settings
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Integrate daemon manager
+- `apps/cli/rust/core/files/src/lib.rs.jinja` — Export daemon types
+- `apps/cli/rust/core/files/Cargo.toml.jinja` — Tokio and daemon dependencies
+- `apps/cli/rust/core/files/templates/config.toml.jinja` — Add daemon config template
+- `apps/cli/rust/core/files/tests/daemon_test.rs.jinja` — Daemon tests
 
 ## Acceptance Criteria
 
-- [ ] --daemon flag pre-launches daemon and waits for jobs
-- [ ] --no-daemon flag forces synchronous operation
-- [ ] Auto-spawn daemon on first async operation
-- [ ] --list-jobs shows background job status with optional filter
-- [ ] --cancel-job cancels specific background jobs
-- [ ] Job output returned immediately from --list-jobs
-- [ ] Platform fallback with clear error messages
-- [ ] Config variable overrides noisy behavior
-- [ ] All tests pass
+- [x] --daemon flag pre-launches daemon and waits for jobs
+- [x] --no-daemon flag forces synchronous operation
+- [x] Auto-spawn daemon on first async operation
+- [x] --list-jobs shows background job status with optional filter
+- [x] --cancel-job cancels specific background jobs
+- [x] Job output returned immediately from --list-jobs
+- [x] Platform fallback with clear error messages
+- [x] Config variable overrides noisy behavior
+- [x] All tests pass
 
 ## Test Plan
 

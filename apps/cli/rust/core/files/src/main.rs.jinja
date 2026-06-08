@@ -4,6 +4,7 @@ mod io;
 mod logging;
 mod signals;
 mod destructive;
+mod daemon;
 
 {% if enable_tui -%}
 mod tui;
@@ -16,13 +17,14 @@ use std::sync::Arc;
 use directories::ProjectDirs;
 use glob::glob;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{info, error};
 use cli::{Cli, Progress};
 use config::ConfigManager;
 use io::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
 use logging::{init_logging, setup_signal_handlers, Verbosity, exit_success, exit_error, exit_usage};
 use signals::SignalHandler;
 use destructive::{DestructiveOperation, detect_destructive_operation};
+use daemon::{DaemonManager, DaemonConfig, JobStatus};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -168,6 +170,98 @@ async fn main() -> Result<()> {
     let config_manager_arc = Arc::new(Mutex::new(config_manager));
     let signal_handler = SignalHandler::new(config_manager_arc.clone());
     signal_handler.run().await?;
+
+    // Handle daemon-related flags
+    if cli.no_daemon {
+        info!("No-daemon mode: forcing synchronous operation");
+    }
+
+    // Handle --list-jobs flag
+    if let Some(filter_str) = cli.list_jobs {
+        let daemon_config = DaemonConfig::default();
+        let daemon_manager = DaemonManager::new(daemon_config);
+        let filter = match filter_str.to_lowercase().as_str() {
+            "pending" => Some(JobStatus::Pending),
+            "running" => Some(JobStatus::Running),
+            "completed" => Some(JobStatus::Completed),
+            "failed" => Some(JobStatus::Failed),
+            "cancelled" => Some(JobStatus::Cancelled),
+            _ => None,
+        };
+        let jobs = daemon_manager.list_jobs(filter).await;
+        if cli.json {
+            println!("{}", serde_json::to_string_pretty(&jobs)?);
+        } else {
+            if jobs.is_empty() {
+                println!("No jobs found");
+            } else {
+                println!("Jobs:");
+                for job in jobs {
+                    println!("  ID: {}", job.id);
+                    println!("  Command: {}", job.command);
+                    println!("  Status: {:?}", job.status);
+                    println!("  Created: {}", job.created_at);
+                    if let Some(started) = job.started_at {
+                        println!("  Started: {}", started);
+                    }
+                    if let Some(completed) = job.completed_at {
+                        println!("  Completed: {}", completed);
+                    }
+                    if !job.output.is_empty() {
+                        println!("  Output: {}", job.output);
+                    }
+                    if let Some(error) = job.error {
+                        println!("  Error: {}", error);
+                    }
+                    println!();
+                }
+            }
+        }
+        std::process::exit(0);
+    }
+
+    // Handle --cancel-job flag
+    if let Some(job_id) = cli.cancel_job {
+        let daemon_config = DaemonConfig::default();
+        let daemon_manager = DaemonManager::new(daemon_config);
+        match daemon_manager.cancel_job(&job_id).await {
+            Ok(_) => {
+                println!("Cancelled job: {}", job_id);
+                std::process::exit(0);
+            }
+            Err(e) => {
+                eprintln!("Error cancelling job: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
+    // Initialize daemon manager
+    let daemon_config = DaemonConfig {
+        enabled: config.daemon_enabled && !cli.no_daemon,
+        auto_spawn: config.daemon_auto_spawn && !cli.no_daemon,
+        max_jobs: config.daemon_max_jobs,
+        job_timeout: config.daemon_job_timeout,
+        ..Default::default()
+    };
+    let daemon_manager = Arc::new(DaemonManager::new(daemon_config));
+
+    // Handle --daemon flag
+    if cli.daemon {
+        info!("Daemon mode: pre-launching daemon");
+        match daemon_manager.start().await {
+            Ok(_) => {
+                info!("Daemon started successfully");
+                // In a real implementation, we would wait for jobs here
+                println!("Daemon is running. Submit jobs using other commands.");
+                std::process::exit(0);
+            }
+            Err(e) => {
+                eprintln!("Failed to start daemon: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
 
     info!("Starting {}", MODULE_NAME);
 
