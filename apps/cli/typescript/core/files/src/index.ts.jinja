@@ -64,6 +64,7 @@ program
   .option('--usage', 'Display usage information')
   .option('--color <mode>', 'Color mode: auto, always, or never', 'auto')
   .option('--log-format <format>', 'Log format: text or json', 'text')
+  .option('--json', 'Output results as JSON')
   .option('--install', 'Install CLI (generate completions, initialize config)')
   .option('--skip-completions', 'Skip shell completion generation during install')
   .option('--uninstall', 'Uninstall CLI (remove completions, clean up config)')
@@ -75,7 +76,6 @@ program
   .addHelpText('after', '\nInstallation:\n  --install      Install CLI (generate completions, initialize config)\n  --uninstall    Uninstall CLI (remove completions, clean up config)')
   .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
   .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')
-  .option('--json', 'Output results as JSON')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--completion <shell>', 'Generate shell completion script (bash, zsh, fish)')
   .option('--completion-install <shell>', 'Show shell completion installation instructions')
@@ -176,23 +176,18 @@ program
           const config = await loadConfigWithPrecedence(configOptions, cliArgs);
 
           // Use merged config (CLI args already applied via precedence)
+          // For quiet and json, prefer CLI args directly to ensure they work as expected
           const mergedOptions = {
-              quiet: config.quiet,
-              verbose: config.verbose,
-              debug: config.debug,
-              color: config.color,
-              logFormat: config.log_format,
-              json: config.json,
+              quiet: options.quiet === true ? true : config.quiet,
+              verbose: options.verbose === true ? true : config.verbose,
+              debug: options.debug === true ? true : config.debug,
+              color: options.color !== undefined ? options.color : config.color,
+              logFormat: options.logFormat !== undefined ? options.logFormat : config.log_format,
+              json: options.json === true ? true : config.json,
           };
 
-          // Initialize config (creates default if doesn't exist) - only when not installing/uninstalling
-          // This ensures config is created on first run when CLI is invoked
-          if (!options.install && !options.uninstall) {
-              await initializeConfig(configOptions, options.verbose);
-          }
-
           // Suppress all console output in JSON mode (only output final JSON result)
-          // Do this AFTER config initialization to suppress config creation logs
+          // Do this BEFORE config initialization to suppress config creation logs
           let originalLog: any, originalError: any, originalWarn: any;
           if (mergedOptions.json) {
               originalLog = console.log;
@@ -214,6 +209,12 @@ program
               module: '{{ project_slug }}',
           };
           const logger = createLogger(loggerOptions);
+
+          // Initialize config (creates default if doesn't exist) - only when not installing/uninstalling
+          // This ensures config is created on first run when CLI is invoked
+          if (!options.install && !options.uninstall) {
+              await initializeConfig(configOptions, options.verbose);
+          }
 
           // Initialize dry-run manager
           initGlobalDryRunManager(logger, options.dryRun);
@@ -277,7 +278,17 @@ program
                   dryRun: isDryRunEnabled(),
                   results,
               };
+              // Restore console functions temporarily to output JSON
+              if (originalLog && originalError && originalWarn) {
+                  console.log = originalLog;
+                  console.error = originalError;
+                  console.warn = originalWarn;
+              }
               console.log(JSON.stringify(output, null, 2));
+              // Re-suppress after output
+              console.log = () => {};
+              console.error = () => {};
+              console.warn = () => {};
           } else {
               if (isDryRunEnabled()) {
                   logger.info('[DRY-RUN] Mode enabled - no changes were made');

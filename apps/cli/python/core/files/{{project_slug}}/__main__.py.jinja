@@ -134,7 +134,7 @@ def version_callback(value: bool):
     """Show version and exit."""
     if value:
         console.print(f"{{ project_slug }} {VERSION}")
-        raise typer.Exit()
+        raise typer.Exit(code=EXIT_SUCCESS)
 
 
 def usage_callback(value: bool):
@@ -142,7 +142,7 @@ def usage_callback(value: bool):
     if value:
         ctx = typer.get_current_context()
         console.print(ctx.get_help())
-        raise typer.Exit()
+        raise typer.Exit(code=EXIT_SUCCESS)
 
 
 def process_content(content: str, source: str, module: str = "processor"):

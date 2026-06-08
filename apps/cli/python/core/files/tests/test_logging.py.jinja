@@ -66,7 +66,7 @@ def test_get_logger_with_color():
 def test_quiet_mode_suppression():
     """Test quiet mode suppresses all log output."""
     logger = Logger(name="{{ project_slug }}", quiet=True)
-    # Logger level should be set above CRITICAL
+    # Logger level should be set above CRITICAL (CRITICAL is 50, so level should be > 50)
     assert logger.logger.level > logging.CRITICAL
 
 
@@ -124,8 +124,13 @@ def test_detect_log_format_non_tty():
     # Mock non-TTY environment
     original_stdout = sys.stdout
     original_stderr = sys.stderr
-    sys.stdout = type('obj', (object,), {'isatty': lambda: False})()
-    sys.stderr = type('obj', (object,), {'isatty': lambda: False})()
+
+    class MockStream:
+        def isatty(self):
+            return False
+
+    sys.stdout = MockStream()
+    sys.stderr = MockStream()
 
     try:
         format_type = detect_log_format()

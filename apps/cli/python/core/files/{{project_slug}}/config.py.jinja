@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 import tomli
 import tomli_w
-from pydantic import BaseModel, Field, validator, ValidationError
+from pydantic import BaseModel, Field, field_validator, ValidationError
 from platformdirs import user_config_dir, site_config_dir
 
 from {{ project_slug }}.logging import get_logger
@@ -56,34 +56,39 @@ class ConfigModel(BaseModel):
     # Feature flags
     experimental: bool = Field(default=False, description="Enable experimental features")
 
-    @validator('log_level')
+    @field_validator('log_level')
+    @classmethod
     def validate_log_level(cls, v):
         valid_levels = ['error', 'warn', 'info', 'debug']
         if v not in valid_levels:
             raise ValueError(f"Invalid log_level: {v}. Must be one of: {', '.join(valid_levels)}")
         return v
 
-    @validator('color')
+    @field_validator('color')
+    @classmethod
     def validate_color(cls, v):
         valid_modes = ['auto', 'always', 'never']
         if v not in valid_modes:
             raise ValueError(f"Invalid color mode: {v}. Must be one of: {', '.join(valid_modes)}")
         return v
 
-    @validator('output_format')
+    @field_validator('output_format')
+    @classmethod
     def validate_output_format(cls, v):
         valid_formats = ['text', 'json']
         if v not in valid_formats:
             raise ValueError(f"Invalid output_format: {v}. Must be one of: {', '.join(valid_formats)}")
         return v
 
-    @validator('max_concurrent')
+    @field_validator('max_concurrent')
+    @classmethod
     def validate_max_concurrent(cls, v):
         if v <= 0:
             raise ValueError(f"max_concurrent must be greater than 0, got {v}")
         return v
 
-    @validator('timeout')
+    @field_validator('timeout')
+    @classmethod
     def validate_timeout(cls, v):
         if v <= 0:
             raise ValueError(f"timeout must be greater than 0, got {v}")
@@ -290,7 +295,7 @@ class ConfigManager:
     def _write_config_to_file(self, config: ConfigModel, path: Path):
         """Write configuration to file with comments."""
         # Convert to dict for TOML serialization
-        config_dict = config.dict()
+        config_dict = config.model_dump()
 
         # Write with comments
         with open(path, 'w', encoding='utf-8') as f:
@@ -342,7 +347,7 @@ class ConfigManager:
         """Validate configuration and return list of errors."""
         errors = []
         try:
-            ConfigModel(**self.config.dict())
+            ConfigModel(**self.config.model_dump())
         except ValidationError as e:
             for error in e.errors():
                 loc = ' -> '.join(str(x) for x in error['loc'])
@@ -406,7 +411,7 @@ def check_deprecated_settings(config: ConfigModel) -> List[str]:
         List of deprecation warnings
     """
     warnings = []
-    config_dict = config.dict()
+    config_dict = config.model_dump()
 
     for old_setting, info in DEPRECATED_SETTINGS.items():
         if old_setting in config_dict:

@@ -23,13 +23,13 @@ runner = CliRunner()
 
 def test_install_bash_completion():
     """Test bash completion installation."""
-    result = runner.invoke(app, ["--install", "--quiet"])
+    result = runner.invoke(app, ["--install", "--force", "--quiet"])
     assert result.exit_code == 0
 
 
 def test_uninstall_bash_completion():
     """Test bash completion uninstallation."""
-    result = runner.invoke(app, ["--uninstall", "--quiet"])
+    result = runner.invoke(app, ["--uninstall", "--force", "--quiet"])
     assert result.exit_code == 0
 
 

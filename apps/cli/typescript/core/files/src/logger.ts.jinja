@@ -197,11 +197,13 @@ export class Logger {
   }
 
   error(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
     if (!this.shouldLog('error')) return;
     console.error(this.formatMessage('error', message, extra));
   }
 
   fatal(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
     if (!this.shouldLog('fatal')) return;
     console.error(this.formatMessage('fatal', message, extra));
   }
