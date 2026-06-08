@@ -12,6 +12,7 @@ from platformdirs import user_config_dir
 from {{ project_slug }}.logging import configure_logging, get_logger
 from {{ project_slug }}.completion import install_all_completions, uninstall_all_completions
 from {{ project_slug }}.errors import format_file_not_found_error, format_permission_denied_error
+from {{ project_slug }}.progress import progress_bar
 {% if include_tui %}
 from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
 {% endif %}
@@ -288,24 +289,32 @@ def process(
         content = sys.stdin.read()
         results.append(process_content(content, "stdin"))
 
-    # Process Files
-    for file_path in files_to_process:
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-                results.append(process_content(content, file_path))
-        except FileNotFoundError:
-            if not quiet:
-                logger.error(format_file_not_found_error(Path(file_path)), module="io")
-            sys.exit(EXIT_FILE_NOT_FOUND)
-        except PermissionError:
-            if not quiet:
-                logger.error(format_permission_denied_error(Path(file_path)), module="io")
-            sys.exit(EXIT_PERMISSION_DENIED)
-        except Exception as e:
-            if not quiet:
-                logger.error(f"Error reading {file_path}: {e}", module="io")
-            sys.exit(EXIT_ERROR)
+    # Process Files with progress indicator
+    if files_to_process:
+        with progress_bar("Processing files", quiet=quiet) as progress:
+            if progress:
+                task = progress.add_task("Processing files", total=len(files_to_process))
+
+            for i, file_path in enumerate(files_to_process):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        results.append(process_content(content, file_path))
+                except FileNotFoundError:
+                    if not quiet:
+                        logger.error(format_file_not_found_error(Path(file_path)), module="io")
+                    sys.exit(EXIT_FILE_NOT_FOUND)
+                except PermissionError:
+                    if not quiet:
+                        logger.error(format_permission_denied_error(Path(file_path)), module="io")
+                    sys.exit(EXIT_PERMISSION_DENIED)
+                except Exception as e:
+                    if not quiet:
+                        logger.error(f"Error reading {file_path}: {e}", module="io")
+                    sys.exit(EXIT_ERROR)
+
+                if progress:
+                    progress.update(task, advance=1)
 
     # Output Strategy
     if json_output:

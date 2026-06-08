@@ -1,0 +1,39 @@
+# vim: set ft=python :
+from {{ project_slug }}.progress import progress_bar, spinner
+
+
+def test_progress_bar():
+    """Test progress bar context manager."""
+    with progress_bar("Test operation", quiet=False) as progress:
+        assert progress is not None
+        # Progress bar should be created successfully
+
+
+def test_progress_bar_quiet():
+    """Test progress bar is suppressed in quiet mode."""
+    with progress_bar("Test operation", quiet=True) as progress:
+        assert progress is None
+        # Progress bar should be None in quiet mode
+
+
+def test_spinner():
+    """Test spinner context manager."""
+    with spinner("Test operation", quiet=False) as progress:
+        assert progress is not None
+        # Spinner should be created successfully
+
+
+def test_spinner_quiet():
+    """Test spinner is suppressed in quiet mode."""
+    with spinner("Test operation", quiet=True) as progress:
+        assert progress is None
+        # Spinner should be None in quiet mode
+
+
+def test_quiet_mode_suppression():
+    """Test that quiet mode suppresses all progress indicators."""
+    with progress_bar("Test", quiet=True) as bar:
+        assert bar is None
+    
+    with spinner("Test", quiet=True) as spin:
+        assert spin is None
