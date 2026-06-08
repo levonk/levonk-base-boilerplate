@@ -26,15 +26,15 @@ Provide health check mechanism (signal or HTTP endpoint) for container orchestra
 
 ## Sub-Tasks
 
-- [ ] Implement health check command
-- [ ] Add HTTP endpoint for health checks
-- [ ] Add signal-based health check
-- [ ] Support Docker HEALTHCHECK
-- [ ] Support Kubernetes probes
-- [ ] Ensure no side effects
-- [ ] Ensure fast response (<100ms)
-- [ ] Add tests for health check
-- [ ] Update documentation
+- [x] Implement health check command
+- [x] Add HTTP endpoint for health checks
+- [x] Add signal-based health check
+- [x] Support Docker HEALTHCHECK
+- [x] Support Kubernetes probes
+- [x] Ensure no side effects
+- [x] Ensure fast response (<100ms)
+- [x] Add tests for health check
+- [x] Update documentation
 
 ## Relevant Files
 

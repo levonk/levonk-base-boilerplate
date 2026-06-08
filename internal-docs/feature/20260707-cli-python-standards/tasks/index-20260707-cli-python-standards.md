@@ -43,7 +43,7 @@ This index summarizes all stories for implementing the Python CLI Standards Comp
 | 03-006 | Config File Auto-Migration | feature/current/20260707-cli-python-standards/story-03-006-config-auto-migration | 01-001, 01-007 | Parallel-safe: true | config, migration | [x] Done |
 | 03-007 | Structured Logging with Format Auto-Detection | feature/current/20260707-cli-python-standards/story-03-007-structured-logging | None | Parallel-safe: true | logging, main | [x] Done |
 | 03-008 | Signal-Based Config Reload | feature/current/20260707-cli-python-standards/story-03-008-config-reload | 01-007 | Parallel-safe: true | config, main | [x] Done |
-| 03-009 | Health Check for Containers | feature/current/20260707-cli-python-standards/story-03-009-health-check | None | Parallel-safe: true | health, main | [ ] Todo |
+| 03-009 | Health Check for Containers | feature/current/20260707-cli-python-standards/story-03-009-health-check | None | Parallel-safe: true | health, main | [x] Done |
 | 03-010 | Privacy Mode with Anonymous Lists | feature/current/20260707-cli-python-standards/story-03-010-privacy-mode | None | Parallel-safe: true | privacy, main | [x] Done |
 | 03-011 | Audit Logging with Retention | feature/current/20260707-cli-python-standards/story-03-011-audit-logging | None | Parallel-safe: true | audit, main | [ ] Todo |
 | 03-012 | Legacy Deprecation Policy | feature/current/20260707-cli-python-standards/story-03-012-deprecation-policy | None | Parallel-safe: true | deprecation, main | [ ] Todo |

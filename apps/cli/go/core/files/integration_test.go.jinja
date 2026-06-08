@@ -104,21 +104,17 @@ color: true
 	}
 
 	// Test that config is loaded correctly
-	cfgContent, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("Failed to read config: %v", err)
-	}
 	cfg, err := parseConfigContentFromFile(configPath)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
 	// Verify values
-	if cfg.LogLevel != "debug" {
-		t.Errorf("Expected log_level to be 'debug', got '%s'", cfg.LogLevel)
+	if cfg["log_level"] != "debug" {
+		t.Errorf("Expected log_level to be 'debug', got '%v'", cfg["log_level"])
 	}
-	if cfg.Color != true {
-		t.Errorf("Expected color to be true, got %v", cfg.Color)
+	if cfg["color"] != true {
+		t.Errorf("Expected color to be true, got %v", cfg["color"])
 	}
 
 	// Test environment variable override
@@ -131,8 +127,8 @@ color: true
 	}
 
 	// Verify environment variable takes precedence
-	if cfg2.LogLevel != "error" {
-		t.Errorf("Expected log_level to be 'error' from env, got '%s'", cfg2.LogLevel)
+	if cfg2["log_level"] != "error" {
+		t.Errorf("Expected log_level to be 'error' from env, got '%v'", cfg2["log_level"])
 	}
 }
 
