@@ -335,13 +335,13 @@ log_level: info
 	}
 
 	// Verify migration occurred (version should be updated)
-	if cfg.Version == "" {
+	if cfg["version"] == "" {
 		t.Logf("Config version not set, migration may not be implemented")
 	}
 
 	// Verify config is still functional
-	if cfg.LogLevel != "info" {
-		t.Errorf("Expected log_level to be 'info', got '%s'", cfg.LogLevel)
+	if cfg["log_level"] != "info" {
+		t.Errorf("Expected log_level to be 'info', got '%v'", cfg["log_level"])
 	}
 }
 

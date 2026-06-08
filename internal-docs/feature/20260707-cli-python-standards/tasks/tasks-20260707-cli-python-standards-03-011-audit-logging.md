@@ -26,13 +26,13 @@ Provide optional append-only audit log (SQLite or similar). Implement configurab
 
 ## Sub-Tasks
 
-- [ ] Implement SQLite audit log
-- [ ] Add append-only constraint
-- [ ] Implement configurable retention period
-- [ ] Implement auto-prune on startup
-- [ ] Add export commands (JSON/CSV)
-- [ ] Add tests for audit logging
-- [ ] Update documentation
+- [x] Implement SQLite audit log
+- [x] Add append-only constraint
+- [x] Implement configurable retention period
+- [x] Implement auto-prune on startup
+- [x] Add export commands (JSON/CSV)
+- [x] Add tests for audit logging
+- [x] Update documentation
 
 ## Relevant Files
 
