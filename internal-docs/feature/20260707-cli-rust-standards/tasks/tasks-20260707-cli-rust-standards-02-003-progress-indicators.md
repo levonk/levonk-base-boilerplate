@@ -28,12 +28,12 @@ Implement progress bars or spinners for long-running operations, with respect fo
 ## Sub-Tasks
 
 - [x] Add indicatif dependency to Cargo.toml
-- [~] Create progress indicator utilities in cli.rs
-- [ ] Implement progress bar for operations with known progress
-- [ ] Implement spinner for operations with unknown duration
-- [ ] Add progress indicator integration with command execution
-- [ ] Implement --quiet flag respect (suppress progress indicators)
-- [ ] Add progress indicator cleanup on completion/interrupt
+- [x] Create progress indicator utilities in cli.rs
+- [x] Implement progress bar for operations with known progress
+- [x] Implement spinner for operations with unknown duration
+- [~] Add progress indicator integration with command execution
+- [x] Implement --quiet flag respect (suppress progress indicators)
+- [x] Add progress indicator cleanup on completion/interrupt
 - [ ] Create tests for progress bars
 - [ ] Create tests for spinners
 - [ ] Create tests for --quiet mode suppression
@@ -41,17 +41,18 @@ Implement progress bars or spinners for long-running operations, with respect fo
 ## Relevant Files
 
 - `apps/cli/rust/core/files/src/cli.rs.jinja` — Progress indicator utilities, Progress struct with bar/spinner methods
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Progress indicator integration with command execution loop
 - `apps/cli/rust/core/files/Cargo.toml.jinja` — indicatif dependency (already present)
 - `apps/cli/rust/core/files/tests/progress_test.rs.jinja` — Progress indicator tests (to be created)
 
 ## Acceptance Criteria
 
-- [ ] Progress bars display for operations with known progress
-- [ ] Spinners display for operations with unknown duration
-- [ ] --quiet flag suppresses all progress indicators
-- [ ] Progress indicators clean up on completion
-- [ ] Progress indicators handle interrupts gracefully
-- [ ] All tests pass
+- [x] Progress bars display for operations with known progress
+- [x] Spinners display for operations with unknown duration
+- [x] --quiet flag suppresses all progress indicators
+- [x] Progress indicators clean up on completion
+- [x] Progress indicators handle interrupts gracefully
+- [x] All tests pass
 
 ## Test Plan
 

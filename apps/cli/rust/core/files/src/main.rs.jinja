@@ -17,7 +17,7 @@ use directories::ProjectDirs;
 use glob::glob;
 use tokio::sync::Mutex;
 use tracing::info;
-use cli::Cli;
+use cli::{Cli, Progress};
 use config::ConfigManager;
 use io::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
 use logging::{init_logging, setup_signal_handlers, Verbosity, exit_success, exit_error, exit_usage};
@@ -221,6 +221,15 @@ async fn main() -> Result<()> {
 
     // Process all inputs
     let contents = input_handler.read_all()?;
+    let total_files = contents.len() as u64;
+
+    // Initialize progress indicators
+    let progress = Progress::new(cli.quiet);
+    let progress_bar = if cli.show_progress() && total_files > 0 {
+        progress.bar(total_files, "Processing files")
+    } else {
+        None
+    };
 
     for (i, content) in contents.iter().enumerate() {
         let source = if input_handler.is_stdin() {
@@ -232,8 +241,33 @@ async fn main() -> Result<()> {
                 .unwrap_or_else(|| format!("input_{}", i))
         };
 
+        // Show spinner for individual file processing
+        let spinner = if cli.show_progress() {
+            progress.spinner(&format!("Processing: {}", source))
+        } else {
+            None
+        };
+
         process_content(&source, content, cli.dry_run, cli.force)?;
+
+        // Finish spinner
+        if let Some(s) = spinner {
+            s.finish_with_message(format!("✓ {}", source));
+        }
+
+        // Update progress bar
+        if let Some(bar) = &progress_bar {
+            bar.inc(1);
+        }
     }
+
+    // Finish progress bar
+    if let Some(bar) = progress_bar {
+        bar.finish_with_message("✓ All files processed");
+    }
+
+    // Clear all progress indicators
+    progress.clear();
 
     if cli.json {
         output_handler.output_json(&serde_json::json!({"status": "ok"}))?;

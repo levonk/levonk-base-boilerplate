@@ -1,0 +1,116 @@
+use {{ project_slug }}::cli::{Cli, Progress};
+use anyhow::Result;
+
+#[test]
+fn test_progress_bar_creation() -> Result<()> {
+    let progress = Progress::new(false);
+    let bar = progress.bar(100, "Test progress");
+    
+    assert!(bar.is_some(), "Progress bar should be created when not quiet");
+    
+    if let Some(b) = bar {
+        assert_eq!(b.length(), Some(100));
+        b.finish();
+    }
+    
+    Ok(())
+}
+
+#[test]
+fn test_progress_bar_quiet_mode() -> Result<()> {
+    let progress = Progress::new(true);
+    let bar = progress.bar(100, "Test progress");
+    
+    assert!(bar.is_none(), "Progress bar should not be created in quiet mode");
+    
+    Ok(())
+}
+
+#[test]
+fn test_spinner_creation() -> Result<()> {
+    let progress = Progress::new(false);
+    let spinner = progress.spinner("Test spinner");
+    
+    assert!(spinner.is_some(), "Spinner should be created when not quiet");
+    
+    if let Some(s) = spinner {
+        s.finish();
+    }
+    
+    Ok(())
+}
+
+#[test]
+fn test_spinner_quiet_mode() -> Result<()> {
+    let progress = Progress::new(true);
+    let spinner = progress.spinner("Test spinner");
+    
+    assert!(spinner.is_none(), "Spinner should not be created in quiet mode");
+    
+    Ok(())
+}
+
+#[test]
+fn test_progress_clear() -> Result<()> {
+    let progress = Progress::new(false);
+    let bar = progress.bar(10, "Clear test");
+    
+    if let Some(b) = bar {
+        b.inc(5);
+    }
+    
+    progress.clear();
+    Ok(())
+}
+
+#[test]
+fn test_cli_show_progress() -> Result<()> {
+    let cli = Cli {
+        inputs: vec![],
+        config: None,
+        json: false,
+        quiet: false,
+        verbose: 0,
+        debug: false,
+        usage: false,
+        color: None,
+        nocolor: false,
+        no_pager: false,
+        install: false,
+        uninstall: false,
+        interactive: false,
+        dry_run: false,
+        force: false,
+    };
+    
+    // This test verifies the method exists and returns a bool
+    // Actual TTY detection will vary by environment
+    let _show = cli.show_progress();
+    
+    Ok(())
+}
+
+#[test]
+fn test_cli_show_progress_quiet() -> Result<()> {
+    let cli = Cli {
+        inputs: vec![],
+        config: None,
+        json: false,
+        quiet: true,
+        verbose: 0,
+        debug: false,
+        usage: false,
+        color: None,
+        nocolor: false,
+        no_pager: false,
+        install: false,
+        uninstall: false,
+        interactive: false,
+        dry_run: false,
+        force: false,
+    };
+    
+    assert!(!cli.show_progress(), "Progress should not show in quiet mode");
+    
+    Ok(())
+}
