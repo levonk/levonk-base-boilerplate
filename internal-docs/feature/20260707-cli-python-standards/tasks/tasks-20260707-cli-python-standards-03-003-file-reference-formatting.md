@@ -26,12 +26,12 @@ Use VSCode-compatible format `file:///absolute/path/to/file:line:column` for fil
 
 ## Sub-Tasks
 
-- [ ] Implement VSCode-compatible file reference format
-- [ ] Implement standard file:line:column format
-- [ ] Apply to all error messages
-- [ ] Apply to all file references
-- [ ] Add tests for file reference formatting
-- [ ] Update documentation
+- [x] Implement VSCode-compatible file reference format
+- [x] Implement standard file:line:column format
+- [x] Apply to all error messages
+- [x] Apply to all file references
+- [x] Add tests for file reference formatting
+- [x] Update documentation
 
 ## Relevant Files
 
