@@ -92,12 +92,18 @@ def reload_config() -> bool:
         timestamp = datetime.now().isoformat()
         logger.info(f"Config reload initiated at {timestamp}", module="config")
 
-        # Note: Actual config reload logic would be implemented in config.py.jinja
-        # Since config module is not in this boilerplate, we log the intent
-        logger.info("Config reload completed (config module not present in this boilerplate)", module="config")
+        # Use config module if advanced config is enabled
+        {% if include_advanced_config %}
+        from {{ project_slug }}.config import reload_config as config_reload
+        result = config_reload()
+        {% else %}
+        # Config module not enabled, log intent
+        logger.info("Config reload completed (config module not enabled in this boilerplate)", module="config")
+        result = True
+        {% endif %}
 
         _config_needs_reload = False
-        return True
+        return result
     except Exception as e:
         logger.error(f"Config reload failed: {e}", module="config")
         return False
