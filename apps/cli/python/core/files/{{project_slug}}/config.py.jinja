@@ -130,9 +130,9 @@ class ConfigManager:
 
     def _load_user_config(self):
         """Load user configuration from XDG config directory."""
-        user_config_dir = user_config_dir(PROJECT_SLUG)
-        if user_config_dir:
-            user_config = Path(user_config_dir) / "config.toml"
+        user_config_path = user_config_dir(PROJECT_SLUG)
+        if user_config_path:
+            user_config = Path(user_config_path) / "config.toml"
             if user_config.exists():
                 self._load_from_file(user_config, ConfigSource.USER)
 
@@ -232,24 +232,34 @@ class ConfigManager:
             raise ValueError(f"Failed to parse config from {path}: {e}") from e
 
     def _merge_config(self, new_config: ConfigModel, source: ConfigSource):
-        """Merge configuration with precedence (only override non-default values)."""
-        # Only override if the new value is not the default
-        defaults = ConfigModel()
-
-        if new_config.log_level != defaults.log_level:
+        """Merge configuration with precedence (higher sources override lower sources)."""
+        # File sources (USER, LOCAL) always override completely
+        # ENVIRONMENT and COMMAND_LINE only override if explicitly set (not default)
+        if source in (ConfigSource.USER, ConfigSource.LOCAL):
             self.config.log_level = new_config.log_level
-        if new_config.color != defaults.color:
             self.config.color = new_config.color
-        if new_config.output_format != defaults.output_format:
             self.config.output_format = new_config.output_format
-        if new_config.quiet != defaults.quiet:
             self.config.quiet = new_config.quiet
-        if new_config.max_concurrent != defaults.max_concurrent:
             self.config.max_concurrent = new_config.max_concurrent
-        if new_config.timeout != defaults.timeout:
             self.config.timeout = new_config.timeout
-        if new_config.experimental != defaults.experimental:
             self.config.experimental = new_config.experimental
+        else:
+            # For ENVIRONMENT and COMMAND_LINE, only override if explicitly set
+            defaults = ConfigModel()
+            if new_config.log_level != defaults.log_level:
+                self.config.log_level = new_config.log_level
+            if new_config.color != defaults.color:
+                self.config.color = new_config.color
+            if new_config.output_format != defaults.output_format:
+                self.config.output_format = new_config.output_format
+            if new_config.quiet != defaults.quiet:
+                self.config.quiet = new_config.quiet
+            if new_config.max_concurrent != defaults.max_concurrent:
+                self.config.max_concurrent = new_config.max_concurrent
+            if new_config.timeout != defaults.timeout:
+                self.config.timeout = new_config.timeout
+            if new_config.experimental != defaults.experimental:
+                self.config.experimental = new_config.experimental
 
     def _migrate_config(self, path: Path, old_config: ConfigModel):
         """Migrate configuration to new version with backup."""
@@ -276,11 +286,11 @@ class ConfigManager:
 
     def initialize_config(self) -> Path:
         """Initialize configuration file with default commented settings."""
-        user_config_dir = user_config_dir(PROJECT_SLUG)
-        if not user_config_dir:
+        user_config_path = user_config_dir(PROJECT_SLUG)
+        if not user_config_path:
             raise RuntimeError("Failed to determine config directory")
 
-        config_dir = Path(user_config_dir)
+        config_dir = Path(user_config_path)
         config_dir.mkdir(parents=True, exist_ok=True)
 
         config_path = config_dir / "config.toml"

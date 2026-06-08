@@ -21,28 +21,35 @@ This index summarizes all stories for implementing the Python CLI Standards Comp
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules | Status |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- | ------ |
-| 01-001 | Configuration Management System | feature/current/cli-python-standards/story-01-001-config-management | None | Parallel-safe: true | config module | [x] Done |
-| 01-002 | Standard Arguments Enhancement | feature/current/cli-python-standards/story-01-002-standard-arguments | None | Parallel-safe: true | __main__.py | [x] Done |
-| 01-003 | Signal Handling and Exit Codes | feature/current/cli-python-standards/story-01-003-signal-handling | None | Parallel-safe: true | __main__.py, logging.py | [x] Done |
-| 02-001 | Install/Uninstall Functionality | feature/current/cli-python-standards/story-02-001-install-uninstall | 01-001 | Parallel-safe: true | completion module, config module | [x] Done |
-| 02-002 | Color Control Enhancement | feature/current/cli-python-standards/story-02-002-color-control | 01-001 | Parallel-safe: true | logging.py, __main__.py | [x] Done |
-| 02-003 | Error Message Formatting | feature/current/cli-python-standards/story-02-003-error-formatting | 01-001 | Parallel-safe: true | error handling module | [x] Done |
-| 03-001 | Daemon Process Support | feature/current/cli-python-standards/story-03-001-daemon-process | 01-001, 02-003 | Parallel-safe: true | daemon module | [x] Done |
-| 03-002 | TUI Mode Support | feature/current/cli-python-standards/story-03-002-tui-mode | 01-001 | Parallel-safe: true | tui module | [x] Done |
-| 03-003 | Dry-Run and Confirmation Prompts | feature/current/cli-python-standards/story-03-003-dry-run-confirm | 01-001 | Parallel-safe: true | __main__.py | [x] Done |
-| 03-004 | Progress Indicators | feature/current/cli-python-standards/story-03-004-progress-indicators | 01-001 | Parallel-safe: true | progress module | [x] Done |
-| 04-001 | Shell Completion and Man Pages | feature/current/cli-python-standards/story-04-001-completion-manpages | 02-001 | Parallel-safe: true | completion module, man page module | [x] Done |
-| 04-002 | Pager Integration and Terminal Awareness | feature/current/cli-python-standards/story-04-002-pager-terminal | 01-001 | Parallel-safe: true | __main__.py, terminal module | [x] Done |
-| 04-003 | Logging Modes Enhancement | feature/current/cli-python-standards/story-04-003-logging-modes | 01-001, 01-003 | Parallel-safe: true | logging.py | [x] Done |
-| 04-004 | Security and Resource Management | feature/current/cli-python-standards/story-04-004-security-resources | 01-001 | Parallel-safe: true | security module, resource module | [x] Done |
-| 05-001 | Comprehensive Test Coverage | feature/current/cli-python-standards/story-05-001-test-coverage | 01-001, 01-002, 01-003, 02-001, 02-002, 02-003, 03-001, 03-002, 03-003, 03-004, 04-001, 04-002, 04-003, 04-004, 06-001, 06-002, 06-003, 06-004, 06-005, 06-006 | Parallel-safe: false | tests/ | [x] Done |
-| 05-002 | Backward Compatibility and Documentation | feature/current/cli-python-standards/story-05-002-backward-compat-docs | 05-001 | Parallel-safe: false | README.md, copier.yml, template files | [x] Done |
-| 06-001 | Structured Logging with Format Auto-Detection | feature/current/cli-python-standards/story-06-001-structured-logging | 04-003 | Parallel-safe: true | logging.py | [x] Done |
-| 06-002 | Signal-Based Config Reload | feature/current/cli-python-standards/story-06-002-config-reload | 01-001 | Parallel-safe: true | config module, __main__.py | [x] Done |
-| 06-003 | Health Check for Containers | feature/current/cli-python-standards/story-06-003-health-check | None | Parallel-safe: true | health module | [x] Done |
-| 06-004 | Privacy Mode with Anonymous Lists | feature/current/cli-python-standards/story-06-004-privacy-mode | None | Parallel-safe: true | privacy module | [x] Done |
-| 06-005 | Audit Logging with Retention | feature/current/cli-python-standards/story-06-005-audit-logging | None | Parallel-safe: true | audit module | [x] Done |
-| 06-006 | Legacy Deprecation Policy | feature/current/cli-python-standards/story-06-006-deprecation-policy | 01-001 | Parallel-safe: true | config module | [x] Done |
+| 01-001 | Config File Initialization | feature/current/20260707-cli-python-standards/story-01-001-config-file-initialization | None | Parallel-safe: true | config, main | [x] Done |
+| 01-002 | Install/Uninstall Flag | feature/current/20260707-cli-python-standards/story-01-002-install-uninstall-flag | None | Parallel-safe: true | main, install | [x] Done |
+| 01-003 | Proper Color Control | feature/current/20260707-cli-python-standards/story-01-003-proper-color-control | None | Parallel-safe: true | logger, main | [ ] Todo |
+| 01-004 | Debug Flag | feature/current/20260707-cli-python-standards/story-01-004-debug-flag | None | Parallel-safe: true | logger, main | [ ] Todo |
+| 01-005 | Shell Completion | feature/current/20260707-cli-python-standards/story-01-005-shell-completion | None | Parallel-safe: true | main, completion | [ ] Todo |
+| 01-006 | Configuration Precedence Chain | feature/current/20260707-cli-python-standards/story-01-006-config-precedence-chain | None | Parallel-safe: true | config, main | [ ] Todo |
+| 01-007 | Configuration Validation | feature/current/20260707-cli-python-standards/story-01-007-config-validation | 01-006 | Parallel-safe: true | config, main | [ ] Todo |
+| 02-001 | Dry-Run Mode | feature/current/20260707-cli-python-standards/story-02-001-dry-run-mode | 01-001, 01-006 | Parallel-safe: true | main, cmd | [ ] Todo |
+| 02-002 | Confirmation Prompts | feature/current/20260707-cli-python-standards/story-02-002-confirmation-prompts | 01-001 | Parallel-safe: true | main, prompt | [ ] Todo |
+| 02-003 | Progress Indicators | feature/current/20260707-cli-python-standards/story-02-003-progress-indicators | 01-003 | Parallel-safe: true | progress, main | [ ] Todo |
+| 02-004 | Error Message Formatting | feature/current/20260707-cli-python-standards/story-02-004-error-message-formatting | None | Parallel-safe: true | logger, main | [ ] Todo |
+| 02-005 | Man Pages | feature/current/20260707-cli-python-standards/story-02-005-man-pages | None | Parallel-safe: true | docs, main | [ ] Todo |
+| 02-006 | Pager Integration | feature/current/20260707-cli-python-standards/story-02-006-pager-integration | None | Parallel-safe: true | main, output | [ ] Todo |
+| 02-007 | Terminal Size Awareness | feature/current/20260707-cli-python-standards/story-02-007-terminal-size-awareness | None | Parallel-safe: true | main, terminal | [ ] Todo |
+| 03-001 | TUI Mode | feature/current/20260707-cli-python-standards/story-03-001-tui-mode | 01-001, 01-006 | Parallel-safe: true | tui, main | [ ] Todo |
+| 03-002 | Daemon Process Support | feature/current/20260707-cli-python-standards/story-03-002-daemon-process-support | 01-001, 01-006 | Parallel-safe: false | daemon, main | [ ] Todo |
+| 03-003 | File Reference Formatting | feature/current/20260707-cli-python-standards/story-03-003-file-reference-formatting | 02-004 | Parallel-safe: true | main, output | [ ] Todo |
+| 03-004 | URL Formatting | feature/current/20260707-cli-python-standards/story-03-004-url-formatting | None | Parallel-safe: true | main, output | [ ] Todo |
+| 03-005 | Credential/Secret Handling | feature/current/20260707-cli-python-standards/story-03-005-credential-secret-handling | 01-001, 01-007 | Parallel-safe: true | secrets, config | [ ] Todo |
+| 03-006 | Config File Auto-Migration | feature/current/20260707-cli-python-standards/story-03-006-config-auto-migration | 01-001, 01-007 | Parallel-safe: true | config, migration | [ ] Todo |
+| 03-007 | Structured Logging with Format Auto-Detection | feature/current/20260707-cli-python-standards/story-03-007-structured-logging | None | Parallel-safe: true | logging, main | [ ] Todo |
+| 03-008 | Signal-Based Config Reload | feature/current/20260707-cli-python-standards/story-03-008-config-reload | 01-007 | Parallel-safe: true | config, main | [ ] Todo |
+| 03-009 | Health Check for Containers | feature/current/20260707-cli-python-standards/story-03-009-health-check | None | Parallel-safe: true | health, main | [ ] Todo |
+| 03-010 | Privacy Mode with Anonymous Lists | feature/current/20260707-cli-python-standards/story-03-010-privacy-mode | None | Parallel-safe: true | privacy, main | [ ] Todo |
+| 03-011 | Audit Logging with Retention | feature/current/20260707-cli-python-standards/story-03-011-audit-logging | None | Parallel-safe: true | audit, main | [ ] Todo |
+| 03-012 | Legacy Deprecation Policy | feature/current/20260707-cli-python-standards/story-03-012-deprecation-policy | None | Parallel-safe: true | deprecation, main | [ ] Todo |
+| 04-001 | Test Coverage for New Features | feature/current/20260707-cli-python-standards/story-04-001-test-new-features | 01-007, 02-007, 03-006 | Parallel-safe: true | all | [ ] Todo |
+| 04-002 | Test Coverage for Existing Features | feature/current/20260707-cli-python-standards/story-04-002-test-existing-features | None | Parallel-safe: true | all | [ ] Todo |
+| 04-003 | Integration Testing | feature/current/20260707-cli-python-standards/story-04-003-integration-testing | 04-001, 04-002 | Parallel-safe: true | all | [ ] Todo |
 
 ## Phase Breakdown
 

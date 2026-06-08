@@ -1,0 +1,296 @@
+import { describe, it, expect } from 'vitest';
+import { validateConfig, isValidConfig, getValidationErrors, ConfigSchema } from './validation.js';
+
+describe('Config Validation', () => {
+    describe('ConfigSchema', () => {
+        it('should accept valid config with all fields', () => {
+            const validConfig = {
+                log_level: 'info',
+                quiet: false,
+                verbose: false,
+                debug: false,
+                color: 'auto',
+                log_format: 'text',
+                json: false,
+                file_ref_format: 'auto',
+            };
+            const result = ConfigSchema.safeParse(validConfig);
+            expect(result.success).toBe(true);
+        });
+
+        it('should accept valid config with partial fields', () => {
+            const partialConfig = {
+                log_level: 'debug',
+                verbose: true,
+            };
+            const result = ConfigSchema.safeParse(partialConfig);
+            expect(result.success).toBe(true);
+        });
+
+        it('should accept config with additional fields (passthrough)', () => {
+            const configWithExtras = {
+                log_level: 'info',
+                custom_field: 'custom_value',
+                another_field: 123,
+            };
+            const result = ConfigSchema.safeParse(configWithExtras);
+            expect(result.success).toBe(true);
+        });
+
+        it('should reject invalid log_level value', () => {
+            const invalidConfig = {
+                log_level: 'invalid',
+            };
+            const result = ConfigSchema.safeParse(invalidConfig);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.errors[0].message).toContain('log_level must be one of');
+            }
+        });
+
+        it('should reject invalid color value', () => {
+            const invalidConfig = {
+                color: 'invalid',
+            };
+            const result = ConfigSchema.safeParse(invalidConfig);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.errors[0].message).toContain('color must be one of');
+            }
+        });
+
+        it('should reject invalid log_format value', () => {
+            const invalidConfig = {
+                log_format: 'invalid',
+            };
+            const result = ConfigSchema.safeParse(invalidConfig);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.errors[0].message).toContain('log_format must be one of');
+            }
+        });
+
+        it('should reject invalid boolean type for quiet', () => {
+            const invalidConfig = {
+                quiet: 'true',
+            };
+            const result = ConfigSchema.safeParse(invalidConfig);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.errors[0].message).toContain('quiet must be a boolean');
+            }
+        });
+
+        it('should reject invalid boolean type for verbose', () => {
+            const invalidConfig = {
+                verbose: 'yes',
+            };
+            const result = ConfigSchema.safeParse(invalidConfig);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.errors[0].message).toContain('verbose must be a boolean');
+            }
+        });
+
+        it('should reject invalid boolean type for debug', () => {
+            const invalidConfig = {
+                debug: 1,
+            };
+            const result = ConfigSchema.safeParse(invalidConfig);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.errors[0].message).toContain('debug must be a boolean');
+            }
+        });
+
+        it('should reject invalid boolean type for json', () => {
+            const invalidConfig = {
+                json: 'false',
+            };
+            const result = ConfigSchema.safeParse(invalidConfig);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.errors[0].message).toContain('json must be a boolean');
+            }
+        });
+
+        it('should reject invalid file_ref_format value', () => {
+            const invalidConfig = {
+                file_ref_format: 'invalid',
+            };
+            const result = ConfigSchema.safeParse(invalidConfig);
+            expect(result.success).toBe(false);
+            if (!result.success) {
+                expect(result.error.errors[0].message).toContain('file_ref_format must be one of');
+            }
+        });
+    });
+
+    describe('validateConfig', () => {
+        it('should return validated config for valid input', () => {
+            const validConfig = {
+                log_level: 'debug',
+                verbose: true,
+            };
+            const result = validateConfig(validConfig);
+            expect(result).toEqual(validConfig);
+        });
+
+        it('should throw error for invalid config', () => {
+            const invalidConfig = {
+                log_level: 'invalid',
+            };
+            expect(() => validateConfig(invalidConfig)).toThrow();
+        });
+
+        it('should throw error with helpful message', () => {
+            const invalidConfig = {
+                log_level: 'invalid',
+            };
+            try {
+                validateConfig(invalidConfig);
+                fail('Should have thrown an error');
+            } catch (error) {
+                expect((error as Error).message).toContain('Configuration validation failed');
+                expect((error as Error).message).toContain('log_level');
+            }
+        });
+    });
+
+    describe('isValidConfig', () => {
+        it('should return true for valid config', () => {
+            const validConfig = {
+                log_level: 'info',
+                quiet: false,
+            };
+            expect(isValidConfig(validConfig)).toBe(true);
+        });
+
+        it('should return true for empty config', () => {
+            expect(isValidConfig({})).toBe(true);
+        });
+
+        it('should return false for invalid config', () => {
+            const invalidConfig = {
+                log_level: 'invalid',
+            };
+            expect(isValidConfig(invalidConfig)).toBe(false);
+        });
+
+        it('should return false for invalid type', () => {
+            const invalidConfig = {
+                quiet: 'not-a-boolean',
+            };
+            expect(isValidConfig(invalidConfig)).toBe(false);
+        });
+    });
+
+    describe('getValidationErrors', () => {
+        it('should return empty array for valid config', () => {
+            const validConfig = {
+                log_level: 'info',
+            };
+            const errors = getValidationErrors(validConfig);
+            expect(errors).toEqual([]);
+        });
+
+        it('should return errors for invalid config', () => {
+            const invalidConfig = {
+                log_level: 'invalid',
+                color: 'also-invalid',
+            };
+            const errors = getValidationErrors(invalidConfig);
+            expect(errors.length).toBeGreaterThan(0);
+            expect(errors[0].path).toContain('log_level');
+            expect(errors[0].message).toBeDefined();
+        });
+
+        it('should include suggestions for enum errors', () => {
+            const invalidConfig = {
+                log_level: 'invalid',
+            };
+            const errors = getValidationErrors(invalidConfig);
+            expect(errors.length).toBeGreaterThan(0);
+            expect(errors[0].suggestion).toBeDefined();
+        });
+
+        it('should include suggestions for type errors', () => {
+            const invalidConfig = {
+                quiet: 'not-a-boolean',
+            };
+            const errors = getValidationErrors(invalidConfig);
+            expect(errors.length).toBeGreaterThan(0);
+            expect(errors[0].suggestion).toBeDefined();
+        });
+
+        it('should handle multiple validation errors', () => {
+            const invalidConfig = {
+                log_level: 'invalid',
+                color: 'invalid',
+                log_format: 'invalid',
+                quiet: 'not-a-boolean',
+            };
+            const errors = getValidationErrors(invalidConfig);
+            expect(errors.length).toBeGreaterThan(1);
+        });
+    });
+
+    describe('Type checking', () => {
+        it('should validate boolean fields', () => {
+            const validBooleans = [
+                { quiet: true },
+                { quiet: false },
+                { verbose: true },
+                { verbose: false },
+                { debug: true },
+                { debug: false },
+                { json: true },
+                { json: false },
+            ];
+            
+            validBooleans.forEach(config => {
+                expect(isValidConfig(config)).toBe(true);
+            });
+        });
+
+        it('should validate enum fields', () => {
+            const validEnums = [
+                { log_level: 'error' },
+                { log_level: 'warn' },
+                { log_level: 'info' },
+                { log_level: 'debug' },
+                { color: 'auto' },
+                { color: 'always' },
+                { color: 'never' },
+                { log_format: 'text' },
+                { log_format: 'json' },
+                { file_ref_format: 'vscode' },
+                { file_ref_format: 'standard' },
+                { file_ref_format: 'auto' },
+            ];
+            
+            validEnums.forEach(config => {
+                expect(isValidConfig(config)).toBe(true);
+            });
+        });
+    });
+
+    describe('Range checking', () => {
+        it('should accept all valid enum values', () => {
+            const allValid = {
+                log_level: 'debug',
+                color: 'always',
+                log_format: 'json',
+                file_ref_format: 'vscode',
+            };
+            expect(isValidConfig(allValid)).toBe(true);
+        });
+
+        it('should reject out-of-range enum values', () => {
+            const outOfRange = {
+                log_level: 'trace',
+            };
+            expect(isValidConfig(outOfRange)).toBe(false);
+        });
+    });
+});

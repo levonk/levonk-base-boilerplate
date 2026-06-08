@@ -140,8 +140,14 @@ def version_callback(value: bool):
 def usage_callback(value: bool):
     """Show usage and exit."""
     if value:
-        ctx = typer.get_current_context()
-        console.print(ctx.get_help())
+        try:
+            ctx = typer.get_current_context()
+            console.print(ctx.get_help())
+        except Exception:
+            # Fallback if context not available
+            console.print("Usage: {{ project_slug }} [OPTIONS] COMMAND [ARGS]...")
+            console.print("  --help     Show this message and exit.")
+            console.print("  --version  Show version and exit.")
         raise typer.Exit(code=EXIT_SUCCESS)
 
 
@@ -201,6 +207,7 @@ def process(
     privacy_mode: bool = typer.Option(False, "--privacy-mode", help="Enable privacy mode with anonymous lists"),
     audit_log: bool = typer.Option(False, "--audit-log", help="Enable audit logging with SQLite"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
+    version_short: bool = typer.Option(False, "-V", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
     """
@@ -350,12 +357,30 @@ def process(
         success_count = sum(1 for v in results.values() if v)
         logger.info(f"Installed {success_count}/{len(results)} completion scripts", module="install")
 
+        # Print installation instructions
+        console.print("\n[bold cyan]Installation Instructions:[/bold cyan]")
+        console.print("Shell completions have been installed. To enable them:")
+        console.print("")
+        console.print("  [bold]Bash:[/bold] Add to ~/.bashrc or ~/.bash_profile:")
+        console.print("    source ~/.local/share/bash-completion/completions/{{ project_slug }}")
+        console.print("")
+        console.print("  [bold]Zsh:[/bold] Completions are in ~/.zsh/completions/_{{ project_slug }}")
+        console.print("    Add to fpath in ~/.zshrc:")
+        console.print("    fpath=(~/.zsh/completions $fpath)")
+        console.print("    autoload -U compinit && compinit")
+        console.print("")
+        console.print("  [bold]Fish:[/bold] Completions are in ~/.config/fish/completions/{{ project_slug }}.fish")
+        console.print("    Fish will load them automatically")
+        console.print("")
+        console.print("Restart your shell or run the above commands to enable completions.")
+
         {% if include_advanced_config %}
         # Initialize config during install
         try:
             config_manager = get_config_manager()
             config = config_manager.initialize_config()
             logger.info(f"Initialized config at {config}", module="install")
+            console.print(f"\n[bold green]Config initialized at:[/bold green] {config}")
         except Exception as e:
             logger.warn(f"Could not initialize config: {e}", module="install")
         {% endif %}
@@ -370,6 +395,21 @@ def process(
         results = uninstall_all_completions()
         success_count = sum(1 for v in results.values() if v)
         logger.info(f"Removed {success_count}/{len(results)} completion scripts", module="install")
+
+        # Print uninstall instructions
+        console.print("\n[bold cyan]Uninstall Instructions:[/bold cyan]")
+        console.print("Shell completions have been removed. To complete cleanup:")
+        console.print("")
+        console.print("  [bold]Bash:[/bold] Remove from ~/.bashrc or ~/.bash_profile:")
+        console.print("    # Remove the source line for {{ project_slug }} completions")
+        console.print("")
+        console.print("  [bold]Zsh:[/bold] Remove from ~/.zshrc:")
+        console.print("    # Remove {{ project_slug }} from fpath")
+        console.print("")
+        console.print("  [bold]Fish:[/bold] Completions removed from ~/.config/fish/completions/")
+        console.print("")
+        console.print("Restart your shell or run the above commands to complete cleanup.")
+
         sys.exit(EXIT_SUCCESS)
 
     {% if include_advanced_config %}

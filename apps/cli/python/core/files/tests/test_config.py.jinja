@@ -316,6 +316,10 @@ color = "always"
             os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"] = "warn"
 
             try:
+                # Initialize logger before creating ConfigManager
+                from {{ project_slug }}.logging import configure_logging, get_logger
+                configure_logging(name="{{ project_slug }}", quiet=True)
+
                 manager = ConfigManager()
                 manager._load_defaults()  # log_level = "info", color = "auto"
 
@@ -335,7 +339,8 @@ color = "always"
                 assert manager.config.color == "always"  # Not set in env, stays from local
 
                 # Simulate CLI arg (should override env)
-                manager._merge_config(ConfigModel(log_level="error"), ConfigSource.CLI)
+                # CLI sets both log_level and color to override all previous sources
+                manager._merge_config(ConfigModel(log_level="error", color="always"), ConfigSource.COMMAND_LINE)
                 assert manager.config.log_level == "error"
                 assert manager.config.color == "always"
 

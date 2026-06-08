@@ -7,24 +7,24 @@
       "echo '🐍 Setting up {{ project_name | default('python-cli-app') }} development environment...'"
     ],
     "scripts": {
-      "build": "python -m build",
-      "install": "pip install -e .",
-      "install-dev": "pip install -e \".[dev]\"",
-      "test": "pytest",
-      "test-coverage": "pytest --cov=src --cov-report=html",
-      "lint": "ruff check .",
-      "format": "ruff format .",
-      "format-check": "ruff format --check .",
-      "run": "python -m {{ project_slug | default(project_name | lower | replace(' ', '_')) }}",
-      "dev": "watchfiles \"python -m {{ project_slug | default(project_name | lower | replace(' ', '_')) }}\" src",
+      "build": "uv run python -m build",
+      "install": "uv pip install -e .",
+      "install-dev": "uv pip install -e \".[dev]\"",
+      "test": "uv run pytest",
+      "test-coverage": "uv run pytest --cov={{ project_slug | default(project_name | lower | replace(' ', '_')) }} --cov-report=html",
+      "lint": "uv run ruff check .",
+      "format": "uv run ruff format .",
+      "format-check": "uv run ruff format --check .",
+      "run": "uv run python -m {{ project_slug | default(project_name | lower | replace(' ', '_')) }}",
+      "dev": "uv run watchfiles \"python -m {{ project_slug | default(project_name | lower | replace(' ', '_')) }}\" src",
       "clean": "rm -rf build dist *.egg-info",
-      "docs": "mkdocs serve",
-      "type-check": "mypy src",
-      "check": "ruff check . && mypy src"
+      "docs": "uv run mkdocs serve",
+      "type-check": "uv run mypy {{ project_slug | default(project_name | lower | replace(' ', '_')) }}",
+      "check": "uv run ruff check . && uv run mypy {{ project_slug | default(project_name | lower | replace(' ', '_')) }}"
     }
   },
   "packages": {
-    "nixpkgs#python311": "",
+    "nixpkgs#uv": "",
     {% if include_requests %}
     "nixpkgs#python311Packages.requests": "",
     {% endif %}
@@ -75,8 +75,7 @@
   },
   "hooks": {
     "on_create": [
-      "pip install poetry",
-      "poetry install"
+      "uv sync --group dev"
     ]
   }
 }

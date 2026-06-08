@@ -42,7 +42,7 @@ This index summarizes all stories for the Go CLI Standards compliance implementa
 | Story ID | Story Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
 | -------- | ----------- | ----: | ------ | -------- | ------------- | ------------ | ---------- | ------- | ------ |
 | 03-001 | TUI Mode | 03 | [x] Done | | true | 01-001, 01-006 | None | [tui, main] | feature/current/20260707-cli-go-standards/story-03-001-tui-mode |
-| 03-002 | Daemon Process Support | 03 | [~] In-Progress | | false | 01-001, 01-006 | None | [daemon, main] | feature/current/20260707-cli-go-standards/story-03-002-daemon-process-support |
+| 03-002 | Daemon Process Support | 03 | [x] Done | | false | 01-001, 01-006 | None | [daemon, main] | feature/current/20260707-cli-go-standards/story-03-002-daemon-process-support |
 | 03-003 | File Reference Formatting | 03 | [x] Done | | true | 02-004 | None | [main, output] | feature/current/20260707-cli-go-standards/story-03-003-file-reference-formatting |
 | 03-004 | URL Formatting | 03 | [x] Done | | true | None | None | [main, output] | feature/current/20260707-cli-go-standards/story-03-004-url-formatting |
 | 03-005 | Credential/Secret Handling | 03 | [x] Done | | true | 01-001, 01-007 | None | [secrets, config] | feature/current/20260707-cli-go-standards/story-03-005-credential-secret-handling |

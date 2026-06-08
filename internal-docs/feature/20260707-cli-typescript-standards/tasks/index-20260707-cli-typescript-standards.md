@@ -25,7 +25,7 @@ This index provides a summary of all stories for implementing CLI Tool Standards
 | 05-002 | Daemon Process Support | 05 | [x] Done | | false | — | 07-003, 09-001, 09-003 | daemon/ | feature/current/20260707-cli-typescript-standards/story-05-002-daemon-process-support |
 | 05-003 | File Reference Formatting | 05 | [x] Done | | true | 01-002 | 08-001, 09-001, 09-003 | logger.ts, error handling | feature/current/20260707-cli-typescript-standards/story-05-003-file-reference-formatting |
 | 05-004 | URL Formatting | 05 | [x] Done | | true | — | 09-001, 09-003 | utils/ | feature/current/20260707-cli-typescript-standards/story-05-004-url-formatting |
-| 06-001 | Configuration Validation | 06 | [ ] Todo | | true | 02-002 | 06-004, 09-001, 09-003 | config/, validation/ | feature/current/20260707-cli-typescript-standards/story-06-001-config-validation |
+| 06-001 | Configuration Validation | 06 | [x] Done | | true | 02-002 | 06-004, 09-001, 09-003 | config/, validation/ | feature/current/20260707-cli-typescript-standards/story-06-001-config-validation |
 | 06-002 | Config Auto-Migration | 06 | [ ] Todo | | true | 02-002 | 09-001, 09-003 | config/ | feature/current/20260707-cli-typescript-standards/story-06-002-config-auto-migration |
 | 06-003 | Credential/Secret Handling | 06 | [ ] Todo | | true | — | 09-001, 09-003 | secrets/ | feature/current/20260707-cli-typescript-standards/story-06-003-credential-secret-handling |
 | 06-004 | Signal-Based Config Reload | 06 | [ ] Todo | | true | 02-002, 06-001 | 09-001, 09-003 | config/ | feature/current/20260707-cli-typescript-standards/story-06-004-signal-based-config-reload |

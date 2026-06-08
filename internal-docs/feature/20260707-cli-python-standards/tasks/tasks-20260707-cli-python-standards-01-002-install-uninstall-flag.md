@@ -26,14 +26,14 @@ Implement `--install` and `--uninstall` flags for the Python CLI to manage shell
 
 ## Sub-Tasks
 
-- [ ] Add --install and --uninstall flags to CLI argument parser
-- [ ] Implement shell completion generation for bash, zsh, fish
-- [ ] Add completion script installation logic
-- [ ] Implement config file initialization on install
-- [ ] Add uninstall cleanup logic
-- [ ] Add installation instructions output
-- [ ] Add tests for install/uninstall functionality
-- [ ] Update documentation
+- [x] Add --install and --uninstall flags to CLI argument parser
+- [x] Implement shell completion generation for bash, zsh, fish
+- [x] Add completion script installation logic
+- [x] Implement config file initialization on install
+- [x] Add uninstall cleanup logic
+- [x] Add installation instructions output
+- [x] Add tests for install/uninstall functionality
+- [x] Update documentation
 
 ## Relevant Files
 

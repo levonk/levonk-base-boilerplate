@@ -328,4 +328,140 @@ quiet = true
             consoleErrorSpy.mockRestore();
         });
     });
+
+    describe('Config Validation', () => {
+        it('should throw error for invalid log_level value', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_level = "invalid"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            await expect(loadConfig(testConfigPath)).rejects.toThrow('Configuration validation failed');
+        });
+
+        it('should throw error for invalid color value', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+color = "invalid"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            await expect(loadConfig(testConfigPath)).rejects.toThrow('Configuration validation failed');
+        });
+
+        it('should throw error for invalid boolean type', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+quiet = "not-a-boolean"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            await expect(loadConfig(testConfigPath)).rejects.toThrow('Configuration validation failed');
+        });
+
+        it('should throw error for invalid log_format value', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_format = "invalid"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            await expect(loadConfig(testConfigPath)).rejects.toThrow('Configuration validation failed');
+        });
+
+        it('should throw error for invalid file_ref_format value', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+file_ref_format = "invalid"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            await expect(loadConfig(testConfigPath)).rejects.toThrow('Configuration validation failed');
+        });
+
+        it('should include helpful error message with suggestions', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_level = "invalid"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            try {
+                await loadConfig(testConfigPath);
+                fail('Should have thrown an error');
+            } catch (error) {
+                expect((error as Error).message).toContain('log_level');
+                expect((error as Error).message).toContain('Suggestion');
+            }
+        });
+
+        it('should log validation errors in debug mode', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_level = "invalid"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            try {
+                await loadConfig(testConfigPath, true);
+            } catch (error) {
+                // Expected to throw
+            }
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Validation errors'));
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('log_level'));
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should accept valid config after validation', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_level = "debug"
+quiet = true
+color = "always"
+log_format = "json"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            const config = await loadConfig(testConfigPath);
+            expect(config.log_level).toBe('debug');
+            expect(config.quiet).toBe(true);
+            expect(config.color).toBe('always');
+            expect(config.log_format).toBe('json');
+        });
+
+        it('should handle multiple validation errors', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_level = "invalid"
+color = "also-invalid"
+quiet = "not-a-boolean"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            try {
+                await loadConfig(testConfigPath);
+                fail('Should have thrown an error');
+            } catch (error) {
+                expect((error as Error).message).toContain('Configuration validation failed');
+            }
+        });
+
+        it('should validate config with debug logging enabled', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            await ensureConfigDir(testConfigDir);
+            const configContent = `
+log_level = "debug"
+`;
+            await fs.writeFile(testConfigPath, configContent);
+
+            const config = await loadConfig(testConfigPath, true);
+
+            expect(config.log_level).toBe('debug');
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Successfully validated'));
+            consoleErrorSpy.mockRestore();
+        });
+    });
 });
