@@ -199,13 +199,14 @@ program
           }
 
           // Create logger with merged options
+          // For quiet and json, use CLI options directly to ensure they work
           const loggerOptions: LoggerOptions = {
-              quiet: mergedOptions.quiet || mergedOptions.json, // Suppress all output in JSON mode
-              verbose: mergedOptions.verbose,
-              debug: mergedOptions.debug,
+              quiet: options.quiet === true || options.json === true,
+              verbose: options.verbose === true,
+              debug: options.debug === true,
               logLevel: config.log_level as any,
-              color: mergedOptions.color,
-              logFormat: mergedOptions.logFormat,
+              color: options.color !== undefined ? options.color : config.color,
+              logFormat: options.logFormat !== undefined ? options.logFormat : config.log_format,
               module: 'my-cli-tool',
           };
           const logger = createLogger(loggerOptions);
