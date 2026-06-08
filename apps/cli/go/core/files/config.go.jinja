@@ -104,4 +104,85 @@ func InitConfigIfNeeded(configPath string) error {
 	return nil
 }
 
+// GetLocalProjectConfigPath returns the path to a local project config file
+// This looks for .config/{project_slug}/config.yaml in the current directory or parent directories
+func GetLocalProjectConfigPath() (string, error) {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Search for .config/{project_slug}/config.yaml in current directory and parents
+	dir := currentDir
+	for {
+		configPath := filepath.Join(dir, ".config", "{{ project_slug }}", "config.yaml")
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath, nil
+		}
+
+		// Move to parent directory
+		parentDir := filepath.Dir(dir)
+		if parentDir == dir {
+			// Reached root, no local config found
+			return "", nil
+		}
+		dir = parentDir
+	}
+}
+
+// GetSystemConfigPath returns the path to the system/enterprise config file
+// This is typically /etc/{project_slug}/config.yaml
+func GetSystemConfigPath() (string, error) {
+	systemConfigPath := filepath.Join("/etc", "{{ project_slug }}", "config.yaml")
+	return systemConfigPath, nil
+}
+
+// GetConfigPrecedence returns a list of config paths in precedence order
+// from lowest to highest priority (excluding CLI args and env vars)
+// Order: system config -> user config -> local project config
+func GetConfigPrecedence() ([]string, error) {
+	var configPaths []string
+
+	// 1. System/enterprise config (lowest priority)
+	systemConfig, err := GetSystemConfigPath()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(systemConfig); err == nil {
+		configPaths = append(configPaths, systemConfig)
+	}
+
+	// 2. User config (XDG)
+	userConfig, err := GetConfigPath()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(userConfig); err == nil {
+		configPaths = append(configPaths, userConfig)
+	}
+
+	// 3. Local project config (highest priority among files)
+	localConfig, err := GetLocalProjectConfigPath()
+	if err != nil {
+		return nil, err
+	}
+	if localConfig != "" {
+		configPaths = append(configPaths, localConfig)
+	}
+
+	return configPaths, nil
+}
+
+// GetHardcodedDefaults returns the hardcoded default values for all settings
+// These are used when no config file exists
+func GetHardcodedDefaults() map[string]interface{} {
+	return map[string]interface{}{
+		"quiet":   false,
+		"verbose": false,
+		"debug":   false,
+		"color":   "auto",
+		"json":    false,
+	}
+}
+
 {# vim: set ft=go: #}

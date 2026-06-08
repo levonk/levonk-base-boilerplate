@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/mattn/go-isatty"
@@ -183,13 +184,31 @@ func initConfig() {
 	var configPath string
 
 	if cfgFile != "" {
+		// User explicitly specified a config file
 		viper.SetConfigFile(cfgFile)
 		configPath = cfgFile
 	} else {
-		configDir, _ := os.UserConfigDir()
-		viper.AddConfigPath(configDir + "/{{ project_slug }}")
-		viper.SetConfigName("config")
-		configPath = configDir + "/{{ project_slug }}/config.yaml"
+		// Use full precedence chain
+		configPaths, err := GetConfigPrecedence()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to get config precedence: %v\n", err)
+		}
+
+		// Add all config paths to viper (in order of precedence)
+		for _, path := range configPaths {
+			configDir := filepath.Dir(path)
+			viper.AddConfigPath(configDir)
+			viper.SetConfigName("config")
+			configPath = path
+		}
+
+		// If no config files found, use default user config path
+		if len(configPaths) == 0 {
+			configDir, _ := os.UserConfigDir()
+			viper.AddConfigPath(configDir + "/{{ project_slug }}")
+			viper.SetConfigName("config")
+			configPath = configDir + "/{{ project_slug }}/config.yaml"
+		}
 	}
 
 	// Initialize config file if it doesn't exist (first run)
@@ -197,9 +216,23 @@ func initConfig() {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to initialize config file: %v\n", err)
 	}
 
+	// Set environment variable prefix
 	viper.SetEnvPrefix("{{ project_slug | upper | replace('-', '_') }}")
 	viper.AutomaticEnv()
-	viper.ReadInConfig()
+
+	// Read config file (will use the highest priority one found)
+	if err := viper.ReadInConfig(); err != nil {
+		// Config file not found is not an error - we'll use defaults
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to read config file: %v\n", err)
+		}
+	}
+
+	// Set hardcoded defaults
+	defaults := GetHardcodedDefaults()
+	for key, value := range defaults {
+		viper.SetDefault(key, value)
+	}
 }
 
 func main() {
