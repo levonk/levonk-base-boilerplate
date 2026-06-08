@@ -1,0 +1,60 @@
+# Justfile for my-cli-tool
+# NX-friendly configuration for monorepo integration
+
+# Detect NX binary
+NX_BIN := `command -v nx || echo ""`
+NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
+
+# Bootstrap - install pnpm and NX globally
+bootstrap-internal:
+    @echo "📦 Bootstrapping..."
+    # Install dependencies in background if not present
+    [ -d node_modules/ ] || pnpm install &
+
+    @echo "📦 Installing pnpm and NX..."
+    @npm install -g pnpm@latest
+    @if [ "" = "false" ]; then pnpm add -g nx@latest; fi
+    @echo "✓ Bootstrap complete"
+
+# NX Commands
+nx-build:
+    @if [ "" = "true" ]; then nx build; else pnpm run build; fi
+
+nx-test:
+    @if [ "" = "true" ]; then nx test; else pnpm run test; fi
+
+nx-lint:
+    @if [ "" = "true" ]; then nx lint; else pnpm run lint; fi
+
+nx-typecheck:
+    @if [ "" = "true" ]; then nx typecheck; else pnpm run typecheck; fi
+
+nx-affected:
+    @if [ "" = "true" ]; then nx affected; else echo "NX not available"; fi
+
+nx-graph:
+    @if [ "" = "true" ]; then nx graph; else echo "NX not available"; fi
+
+nx-clear-cache:
+    @if [ "" = "true" ]; then nx reset; else echo "NX not available"; fi
+
+# Legacy commands (for non-NX usage)
+build:
+    @pnpm run build
+
+test:
+    @pnpm run test
+
+lint:
+    @pnpm run lint
+
+dev:
+    @pnpm run dev
+
+# Doctor - check environment
+doctor:
+    @echo "🔍 Environment check:"
+    @echo "  Node: $(node --version)"
+    @echo "  pnpm: $(pnpm --version)"
+    @echo "  NX: not installed"
+

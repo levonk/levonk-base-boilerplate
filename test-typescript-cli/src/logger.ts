@@ -1,0 +1,214 @@
+import chalk from 'chalk';
+import supportsColor from 'supports-color';
+import process from 'process';
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export type ColorMode = 'auto' | 'always' | 'never';
+export type LogFormat = 'text' | 'json';
+
+export interface LoggerOptions {
+  quiet?: boolean;
+  verbose?: boolean;
+  debug?: boolean;
+  logLevel?: LogLevel;
+  color?: ColorMode;
+  logFormat?: LogFormat;
+  module?: string;
+}
+
+// Color palette for log levels
+const levelColors = {
+  debug: chalk.gray,
+  info: chalk.blue,
+  warn: chalk.yellow,
+  error: chalk.red,
+  fatal: chalk.bgRed.white,
+};
+
+// Color palette for modules (unique colors per module)
+const moduleColors = [
+  chalk.cyan,
+  chalk.magenta,
+  chalk.green,
+  chalk.blue,
+  chalk.yellow,
+  chalk.red,
+  chalk.white,
+  chalk.gray,
+];
+
+// Module name to color mapping
+const moduleColorMap = new Map<string, typeof chalk>();
+
+function getModuleColor(moduleName: string): typeof chalk {
+  if (!moduleColorMap.has(moduleName)) {
+    const index = moduleColorMap.size % moduleColors.length;
+    moduleColorMap.set(moduleName, moduleColors[index]);
+  }
+  return moduleColorMap.get(moduleName)!;
+}
+
+function formatTimestamp(): string {
+  const now = new Date();
+  return now.toISOString();
+}
+
+function formatJsonMessage(
+  level: LogLevel,
+  message: string,
+  module: string,
+  extra?: Record<string, unknown>
+): string {
+  const logEntry: Record<string, unknown> = {
+    timestamp: formatTimestamp(),
+    level,
+    module,
+    message,
+  };
+
+  if (extra) {
+    Object.assign(logEntry, extra);
+  }
+
+  return JSON.stringify(logEntry);
+}
+
+function shouldUseColor(options: LoggerOptions): boolean {
+  // NO_COLOR environment variable takes highest precedence
+  if (process.env.NO_COLOR) return false;
+
+  // Use the color mode from options (from --color flag or config file)
+  const colorMode = options.color || 'auto';
+
+  switch (colorMode) {
+    case 'always':
+      return true;
+    case 'never':
+      return false;
+    case 'auto':
+    default:
+      // Auto mode: use supports-color library for TTY detection
+      return supportsColor.stdout !== false;
+  }
+}
+
+// Log level hierarchy (lower number = lower priority)
+const levelPriority: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+  fatal: 4,
+};
+
+export class Logger {
+  private options: LoggerOptions;
+  private currentLevel: LogLevel;
+
+  constructor(options: LoggerOptions = {}) {
+    // Auto-detect log format if not specified
+    const logFormat = options.logFormat || (process.stdout.isTTY ? 'text' : 'json');
+
+    // Support language-native env filters
+    // NODE_ENV=development enables debug mode
+    // LOG_LEVEL sets the log level directly
+    const envLogLevel = process.env.LOG_LEVEL as LogLevel;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
+    this.options = {
+      quiet: false,
+      verbose: false,
+      debug: isDevelopment || options.debug,
+      color: 'auto',
+      logFormat,
+      module: 'my-cli-tool',
+      ...options,
+    };
+
+    // Set current log level: env var > config log_level > debug flag > info default
+    if (envLogLevel && ['debug', 'info', 'warn', 'error', 'fatal'].includes(envLogLevel)) {
+      this.currentLevel = envLogLevel;
+    } else if (options.logLevel && ['debug', 'info', 'warn', 'error', 'fatal'].includes(options.logLevel)) {
+      this.currentLevel = options.logLevel;
+    } else if (this.options.debug) {
+      this.currentLevel = 'debug';
+    } else {
+      this.currentLevel = 'info';
+    }
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    // Always log errors and fatal regardless of level
+    if (level === 'error' || level === 'fatal') return true;
+    // Check if level is at or above current level
+    return levelPriority[level] >= levelPriority[this.currentLevel];
+  }
+
+  private formatMessage(
+    level: LogLevel,
+    message: string,
+    extra?: Record<string, unknown>
+  ): string {
+    const module = this.options.module || 'my-cli-tool';
+
+    // Use JSON format if specified
+    if (this.options.logFormat === 'json') {
+      return formatJsonMessage(level, message, module, extra);
+    }
+
+    // Text format (existing logic)
+    const timestamp = formatTimestamp();
+    const useColor = shouldUseColor(this.options);
+
+    const levelFn = useColor ? levelColors[level] : (text: string) => text;
+    const moduleFn = useColor ? getModuleColor(module) : (text: string) => text;
+
+    const levelStr = levelFn(`[${level.toUpperCase()}]`);
+    const moduleStr = moduleFn(`[${module}]`);
+
+    let output = `${timestamp} ${moduleStr} ${levelStr} ${message}`;
+
+    if (extra && this.options.verbose) {
+      const extraStr = Object.entries(extra)
+        .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
+        .join(' ');
+      output += ` ${extraStr}`;
+    }
+
+    return output;
+  }
+
+  debug(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    if (!this.shouldLog('debug')) return;
+    console.log(this.formatMessage('debug', message, extra));
+  }
+
+  info(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    if (!this.shouldLog('info')) return;
+    console.log(this.formatMessage('info', message, extra));
+  }
+
+  warn(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    if (!this.shouldLog('warn')) return;
+    console.warn(this.formatMessage('warn', message, extra));
+  }
+
+  error(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    if (!this.shouldLog('error')) return;
+    console.error(this.formatMessage('error', message, extra));
+  }
+
+  fatal(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    if (!this.shouldLog('fatal')) return;
+    console.error(this.formatMessage('fatal', message, extra));
+  }
+}
+
+export function createLogger(options: LoggerOptions = {}): Logger {
+  return new Logger(options);
+}

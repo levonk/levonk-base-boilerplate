@@ -1,0 +1,56 @@
+{
+  "name": "my-cli-tool",
+  "version": "0.1.0",
+  "description": "A TypeScript CLI application",
+  "shell": {
+    "init_hook": "just bootstrap-internal",
+    "init": [
+      "echo '📘 Setting up my-cli-tool development environment...'"
+    ],
+    "scripts": {
+      "build": "tsc",
+      "build-watch": "tsc --watch",
+      "build-release": "tsc && npm pkg fix",
+      "test": "vitest",
+      "test-coverage": "vitest --coverage",
+      "lint": "eslint . --ext .ts,.js",
+      "format": "prettier --write .",
+      "format-check": "prettier --check .",
+      "run": "node dist/index.js",
+      "dev": "tsx watch src/index.ts",
+      "clean": "rm -rf dist/",
+      "type-check": "tsc --noEmit",
+      "check": "eslint . --ext .ts,.js && tsc --noEmit"
+    }
+  },
+  "packages": {
+    "nixpkgs#nodejs_20": "",
+    "nixpkgs#nodePackages.typescript": "",
+    "nixpkgs#nodePackages.tsx": "",
+    "nixpkgs#nodePackages.vitest": "",
+    "nixpkgs#nodePackages.eslint": "",
+    "nixpkgs#nodePackages.prettier": "",
+    "nixpkgs#pnpm": "",
+    "nixpkgs#just": "",
+    
+    
+    
+    
+    
+    
+    
+  },
+    "hooks": {
+    "on_create": [
+      "just bootstrap-internal"
+    ]
+  }
+
+  "env": {
+    "NODE_ENV": "development",
+    "TS_NODE_PROJECT": "./tsconfig.json",
+    
+    
+  }
+}
+
