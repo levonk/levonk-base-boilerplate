@@ -1,4 +1,4 @@
-.PHONY: doctor bootstrap profile help clean clean-inner build build-inner build-release build-release-inner debug debug-inner run run-inner run-debug run-debug-inner deploy deploy-inner lint lint-inner test test-inner docker-build docker-run
+.PHONY: doctor bootstrap profile help clean clean-inner build build-inner build-release build-release-inner debug debug-inner run run-inner run-debug run-debug-inner deploy deploy-inner lint lint-inner test test-inner coverage coverage-inner docker-build docker-run
 
 PROJECT_SLUG := {{ project_slug }}
 NIX := $(shell if [ -x /nix/var/nix/profiles/default/bin/nix ]; then echo /nix/var/nix/profiles/default/bin/nix; else echo nix; fi)
@@ -92,6 +92,16 @@ test: doctor bootstrap ## Run tests (via nix dev shell)
 test-inner: ## Run tests
 	GOFLAGS=-mod=mod go mod tidy
 	go test -v ./...
+
+coverage: doctor bootstrap ## Run test coverage analysis (via nix dev shell)
+	@$(NIX_DEV) $(MAKE) coverage-inner
+
+coverage-inner: ## Run test coverage analysis
+	GOFLAGS=-mod=mod go mod tidy
+	go test -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
+	@go tool cover -func=coverage.out | tail -1
 
 
 run: doctor bootstrap ## Run the application (use ARGS="..." to pass arguments) (via nix dev shell)
