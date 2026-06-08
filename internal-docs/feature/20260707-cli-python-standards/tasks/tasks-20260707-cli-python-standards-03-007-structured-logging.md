@@ -26,13 +26,13 @@ Use structured logging (JSON or structured text). Auto-detect format based on TT
 
 ## Sub-Tasks
 
-- [ ] Implement structured logging (JSON)
-- [ ] Implement pretty logging for TTY
-- [ ] Add TTY detection for format auto-selection
-- [ ] Add LOG_LEVEL environment variable support
-- [ ] Implement log level precedence chain
-- [ ] Add tests for structured logging
-- [ ] Update documentation
+- [x] Implement structured logging (JSON)
+- [x] Implement pretty logging for TTY
+- [x] Add TTY detection for format auto-selection
+- [x] Add LOG_LEVEL environment variable support
+- [x] Implement log level precedence chain
+- [x] Add tests for structured logging
+- [x] Update documentation
 
 ## Relevant Files
 

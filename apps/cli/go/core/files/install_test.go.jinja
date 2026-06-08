@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -63,13 +64,14 @@ func TestUninstallCompletions(t *testing.T) {
 	}
 
 	// First install completions
-	err := installCompletions(cmd)
+	ctx := context.Background()
+	err := installCompletions(ctx, cmd)
 	if err != nil {
 		t.Fatalf("installCompletions failed: %v", err)
 	}
 
 	// Then uninstall completions
-	err = uninstallCompletions()
+	err = uninstallCompletions(ctx)
 	if err != nil {
 		t.Fatalf("uninstallCompletions failed: %v", err)
 	}
@@ -108,13 +110,14 @@ func TestInstallIdempotency(t *testing.T) {
 	}
 
 	// Install completions first time
-	err := installCompletions(cmd)
+	ctx := context.Background()
+	err := installCompletions(ctx, cmd)
 	if err != nil {
 		t.Fatalf("first installCompletions failed: %v", err)
 	}
 
 	// Install completions second time (should succeed)
-	err = installCompletions(cmd)
+	err = installCompletions(ctx, cmd)
 	if err != nil {
 		t.Fatalf("second installCompletions failed (not idempotent): %v", err)
 	}
@@ -136,7 +139,8 @@ func TestUninstallHandlesMissingFiles(t *testing.T) {
 	defer os.Setenv("HOME", oldHome)
 
 	// Try to uninstall without installing first (should not error)
-	err := uninstallCompletions()
+	ctx := context.Background()
+	err := uninstallCompletions(ctx)
 	if err != nil {
 		t.Errorf("uninstallCompletions failed with missing files: %v", err)
 	}
