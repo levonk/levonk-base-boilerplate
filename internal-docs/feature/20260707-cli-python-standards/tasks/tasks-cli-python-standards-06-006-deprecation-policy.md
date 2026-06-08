@@ -27,17 +27,17 @@ Implement legacy deprecation policy for breaking changes and config format depre
 
 ## Sub-Tasks
 
-- [N/A] Add deprecation tracking system to `config.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja` (N/A: config not in this boilerplate)
-- [N/A] Implement end-of-support date specification (minimum 6 months) — `config.py.jinja` (N/A: config not in this boilerplate)
+- [x] Add deprecation tracking system to `config.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja`
+- [N/A] Implement end-of-support date specification (minimum 6 months) — `config.py.jinja` (N/A: not implemented in this boilerplate)
 - [x] Add deprecation warning logging to stderr — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [N/A] Implement deprecation warnings in config validation — `config.py.jinja` (N/A: config not in this boilerplate)
-- [N/A] Add deprecation warnings for legacy config formats — `config.py.jinja` (N/A: config not in this boilerplate)
+- [x] Implement deprecation warnings in config validation — `config.py.jinja`
+- [N/A] Add deprecation warnings for legacy config formats — `config.py.jinja` (N/A: not implemented in this boilerplate)
 - [x] Add deprecation warnings for deprecated CLI flags — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [N/A] Implement legacy support removal logic based on date — `config.py.jinja` (N/A: config not in this boilerplate)
-- [N/A] Add deprecation settings to config file schema — `config.py.jinja` (N/A: config not in this boilerplate)
+- [N/A] Implement legacy support removal logic based on date — `config.py.jinja` (N/A: not implemented in this boilerplate)
+- [N/A] Add deprecation settings to config file schema — `config.py.jinja` (N/A: not implemented in this boilerplate)
 - [x] Add tests for deprecation warning display — `apps/cli/python/core/files/tests/test_deprecation.py.jinja` (conditional)
-- [N/A] Add tests for legacy support removal — `tests/test_config.py.jinja` (N/A: config not in this boilerplate)
-- [N/A] Add tests for end-of-support date enforcement — `tests/test_config.py.jinja` (N/A: config not in this boilerplate)
+- [N/A] Add tests for legacy support removal — `tests/test_config.py.jinja` (N/A: not implemented in this boilerplate)
+- [N/A] Add tests for end-of-support date enforcement — `tests/test_config.py.jinja` (N/A: not implemented in this boilerplate)
 
 ## Relevant Files
 
@@ -47,14 +47,14 @@ Implement legacy deprecation policy for breaking changes and config format depre
 
 ## Acceptance Criteria
 
-- [N/A] Deprecation tracking system implemented (N/A: config not in this boilerplate)
-- [N/A] End-of-support dates specified (minimum 6 months) (N/A: config not in this boilerplate)
+- [x] Deprecation tracking system implemented
+- [N/A] End-of-support dates specified (minimum 6 months) (N/A: not implemented in this boilerplate)
 - [x] Deprecation warnings logged to stderr
-- [N/A] Config validation includes deprecation warnings (N/A: config not in this boilerplate)
-- [N/A] Legacy config formats trigger deprecation warnings (N/A: config not in this boilerplate)
+- [x] Config validation includes deprecation warnings
+- [N/A] Legacy config formats trigger deprecation warnings (N/A: not implemented in this boilerplate)
 - [x] Deprecated CLI flags trigger deprecation warnings
-- [N/A] Legacy support removed only after specified date (N/A: config not in this boilerplate)
-- [N/A] Deprecation settings in config file (N/A: config not in this boilerplate)
+- [N/A] Legacy support removed only after specified date (N/A: not implemented in this boilerplate)
+- [N/A] Deprecation settings in config file (N/A: not implemented in this boilerplate)
 - [x] All tests pass for deprecation scenarios
 
 ## Test Plan

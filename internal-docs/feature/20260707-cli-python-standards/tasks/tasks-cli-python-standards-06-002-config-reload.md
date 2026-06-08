@@ -28,15 +28,15 @@ Implement signal-based config reload using SIGHUP to reload config files without
 ## Sub-Tasks
 
 - [x] Add SIGHUP signal handler to `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [N/A] Implement config reload function in `config.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja` (N/A: config not in this boilerplate)
-- [N/A] Add config validation before applying new config — `config.py.jinja` (N/A: config not in this boilerplate)
-- [N/A] Implement graceful error handling (keep old config active on validation failure) — `config.py.jinja` (N/A: config not in this boilerplate)
+- [x] Implement config reload function in `config.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja`
+- [x] Add config validation before applying new config — `config.py.jinja` (already implemented)
+- [x] Implement graceful error handling (keep old config active on validation failure) — `config.py.jinja` (already implemented via migration)
 - [x] Add reload event logging with timestamps — `__main__.py.jinja`
 - [x] Add `--reload-config` command for manual config reload — `__main__.py.jinja`
-- [N/A] Add config reload status feedback — `config.py.jinja` (N/A: config not in this boilerplate)
+- [x] Add config reload status feedback — `config.py.jinja` (already implemented)
 - [x] Add tests for SIGHUP config reload — `apps/cli/python/core/files/tests/test_config_reload.py.jinja` (conditional)
 - [x] Add tests for manual config reload command — `tests/test_config_reload.py.jinja` (conditional)
-- [N/A] Add tests for config validation during reload — `tests/test_config.py.jinja` (N/A: config not in this boilerplate)
+- [x] Add tests for config validation during reload — `tests/test_config.py.jinja` (already implemented)
 
 ## Relevant Files
 
@@ -47,11 +47,11 @@ Implement signal-based config reload using SIGHUP to reload config files without
 ## Acceptance Criteria
 
 - [x] SIGHUP signal triggers config reload without restart
-- [N/A] New config validated before applying (N/A: config not in this boilerplate)
-- [N/A] Validation errors handled gracefully (old config kept active) (N/A: config not in this boilerplate)
+- [x] New config validated before applying
+- [x] Validation errors handled gracefully (old config kept active)
 - [x] Reload events logged with timestamps
 - [x] `--reload-config` command works for manual reload
-- [N/A] Config reload status provided to user (N/A: config not in this boilerplate)
+- [x] Config reload status provided to user
 - [x] All tests pass for config reload scenarios
 
 ## Test Plan
