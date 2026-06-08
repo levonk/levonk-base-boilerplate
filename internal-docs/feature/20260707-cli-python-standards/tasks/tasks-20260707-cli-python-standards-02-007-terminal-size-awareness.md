@@ -26,12 +26,12 @@ Detect terminal size on startup, format output based on terminal width, handle r
 
 ## Sub-Tasks
 
-- [ ] Add terminal size detection
-- [ ] Format output based on terminal width
-- [ ] Handle resize events
-- [ ] Implement 80-column default fallback
-- [ ] Add tests for terminal awareness
-- [ ] Update documentation
+- [x] Add terminal size detection
+- [x] Format output based on terminal width
+- [x] Handle resize events
+- [x] Implement 80-column default fallback
+- [x] Add tests for terminal awareness
+- [x] Update documentation
 
 ## Relevant Files
 

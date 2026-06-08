@@ -34,7 +34,7 @@ This index summarizes all stories for implementing the Python CLI Standards Comp
 | 02-004 | Error Message Formatting | feature/current/20260707-cli-python-standards/story-02-004-error-message-formatting | None | Parallel-safe: true | logger, main | [x] Done |
 | 02-005 | Man Pages | feature/current/20260707-cli-python-standards/story-02-005-man-pages | None | Parallel-safe: true | docs, main | [x] Done |
 | 02-006 | Pager Integration | feature/current/20260707-cli-python-standards/story-02-006-pager-integration | None | Parallel-safe: true | main, output | [x] Done |
-| 02-007 | Terminal Size Awareness | feature/current/20260707-cli-python-standards/story-02-007-terminal-size-awareness | None | Parallel-safe: true | main, terminal | [ ] Todo |
+| 02-007 | Terminal Size Awareness | feature/current/20260707-cli-python-standards/story-02-007-terminal-size-awareness | None | Parallel-safe: true | main, terminal | [x] Done |
 | 03-001 | TUI Mode | feature/current/20260707-cli-python-standards/story-03-001-tui-mode | 01-001, 01-006 | Parallel-safe: true | tui, main | [ ] Todo |
 | 03-002 | Daemon Process Support | feature/current/20260707-cli-python-standards/story-03-002-daemon-process-support | 01-001, 01-006 | Parallel-safe: false | daemon, main | [ ] Todo |
 | 03-003 | File Reference Formatting | feature/current/20260707-cli-python-standards/story-03-003-file-reference-formatting | 02-004 | Parallel-safe: true | main, output | [ ] Todo |

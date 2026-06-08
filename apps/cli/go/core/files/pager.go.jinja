@@ -137,7 +137,7 @@ func (p *Pager) Finish() {
 	}
 
 	// Close the pipe writer to signal EOF to pager
-	if pw, ok := p.writer.(*os.File); ok {
+	if pw, ok := p.terminal.(*os.File); ok {
 		pw.Close()
 	}
 
@@ -255,7 +255,7 @@ func GetEnvTerminalSize() (width, height int) {
 // GetTerminalSizeWithFallback tries multiple methods to get terminal size
 func GetTerminalSizeWithFallback() (width, height int) {
 	// First try term.GetSize
-	if IsTerminal() {
+	if isatty.IsTerminal(os.Stdout.Fd()) {
 		w, h, err := term.GetSize(int(os.Stdout.Fd()))
 		if err == nil && w > 0 && h > 0 {
 			return w, h
@@ -273,6 +273,11 @@ func GetWinsize() (rows, cols uint16, err error) {
 		return 24, 80, err
 	}
 	return uint16(ws.Row), uint16(ws.Col), nil
+}
+
+// IsTerminal returns true if stdout is a terminal
+func IsTerminal() bool {
+	return isatty.IsTerminal(os.Stdout.Fd())
 }
 
 // SetRawMode sets the terminal to raw mode (for TUI applications)

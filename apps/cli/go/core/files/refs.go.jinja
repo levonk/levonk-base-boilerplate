@@ -27,7 +27,7 @@ type FileReference struct {
 
 // NewFileReference creates a new file reference from runtime caller information
 func NewFileReference(skip int) *FileReference {
-	pc, file, line, ok := runtime.Caller(skip)
+	_, file, line, ok := runtime.Caller(skip)
 	if !ok {
 		return nil
 	}
