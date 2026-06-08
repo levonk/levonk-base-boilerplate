@@ -1,0 +1,306 @@
+package main
+
+import (
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+)
+
+func TestNewFileReference(t *testing.T) {
+	ref := NewFileReference(1)
+	if ref == nil {
+		t.Fatal("NewFileReference returned nil")
+	}
+
+	if ref.Path == "" {
+		t.Error("Path should not be empty")
+	}
+
+	if ref.Line <= 0 {
+		t.Error("Line should be positive")
+	}
+
+	if ref.AbsPath == "" {
+		t.Error("AbsPath should not be empty")
+	}
+}
+
+func TestNewFileReferenceFromPath(t *testing.T) {
+	tests := []struct {
+		name   string
+		path   string
+		line   int
+		column int
+	}{
+		{"with line and column", "/path/to/file.go", 10, 5},
+		{"with line only", "/path/to/file.go", 10, 0},
+		{"with zero values", "/path/to/file.go", 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ref := NewFileReferenceFromPath(tt.path, tt.line, tt.column)
+			if ref == nil {
+				t.Fatal("NewFileReferenceFromPath returned nil")
+			}
+
+			if ref.Path != tt.path {
+				t.Errorf("Path = %v, want %v", ref.Path, tt.path)
+			}
+
+			if ref.Line != tt.line {
+				t.Errorf("Line = %v, want %v", ref.Line, tt.line)
+			}
+
+			if ref.Column != tt.column {
+				t.Errorf("Column = %v, want %v", ref.Column, tt.column)
+			}
+
+			if ref.AbsPath == "" {
+				t.Error("AbsPath should not be empty")
+			}
+		})
+	}
+}
+
+func TestFileReference_FormatVSCode(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		line     int
+		column   int
+		expected string
+	}{
+		{
+			name:     "with line and column",
+			path:     "/path/to/file.go",
+			line:     10,
+			column:   5,
+			expected: "file:///path/to/file.go:10:5",
+		},
+		{
+			name:     "with line only",
+			path:     "/path/to/file.go",
+			line:     10,
+			column:   0,
+			expected: "file:///path/to/file.go:10",
+		},
+		{
+			name:     "with zero values",
+			path:     "/path/to/file.go",
+			line:     0,
+			column:   0,
+			expected: "file:///path/to/file.go",
+		},
+		{
+			name:     "windows path",
+			path:     "C:\\path\\to\\file.go",
+			line:     10,
+			column:   5,
+			expected: "file:///C:/path/to/file.go:10:5",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ref := NewFileReferenceFromPath(tt.path, tt.line, tt.column)
+			result := ref.FormatVSCode()
+
+			if result != tt.expected {
+				t.Errorf("FormatVSCode() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFileReference_FormatStandard(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		line     int
+		column   int
+		expected string
+	}{
+		{
+			name:     "with line and column",
+			path:     "/path/to/file.go",
+			line:     10,
+			column:   5,
+			expected: "/path/to/file.go:10:5",
+		},
+		{
+			name:     "with line only",
+			path:     "/path/to/file.go",
+			line:     10,
+			column:   0,
+			expected: "/path/to/file.go:10",
+		},
+		{
+			name:     "with zero values",
+			path:     "/path/to/file.go",
+			line:     0,
+			column:   0,
+			expected: "/path/to/file.go",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ref := NewFileReferenceFromPath(tt.path, tt.line, tt.column)
+			result := ref.FormatStandard()
+
+			if result != tt.expected {
+				t.Errorf("FormatStandard() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFileReference_Format(t *testing.T) {
+	ref := NewFileReferenceFromPath("/path/to/file.go", 10, 5)
+
+	// Test VSCode format
+	result := ref.Format(FormatVSCode)
+	expected := "file:///path/to/file.go:10:5"
+	if result != expected {
+		t.Errorf("Format(FormatVSCode) = %v, want %v", result, expected)
+	}
+
+	// Test Standard format
+	result = ref.Format(FormatStandard)
+	expected = "/path/to/file.go:10:5"
+	if result != expected {
+		t.Errorf("Format(FormatStandard) = %v, want %v", result, expected)
+	}
+
+	// Test default (should use Standard)
+	result = ref.Format(ReferenceFormat(99))
+	expected = "/path/to/file.go:10:5"
+	if result != expected {
+		t.Errorf("Format(default) = %v, want %v", result, expected)
+	}
+}
+
+func TestFileReference_Nil(t *testing.T) {
+	var ref *FileReference
+
+	if ref.FormatVSCode() != "" {
+		t.Error("FormatVSCode on nil should return empty string")
+	}
+
+	if ref.FormatStandard() != "" {
+		t.Error("FormatStandard on nil should return empty string")
+	}
+
+	if ref.Format(FormatVSCode) != "" {
+		t.Error("Format on nil should return empty string")
+	}
+}
+
+func TestFormatErrorWithReference(t *testing.T) {
+	tests := []struct {
+		name     string
+		message  string
+		path     string
+		line     int
+		column   int
+		format   ReferenceFormat
+		expected string
+	}{
+		{
+			name:     "VSCode format",
+			message:  "Test error",
+			path:     "/path/to/file.go",
+			line:     10,
+			column:   5,
+			format:   FormatVSCode,
+			expected: "Test error (file:///path/to/file.go:10:5)",
+		},
+		{
+			name:     "Standard format",
+			message:  "Test error",
+			path:     "/path/to/file.go",
+			line:     10,
+			column:   5,
+			format:   FormatStandard,
+			expected: "Test error (/path/to/file.go:10:5)",
+		},
+		{
+			name:     "nil reference",
+			message:  "Test error",
+			path:     "",
+			line:     0,
+			column:   0,
+			format:   FormatStandard,
+			expected: "Test error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var ref *FileReference
+			if tt.path != "" {
+				ref = NewFileReferenceFromPath(tt.path, tt.line, tt.column)
+			}
+
+			result := FormatErrorWithReference(tt.message, ref, tt.format)
+			if result != tt.expected {
+				t.Errorf("FormatErrorWithReference() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetCallerReference(t *testing.T) {
+	ref := GetCallerReference(0)
+	if ref == nil {
+		t.Fatal("GetCallerReference returned nil")
+	}
+
+	// Verify the reference points to this test file
+	if !strings.Contains(ref.Path, "refs_test.go") {
+		t.Errorf("Path should contain 'refs_test.go', got %v", ref.Path)
+	}
+
+	// Line should be positive
+	if ref.Line <= 0 {
+		t.Errorf("Line should be positive, got %v", ref.Line)
+	}
+}
+
+func TestFileReference_AbsolutePath(t *testing.T) {
+	// Create a reference with a relative path
+	relPath := "test.go"
+	ref := NewFileReferenceFromPath(relPath, 10, 5)
+
+	// AbsPath should be absolute
+	if !filepath.IsAbs(ref.AbsPath) {
+		t.Error("AbsPath should be absolute")
+	}
+
+	// AbsPath should end with the relative path
+	if !strings.HasSuffix(ref.AbsPath, relPath) {
+		t.Errorf("AbsPath should end with %v, got %v", relPath, ref.AbsPath)
+	}
+}
+
+func TestFileReference_WindowsPathConversion(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows-specific test on non-Windows platform")
+	}
+
+	ref := NewFileReferenceFromPath("C:\\path\\to\\file.go", 10, 5)
+	result := ref.FormatVSCode()
+
+	// VSCode format should use forward slashes
+	if strings.Contains(result, "\\") {
+		t.Error("VSCode format should use forward slashes, not backslashes")
+	}
+
+	if !strings.Contains(result, "C:/path/to/file.go") {
+		t.Errorf("Expected forward slashes in path, got %v", result)
+	}
+}
+
+{# vim: set ft=go: #}

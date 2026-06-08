@@ -31,10 +31,9 @@ const (
 
 // ErrorContext provides additional context for errors
 type ErrorContext struct {
-	File     string
-	Line     int
-	Function string
-	Module   string
+	Reference *FileReference
+	Function  string
+	Module    string
 }
 
 // AppError represents a structured application error
@@ -74,7 +73,7 @@ func WrapError(err error, errorType ErrorType, message string, suggestion string
 
 // getErrorContext captures the current call context
 func getErrorContext() *ErrorContext {
-	pc, file, line, ok := runtime.Caller(2)
+	pc, _, _, ok := runtime.Caller(2)
 	if !ok {
 		return nil
 	}
@@ -85,10 +84,9 @@ func getErrorContext() *ErrorContext {
 	}
 
 	return &ErrorContext{
-		File:     file,
-		Line:     line,
-		Function: fn.Name(),
-		Module:   extractModuleFromFunction(fn.Name()),
+		Reference: GetCallerReference(2),
+		Function:  fn.Name(),
+		Module:    extractModuleFromFunction(fn.Name()),
 	}
 }
 
@@ -107,7 +105,7 @@ func extractModuleFromFunction(funcName string) string {
 }
 
 // formatError formats an error according to the standard format
-// Format: ERROR: <description> - <suggestion>
+// Format: ERROR: <description> - <suggestion> (file:line:column)
 func formatError(err *AppError) string {
 	var builder strings.Builder
 
@@ -119,15 +117,10 @@ func formatError(err *AppError) string {
 		builder.WriteString(err.Suggestion)
 	}
 
-	// Add context if available
-	if err.Context != nil {
-		if err.Context.File != "" {
-			builder.WriteString(fmt.Sprintf(" (file: %s", err.Context.File))
-			if err.Context.Line > 0 {
-				builder.WriteString(fmt.Sprintf(":%d", err.Context.Line))
-			}
-			builder.WriteString(")")
-		}
+	// Add context with file reference if available
+	if err.Context != nil && err.Context.Reference != nil {
+		refStr := err.Context.Reference.Format(FormatStandard)
+		builder.WriteString(fmt.Sprintf(" (%s)", refStr))
 	}
 
 	// Add wrapped error if present

@@ -35,13 +35,15 @@ const (
 
 // Logger handles structured logging with color support
 type Logger struct {
-	quiet      bool
-	verbose    bool
-	debug      bool
-	colorMode  ColorMode
-	moduleName string
-	moduleColor string
-	writer     io.Writer
+	quiet         bool
+	verbose       bool
+	debug         bool
+	colorMode     ColorMode
+	moduleName    string
+	moduleColor   string
+	writer        io.Writer
+	enableRefs    bool
+	refFormat     ReferenceFormat
 }
 
 // Log level colors (ANSI escape codes)
@@ -74,13 +76,15 @@ func NewLogger(moduleName string) *Logger {
 	moduleColorIndex++
 
 	return &Logger{
-		quiet:      false,
-		verbose:    false,
-		debug:      false,
-		colorMode:  ColorAuto,
-		moduleName: moduleName,
+		quiet:       false,
+		verbose:     false,
+		debug:       false,
+		colorMode:   ColorAuto,
+		moduleName:  moduleName,
 		moduleColor: moduleColors[colorIndex],
-		writer:     os.Stderr,
+		writer:      os.Stderr,
+		enableRefs:  false,
+		refFormat:   FormatStandard,
 	}
 }
 
@@ -130,6 +134,16 @@ func (l *Logger) SetColorMode(modeStr string) {
 // SetWriter sets the output writer
 func (l *Logger) SetWriter(w io.Writer) {
 	l.writer = w
+}
+
+// SetEnableRefs enables or disables file references in log messages
+func (l *Logger) SetEnableRefs(enable bool) {
+	l.enableRefs = enable
+}
+
+// SetRefFormat sets the file reference format
+func (l *Logger) SetRefFormat(format ReferenceFormat) {
+	l.refFormat = format
 }
 
 // shouldUseColor determines if color should be used
@@ -257,6 +271,42 @@ func (l *Logger) log(level LogLevel, format string, args ...interface{}) {
 	}
 }
 
+// logWithRef is the internal logging method with file reference
+func (l *Logger) logWithRef(level LogLevel, ref *FileReference, format string, args ...interface{}) {
+	if l.quiet {
+		return
+	}
+
+	timestamp := l.formatTimestamp()
+	levelStr := l.formatLevel(level)
+	moduleStr := l.formatModule()
+	message := fmt.Sprintf(format, args...)
+
+	var refStr string
+	if l.enableRefs && ref != nil {
+		refStr = fmt.Sprintf(" (%s)", ref.Format(l.refFormat))
+	}
+
+	if l.shouldUseColor() {
+		grayColor := color.New(color.FgHiBlack)
+		fmt.Fprintf(l.writer, "%s [%s] %s: %s%s\n",
+			grayColor.Sprint(timestamp),
+			levelStr,
+			moduleStr,
+			message,
+			refStr,
+		)
+	} else {
+		fmt.Fprintf(l.writer, "%s [%s] %s: %s%s\n",
+			timestamp,
+			levelStr,
+			moduleStr,
+			message,
+			refStr,
+		)
+	}
+}
+
 // Info logs an info message
 func (l *Logger) Info(format string, args ...interface{}) {
 	l.log(LevelInfo, format, args...)
@@ -324,6 +374,23 @@ func (l *Logger) DebugState(stateName string, state interface{}) {
 	if l.debug {
 		stateStr := fmt.Sprintf("%+v", state)
 		l.log(LevelDebug, "State [%s]: %s", stateName, stateStr)
+	}
+}
+
+// ErrorWithRef logs an error message with a file reference
+func (l *Logger) ErrorWithRef(ref *FileReference, format string, args ...interface{}) {
+	l.logWithRef(LevelError, ref, format, args...)
+}
+
+// WarnWithRef logs a warning message with a file reference
+func (l *Logger) WarnWithRef(ref *FileReference, format string, args ...interface{}) {
+	l.logWithRef(LevelWarn, ref, format, args...)
+}
+
+// DebugWithRef logs a debug message with a file reference (only in debug mode)
+func (l *Logger) DebugWithRef(ref *FileReference, format string, args ...interface{}) {
+	if l.debug {
+		l.logWithRef(LevelDebug, ref, format, args...)
 	}
 }
 
