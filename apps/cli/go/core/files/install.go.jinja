@@ -130,7 +130,7 @@ func installCompletions(ctx context.Context, cmd *cobra.Command) error {
 	}
 	fishFile := filepath.Join(fishCompletionDir, "{{ project_slug }}.fish")
 	DryRunFileOp(ctx, "write", fishFile)
-	if err := cmd.GenFishCompletionFile(fishFile); err != nil {
+	if err := cmd.GenFishCompletionFile(fishFile, true); err != nil {
 		return err
 	}
 	fmt.Printf("Installed fish completion to %s\n", fishFile)

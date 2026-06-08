@@ -26,14 +26,14 @@ Implement full configuration precedence chain: CLI args > env vars > local proje
 
 ## Sub-Tasks
 
-- [ ] Implement config loading from multiple sources
-- [ ] Add local project config support
-- [ ] Add system/enterprise config support
-- [ ] Implement precedence chain logic
-- [ ] Add environment variable support
-- [ ] Add CLI argument support
-- [ ] Add tests for precedence chain
-- [ ] Update documentation
+- [x] Implement config loading from multiple sources
+- [x] Add local project config support
+- [x] Add system/enterprise config support
+- [x] Implement precedence chain logic
+- [x] Add environment variable support
+- [x] Add CLI argument support
+- [x] Add tests for precedence chain
+- [x] Update documentation
 
 ## Relevant Files
 
