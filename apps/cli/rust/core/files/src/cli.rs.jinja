@@ -1,12 +1,37 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use anyhow::Result;
 use std::path::PathBuf;
 use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 use std::time::Duration;
 
 /// {{ description }}
+///
+/// # Examples
+///
+/// Process files:
+///   {{ project_slug }} file1.txt file2.txt
+///
+/// Use glob patterns:
+///   {{ project_slug }} "**/*.txt"
+///
+/// Read from stdin:
+///   {{ project_slug }} -
+///
+/// Manage configuration:
+///   {{ project_slug }} config --show
+///   {{ project_slug }} config --validate
+///
+/// Manage daemon:
+///   {{ project_slug }} daemon --start
+///   {{ project_slug }} daemon --list-jobs running
+///
+/// Generate completions:
+///   {{ project_slug }} completion bash
+///
+/// Run diagnostics:
+///   {{ project_slug }} doctor --all
 #[derive(Parser)]
-#[command(name = "{{ project_slug }}", version, about = "{{ description }}")]
+#[command(name = "{{ project_slug }}", version, about = "{{ description }}", long_about = None)]
 pub struct Cli {
     /// Input files or glob patterns. Use "-" for stdin.
     #[arg(value_name = "INPUTS")]
@@ -32,10 +57,6 @@ pub struct Cli {
     #[arg(long, short = 'd')]
     pub debug: bool,
 
-    /// Show usage information
-    #[arg(long)]
-    pub usage: bool,
-
     /// Color mode: auto, always, never (default: auto)
     #[arg(long, value_name = "MODE")]
     pub color: Option<String>,
@@ -47,14 +68,6 @@ pub struct Cli {
     /// Disable pager
     #[arg(long)]
     pub no_pager: bool,
-
-    /// Install shell completions and initialize config
-    #[arg(long)]
-    pub install: bool,
-
-    /// Uninstall and cleanup
-    #[arg(long)]
-    pub uninstall: bool,
 
     /// Interactive TUI mode (alias: --tui)
     /// Launch a terminal UI to configure arguments before execution
@@ -77,13 +90,119 @@ pub struct Cli {
     #[arg(long, help = "Force synchronous in-process operation (disable daemon)")]
     pub no_daemon: bool,
 
-    /// List background jobs
-    #[arg(long, value_name = "FILTER")]
-    pub list_jobs: Option<String>,
+    /// Subcommand for management operations
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+}
 
-    /// Cancel a background job by ID
-    #[arg(long, value_name = "ID")]
-    pub cancel_job: Option<String>,
+/// Management subcommands
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Manage configuration (show, reset, validate)
+    ///
+    /// # Examples
+    ///
+    /// Show current configuration:
+    ///   {{ project_slug }} config --show
+    ///
+    /// Reset to defaults:
+    ///   {{ project_slug }} config --reset
+    ///
+    /// Validate configuration:
+    ///   {{ project_slug }} config --validate
+    Config {
+        /// Show current configuration
+        #[arg(long, help = "Display current configuration settings")]
+        show: bool,
+
+        /// Reset configuration to defaults
+        #[arg(long, help = "Reset configuration to default values")]
+        reset: bool,
+
+        /// Validate configuration
+        #[arg(long, help = "Validate configuration syntax and values")]
+        validate: bool,
+    },
+
+    /// Manage daemon processes (start, stop, restart, status, jobs)
+    ///
+    /// # Examples
+    ///
+    /// Start daemon:
+    ///   {{ project_slug }} daemon --start
+    ///
+    /// List running jobs:
+    ///   {{ project_slug }} daemon --list-jobs running
+    ///
+    /// Cancel a job:
+    ///   {{ project_slug }} daemon --cancel-job <job-id>
+    Daemon {
+        /// Start daemon in background
+        #[arg(long, help = "Start daemon process in background")]
+        start: bool,
+
+        /// Stop running daemon
+        #[arg(long, help = "Stop running daemon process")]
+        stop: bool,
+
+        /// Restart daemon
+        #[arg(long, help = "Restart daemon process")]
+        restart: bool,
+
+        /// Show daemon status
+        #[arg(long, help = "Display daemon status information")]
+        status: bool,
+
+        /// List background jobs
+        #[arg(long, value_name = "FILTER", help = "List jobs (filter: pending, running, completed, failed, cancelled)")]
+        list_jobs: Option<String>,
+
+        /// Cancel a background job by ID
+        #[arg(long, value_name = "ID", help = "Cancel a specific background job by its ID")]
+        cancel_job: Option<String>,
+    },
+
+    /// Generate shell completion scripts
+    ///
+    /// # Examples
+    ///
+    /// Generate bash completions:
+    ///   {{ project_slug }} completion bash > ~/.local/share/bash-completion/completions/{{ project_slug }}
+    ///
+    /// Generate zsh completions:
+    ///   {{ project_slug }} completion zsh > ~/.local/share/zsh/site-functions/_{{ project_slug }}
+    Completion {
+        /// Shell type (bash, zsh, fish, elvish, powershell)
+        #[arg(value_name = "SHELL", help = "Shell type for completion script")]
+        shell: String,
+    },
+
+    /// Run diagnostics and health checks
+    ///
+    /// # Examples
+    ///
+    /// Run all diagnostics:
+    ///   {{ project_slug }} doctor --all
+    ///
+    /// Check specific components:
+    ///   {{ project_slug }} doctor --config --terminal
+    Doctor {
+        /// Run all diagnostic checks
+        #[arg(long, help = "Run all diagnostic checks")]
+        all: bool,
+
+        /// Check configuration
+        #[arg(long, help = "Check configuration file and settings")]
+        config: bool,
+
+        /// Check daemon status
+        #[arg(long, help = "Check daemon process status")]
+        daemon: bool,
+
+        /// Check terminal capabilities
+        #[arg(long, help = "Check terminal size and capabilities")]
+        terminal: bool,
+    },
 }
 
 impl Cli {
@@ -104,6 +223,11 @@ impl Cli {
     /// Check if progress indicators should be shown
     pub fn show_progress(&self) -> bool {
         !self.quiet && atty::is(atty::Stream::Stdout)
+    }
+
+    /// Check if any subcommand is provided
+    pub fn has_subcommand(&self) -> bool {
+        self.command.is_some()
     }
 }
 

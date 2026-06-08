@@ -32,8 +32,8 @@ This index summarizes all tasks for implementing the Rust CLI Tool Standards Com
 | 02-001 | TUI Mode Implementation | [x] Done | feature/current/20260707-cli-rust-standards/story-02-001-tui-mode | 01-001, 01-002 | Parallel-safe: true | tui.rs |
 | 02-002 | Dry-Run and Confirmation Prompts | [x] Done | feature/current/20260707-cli-rust-standards/story-02-002-dry-run-confirm | 01-001 | Parallel-safe: true | cli.rs |
 | 02-003 | Progress Indicators | [x] Done | feature/current/20260707-cli-rust-standards/story-02-003-progress-indicators | 01-004 | Parallel-safe: true | cli.rs |
-| 02-004 | Daemon Process Support | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-02-004-daemon-support | 01-002, 01-004 | Parallel-safe: true | daemon.rs |
-| 02-005 | Command Organization and Terminal Awareness | [ ] Todo | feature/current/20260707-cli-rust-standards/story-02-005-command-organization | 01-001 | Parallel-safe: true | cli.rs |
+| 02-004 | Daemon Process Support | [x] Done | feature/current/20260707-cli-rust-standards/story-02-004-daemon-support | 01-002, 01-004 | Parallel-safe: true | daemon.rs |
+| 02-005 | Command Organization and Terminal Awareness | [~] In-Progress | feature/current/20260707-cli-rust-standards/story-02-005-command-organization | 01-001 | Parallel-safe: true | cli.rs |
 
 **Phase 2 Milestone:** All advanced CLI features complete and tested
 

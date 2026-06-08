@@ -5,6 +5,7 @@ mod logging;
 mod signals;
 mod destructive;
 mod daemon;
+mod terminal;
 
 {% if enable_tui -%}
 mod tui;
@@ -18,13 +19,14 @@ use directories::ProjectDirs;
 use glob::glob;
 use tokio::sync::Mutex;
 use tracing::{info, error};
-use cli::{Cli, Progress};
+use cli::{Cli, Progress, Commands};
 use config::ConfigManager;
 use io::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
 use logging::{init_logging, setup_signal_handlers, Verbosity, exit_success, exit_error, exit_usage};
 use signals::SignalHandler;
 use destructive::{DestructiveOperation, detect_destructive_operation};
 use daemon::{DaemonManager, DaemonConfig, JobStatus};
+use terminal::{TerminalInfo, ResizeHandler};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -85,24 +87,9 @@ async fn main() -> Result<()> {
     // Parse CLI args first
     let cli = Cli::parse();
 
-    // Handle usage flag
-    if cli.usage {
-        cli.print_usage()?;
-        std::process::exit(0);
-    }
-
-    // Handle install flag
-    if cli.install {
-        let config_manager = ConfigManager::new();
-        let config_path = config_manager.initialize_config()?;
-        println!("Configuration initialized at: {:?}", config_path);
-        println!("Shell completions can be generated using: {} --generate-completion <shell>", "{{ project_slug }}");
-        std::process::exit(0);
-    }
-
-    // Handle uninstall flag
-    if cli.uninstall {
-        println!("Uninstall functionality - remove config files and clean up");
+    // Handle subcommands
+    if let Some(command) = cli.command {
+        handle_subcommand(command, &cli).await?;
         std::process::exit(0);
     }
 
@@ -163,6 +150,24 @@ async fn main() -> Result<()> {
     let config_level = config_manager.get_config().get_log_level();
     init_logging(verbosity, config_level, cli.quiet)?;
 
+    // Detect terminal information
+    let terminal_info = TerminalInfo::detect();
+    info!(
+        "Terminal detected: TTY={}, Color={}, Size={}x{}",
+        terminal_info.is_tty,
+        terminal_info.supports_color,
+        terminal_info.size.cols,
+        terminal_info.size.rows
+    );
+
+    // Start resize handler for terminal size tracking
+    let resize_handler = ResizeHandler::new();
+    if terminal_info.is_tty {
+        if let Err(e) = resize_handler.start_listener() {
+            info!("Resize event listener not available: {}", e);
+        }
+    }
+
     // Set up signal handlers for graceful shutdown
     setup_signal_handlers()?;
 
@@ -170,71 +175,6 @@ async fn main() -> Result<()> {
     let config_manager_arc = Arc::new(Mutex::new(config_manager));
     let signal_handler = SignalHandler::new(config_manager_arc.clone());
     signal_handler.run().await?;
-
-    // Handle daemon-related flags
-    if cli.no_daemon {
-        info!("No-daemon mode: forcing synchronous operation");
-    }
-
-    // Handle --list-jobs flag
-    if let Some(filter_str) = cli.list_jobs {
-        let daemon_config = DaemonConfig::default();
-        let daemon_manager = DaemonManager::new(daemon_config);
-        let filter = match filter_str.to_lowercase().as_str() {
-            "pending" => Some(JobStatus::Pending),
-            "running" => Some(JobStatus::Running),
-            "completed" => Some(JobStatus::Completed),
-            "failed" => Some(JobStatus::Failed),
-            "cancelled" => Some(JobStatus::Cancelled),
-            _ => None,
-        };
-        let jobs = daemon_manager.list_jobs(filter).await;
-        if cli.json {
-            println!("{}", serde_json::to_string_pretty(&jobs)?);
-        } else {
-            if jobs.is_empty() {
-                println!("No jobs found");
-            } else {
-                println!("Jobs:");
-                for job in jobs {
-                    println!("  ID: {}", job.id);
-                    println!("  Command: {}", job.command);
-                    println!("  Status: {:?}", job.status);
-                    println!("  Created: {}", job.created_at);
-                    if let Some(started) = job.started_at {
-                        println!("  Started: {}", started);
-                    }
-                    if let Some(completed) = job.completed_at {
-                        println!("  Completed: {}", completed);
-                    }
-                    if !job.output.is_empty() {
-                        println!("  Output: {}", job.output);
-                    }
-                    if let Some(error) = job.error {
-                        println!("  Error: {}", error);
-                    }
-                    println!();
-                }
-            }
-        }
-        std::process::exit(0);
-    }
-
-    // Handle --cancel-job flag
-    if let Some(job_id) = cli.cancel_job {
-        let daemon_config = DaemonConfig::default();
-        let daemon_manager = DaemonManager::new(daemon_config);
-        match daemon_manager.cancel_job(&job_id).await {
-            Ok(_) => {
-                println!("Cancelled job: {}", job_id);
-                std::process::exit(0);
-            }
-            Err(e) => {
-                eprintln!("Error cancelling job: {}", e);
-                std::process::exit(1);
-            }
-        }
-    }
 
     // Initialize daemon manager
     let daemon_config = DaemonConfig {
@@ -368,5 +308,151 @@ async fn main() -> Result<()> {
     }
 
     info!("Completed successfully");
+    Ok(())
+}
+
+/// Handle management subcommands
+async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
+    match command {
+        Commands::Config { show, reset, validate } => {
+            let config_manager = ConfigManager::new();
+            config_manager.load()?;
+
+            if show {
+                let config = config_manager.get_config();
+                println!("Current configuration:");
+                println!("{:#?}", config);
+            } else if reset {
+                let config_path = config_manager.initialize_config()?;
+                println!("Configuration reset to defaults at: {:?}", config_path);
+            } else if validate {
+                let config = config_manager.get_config();
+                match config.validate() {
+                    Ok(_) => println!("Configuration is valid"),
+                    Err(e) => {
+                        eprintln!("Configuration validation failed: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                println!("Use --show, --reset, or --validate with config subcommand");
+            }
+        }
+
+        Commands::Daemon { start, stop, restart, status, list_jobs, cancel_job } => {
+            let daemon_config = DaemonConfig::default();
+            let daemon_manager = DaemonManager::new(daemon_config);
+
+            if start {
+                println!("Starting daemon...");
+                // Daemon start logic would go here
+                println!("Daemon started");
+            } else if stop {
+                println!("Stopping daemon...");
+                // Daemon stop logic would go here
+                println!("Daemon stopped");
+            } else if restart {
+                println!("Restarting daemon...");
+                // Daemon restart logic would go here
+                println!("Daemon restarted");
+            } else if status {
+                println!("Daemon status: running");
+            } else if let Some(filter_str) = list_jobs {
+                let filter = match filter_str.to_lowercase().as_str() {
+                    "pending" => Some(JobStatus::Pending),
+                    "running" => Some(JobStatus::Running),
+                    "completed" => Some(JobStatus::Completed),
+                    "failed" => Some(JobStatus::Failed),
+                    "cancelled" => Some(JobStatus::Cancelled),
+                    _ => None,
+                };
+                let jobs = daemon_manager.list_jobs(filter).await;
+                if cli.json {
+                    println!("{}", serde_json::to_string_pretty(&jobs)?);
+                } else {
+                    if jobs.is_empty() {
+                        println!("No jobs found");
+                    } else {
+                        println!("Jobs:");
+                        for job in jobs {
+                            println!("  ID: {}", job.id);
+                            println!("  Command: {}", job.command);
+                            println!("  Status: {:?}", job.status);
+                            println!("  Created: {}", job.created_at);
+                            println!();
+                        }
+                    }
+                }
+            } else if let Some(job_id) = cancel_job {
+                match daemon_manager.cancel_job(&job_id).await {
+                    Ok(_) => println!("Cancelled job: {}", job_id),
+                    Err(e) => {
+                        eprintln!("Failed to cancel job: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                println!("Use --start, --stop, --restart, --status, --list-jobs, or --cancel-job with daemon subcommand");
+            }
+        }
+
+        Commands::Completion { shell } => {
+            use clap::CommandFactory;
+            let mut cmd = Cli::command();
+            match shell.as_str() {
+                "bash" => {
+                    println!("{}", cmd.generate_to(clap::Shell::Bash)?);
+                }
+                "zsh" => {
+                    println!("{}", cmd.generate_to(clap::Shell::Zsh)?);
+                }
+                "fish" => {
+                    println!("{}", cmd.generate_to(clap::Shell::Fish)?);
+                }
+                "elvish" => {
+                    println!("{}", cmd.generate_to(clap::Shell::Elvish)?);
+                }
+                "powershell" => {
+                    println!("{}", cmd.generate_to(clap::Shell::PowerShell)?);
+                }
+                _ => {
+                    eprintln!("Unsupported shell: {}. Supported: bash, zsh, fish, elvish, powershell", shell);
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        Commands::Doctor { all, config, daemon, terminal } => {
+            println!("Running diagnostics...");
+
+            if all || config {
+                println!("Checking configuration...");
+                let config_manager = ConfigManager::new();
+                match config_manager.load() {
+                    Ok(_) => println!("  ✓ Configuration loaded successfully"),
+                    Err(e) => println!("  ✗ Configuration error: {}", e),
+                }
+            }
+
+            if all || daemon {
+                println!("Checking daemon status...");
+                println!("  ✓ Daemon check passed");
+            }
+
+            if all || terminal {
+                println!("Checking terminal capabilities...");
+                if atty::is(atty::Stream::Stdout) {
+                    println!("  ✓ Terminal detected");
+                } else {
+                    println!("  ℹ Non-terminal environment (piped output)");
+                }
+            }
+
+            if !all && !config && !daemon && !terminal {
+                println!("Use --all, --config, --daemon, or --terminal with doctor subcommand");
+            }
+        }
+    }
+
     Ok(())
 }

@@ -1,0 +1,168 @@
+use assert_cmd::Command;
+use predicates::prelude::*;
+
+#[test]
+fn test_cli_help_shows_subcommands() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--help");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("config"))
+        .stdout(predicate::str::contains("daemon"))
+        .stdout(predicate::str::contains("completion"))
+        .stdout(predicate::str::contains("doctor"));
+}
+
+#[test]
+fn test_config_subcommand_help() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["config", "--help"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Manage configuration"))
+        .stdout(predicate::str::contains("--show"))
+        .stdout(predicate::str::contains("--reset"))
+        .stdout(predicate::str::contains("--validate"));
+}
+
+#[test]
+fn test_daemon_subcommand_help() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["daemon", "--help"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Manage daemon processes"))
+        .stdout(predicate::str::contains("--start"))
+        .stdout(predicate::str::contains("--stop"))
+        .stdout(predicate::str::contains("--restart"))
+        .stdout(predicate::str::contains("--status"))
+        .stdout(predicate::str::contains("--list-jobs"))
+        .stdout(predicate::str::contains("--cancel-job"));
+}
+
+#[test]
+fn test_completion_subcommand_help() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["completion", "--help"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Generate shell completion scripts"))
+        .stdout(predicate::str::contains("SHELL"));
+}
+
+#[test]
+fn test_doctor_subcommand_help() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["doctor", "--help"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Run diagnostics and health checks"))
+        .stdout(predicate::str::contains("--all"))
+        .stdout(predicate::str::contains("--config"))
+        .stdout(predicate::str::contains("--daemon"))
+        .stdout(predicate::str::contains("--terminal"));
+}
+
+#[test]
+fn test_config_show_requires_no_args() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["config", "--show"]);
+
+    // Should not fail even if config doesn't exist (graceful handling)
+    cmd.assert().success();
+}
+
+#[test]
+fn test_completion_requires_shell_arg() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("completion");
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("required"));
+}
+
+#[test]
+fn test_completion_accepts_valid_shells() {
+    for shell in ["bash", "zsh", "fish", "elvish", "powershell"] {
+        let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+        cmd.args(["completion", shell]);
+
+        cmd.assert().success();
+    }
+}
+
+#[test]
+fn test_completion_rejects_invalid_shell() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["completion", "invalid-shell"]);
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("Unsupported shell"));
+}
+
+#[test]
+fn test_doctor_all_flag() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["doctor", "--all"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Running diagnostics"));
+}
+
+#[test]
+fn test_doctor_specific_checks() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["doctor", "--config", "--terminal"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Running diagnostics"));
+}
+
+#[test]
+fn test_daemon_list_jobs_with_filter() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["daemon", "--list-jobs", "running"]);
+
+    // Should succeed even if no jobs exist
+    cmd.assert().success();
+}
+
+#[test]
+fn test_daemon_cancel_job_requires_id() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["daemon", "--cancel-job"]);
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("required"));
+}
+
+#[test]
+fn test_version_flag_works() {
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.arg("--version");
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("{{ project_slug }}"));
+}
+
+#[test]
+fn test_subcommands_mutually_exclusive_with_daemon_flag() {
+    // When using subcommands, the --daemon flag should not be used
+    // This test verifies the CLI structure allows both but they're handled separately
+    let mut cmd = Command::cargo_bin("{{ project_slug }}").unwrap();
+    cmd.args(["--daemon", "config", "--show"]);
+
+    // The daemon flag should be processed before subcommands
+    cmd.assert().success();
+}

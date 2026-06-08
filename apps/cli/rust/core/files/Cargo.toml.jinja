@@ -12,6 +12,7 @@ directories = "5.0"
 ctrlc = "3.4"
 signal-hook = "0.3"
 signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
+signal-hook-iterator = "0.3"
 indicatif = "0.17"
 glob = "0.3"
 atty = "0.2"
@@ -31,6 +32,8 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "pro
 {% if include_sqlite -%}
 rusqlite = { version = "0.31", features = ["bundled"] }
 {% endif %}
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.52", features = ["Win32_System_Console"] }
 ratatui = { version = "0.26", optional = true }
 cursive = { version = "0.21", optional = true }
 

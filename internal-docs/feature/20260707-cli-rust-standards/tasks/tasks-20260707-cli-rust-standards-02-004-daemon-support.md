@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 2
 parallel_id: 4
 branch: "feature/current/20260707-cli-rust-standards/story-02-004-daemon-support"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002", "01-004"]

@@ -1,6 +1,7 @@
 pub mod logging;
 pub mod signals;
 pub mod daemon;
+pub mod terminal;
 
 {% if enable_tui -%}
 pub mod tui;
@@ -16,6 +17,7 @@ pub use logging::{
 
 pub use signals::SignalHandler;
 pub use daemon::{DaemonManager, DaemonConfig, Job, JobStatus};
+pub use terminal::{TerminalInfo, TerminalSize, ResizeHandler, get_terminal_size};
 
 {% if enable_tui -%}
 pub use tui::{TuiConfig, TuiHandler, TuiError, init_tui_mode, terminal_supports_tui};
