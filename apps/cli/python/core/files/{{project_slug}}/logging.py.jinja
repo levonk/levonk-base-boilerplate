@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Optional
 from rich.console import Console
 from rich.theme import Theme
+import structlog
 
 # Color palette for log levels
 LEVEL_COLORS = {
@@ -28,6 +29,41 @@ def get_module_color(module_name: str) -> str:
     """Get a consistent color for a module name based on hash."""
     hash_val = sum(ord(c) for c in module_name)
     return MODULE_COLORS[hash_val % len(MODULE_COLORS)]
+
+
+def detect_log_format() -> str:
+    """
+    Auto-detect log format based on TTY.
+
+    Returns:
+        "human" for TTY, "json" for non-TTY
+    """
+    if sys.stdout.isatty() and sys.stderr.isatty():
+        return "human"
+    return "json"
+
+
+def resolve_log_level(cli_level: Optional[str] = None) -> str:
+    """
+    Resolve log level with precedence: env vars > CLI flags > defaults.
+
+    Args:
+        cli_level: Log level from CLI flag
+
+    Returns:
+        Resolved log level name
+    """
+    # 1. Check Python-native env filters
+    env_level = os.environ.get("LOG_LEVEL") or os.environ.get("PYTHON_LOG")
+    if env_level:
+        return env_level.upper()
+
+    # 2. Check CLI flag
+    if cli_level:
+        return cli_level.upper()
+
+    # 3. Default to WARNING
+    return "WARNING"
 
 
 class ColoredFormatter(logging.Formatter):
@@ -87,13 +123,15 @@ class Logger:
         quiet: bool = False,
         verbose: bool = False,
         debug: bool = False,
-        color: str = "auto"
+        color: str = "auto",
+        log_format: Optional[str] = None
     ):
         self.name = name
         self.quiet = quiet
         self.verbose = verbose
         self.debug = debug
         self.color = color
+        self.log_format = log_format or detect_log_format()
         self.logger = logging.getLogger(name)
 
         # Detect terminal color support with precedence
@@ -161,13 +199,36 @@ class Logger:
         # Create console handler
         handler = logging.StreamHandler(sys.stderr)
 
-        # Create formatter
-        formatter = ColoredFormatter(
-            use_color=self.use_color,
-            show_module=True
-        )
-        handler.setFormatter(formatter)
+        # Create formatter based on log_format
+        if self.log_format == "json":
+            # Use structlog for JSON output
+            structlog.configure(
+                processors=[
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.processors.add_log_level,
+                    structlog.processors.JSONRenderer()
+                ],
+                wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+                context_class=dict,
+                logger_factory=structlog.PrintLoggerFactory(),
+                cache_logger_on_first_use=True,
+            )
+            # Use standard logging formatter as fallback
+            formatter = logging.Formatter('%(message)s')
+        elif self.log_format == "structured":
+            # Structured text format (human-readable but structured)
+            formatter = ColoredFormatter(
+                use_color=self.use_color,
+                show_module=True
+            )
+        else:
+            # Human format (default)
+            formatter = ColoredFormatter(
+                use_color=self.use_color,
+                show_module=True
+            )
 
+        handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
     def _log(self, level: int, message: str, module: Optional[str] = None):
@@ -231,13 +292,14 @@ def get_logger(
     quiet: bool = False,
     verbose: bool = False,
     debug: bool = False,
-    color: str = "auto"
+    color: str = "auto",
+    log_format: Optional[str] = None
 ) -> Logger:
     """Get or create the global logger instance."""
     global _global_logger
 
     if _global_logger is None:
-        _global_logger = Logger(name, quiet, verbose, debug, color)
+        _global_logger = Logger(name, quiet, verbose, debug, color, log_format)
 
     return _global_logger
 
@@ -247,8 +309,9 @@ def configure_logging(
     quiet: bool = False,
     verbose: bool = False,
     debug: bool = False,
-    color: str = "auto"
+    color: str = "auto",
+    log_format: Optional[str] = None
 ):
     """Configure the global logger with the given settings."""
     global _global_logger
-    _global_logger = Logger(name, quiet, verbose, debug, color)
+    _global_logger = Logger(name, quiet, verbose, debug, color, log_format)

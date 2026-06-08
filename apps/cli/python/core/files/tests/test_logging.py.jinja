@@ -1,5 +1,6 @@
-from {{ project_slug }}.logging import Logger, configure_logging, get_logger
+from {{ project_slug }}.logging import Logger, configure_logging, get_logger, detect_log_format, resolve_log_level
 import os
+import sys
 import pytest
 
 
@@ -109,3 +110,89 @@ def test_module_information_in_logs():
     logger = Logger(name="{{ project_slug }}", verbose=True)
     # This should not raise an exception
     logger.info("Test message with module", module="test_module")
+
+
+def test_detect_log_format_tty():
+    """Test format auto-detection returns human for TTY."""
+    # This test depends on the environment
+    format_type = detect_log_format()
+    assert format_type in ["human", "json"]
+
+
+def test_detect_log_format_non_tty():
+    """Test format auto-detection returns json for non-TTY."""
+    # Mock non-TTY environment
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = type('obj', (object,), {'isatty': lambda: False})()
+    sys.stderr = type('obj', (object,), {'isatty': lambda: False})()
+
+    try:
+        format_type = detect_log_format()
+        assert format_type == "json"
+    finally:
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+
+def test_resolve_log_level_env_var():
+    """Test log level resolution with environment variable."""
+    os.environ["LOG_LEVEL"] = "DEBUG"
+    try:
+        level = resolve_log_level()
+        assert level == "DEBUG"
+    finally:
+        del os.environ["LOG_LEVEL"]
+
+
+def test_resolve_log_level_cli_flag():
+    """Test log level resolution with CLI flag."""
+    level = resolve_log_level(cli_level="INFO")
+    assert level == "INFO"
+
+
+def test_resolve_log_level_env_precedence():
+    """Test env var takes precedence over CLI flag."""
+    os.environ["LOG_LEVEL"] = "ERROR"
+    try:
+        level = resolve_log_level(cli_level="DEBUG")
+        assert level == "ERROR"
+    finally:
+        del os.environ["LOG_LEVEL"]
+
+
+def test_resolve_log_level_default():
+    """Test default log level is WARNING."""
+    level = resolve_log_level()
+    assert level == "WARNING"
+
+
+def test_logger_with_json_format():
+    """Test logger accepts json format."""
+    logger = Logger(name="{{ project_slug }}", log_format="json")
+    assert logger.log_format == "json"
+
+
+def test_logger_with_structured_format():
+    """Test logger accepts structured format."""
+    logger = Logger(name="{{ project_slug }}", log_format="structured")
+    assert logger.log_format == "structured"
+
+
+def test_logger_with_human_format():
+    """Test logger accepts human format."""
+    logger = Logger(name="{{ project_slug }}", log_format="human")
+    assert logger.log_format == "human"
+
+
+def test_configure_logging_with_log_format():
+    """Test configure_logging accepts log_format parameter."""
+    configure_logging(name="{{ project_slug }}", log_format="json")
+    logger = get_logger()
+    assert logger.log_format == "json"
+
+
+def test_get_logger_with_log_format():
+    """Test get_logger accepts log_format parameter."""
+    logger = get_logger(name="{{ project_slug }}", log_format="json")
+    assert logger.log_format == "json"
