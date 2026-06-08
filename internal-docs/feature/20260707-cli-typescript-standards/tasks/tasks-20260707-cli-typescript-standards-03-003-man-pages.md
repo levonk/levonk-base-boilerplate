@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 3
 parallel_id: 3
 branch: "feature/current/20260707-cli-typescript-standards/story-03-003-man-pages"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []

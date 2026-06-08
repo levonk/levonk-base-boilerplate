@@ -31,14 +31,14 @@ Add `--debug` flag for debug-level logging and enhance the existing logging syst
 - [~] Add debug log level to logger.ts
 - [x] Implement log level hierarchy (debug < info < warn < error < fatal)
 - [x] Ensure --quiet flag suppresses all non-essential output including progress indicators
-- [ ] Add structured logging support (JSON format for logs)
-- [ ] Add --log-format flag to choose between text and JSON logging
-- [ ] Update LoggerOptions interface to include debug and log format options
-- [ ] Implement JSON log formatter with structured fields
-- [ ] Add timestamp, level, module, and message fields to JSON logs
-- [ ] Implement format auto-detection based on TTY
-- [ ] Support language-native env filters (NODE_ENV, LOG_LEVEL)
-- [ ] Implement log level resolution: env vars > CLI flags > config file > defaults
+- [x] Add structured logging support (JSON format for logs)
+- [x] Add --log-format flag to choose between text and JSON logging
+- [x] Update LoggerOptions interface to include debug and log format options
+- [x] Implement JSON log formatter with structured fields
+- [x] Add timestamp, level, module, and message fields to JSON logs
+- [x] Implement format auto-detection based on TTY
+- [x] Support language-native env filters (NODE_ENV, LOG_LEVEL)
+- [~] Implement log level resolution: env vars > CLI flags > config file > defaults
 - [ ] Add unit tests for debug logging behavior
 - [ ] Add unit tests for quiet mode behavior
 - [ ] Add unit tests for JSON log formatting

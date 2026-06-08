@@ -134,19 +134,82 @@ Examples:
 			}
 
 			// Process Files
-			for _, file := range filesToProcess {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				default:
-					DryRunFileOp(ctx, "read", file)
-					logger.Info("Processing %s...", file)
-					content, err := os.ReadFile(file)
-					if err != nil {
-						logger.Error("Error reading %s: %v", file, err)
-						continue
+			if len(filesToProcess) > 0 && !quiet {
+				// Calculate total size for progress bar
+				var totalSize int64
+				for _, file := range filesToProcess {
+					if info, err := os.Stat(file); err == nil {
+						totalSize += info.Size()
 					}
-					results = append(results, processContent(ctx, string(content), file))
+				}
+
+				// Create progress bar
+				bar := NewProgressBar(ProgressConfig{
+					Total:      totalSize,
+					Description: "Processing files",
+					Quiet:      quiet,
+				})
+
+				if bar != nil {
+					bar.RenderBlank()
+				}
+
+				for _, file := range filesToProcess {
+					select {
+					case <-ctx.Done():
+						if bar != nil {
+							bar.Finish()
+						}
+						return ctx.Err()
+					default:
+						DryRunFileOp(ctx, "read", file)
+						if !quiet {
+							logger.Info("Processing %s...", file)
+						}
+
+						// Read file with progress tracking
+						var content []byte
+						var err error
+
+						if bar != nil {
+							fileInfo, _ := os.Stat(file)
+							reader := NewProgressReader(nil, bar, fileInfo.Size())
+							// Actually read the file
+							content, err = os.ReadFile(file)
+							if err == nil {
+								bar.Add64(int64(len(content)))
+							}
+						} else {
+							content, err = os.ReadFile(file)
+						}
+
+						if err != nil {
+							logger.Error("Error reading %s: %v", file, err)
+							continue
+						}
+						results = append(results, processContent(ctx, string(content), file))
+					}
+				}
+
+				if bar != nil {
+					bar.Finish()
+				}
+			} else {
+				// Process files without progress bar (quiet mode or no files)
+				for _, file := range filesToProcess {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+						DryRunFileOp(ctx, "read", file)
+						logger.Info("Processing %s...", file)
+						content, err := os.ReadFile(file)
+						if err != nil {
+							logger.Error("Error reading %s: %v", file, err)
+							continue
+						}
+						results = append(results, processContent(ctx, string(content), file))
+					}
 				}
 			}
 
@@ -184,6 +247,41 @@ func processContent(ctx context.Context, content string, source string) map[stri
 		"length": len(content),
 		"status": "processed",
 	}
+}
+
+// processWithNetworkProgress is a placeholder for network operations with progress tracking
+// This function demonstrates how to use progress bars for network operations
+// Example usage:
+//
+//	func downloadFile(ctx context.Context, url string, quiet bool) ([]byte, error) {
+//		resp, err := http.Get(url)
+//		if err != nil {
+//			return nil, err
+//		}
+//		defer resp.Body.Close()
+//
+//		if quiet {
+//			return io.ReadAll(resp.Body)
+//		}
+//
+//		bar := NewProgressBar(ProgressConfig{
+//			Total:      resp.ContentLength,
+//			Description: "Downloading",
+//			Quiet:      quiet,
+//		})
+//
+//		if bar != nil {
+//			bar.RenderBlank()
+//			defer bar.Finish()
+//		}
+//
+//		reader := NewProgressReader(resp.Body, bar, resp.ContentLength)
+//		return io.ReadAll(reader)
+//	}
+func processWithNetworkProgress(ctx context.Context, url string, quiet bool) ([]byte, error) {
+	// Placeholder for actual network operation implementation
+	// This would typically use http.Client or similar
+	return nil, nil
 }
 
 func init() {

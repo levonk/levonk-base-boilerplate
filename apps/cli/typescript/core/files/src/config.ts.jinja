@@ -13,8 +13,12 @@ export interface Config {
     quiet?: boolean;
     /** Enable verbose output with extra details. Default: false */
     verbose?: boolean;
+    /** Debug mode (enables debug-level logging). Default: false */
+    debug?: boolean;
     /** Color mode: auto, always, never. Default: "auto" */
     color?: 'auto' | 'always' | 'never';
+    /** Log format: text or json. Default: "text" */
+    log_format?: 'text' | 'json';
     /** Output results as JSON. Default: false */
     json?: boolean;
     /** Custom configuration values */
@@ -44,7 +48,9 @@ export const DEFAULT_CONFIG: Config = {
     log_level: 'info',
     quiet: false,
     verbose: false,
+    debug: false,
     color: 'auto',
+    log_format: 'text',
     json: false,
 };
 
@@ -227,7 +233,9 @@ export function loadEnvConfig(projectSlug: string): Config {
         [`${prefix}_LOG_LEVEL`]: 'log_level',
         [`${prefix}_QUIET`]: 'quiet',
         [`${prefix}_VERBOSE`]: 'verbose',
+        [`${prefix}_DEBUG`]: 'debug',
         [`${prefix}_COLOR`]: 'color',
+        [`${prefix}_LOG_FORMAT`]: 'log_format',
         [`${prefix}_JSON`]: 'json',
     };
 
@@ -235,7 +243,7 @@ export function loadEnvConfig(projectSlug: string): Config {
         const value = process.env[envVar];
         if (value !== undefined) {
             // Convert string values to appropriate types
-            if (configKey === 'quiet' || configKey === 'verbose' || configKey === 'json') {
+            if (configKey === 'quiet' || configKey === 'verbose' || configKey === 'debug' || configKey === 'json') {
                 envConfig[configKey] = value === 'true' || value === '1';
             } else {
                 envConfig[configKey] = value;

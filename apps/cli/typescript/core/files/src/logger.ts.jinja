@@ -4,12 +4,14 @@ import process from 'process';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 export type ColorMode = 'auto' | 'always' | 'never';
+export type LogFormat = 'text' | 'json';
 
 export interface LoggerOptions {
   quiet?: boolean;
   verbose?: boolean;
   debug?: boolean;
   color?: ColorMode;
+  logFormat?: LogFormat;
   module?: string;
 }
 
@@ -50,6 +52,26 @@ function formatTimestamp(): string {
   return now.toISOString();
 }
 
+function formatJsonMessage(
+  level: LogLevel,
+  message: string,
+  module: string,
+  extra?: Record<string, unknown>
+): string {
+  const logEntry: Record<string, unknown> = {
+    timestamp: formatTimestamp(),
+    level,
+    module,
+    message,
+  };
+
+  if (extra) {
+    Object.assign(logEntry, extra);
+  }
+
+  return JSON.stringify(logEntry);
+}
+
 function shouldUseColor(options: LoggerOptions): boolean {
   // NO_COLOR environment variable takes highest precedence
   if (process.env.NO_COLOR) return false;
@@ -83,16 +105,33 @@ export class Logger {
   private currentLevel: LogLevel;
 
   constructor(options: LoggerOptions = {}) {
+    // Auto-detect log format if not specified
+    const logFormat = options.logFormat || (process.stdout.isTTY ? 'text' : 'json');
+
+    // Support language-native env filters
+    // NODE_ENV=development enables debug mode
+    // LOG_LEVEL sets the log level directly
+    const envLogLevel = process.env.LOG_LEVEL as LogLevel;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
     this.options = {
       quiet: false,
       verbose: false,
-      debug: false,
+      debug: isDevelopment || options.debug,
       color: 'auto',
+      logFormat,
       module: '{{ project_slug }}',
       ...options,
     };
-    // Set current log level based on debug flag
-    this.currentLevel = this.options.debug ? 'debug' : 'info';
+
+    // Set current log level: env var > debug flag > info default
+    if (envLogLevel && ['debug', 'info', 'warn', 'error', 'fatal'].includes(envLogLevel)) {
+      this.currentLevel = envLogLevel;
+    } else if (this.options.debug) {
+      this.currentLevel = 'debug';
+    } else {
+      this.currentLevel = 'info';
+    }
   }
 
   private shouldLog(level: LogLevel): boolean {
@@ -107,8 +146,15 @@ export class Logger {
     message: string,
     extra?: Record<string, unknown>
   ): string {
-    const timestamp = formatTimestamp();
     const module = this.options.module || '{{ project_slug }}';
+
+    // Use JSON format if specified
+    if (this.options.logFormat === 'json') {
+      return formatJsonMessage(level, message, module, extra);
+    }
+
+    // Text format (existing logic)
+    const timestamp = formatTimestamp();
     const useColor = shouldUseColor(this.options);
 
     const levelFn = useColor ? levelColors[level] : (text: string) => text;

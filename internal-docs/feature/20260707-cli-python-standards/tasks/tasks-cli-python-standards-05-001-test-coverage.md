@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 5
 parallel_id: 1
 branch: "feature/current/cli-python-standards/story-05-001-test-coverage"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-002", "01-003", "02-001", "02-002", "02-003", "03-001", "03-002", "03-003", "03-004", "04-001", "04-002", "04-003", "04-004", "06-001", "06-002", "06-003", "06-004", "06-005", "06-006"]
@@ -27,7 +27,7 @@ Implement comprehensive test coverage for all CLI standards to achieve 90%+ code
 
 ## Sub-Tasks
 
-- [ ] Review all existing test files and identify gaps — `apps/cli/python/core/files/tests/`
+- [x] Review all existing test files and identify gaps — `apps/cli/python/core/files/tests/`
 - [ ] Add tests for help output at root and all subcommands — `apps/cli/python/core/files/tests/test_main.py.jinja`
 - [ ] Add tests for globbing patterns including recursive `**/*` — `tests/test_main.py.jinja`
 - [ ] Add tests for stdin processing with `-` flag — `tests/test_main.py.jinja`
@@ -70,19 +70,21 @@ Implement comprehensive test coverage for all CLI standards to achieve 90%+ code
 
 ## Relevant Files
 
-- `apps/cli/python/core/files/tests/test_main.py.jinja` — Main CLI tests
-- `apps/cli/python/core/files/tests/test_config.py.jinja` — Config management tests
-- `apps/cli/python/core/files/tests/test_logging.py.jinja` — Logging and color tests
-- `apps/cli/python/core/files/tests/test_completion.py.jinja` — Completion and man page tests
-- `apps/cli/python/core/files/tests/test_errors.py.jinja` — Error formatting tests
-- `apps/cli/python/core/files/tests/test_daemon.py.jinja` — Daemon process tests
-- `apps/cli/python/core/files/tests/test_tui.py.jinja` — TUI mode tests (conditional)
-- `apps/cli/python/core/files/tests/test_progress.py.jinja` — Progress indicator tests
-- `apps/cli/python/core/files/tests/test_terminal.py.jinja` — Terminal and pager tests
-- `apps/cli/python/core/files/tests/test_security.py.jinja` — Security and resource tests
-- `apps/cli/python/core/files/tests/test_health.py.jinja` — Health check tests (conditional)
-- `apps/cli/python/core/files/tests/test_privacy.py.jinja` — Privacy mode tests (conditional)
-- `apps/cli/python/core/files/tests/test_audit.py.jinja` — Audit logging tests (conditional)
+- `apps/cli/python/core/files/tests/test_main.py.jinja` — Main CLI tests (needs: globbing, subcommand help, JSON output, full exit codes, collection vs processing)
+- `apps/cli/python/core/files/tests/test_config.py.jinja` — Config management tests (needs: full precedence, validation messages, manual reload)
+- `apps/cli/python/core/files/tests/test_logging.py.jinja` — Logging and color tests (needs: TTY detection, log level resolution, env filters)
+- `apps/cli/python/core/files/tests/test_completion.py.jinja` — Completion and man page tests (complete)
+- `apps/cli/python/core/files/tests/test_errors.py.jinja` — Error formatting tests (complete)
+- `apps/cli/python/core/files/tests/test_daemon.py.jinja` — Daemon process tests (complete)
+- `apps/cli/python/core/files/tests/test_tui.py.jinja` — TUI mode tests (conditional, complete)
+- `apps/cli/python/core/files/tests/test_progress.py.jinja` — Progress indicator tests (complete)
+- `apps/cli/python/core/files/tests/test_terminal.py.jinja` — Terminal and pager tests (complete)
+- `apps/cli/python/core/files/tests/test_security.py.jinja` — Security and resource tests (complete)
+- `apps/cli/python/core/files/tests/test_health.py.jinja` — Health check tests (conditional, complete)
+- `apps/cli/python/core/files/tests/test_privacy.py.jinja` — Privacy mode tests (conditional, complete)
+- `apps/cli/python/core/files/tests/test_audit.py.jinja` — Audit logging tests (conditional, complete)
+- `apps/cli/python/core/files/tests/test_config_reload.py.jinja` — Config reload tests (complete)
+- `apps/cli/python/core/files/tests/test_deprecation.py.jinja` — Deprecation tests (complete)
 
 ## Acceptance Criteria
 
