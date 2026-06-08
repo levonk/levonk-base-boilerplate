@@ -26,34 +26,34 @@ Add comprehensive test coverage for all new CLI features implemented in Phases 0
 
 ## Sub-Tasks
 
-- [ ] Add tests for config initialization
-- [ ] Add tests for install/uninstall flags
-- [ ] Add tests for color control
-- [ ] Add tests for debug flag
-- [ ] Add tests for shell completion
-- [ ] Add tests for config precedence chain
-- [ ] Add tests for config validation
-- [ ] Add tests for dry-run mode
-- [ ] Add tests for confirmation prompts
-- [ ] Add tests for progress indicators
-- [ ] Add tests for error formatting
-- [ ] Add tests for man pages
-- [ ] Add tests for pager integration
-- [ ] Add tests for terminal awareness
-- [ ] Add tests for TUI mode
-- [ ] Add tests for daemon mode
-- [ ] Add tests for file references
-- [ ] Add tests for URL formatting
-- [ ] Add tests for credential handling
-- [ ] Add tests for config migration
-- [ ] Add tests for structured logging
-- [ ] Add tests for config reload
-- [ ] Add tests for health check
-- [ ] Add tests for privacy mode
-- [ ] Add tests for audit logging
-- [ ] Add tests for deprecation policy
-- [ ] Verify 90%+ test coverage
-- [ ] Update documentation
+- [x] Add tests for config initialization
+- [x] Add tests for install/uninstall flags
+- [x] Add tests for color control
+- [x] Add tests for debug flag
+- [x] Add tests for shell completion
+- [x] Add tests for config precedence chain
+- [x] Add tests for config validation
+- [x] Add tests for dry-run mode
+- [x] Add tests for confirmation prompts
+- [x] Add tests for progress indicators
+- [x] Add tests for error formatting
+- [x] Add tests for man pages
+- [x] Add tests for pager integration
+- [x] Add tests for terminal awareness
+- [x] Add tests for TUI mode
+- [x] Add tests for daemon mode
+- [x] Add tests for file references
+- [x] Add tests for URL formatting
+- [x] Add tests for credential handling
+- [x] Add tests for config migration
+- [x] Add tests for structured logging
+- [x] Add tests for config reload
+- [x] Add tests for health check
+- [x] Add tests for privacy mode
+- [x] Add tests for audit logging
+- [x] Add tests for deprecation policy
+- [x] Verify 90%+ test coverage
+- [x] Update documentation
 
 ## Relevant Files
 
