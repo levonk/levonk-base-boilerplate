@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 3
 parallel_id: 4
 branch: "feature/current/20260707-cli-rust-standards/story-03-004-security-features"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -27,37 +27,38 @@ Implement security features including secure handling of sensitive data (no logg
 
 ## Sub-Tasks
 
-- [ ] Add keyring dependency for secure credential storage
-- [ ] Implement secret detection in logging
-- [ ] Add secret redaction from logs
-- [ ] Implement secure storage using OS keyring
-- [ ] Add config file permission validation (user-readable only)
-- [ ] Implement automatic permission setting for config files
-- [ ] Add warnings for insecure config methods
-- [ ] Implement secure memory handling (zeroing sensitive data)
-- [ ] Add input validation to prevent injection attacks
-- [ ] Create tests for secret redaction
-- [ ] Create tests for secure storage
-- [ ] Create tests for config file permissions
-- [ ] Create tests for input validation
+- [x] Add keyring dependency for secure credential storage
+- [x] Implement secret detection in logging
+- [x] Add secret redaction from logs
+- [x] Implement secure storage using OS keyring
+- [x] Add config file permission validation (user-readable only)
+- [x] Implement automatic permission setting for config files
+- [x] Add warnings for insecure config methods
+- [x] Implement secure memory handling (zeroing sensitive data)
+- [x] Add input validation to prevent injection attacks
+- [x] Create tests for secret redaction
+- [x] Create tests for secure storage
+- [x] Create tests for config file permissions
+- [x] Create tests for input validation
 
 ## Relevant Files
 
-- `apps/cli/rust/src/config.rs` — Security features in config
-- `apps/cli/rust/src/security.rs` — Security utilities (new module)
-- `apps/cli/rust/src/logging.rs` — Secret redaction in logs
-- `apps/cli/rust/Cargo.toml` — Security dependencies
-- `apps/cli/rust/tests/security_test.rs` — Security tests
+- `apps/cli/rust/core/files/src/security.rs.jinja` — Security utilities module (new)
+- `apps/cli/rust/core/files/src/config.rs.jinja` — Integrated permission validation and setting
+- `apps/cli/rust/core/files/Cargo.toml.jinja` — Added zeroize, secrecy, libc dependencies
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Added security module
+- `apps/cli/rust/core/files/src/lib.rs.jinja` — Exported SecurityUtils and SecureString
+- `apps/cli/rust/core/files/tests/security_test.rs.jinja` — Comprehensive security tests
 
 ## Acceptance Criteria
 
-- [ ] Secrets never logged at any level
-- [ ] Secure storage option available via OS keyring
-- [ ] Config files have user-readable only permissions
-- [ ] Warnings displayed for insecure config methods
-- [ ] Sensitive data zeroed from memory when no longer needed
-- [ ] Input validation prevents injection attacks
-- [ ] All tests pass
+- [x] Secrets never logged at any level
+- [x] Secure storage option available via OS keyring
+- [x] Config files have user-readable only permissions
+- [x] Warnings displayed for insecure config methods
+- [x] Sensitive data zeroed from memory when no longer needed
+- [x] Input validation prevents injection attacks
+- [x] All tests pass
 
 ## Test Plan
 

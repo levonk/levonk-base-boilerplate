@@ -5,6 +5,7 @@ use directories::ProjectDirs;
 use tracing::{info, warn, error, debug, Level};
 use std::fs;
 use std::io::Write;
+use crate::security::SecurityUtils;
 
 const CONFIG_VERSION: u32 = 1;
 const PROJECT_QUALIFIER: &str = "com";
@@ -241,6 +242,11 @@ impl ConfigManager {
     
     /// Load configuration from a file
     pub fn load_from_file(&mut self, path: &Path, source: ConfigSource) -> Result<()> {
+        // Validate config file permissions before loading
+        if !SecurityUtils::validate_config_permissions(path)? {
+            warn!("Config file has insecure permissions: {:?}", path);
+        }
+        
         let content = fs::read_to_string(path)
             .with_context(|| format!("Failed to read config file: {:?}", path))?;
         
@@ -382,13 +388,12 @@ impl ConfigManager {
         file.write_all(commented_config.as_bytes())
             .with_context(|| format!("Failed to write config file: {:?}", path))?;
         
-        // Set file permissions to user-readable only
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut perms = fs::metadata(path)?.permissions();
-            perms.set_mode(0o600);
-            fs::set_permissions(path, perms)?;
+        // Set secure file permissions using SecurityUtils
+        SecurityUtils::set_secure_permissions(path)?;
+        
+        // Validate permissions were set correctly
+        if !SecurityUtils::validate_config_permissions(path)? {
+            warn!("Config file permissions may not be secure: {:?}", path);
         }
         
         Ok(())
