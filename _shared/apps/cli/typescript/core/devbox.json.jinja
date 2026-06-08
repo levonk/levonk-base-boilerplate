@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "{{ project_description | default('A TypeScript CLI application') }}",
   "shell": {
-    "init_hook": "just bootstrap-internal",
     "init": [
       "echo '📘 Setting up {{ project_name | default('ts-cli-app') }} development environment...'"
     ],
@@ -54,7 +53,6 @@
     "nixpkgs#nodePackages.jsonSchema": "",
     {% endif %}
   },
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
   "env": {
     "NODE_ENV": "{{ node_env | default('development') }}",
     "TS_NODE_PROJECT": "{{ ts_node_project | default('./tsconfig.json') }}",

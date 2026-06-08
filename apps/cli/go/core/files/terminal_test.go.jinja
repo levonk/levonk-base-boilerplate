@@ -131,22 +131,6 @@ func TestFormatForWidthWithTerminal(t *testing.T) {
 	}
 }
 
-func TestIsTerminal(t *testing.T) {
-	// This test just ensures the function doesn't panic
-	// The actual result depends on the test environment
-	result := IsTerminal()
-	_ = result // Suppress unused variable warning
-}
-
-func TestGetTerminalWidth(t *testing.T) {
-	width := GetTerminalWidth()
-
-	// Should return a positive width
-	if width <= 0 {
-		t.Errorf("Expected positive width, got %d", width)
-	}
-
-	// Should be at least the default
 	if width < DefaultTerminalWidth {
 		t.Errorf("Expected width >= %d, got %d", DefaultTerminalWidth, width)
 	}

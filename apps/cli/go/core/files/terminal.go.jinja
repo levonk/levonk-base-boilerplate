@@ -169,17 +169,4 @@ func (t *Terminal) FormatForWidth(text string, margin ...int) string {
 	return text[:m]
 }
 
-// IsTerminal returns true if running in a terminal environment
-func IsTerminal() bool {
-	return term.IsTerminal(int(os.Stdout.Fd())) ||
-		term.IsTerminal(int(os.Stderr.Fd())) ||
-		term.IsTerminal(int(os.Stdin.Fd()))
-}
-
-// GetTerminalWidth returns the terminal width with fallback to default
-func GetTerminalWidth() int {
-	t := NewTerminal()
-	return t.GetWidth()
-}
-
 {# vim: set ft=go: #}

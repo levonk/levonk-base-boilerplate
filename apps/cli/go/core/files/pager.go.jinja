@@ -202,11 +202,6 @@ func GetTerminalWidth() int {
 	return width
 }
 
-// IsTerminal returns true if stdout is a terminal
-func IsTerminal() bool {
-	return isatty.IsTerminal(os.Stdout.Fd())
-}
-
 // GetTerminalSize returns both width and height of the terminal
 func GetTerminalSize() (width, height int) {
 	if !isatty.IsTerminal(os.Stdout.Fd()) {

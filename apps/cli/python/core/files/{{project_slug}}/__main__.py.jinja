@@ -188,6 +188,7 @@ def process(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
     debug: bool = typer.Option(False, "--debug", help="Enable detailed debugging output"),
     color: str = typer.Option("auto", "--color", help="Color mode: auto, always, or never"),
+    no_color: bool = typer.Option(False, "--no-color", callback=lambda x: None if not x else typer.Exit("WARNING: --no-color is deprecated. Use --color=never instead."), help="Deprecated: Use --color=never instead"),
     log_format: str = typer.Option(None, "--log-format", help="Log format: human, json, or structured"),
     install: bool = typer.Option(False, "--install", help="Install shell completions and initialize config"),
     uninstall: bool = typer.Option(False, "--uninstall", help="Uninstall shell completions and cleanup"),

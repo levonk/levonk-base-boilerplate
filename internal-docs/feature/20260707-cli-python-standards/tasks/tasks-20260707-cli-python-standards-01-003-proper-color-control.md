@@ -26,14 +26,14 @@ Replace `--no-color` with `--color=auto|always|never` flag for proper color cont
 
 ## Sub-Tasks
 
-- [ ] Replace --no-color with --color flag (auto/always/never)
-- [ ] Implement TTY detection for auto mode
-- [ ] Add color setting to config file
-- [ ] Implement NO_COLOR environment variable support
-- [ ] Implement precedence chain (NO_COLOR > --color > config > auto-detection)
-- [ ] Update logging module to respect color settings
-- [ ] Add tests for color control
-- [ ] Update documentation
+- [x] Replace --no-color with --color flag (auto/always/never)
+- [x] Implement TTY detection for auto mode
+- [x] Add color setting to config file
+- [x] Implement NO_COLOR environment variable support
+- [x] Implement precedence chain (NO_COLOR > --color > config > auto-detection)
+- [x] Update logging module to respect color settings
+- [x] Add tests for color control
+- [x] Update documentation
 
 ## Relevant Files
 

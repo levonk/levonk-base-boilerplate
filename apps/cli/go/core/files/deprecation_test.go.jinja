@@ -400,7 +400,7 @@ func TestDeprecationWarningOutput(t *testing.T) {
 	}
 }
 
-func TestQuietMode(t *testing.T) {
+func TestDeprecationQuietMode(t *testing.T) {
 	logger := NewLogger("test")
 	dm := NewDeprecationManager(logger)
 	dm.SetQuietMode(true) // Enable quiet mode
