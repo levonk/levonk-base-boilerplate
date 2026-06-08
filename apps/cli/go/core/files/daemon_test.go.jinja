@@ -24,9 +24,10 @@ func TestDaemonManager_IsPlatformSupported(t *testing.T) {
 }
 
 func TestJobQueue_CreateJob(t *testing.T) {
-	jq := NewJobQueue()
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
 
-	job, err := jq.CreateJob("echo", []string{"hello"})
+	job, err := dm.CreateJob("echo", []string{"hello"})
 	require.NoError(t, err)
 	require.NotNil(t, job)
 

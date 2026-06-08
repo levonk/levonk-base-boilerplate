@@ -26,12 +26,12 @@ Show progress bars for long-running operations using a Python progress bar libra
 
 ## Sub-Tasks
 
-- [ ] Add progress bar library dependency
-- [ ] Implement progress indicators for file operations
-- [ ] Implement progress indicators for network operations
-- [ ] Respect --quiet flag (no progress in quiet mode)
-- [ ] Add tests for progress indicators
-- [ ] Update documentation
+- [x] Add progress bar library dependency
+- [x] Implement progress indicators for file operations
+- [x] Implement progress indicators for network operations
+- [x] Respect --quiet flag (no progress in quiet mode)
+- [x] Add tests for progress indicators
+- [x] Update documentation
 
 ## Relevant Files
 

@@ -137,7 +137,7 @@ func (t *Terminal) handleResize() {
 		newHeight := t.GetHeight()
 
 		// Call callback if size changed
-		if t.onResize != (func(int, int))(nil) && (oldWidth != newWidth || oldHeight != newHeight) {
+		if t.onResize != nil && (oldWidth != newWidth || oldHeight != newHeight) {
 			t.onResize(newWidth, newHeight)
 		}
 	}

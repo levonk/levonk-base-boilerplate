@@ -30,7 +30,7 @@ This index summarizes all stories for implementing the Python CLI Standards Comp
 | 01-007 | Configuration Validation | feature/current/20260707-cli-python-standards/story-01-007-config-validation | 01-006 | Parallel-safe: true | config, main | [x] Done |
 | 02-001 | Dry-Run Mode | feature/current/20260707-cli-python-standards/story-02-001-dry-run-mode | 01-001, 01-006 | Parallel-safe: true | main, cmd | [ ] Todo |
 | 02-002 | Confirmation Prompts | feature/current/20260707-cli-python-standards/story-02-002-confirmation-prompts | 01-001 | Parallel-safe: true | main, prompt | [ ] Todo |
-| 02-003 | Progress Indicators | feature/current/20260707-cli-python-standards/story-02-003-progress-indicators | 01-003 | Parallel-safe: true | progress, main | [ ] Todo |
+| 02-003 | Progress Indicators | feature/current/20260707-cli-python-standards/story-02-003-progress-indicators | 01-003 | Parallel-safe: true | progress, main | [x] Done |
 | 02-004 | Error Message Formatting | feature/current/20260707-cli-python-standards/story-02-004-error-message-formatting | None | Parallel-safe: true | logger, main | [x] Done |
 | 02-005 | Man Pages | feature/current/20260707-cli-python-standards/story-02-005-man-pages | None | Parallel-safe: true | docs, main | [x] Done |
 | 02-006 | Pager Integration | feature/current/20260707-cli-python-standards/story-02-006-pager-integration | None | Parallel-safe: true | main, output | [x] Done |
