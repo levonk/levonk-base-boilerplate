@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -19,6 +21,128 @@ func TestHelp(t *testing.T) {
 	output := buf.String()
 	if !strings.Contains(output, "Usage:") {
 		t.Errorf("Expected help output, got: %s", output)
+	}
+}
+
+func TestConfigFileCreationOnFirstRun(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	// Test that config file is created on first run
+	err := InitConfigIfNeeded(configPath)
+	if err != nil {
+		t.Fatalf("InitConfigIfNeeded failed: %v", err)
+	}
+
+	// Verify config file was created
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Errorf("Config file was not created at %s", configPath)
+	}
+
+	// Verify config file is not empty
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to read config file: %v", err)
+	}
+	if len(content) == 0 {
+		t.Errorf("Config file is empty")
+	}
+}
+
+func TestConfigFileNotOverwrittenIfExists(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	// Create initial config file with custom content
+	initialContent := "# Custom config content"
+	err := os.WriteFile(configPath, []byte(initialContent), 0600)
+	if err != nil {
+		t.Fatalf("Failed to create initial config file: %v", err)
+	}
+
+	// Call InitConfigIfNeeded
+	err = InitConfigIfNeeded(configPath)
+	if err != nil {
+		t.Fatalf("InitConfigIfNeeded failed: %v", err)
+	}
+
+	// Verify config file was not overwritten
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to read config file: %v", err)
+	}
+	if string(content) != initialContent {
+		t.Errorf("Config file was overwritten. Expected: %s, Got: %s", initialContent, string(content))
+	}
+}
+
+func TestIsFirstRun(t *testing.T) {
+	// Test with non-existent file
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	if !IsFirstRun(configPath) {
+		t.Errorf("Expected first run for non-existent config file")
+	}
+
+	// Create the file
+	err := os.WriteFile(configPath, []byte("# config"), 0600)
+	if err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	// Test with existing file
+	if IsFirstRun(configPath) {
+		t.Errorf("Expected not first run for existing config file")
+	}
+}
+
+func TestGetConfigPath(t *testing.T) {
+	configPath, err := GetConfigPath()
+	if err != nil {
+		t.Fatalf("GetConfigPath failed: %v", err)
+	}
+
+	if configPath == "" {
+		t.Errorf("Config path is empty")
+	}
+
+	if !filepath.IsAbs(configPath) {
+		t.Errorf("Config path is not absolute: %s", configPath)
+	}
+}
+
+func TestValidateConfigPath(t *testing.T) {
+	// Test with empty path
+	err := ValidateConfigPath("")
+	if err == nil {
+		t.Errorf("Expected error for empty config path")
+	}
+
+	// Test with relative path
+	err = ValidateConfigPath("relative/path/config.yaml")
+	if err == nil {
+		t.Errorf("Expected error for relative config path")
+	}
+
+	// Test with valid absolute path
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	err = ValidateConfigPath(configPath)
+	if err != nil {
+		t.Errorf("ValidateConfigPath failed for valid path: %v", err)
+	}
+
+	// Test with existing readable file
+	err = os.WriteFile(configPath, []byte("# config"), 0600)
+	if err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+	err = ValidateConfigPath(configPath)
+	if err != nil {
+		t.Errorf("ValidateConfigPath failed for existing file: %v", err)
 	}
 }
 

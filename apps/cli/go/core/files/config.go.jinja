@@ -25,6 +25,39 @@ func GetConfigPath() (string, error) {
 	return configPath, nil
 }
 
+// ValidateConfigPath checks if the config path is valid and accessible
+func ValidateConfigPath(configPath string) error {
+	if configPath == "" {
+		return fmt.Errorf("config path cannot be empty")
+	}
+
+	// Check if the path is absolute
+	if !filepath.IsAbs(configPath) {
+		return fmt.Errorf("config path must be absolute: %s", configPath)
+	}
+
+	// Check if the parent directory is accessible
+	configDir := filepath.Dir(configPath)
+	if _, err := os.Stat(configDir); err != nil {
+		if os.IsNotExist(err) {
+			// Directory doesn't exist yet, which is okay for first run
+			return nil
+		}
+		return fmt.Errorf("config directory is not accessible: %w", err)
+	}
+
+	// If config file exists, check if it's readable
+	if _, err := os.Stat(configPath); err == nil {
+		file, err := os.Open(configPath)
+		if err != nil {
+			return fmt.Errorf("config file exists but is not readable: %w", err)
+		}
+		file.Close()
+	}
+
+	return nil
+}
+
 // EnsureConfigDir creates the config directory if it doesn't exist
 func EnsureConfigDir(configPath string) error {
 	configDir := filepath.Dir(configPath)
