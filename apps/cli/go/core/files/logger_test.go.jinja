@@ -163,4 +163,90 @@ func TestVerboseMode(t *testing.T) {
 		t.Error("Debug messages should appear when verbose is true")
 	}
 }
+
+func TestDebugFlagEnablesDebugLogs(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+	logger.SetDebug(false)
+
+	logger.Debug("debug message")
+
+	output := buf.String()
+	if output != "" {
+		t.Error("Debug messages should not appear when debug is false")
+	}
+
+	logger.SetDebug(true)
+	logger.Debug("debug message")
+
+	output = buf.String()
+	if output == "" {
+		t.Error("Debug messages should appear when debug is true")
+	}
+	if !strings.Contains(output, "DEBUG") {
+		t.Error("Debug messages should contain DEBUG level")
+	}
+}
+
+func TestDebugModeIncludesStackTraces(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+	logger.SetDebug(true)
+
+	logger.DebugWithStack("debug with stack")
+
+	output := buf.String()
+	if !strings.Contains(output, "Stack trace:") {
+		t.Error("DebugWithStack should include stack trace")
+	}
+}
+
+func TestDebugStateLogging(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+	logger.SetDebug(true)
+
+	testState := map[string]string{"key": "value"}
+	logger.DebugState("test-state", testState)
+
+	output := buf.String()
+	if !strings.Contains(output, "State [test-state]:") {
+		t.Error("DebugState should log state information")
+	}
+	if !strings.Contains(output, "key:value") {
+		t.Error("DebugState should include state content")
+	}
+}
+
+func TestDebugIsSeparateFromVerbose(t *testing.T) {
+	var buf bytes.Buffer
+	logger := NewLogger("test")
+	logger.SetWriter(&buf)
+
+	// Test with debug=true, verbose=false
+	logger.SetDebug(true)
+	logger.SetVerbose(false)
+	logger.Debug("debug message")
+
+	output := buf.String()
+	if output == "" {
+		t.Error("Debug should work independently of verbose")
+	}
+
+	// Clear buffer
+	buf.Reset()
+
+	// Test with debug=false, verbose=true
+	logger.SetDebug(false)
+	logger.SetVerbose(true)
+	logger.Debug("debug message")
+
+	output = buf.String()
+	if output != "" {
+		t.Error("Debug should not appear when debug is false, even if verbose is true")
+	}
+}
 {# vim: set ft=go: #}
