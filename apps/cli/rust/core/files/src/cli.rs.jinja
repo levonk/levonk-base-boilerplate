@@ -127,6 +127,19 @@ use std::time::Duration;
 /// - Human: Readable message with context and suggestions
 ///
 /// This prevents agents from re-running commands with different flags to verify empty results.
+///
+/// # Idempotent Operations
+///
+/// State-changing operations (install, uninstall, start, stop, create, update, delete, close) are idempotent:
+/// - Repeating a command when the desired state already exists returns exit code 0 (success)
+/// - No-op operations provide descriptive acknowledgment messages
+/// - Non-zero exit codes are reserved for situations where the intent cannot be satisfied
+///
+/// Idempotent behavior examples:
+///   {{ project_slug }} --install  # Already installed: "Completions already installed at /path/to/completion"
+///   {{ project_slug }} --uninstall  # Already uninstalled: "Completions already uninstalled (file not found)"
+///
+/// This enables agents to safely repeat operations without causing errors when the desired state is already achieved.
 #[derive(Parser)]
 #[command(name = "{{ project_slug }}", version, about = "{{ description }}", long_about = None)]
 pub struct Cli {

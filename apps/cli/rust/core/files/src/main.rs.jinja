@@ -44,6 +44,7 @@ use internal::mode::{detect_mode, Mode};
 use internal::toon::{OutputFormatter, OutputFormat};
 use internal::schema::{create_default_schema_registry, FieldSelector, parse_fields_arg};
 use internal::errors::{StructuredError, ErrorCode, format_error_with_format, translate_error_with_context, OutputChannels};
+use internal::idempotency::{check_idempotency, OperationType, IdempotentResult, acknowledge_noop};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -122,6 +123,34 @@ async fn main() -> Result<()> {
         use clap::CommandFactory;
         let mut cmd = Cli::command();
         
+        // Check if completions are already installed (idempotency)
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "bash".to_string());
+        let shell_name = if shell.contains("zsh") {
+            "zsh"
+        } else if shell.contains("fish") {
+            "fish"
+        } else if shell.contains("elvish") {
+            "elvish"
+        } else if shell.contains("pwsh") || shell.contains("powershell") {
+            "powershell"
+        } else {
+            "bash"
+        };
+        
+        if let Some(completion_path) = completion::get_completion_path(shell_name) {
+            if completion_path.exists() {
+                // Already installed - idempotent no-op
+                let mode = detect_mode();
+                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let noop_msg = format!("Completions already installed for shell: {} at {}", shell_name, completion_path);
+                
+                match acknowledge_noop(&noop_msg) {
+                    Ok(_) => std::process::exit(0),
+                    Err(_) => std::process::exit(1),
+                }
+            }
+        }
+        
         // Initialize config
         let config_manager = ConfigManager::new();
         match config_manager.initialize_config() {
@@ -137,20 +166,6 @@ async fn main() -> Result<()> {
                 std::process::exit(structured_error.exit_code);
             }
         }
-
-        // Detect shell and install completions
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "bash".to_string());
-        let shell_name = if shell.contains("zsh") {
-            "zsh"
-        } else if shell.contains("fish") {
-            "fish"
-        } else if shell.contains("elvish") {
-            "elvish"
-        } else if shell.contains("pwsh") || shell.contains("powershell") {
-            "powershell"
-        } else {
-            "bash"
-        };
 
         println!("Installing completions for shell: {}", shell_name);
         match completion::install_completion(&mut cmd, shell_name) {
@@ -186,6 +201,19 @@ async fn main() -> Result<()> {
         };
 
         if let Some(path) = completion::get_completion_path(shell_name) {
+            // Check if file exists (idempotency)
+            if !path.exists() {
+                // Already uninstalled - idempotent no-op
+                let mode = detect_mode();
+                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let noop_msg = format!("Completions already uninstalled for shell: {} (file not found at {})", shell_name, path);
+                
+                match acknowledge_noop(&noop_msg) {
+                    Ok(_) => std::process::exit(0),
+                    Err(_) => std::process::exit(1),
+                }
+            }
+            
             match std::fs::remove_file(&path) {
                 Ok(_) => {
                     println!("Removed completion script: {}", path);
@@ -201,16 +229,15 @@ async fn main() -> Result<()> {
                 }
             }
         } else {
+            // Cannot determine path - assume already uninstalled (idempotent no-op)
             let mode = detect_mode();
             let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
-            let structured_error = StructuredError::new(
-                ErrorCode::NotFound,
-                format!("Could not determine completion path for shell: {}", shell_name),
-                1,
-            );
-            let formatted = format.format_error(&structured_error);
-            println!("{}", formatted);
-            std::process::exit(structured_error.exit_code);
+            let noop_msg = format!("Completions already uninstalled for shell: {} (path not found)", shell_name);
+            
+            match acknowledge_noop(&noop_msg) {
+                Ok(_) => std::process::exit(0),
+                Err(_) => std::process::exit(1),
+            }
         }
         std::process::exit(0);
     }
