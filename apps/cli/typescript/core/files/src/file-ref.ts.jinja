@@ -28,7 +28,7 @@ function detectFormat(): FileRefFormat {
   if (process.env.VSCODE_PID || process.env.TERM_PROGRAM === 'vscode') {
     return 'vscode';
   }
-  
+
   // Check if terminal supports hyperlinks (many modern terminals)
   // For now, default to standard format for terminals
   return 'standard';
@@ -41,7 +41,7 @@ function toAbsolutePath(path: string): string {
   if (path.startsWith('/')) {
     return path; // Already absolute
   }
-  
+
   // Convert relative path to absolute
   return process.cwd() + '/' + path;
 }
@@ -54,7 +54,7 @@ function formatVSCode(location: FileLocation): string {
   const absolutePath = toAbsolutePath(location.path);
   const line = location.line !== undefined ? `:${location.line}` : '';
   const column = location.column !== undefined ? `:${location.column}` : '';
-  
+
   return `file://${absolutePath}${line}${column}`;
 }
 
@@ -66,7 +66,7 @@ function formatStandard(location: FileLocation, absolute: boolean = false): stri
   const path = absolute ? toAbsolutePath(location.path) : location.path;
   const line = location.line !== undefined ? `:${location.line}` : '';
   const column = location.column !== undefined ? `:${location.column}` : '';
-  
+
   return `${path}${line}${column}`;
 }
 
@@ -75,16 +75,20 @@ function formatStandard(location: FileLocation, absolute: boolean = false): stri
  */
 export function formatFileRef(location: FileLocation, options: FileRefOptions = {}): string {
   const format = options.format || 'auto';
-  const absolute = options.absolute !== undefined ? options.absolute : true;
-  
+  let absolute = options.absolute !== undefined ? options.absolute : true;
+
   let selectedFormat: FileRefFormat;
-  
+
   if (format === 'auto') {
     selectedFormat = detectFormat();
+    // Use relative paths by default for standard format (better terminal compatibility)
+    if (selectedFormat === 'standard' && options.absolute === undefined) {
+      absolute = false;
+    }
   } else {
     selectedFormat = format;
   }
-  
+
   switch (selectedFormat) {
     case 'vscode':
       return formatVSCode(location);
@@ -127,7 +131,7 @@ export function parseFileRef(ref: string): FileLocation {
   if (ref.startsWith('file://')) {
     const withoutPrefix = ref.substring(7); // Remove 'file://'
     const match = withoutPrefix.match(/^(.*?)(?::(\d+))?(?::(\d+))?$/);
-    
+
     if (match) {
       return {
         path: match[1],
@@ -136,10 +140,10 @@ export function parseFileRef(ref: string): FileLocation {
       };
     }
   }
-  
+
   // Handle standard format: file:line:column
   const match = ref.match(/^(.*?)(?::(\d+))?(?::(\d+))?$/);
-  
+
   if (match) {
     return {
       path: match[1],
@@ -147,7 +151,7 @@ export function parseFileRef(ref: string): FileLocation {
       column: match[3] ? parseInt(match[3], 10) : undefined,
     };
   }
-  
+
   // Fallback: treat entire string as path
   return { path: ref };
 }
