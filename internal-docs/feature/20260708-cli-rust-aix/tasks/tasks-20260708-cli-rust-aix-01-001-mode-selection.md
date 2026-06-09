@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 1
 parallel_id: 1
 branch: "feature/current/20260708-cli-rust-aix/story-01-001-mode-selection"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,44 +27,45 @@ Implement agent mode as the default behavior with auto-detection based on enviro
 
 ## Sub-Tasks
 
-- [ ] Add mode configuration to config struct with `mode` field supporting "agent" and "human" values
-- [ ] Implement environment variable detection for `MYTOOL_MODE` with highest precedence after CLI args
-- [ ] Add `--human` flag to CLI argument parser to force human mode
-- [ ] Add `--interactive` flag to CLI argument parser to force human mode (alias for --human)
-- [ ] Implement TTY detection using `atty` or `is-terminal` crate
-- [ ] Implement agent session detection by checking for `CLAUDE_SESSION`, `CODEX_SESSION` environment variables
-- [ ] Implement process parent detection to identify agent-specific process parents
-- [ ] Create mode detection logic with precedence chain: CLI flags > env vars > config file > auto-detection
-- [ ] Update config file loading to support mode setting
-- [ ] Add mode context to CLI execution context for use by other features
-- [ ] Write unit tests for mode detection logic
-- [ ] Write integration tests for mode precedence chain
-- [ ] Write tests for TTY detection scenarios
-- [ ] Write tests for agent session detection scenarios
-- [ ] Update CLI help text to document mode selection
+- [x] Add mode configuration to config struct with `mode` field supporting "agent" and "human" values
+- [x] Implement environment variable detection for `MYTOOL_MODE` with highest precedence after CLI args
+- [x] Add `--human` flag to CLI argument parser to force human mode
+- [x] Add `--interactive` flag to CLI argument parser to force human mode (alias for --human)
+- [x] Implement TTY detection using `atty` or `is-terminal` crate
+- [x] Implement agent session detection by checking for `CLAUDE_SESSION`, `CODEX_SESSION` environment variables
+- [x] Implement process parent detection to identify agent-specific process parents
+- [x] Create mode detection logic with precedence chain: CLI flags > env vars > config file > auto-detection
+- [x] Update config file loading to support mode setting
+- [x] Add mode context to CLI execution context for use by other features
+- [x] Write unit tests for mode detection logic
+- [x] Write integration tests for mode precedence chain
+- [x] Write tests for TTY detection scenarios
+- [x] Write tests for agent session detection scenarios
+- [x] Update CLI help text to document mode selection
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/rust/core/src/config.rs` — Configuration struct and loading logic
-- `boilerplate/apps/cli/rust/core/src/config/tests.rs` — Tests for configuration
-- `boilerplate/apps/cli/rust/core/src/cli/root.rs` — Root CLI command and flag definitions
-- `boilerplate/apps/cli/rust/core/src/cli/tests.rs` — Tests for root command
-- `boilerplate/apps/cli/rust/core/src/internal/mode/detection.rs` — Mode detection logic (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/mode/tests.rs` — Tests for mode detection (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/context.rs` — CLI execution context (new file)
-- `boilerplate/apps/cli/rust/core/Cargo.toml` — Add dependencies (atty, is-terminal)
+- `boilerplate/apps/cli/rust/core/files/src/config.rs.jinja` — Configuration struct and loading logic
+- `boilerplate/apps/cli/rust/core/files/src/cli.rs.jinja` — Root CLI command and flag definitions
+- `boilerplate/apps/cli/rust/core/files/src/main.rs.jinja` — Main entry point with mode detection
+- `boilerplate/apps/cli/rust/core/files/src/internal/mode/detection.rs.jinja` — Mode detection logic (new file)
+- `boilerplate/apps/cli/rust/core/files/src/internal/mode/tests.rs.jinja` — Tests for mode detection (new file)
+- `boilerplate/apps/cli/rust/core/files/src/internal/mode/mod.rs.jinja` — Mode module exports (new file)
+- `boilerplate/apps/cli/rust/core/files/src/internal/mod.rs.jinja` — Internal module root (new file)
+- `boilerplate/apps/cli/rust/core/files/src/lib.rs.jinja` — Library exports including internal module
+- `boilerplate/apps/cli/rust/core/files/Cargo.toml.jinja` — Add dependencies (is-terminal)
 
 ## Acceptance Criteria
 
-- [ ] Agent mode is the default behavior when no explicit mode selection is provided
-- [ ] Auto-detection correctly identifies agent vs human mode based on TTY and session detection
-- [ ] `--human` flag successfully forces human mode
-- [ ] `--interactive` flag successfully forces human mode
-- [ ] `MYTOOL_MODE` environment variable overrides auto-detection
-- [ ] Config file mode setting is respected when no CLI flags or env vars are set
-- [ ] Mode precedence chain works correctly in all scenarios
-- [ ] All mode detection scenarios have test coverage
-- [ ] Help text documents mode selection options
+- [x] Agent mode is the default behavior when no explicit mode selection is provided
+- [x] Auto-detection correctly identifies agent vs human mode based on TTY and session detection
+- [x] `--human` flag successfully forces human mode
+- [x] `--interactive` flag successfully forces human mode
+- [x] `MYTOOL_MODE` environment variable overrides auto-detection
+- [x] Config file mode setting is respected when no CLI flags or env vars are set
+- [x] Mode precedence chain works correctly in all scenarios
+- [x] All mode detection scenarios have test coverage
+- [x] Help text documents mode selection options
 
 ## Test Plan
 

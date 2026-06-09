@@ -18,6 +18,10 @@ pub struct Config {
     /// Configuration version for migration tracking
     pub version: u32,
     
+    /// CLI mode: agent, human
+    #[serde(default = "default_mode")]
+    pub mode: String,
+    
     /// Log level (error, warn, info, debug, trace)
     #[serde(default = "default_log_level")]
     pub log_level: String,
@@ -91,6 +95,10 @@ pub struct Config {
     pub audit: crate::audit::AuditConfig,
 }
 
+fn default_mode() -> String {
+    "agent".to_string()
+}
+
 fn default_log_level() -> String {
     "info".to_string()
 }
@@ -143,6 +151,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             version: CONFIG_VERSION,
+            mode: default_mode(),
             log_level: default_log_level(),
             color: default_color(),
             output_format: default_output_format(),
@@ -248,6 +257,11 @@ impl ConfigManager {
     /// Load configuration from environment variables
     fn load_environment(&mut self) -> Result<()> {
         let env_prefix = format!("{}_{}", PROJECT_NAME.to_uppercase().replace("-", "_"), "");
+        
+        if let Ok(mode) = std::env::var(format!("{}MODE", env_prefix)) {
+            self.config.mode = mode;
+            debug!("Loaded mode from environment");
+        }
         
         if let Ok(log_level) = std::env::var(format!("{}LOG_LEVEL", env_prefix)) {
             self.config.log_level = log_level;

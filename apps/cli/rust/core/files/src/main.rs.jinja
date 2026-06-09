@@ -13,6 +13,7 @@ mod security;
 mod resource;
 mod export;
 mod processor;
+mod internal;
 
 {% if enable_tui -%}
 mod tui;
@@ -39,6 +40,7 @@ use man::ManHandler;
 use resource::{ResourceLimits, ResourceLimiter};
 use export::{DataExporter, ExportConfig, ExportFormat, DataImporter, ImportConfig};
 use processor::{DataProcessor, ProcessingConfig, ProcessingOperation};
+use internal::mode::{detect_mode, Mode};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -253,6 +255,10 @@ async fn main() -> Result<()> {
     // Load configuration
     let mut config_manager = ConfigManager::new();
     config_manager.load()?;
+
+    // Detect CLI mode with precedence chain
+    let mode_detection = detect_mode(Some(cli.human), config_manager.get_config().mode.as_deref())?;
+    info!("CLI mode: {} (source: {})", mode_detection.mode.as_str(), mode_detection.source.as_str());
 
     // Initialize logging
     let verbosity = Verbosity::from_count(cli.verbose, cli.quiet, cli.debug);

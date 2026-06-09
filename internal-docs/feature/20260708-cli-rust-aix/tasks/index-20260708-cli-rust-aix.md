@@ -1,21 +1,21 @@
 # Rust CLI AXI Task Index
 
-| Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
-| -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 01-001 | Mode Selection and Auto-detection | feature/current/20260708-cli-rust-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli-core, config] |
-| 01-002 | TOON Format Implementation | feature/current/20260708-cli-rust-aix/story-01-002-toon-format | None | Parallel-safe: true | [output-formats] |
-| 01-003 | Configuration System Updates | feature/current/20260708-cli-rust-aix/story-01-003-config-updates | None | Parallel-safe: true | [config] |
-| 02-001 | Minimal Default Schemas | feature/current/20260708-cli-rust-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output-formats, cli-commands] |
-| 02-002 | Content Truncation | feature/current/20260708-cli-rust-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] |
-| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-rust-aix/story-02-003-aggregates | 01-001 | Parallel-safe: true | [data-layer, output-formats] |
-| 02-004 | Definitive Empty States | feature/current/20260708-cli-rust-aix/story-02-004-empty-states | 01-001 | Parallel-safe: true | [output-formats, cli-commands] |
-| 03-001 | Structured Errors & Exit Codes | feature/current/20260708-cli-rust-aix/story-03-001-structured-errors | 01-001, 01-002 | Parallel-safe: true | [error-handling, output-formats] |
-| 03-002 | Idempotent Operations | feature/current/20260708-cli-rust-aix/story-03-002-idempotent-ops | 01-001 | Parallel-safe: true | [cli-commands, business-logic] |
-| 03-003 | No Interactive Prompts in Agent Mode | feature/current/20260708-cli-rust-aix/story-03-003-no-prompts | 01-001 | Parallel-safe: true | [cli-commands, user-interaction] |
-| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-rust-aix/story-04-001-session-hooks | 01-001, 01-002 | Parallel-safe: true | [session-integration, cli-commands] |
-| 04-002 | Agent Skill Support | feature/current/20260708-cli-rust-aix/story-04-002-agent-skills | 01-002 | Parallel-safe: true | [skill-generation, documentation] |
-| 05-001 | Content-First No-Args Behavior | feature/current/20260708-cli-rust-aix/story-05-001-content-first | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, output-formats] |
-| 05-002 | Contextual Disclosure | feature/current/20260708-cli-rust-aix/story-05-002-contextual-disclosure | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, suggestion-engine] |
+| Story ID | Story Title | Status | Branch | Dependencies | Parallel-safe | Modules |
+| -------- | ----------- | ------ | ------ | ------------ | ------------- | ------- |
+| 01-001 | Mode Selection and Auto-detection | [x] Done | feature/current/20260708-cli-rust-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli-core, config] |
+| 01-002 | TOON Format Implementation | [ ] Todo | feature/current/20260708-cli-rust-aix/story-01-002-toon-format | None | Parallel-safe: true | [output-formats] |
+| 01-003 | Configuration System Updates | [ ] Todo | feature/current/20260708-cli-rust-aix/story-01-003-config-updates | None | Parallel-safe: true | [config] |
+| 02-001 | Minimal Default Schemas | [ ] Todo | feature/current/20260708-cli-rust-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output-formats, cli-commands] |
+| 02-002 | Content Truncation | [ ] Todo | feature/current/20260708-cli-rust-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] |
+| 02-003 | Pre-computed Aggregates | [ ] Todo | feature/current/20260708-cli-rust-aix/story-02-003-aggregates | 01-001 | Parallel-safe: true | [data-layer, output-formats] |
+| 02-004 | Definitive Empty States | [ ] Todo | feature/current/20260708-cli-rust-aix/story-02-004-empty-states | 01-001 | Parallel-safe: true | [output-formats, cli-commands] |
+| 03-001 | Structured Errors & Exit Codes | [ ] Todo | feature/current/20260708-cli-rust-aix/story-03-001-structured-errors | 01-001, 01-002 | Parallel-safe: true | [error-handling, output-formats] |
+| 03-002 | Idempotent Operations | [ ] Todo | feature/current/20260708-cli-rust-aix/story-03-002-idempotent-ops | 01-001 | Parallel-safe: true | [cli-commands, business-logic] |
+| 03-003 | No Interactive Prompts in Agent Mode | [ ] Todo | feature/current/20260708-cli-rust-aix/story-03-003-no-prompts | 01-001 | Parallel-safe: true | [cli-commands, user-interaction] |
+| 04-001 | Session Hook Infrastructure | [ ] Todo | feature/current/20260708-cli-rust-aix/story-04-001-session-hooks | 01-001, 01-002 | Parallel-safe: true | [session-integration, cli-commands] |
+| 04-002 | Agent Skill Support | [ ] Todo | feature/current/20260708-cli-rust-aix/story-04-002-agent-skills | 01-002 | Parallel-safe: true | [skill-generation, documentation] |
+| 05-001 | Content-First No-Args Behavior | [ ] Todo | feature/current/20260708-cli-rust-aix/story-05-001-content-first | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, output-formats] |
+| 05-002 | Contextual Disclosure | [ ] Todo | feature/current/20260708-cli-rust-aix/story-05-002-contextual-disclosure | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, suggestion-engine] |
 
 ## Phase Summary
 

@@ -1,0 +1,132 @@
+use anyhow::Result;
+use crate::internal::mode::detection::{Mode, ModeDetection, ModeSource, detect_mode};
+use std::env;
+
+#[test]
+fn test_mode_detection_cli_flag_human() {
+    // Test that --human flag forces human mode
+    let detection = detect_mode(Some(true), None).unwrap();
+    assert_eq!(detection.mode, Mode::Human);
+    assert_eq!(detection.source, ModeSource::CommandLine);
+}
+
+#[test]
+fn test_mode_detection_cli_flag_none() {
+    // Test that no CLI flag doesn't force human mode
+    let detection = detect_mode(Some(false), None).unwrap();
+    assert_ne!(detection.source, ModeSource::CommandLine);
+}
+
+#[test]
+fn test_mode_detection_env_var() {
+    let env_var_name = format!("{}_MODE", "{{ project_slug }}".to_uppercase().replace("-", "_"));
+    
+    // Test environment variable precedence
+    env::set_var(&env_var_name, "human");
+    let detection = detect_mode(None, None).unwrap();
+    assert_eq!(detection.mode, Mode::Human);
+    assert_eq!(detection.source, ModeSource::Environment);
+    
+    env::set_var(&env_var_name, "agent");
+    let detection = detect_mode(None, None).unwrap();
+    assert_eq!(detection.mode, Mode::Agent);
+    assert_eq!(detection.source, ModeSource::Environment);
+    
+    env::remove_var(&env_var_name);
+}
+
+#[test]
+fn test_mode_detection_config() {
+    // Test config file precedence
+    let detection = detect_mode(None, Some("human")).unwrap();
+    assert_eq!(detection.mode, Mode::Human);
+    assert_eq!(detection.source, ModeSource::Config);
+    
+    let detection = detect_mode(None, Some("agent")).unwrap();
+    assert_eq!(detection.mode, Mode::Agent);
+    assert_eq!(detection.source, ModeSource::Config);
+}
+
+#[test]
+fn test_mode_detection_precedence_chain() {
+    let env_var_name = format!("{}_MODE", "{{ project_slug }}".to_uppercase().replace("-", "_"));
+    
+    // CLI flag should override env var
+    env::set_var(&env_var_name, "agent");
+    let detection = detect_mode(Some(true), Some("agent")).unwrap();
+    assert_eq!(detection.mode, Mode::Human);
+    assert_eq!(detection.source, ModeSource::CommandLine);
+    
+    // Env var should override config
+    env::set_var(&env_var_name, "human");
+    let detection = detect_mode(None, Some("agent")).unwrap();
+    assert_eq!(detection.mode, Mode::Human);
+    assert_eq!(detection.source, ModeSource::Environment);
+    
+    env::remove_var(&env_var_name);
+}
+
+#[test]
+fn test_mode_detection_agent_session() {
+    let env_var_name = format!("{}_MODE", "{{ project_slug }}".to_uppercase().replace("-", "_"));
+    
+    // Test agent session detection
+    env::set_var("CLAUDE_SESSION", "test-session");
+    let detection = detect_mode(None, None).unwrap();
+    assert_eq!(detection.mode, Mode::Agent);
+    assert_eq!(detection.source, ModeSource::AutoDetected);
+    
+    env::remove_var("CLAUDE_SESSION");
+    
+    // Env var should override auto-detection
+    env::set_var(&env_var_name, "human");
+    env::set_var("CLAUDE_SESSION", "test-session");
+    let detection = detect_mode(None, None).unwrap();
+    assert_eq!(detection.mode, Mode::Human);
+    assert_eq!(detection.source, ModeSource::Environment);
+    
+    env::remove_var(&env_var_name);
+}
+
+#[test]
+fn test_mode_detection_invalid_env_var() {
+    let env_var_name = format!("{}_MODE", "{{ project_slug }}".to_uppercase().replace("-", "_"));
+    
+    // Test invalid environment variable value
+    env::set_var(&env_var_name, "invalid");
+    let result = detect_mode(None, None);
+    assert!(result.is_err());
+    
+    env::remove_var(&env_var_name);
+}
+
+#[test]
+fn test_mode_detection_invalid_config() {
+    // Test invalid config value
+    let result = detect_mode(None, Some("invalid"));
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_mode_parsing_case_insensitive() {
+    assert_eq!(Mode::from_str("agent").unwrap(), Mode::Agent);
+    assert_eq!(Mode::from_str("AGENT").unwrap(), Mode::Agent);
+    assert_eq!(Mode::from_str("Agent").unwrap(), Mode::Agent);
+    assert_eq!(Mode::from_str("human").unwrap(), Mode::Human);
+    assert_eq!(Mode::from_str("HUMAN").unwrap(), Mode::Human);
+    assert_eq!(Mode::from_str("Human").unwrap(), Mode::Human);
+}
+
+#[test]
+fn test_mode_display() {
+    assert_eq!(Mode::Agent.as_str(), "agent");
+    assert_eq!(Mode::Human.as_str(), "human");
+}
+
+#[test]
+fn test_mode_source_display() {
+    assert_eq!(ModeSource::CommandLine.as_str(), "command-line");
+    assert_eq!(ModeSource::Environment.as_str(), "environment");
+    assert_eq!(ModeSource::Config.as_str(), "config");
+    assert_eq!(ModeSource::AutoDetected.as_str(), "auto-detected");
+}

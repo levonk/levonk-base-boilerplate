@@ -30,6 +30,21 @@ use std::time::Duration;
 ///
 /// Run diagnostics:
 ///   {{ project_slug }} doctor --all
+///
+/// # Mode Selection
+///
+/// The CLI automatically detects the execution mode (agent vs human) based on:
+/// - Explicit flags (--human, --interactive)
+/// - Environment variables ({{ project_slug | upper | replace('-', '_') }}_MODE)
+/// - Config file settings
+/// - Auto-detection (TTY presence, agent session detection)
+///
+/// Force human mode:
+///   {{ project_slug }} --human file1.txt
+///   {{ project_slug }} --interactive file1.txt
+///
+/// Force agent mode via environment:
+///   {{ project_slug | upper | replace('-', '_') }}_MODE=agent {{ project_slug }} file1.txt
 #[derive(Parser)]
 #[command(name = "{{ project_slug }}", version, about = "{{ description }}", long_about = None)]
 pub struct Cli {
@@ -56,6 +71,10 @@ pub struct Cli {
     /// Debug mode - enable debug-level logging
     #[arg(long, short = 'd')]
     pub debug: bool,
+
+    /// Human mode - force human-optimized interaction (alias: --interactive)
+    #[arg(long, alias = "interactive", help = "Force human-optimized interaction mode")]
+    pub human: bool,
 
     /// Color mode: auto, always, never (default: auto)
     #[arg(long, value_name = "MODE")]

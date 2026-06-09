@@ -1,0 +1,275 @@
+use anyhow::{Context, Result};
+use std::env;
+use tracing::{debug, info};
+
+/// CLI execution mode
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mode {
+    /// Agent mode - optimized for AI agent interaction
+    Agent,
+    /// Human mode - optimized for human interaction
+    Human,
+}
+
+impl Mode {
+    /// Convert mode to string
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Mode::Agent => "agent",
+            Mode::Human => "human",
+        }
+    }
+    
+    /// Parse mode from string
+    pub fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_str() {
+            "agent" => Ok(Mode::Agent),
+            "human" => Ok(Mode::Human),
+            _ => anyhow::bail!("Invalid mode: {}. Must be 'agent' or 'human'", s),
+        }
+    }
+}
+
+/// Mode detection result with source information
+#[derive(Debug, Clone)]
+pub struct ModeDetection {
+    /// The detected mode
+    pub mode: Mode,
+    /// Source of the mode decision
+    pub source: ModeSource,
+}
+
+/// Source of mode detection
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModeSource {
+    /// Explicitly set via command line flag
+    CommandLine,
+    /// Set via environment variable
+    Environment,
+    /// Set via config file
+    Config,
+    /// Auto-detected based on environment
+    AutoDetected,
+}
+
+impl ModeSource {
+    /// Convert source to string
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ModeSource::CommandLine => "command-line",
+            ModeSource::Environment => "environment",
+            ModeSource::Config => "config",
+            ModeSource::AutoDetected => "auto-detected",
+        }
+    }
+}
+
+/// Detect CLI mode with precedence chain
+/// 
+/// Precedence (highest to lowest):
+/// 1. Command line flags (--human, --interactive)
+/// 2. Environment variables (MYTOOL_MODE)
+/// 3. Config file setting
+/// 4. Auto-detection (TTY, agent session, process parent)
+pub fn detect_mode(
+    cli_human_mode: Option<bool>,
+    config_mode: Option<&str>,
+) -> Result<ModeDetection> {
+    // 1. Check command line flags (highest precedence)
+    if let Some(human_mode) = cli_human_mode {
+        if human_mode {
+            debug!("Mode set to human via command line flag");
+            return Ok(ModeDetection {
+                mode: Mode::Human,
+                source: ModeSource::CommandLine,
+            });
+        }
+    }
+    
+    // 2. Check environment variable
+    let env_var_name = format!("{}_MODE", "{{ project_slug }}".to_uppercase().replace("-", "_"));
+    if let Ok(env_mode) = env::var(&env_var_name) {
+        let mode = Mode::from_str(&env_mode)
+            .context(format!("Invalid mode in environment variable {}: {}", env_var_name, env_mode))?;
+        debug!("Mode set to {} via environment variable {}", mode.as_str(), env_var_name);
+        return Ok(ModeDetection {
+            mode,
+            source: ModeSource::Environment,
+        });
+    }
+    
+    // 3. Check config file
+    if let Some(config_mode_str) = config_mode {
+        let mode = Mode::from_str(config_mode_str)
+            .context(format!("Invalid mode in config file: {}", config_mode_str))?;
+        debug!("Mode set to {} via config file", mode.as_str());
+        return Ok(ModeDetection {
+            mode,
+            source: ModeSource::Config,
+        });
+    }
+    
+    // 4. Auto-detection (lowest precedence)
+    let detected = auto_detect_mode()?;
+    debug!("Mode auto-detected as {} ({})", detected.mode.as_str(), detected.source.as_str());
+    Ok(detected)
+}
+
+/// Auto-detect mode based on environment
+fn auto_detect_mode() -> Result<ModeDetection> {
+    // Check for agent session indicators
+    if is_agent_session() {
+        info!("Agent session detected, using agent mode");
+        return Ok(ModeDetection {
+            mode: Mode::Agent,
+            source: ModeSource::AutoDetected,
+        });
+    }
+    
+    // Check for TTY presence
+    if !is_tty() {
+        info!("No TTY detected, using agent mode");
+        return Ok(ModeDetection {
+            mode: Mode::Agent,
+            source: ModeSource::AutoDetected,
+        });
+    }
+    
+    // Check process parent
+    if is_agent_parent() {
+        info!("Agent parent process detected, using agent mode");
+        return Ok(ModeDetection {
+            mode: Mode::Agent,
+            source: ModeSource::AutoDetected,
+        });
+    }
+    
+    // Default to human mode if no agent indicators
+    info!("No agent indicators detected, using human mode");
+    Ok(ModeDetection {
+        mode: Mode::Human,
+        source: ModeSource::AutoDetected,
+    })
+}
+
+/// Check if running in an agent session
+fn is_agent_session() -> bool {
+    // Check for common agent session environment variables
+    let agent_vars = [
+        "CLAUDE_SESSION",
+        "CODEX_SESSION",
+        "AGENT_SESSION",
+        "AI_SESSION",
+    ];
+    
+    for var in &agent_vars {
+        if env::var(var).is_ok() {
+            debug!("Agent session detected via {} environment variable", var);
+            return true;
+        }
+    }
+    
+    false
+}
+
+/// Check if stdout is a TTY
+fn is_tty() -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::io::AsRawFd;
+        use is_terminal::IsTerminal;
+        std::io::stdout().is_terminal()
+    }
+    
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        use is_terminal::IsTerminal;
+        std::io::stdout().is_terminal()
+    }
+    
+    #[cfg(not(any(unix, windows)))]
+    {
+        // Fallback for other platforms
+        false
+    }
+}
+
+/// Check if parent process is an agent
+fn is_agent_parent() -> bool {
+    // This is a simplified check - in production you'd want to:
+    // 1. Get parent process ID
+    // 2. Get parent process name/command
+    // 3. Check against known agent process names
+    
+    // For now, we'll use environment variables as a proxy
+    // since getting parent process info is platform-specific
+    let agent_parent_vars = [
+        "AGENT_PARENT",
+        "AI_AGENT",
+    ];
+    
+    for var in &agent_parent_vars {
+        if env::var(var).is_ok() {
+            debug!("Agent parent detected via {} environment variable", var);
+            return true;
+        }
+    }
+    
+    false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    
+    #[test]
+    fn test_mode_from_str() {
+        assert_eq!(Mode::from_str("agent").unwrap(), Mode::Agent);
+        assert_eq!(Mode::from_str("human").unwrap(), Mode::Human);
+        assert_eq!(Mode::from_str("AGENT").unwrap(), Mode::Agent);
+        assert_eq!(Mode::from_str("HUMAN").unwrap(), Mode::Human);
+        assert!(Mode::from_str("invalid").is_err());
+    }
+    
+    #[test]
+    fn test_mode_as_str() {
+        assert_eq!(Mode::Agent.as_str(), "agent");
+        assert_eq!(Mode::Human.as_str(), "human");
+    }
+    
+    #[test]
+    fn test_cli_flag_precedence() {
+        // CLI flag should override everything
+        let detection = detect_mode(Some(true), Some("agent")).unwrap();
+        assert_eq!(detection.mode, Mode::Human);
+        assert_eq!(detection.source, ModeSource::CommandLine);
+    }
+    
+    #[test]
+    fn test_env_var_precedence() {
+        let env_var_name = format!("{}_MODE", "{{ project_slug }}".to_uppercase().replace("-", "_"));
+        env::set_var(&env_var_name, "human");
+        
+        let detection = detect_mode(None, Some("agent")).unwrap();
+        assert_eq!(detection.mode, Mode::Human);
+        assert_eq!(detection.source, ModeSource::Environment);
+        
+        env::remove_var(&env_var_name);
+    }
+    
+    #[test]
+    fn test_config_precedence() {
+        let detection = detect_mode(None, Some("human")).unwrap();
+        assert_eq!(detection.mode, Mode::Human);
+        assert_eq!(detection.source, ModeSource::Config);
+    }
+    
+    #[test]
+    fn test_auto_detection() {
+        let detection = detect_mode(None, None).unwrap();
+        // Should auto-detect based on environment
+        assert!(matches!(detection.source, ModeSource::AutoDetected));
+    }
+}
