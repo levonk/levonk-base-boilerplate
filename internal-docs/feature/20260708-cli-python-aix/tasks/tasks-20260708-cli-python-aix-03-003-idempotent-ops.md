@@ -27,17 +27,17 @@ Ensure all mutation operations are idempotent. Repeating commands should not cau
 
 ## Sub-Tasks
 
-- [ ] Identify all mutation operations (create, update, delete) — `operations/registry.py`
-- [ ] Implement idempotent check for each mutation — `operations/idempotent.py`
-- [ ] Check if desired state already exists before mutation — `operations/idempotent.py`
-- [ ] Acknowledge no-ops with clear message — `operations/idempotent.py`
-- [ ] Return exit code 0 for no-ops — `operations/idempotent.py`
-- [ ] Only execute mutation when state change needed — `operations/idempotent.py`
-- [ ] Test idempotent create operations — `tests/test_idempotent.py`
-- [ ] Test idempotent update operations — `tests/test_idempotent.py`
-- [ ] Test idempotent delete operations — `tests/test_idempotent.py`
-- [ ] Test no-op acknowledgment messages — `tests/test_idempotent.py`
-- [ ] Test exit code 0 for no-ops — `tests/test_idempotent.py`
+- [x] Identify all mutation operations (create, update, delete) — `operations/registry.py`
+- [x] Implement idempotent check for each mutation — `operations/idempotent.py`
+- [x] Check if desired state already exists before mutation — `operations/idempotent.py`
+- [x] Acknowledge no-ops with clear message — `operations/idempotent.py`
+- [x] Return exit code 0 for no-ops — `operations/idempotent.py`
+- [x] Only execute mutation when state change needed — `operations/idempotent.py`
+- [x] Test idempotent create operations — `tests/test_idempotent.py`
+- [x] Test idempotent update operations — `tests/test_idempotent.py`
+- [x] Test idempotent delete operations — `tests/test_idempotent.py`
+- [x] Test no-op acknowledgment messages — `tests/test_idempotent.py`
+- [x] Test exit code 0 for no-ops — `tests/test_idempotent.py`
 
 ## Relevant Files
 
@@ -47,13 +47,13 @@ Ensure all mutation operations are idempotent. Repeating commands should not cau
 
 ## Acceptance Criteria
 
-- [ ] All mutation operations are idempotent
-- [ ] Desired state checked before mutation
-- [ ] No-ops acknowledged with clear message
-- [ ] Exit code 0 for no-ops
-- [ ] Mutation only executed when state change needed
-- [ ] Repeating commands doesn't cause errors
-- [ ] All tests pass
+- [x] All mutation operations are idempotent
+- [x] Desired state checked before mutation
+- [x] No-ops acknowledged with clear message
+- [x] Exit code 0 for no-ops
+- [x] Mutation only executed when state change needed
+- [x] Repeating commands doesn't cause errors
+- [x] All tests pass
 
 ## Test Plan
 

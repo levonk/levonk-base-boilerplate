@@ -31,26 +31,16 @@
     "nixpkgs#nodePackages.eslint": "",
     "nixpkgs#nodePackages.prettier": "",
     "nixpkgs#pnpm": "",
-    "nixpkgs#just": "",
-    
-    
-    
-    
-    
-    
-    
+    "nixpkgs#just": ""
   },
-    "hooks": {
+  "hooks": {
     "on_create": [
       "just bootstrap-internal"
     ]
-  }
-
+  },
   "env": {
     "NODE_ENV": "development",
-    "TS_NODE_PROJECT": "./tsconfig.json",
-    
-    
+    "TS_NODE_PROJECT": "./tsconfig.json"
   }
 }
 

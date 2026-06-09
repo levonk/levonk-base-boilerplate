@@ -49,14 +49,14 @@ Implement consistent, actionable error messages with suggestions using the forma
 
 ## Acceptance Criteria
 
-- [ ] All error messages follow format: `ERROR: <description> - <suggestion>`
-- [ ] Error messages are actionable
-- [ ] Error messages include helpful suggestions
-- [ ] Error messages include file references where applicable
-- [ ] Error messages include context information
-- [ ] Error categorization works correctly
-- [ ] Error format is consistent across all error paths
-- [ ] Error messages are user-friendly
+- [x] All error messages follow format: `ERROR: <description> - <suggestion>`
+- [x] Error messages are actionable
+- [x] Error messages include helpful suggestions
+- [x] Error messages include file references where applicable
+- [x] Error messages include context information
+- [x] Error categorization works correctly
+- [x] Error format is consistent across all error paths
+- [x] Error messages are user-friendly
 
 ## Test Plan
 

@@ -185,7 +185,16 @@ func parseConfigContent(content string) (map[string]interface{}, error) {
 		if len(parts) == 2 {
 			key := trimSpace(parts[0])
 			value := trimSpace(parts[1])
-			config[key] = value
+
+			// Try to parse as integer first
+			if intVal, err := parseInt(value); err == nil {
+				config[key] = intVal
+			} else if boolVal, err := parseBool(value); err == nil {
+				config[key] = boolVal
+			} else {
+				// Keep as string (remove quotes if present)
+				config[key] = unquote(value)
+			}
 		}
 	}
 
@@ -227,6 +236,41 @@ func splitColon(s string) []string {
 		}
 	}
 	return []string{s}
+}
+
+// parseInt parses a string as an integer
+func parseInt(s string) (int, error) {
+	var result int
+	for _, c := range s {
+		if c >= '0' && c <= '9' {
+			result = result*10 + int(c-'0')
+		} else {
+			return 0, fmt.Errorf("not a number")
+		}
+	}
+	return result, nil
+}
+
+// parseBool parses a string as a boolean
+func parseBool(s string) (bool, error) {
+	switch s {
+	case "true", "True", "TRUE":
+		return true, nil
+	case "false", "False", "FALSE":
+		return false, nil
+	default:
+		return false, fmt.Errorf("not a boolean")
+	}
+}
+
+// unquote removes quotes from a string if present
+func unquote(s string) string {
+	if len(s) >= 2 {
+		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
 }
 
 // GetLocalProjectConfigPath returns the path to a local project config file

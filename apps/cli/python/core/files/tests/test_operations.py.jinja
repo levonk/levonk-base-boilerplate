@@ -1,0 +1,282 @@
+# vim: set ft=python :
+"""Tests for idempotent operations framework."""
+
+import pytest
+from {{project_slug}}.operations import (
+    OperationType,
+    Operation,
+    OperationRegistry,
+    register_operation,
+    get_operation,
+    get_registry,
+)
+
+
+def test_operation_type_enum():
+    """Test OperationType enum values."""
+    assert OperationType.CREATE.value == "create"
+    assert OperationType.UPDATE.value == "update"
+    assert OperationType.DELETE.value == "delete"
+
+
+def test_operation_creation():
+    """Test Operation object creation."""
+    def execute_func():
+        return {"status": "executed"}
+    
+    def check_state_func():
+        return {"status": "current"}
+    
+    op = Operation(
+        name="test_op",
+        op_type=OperationType.CREATE,
+        execute_func=execute_func,
+        check_state_func=check_state_func,
+        description="Test operation"
+    )
+    
+    assert op.name == "test_op"
+    assert op.op_type == OperationType.CREATE
+    assert op.description == "Test operation"
+
+
+def test_operation_registry_register():
+    """Test registering an operation."""
+    registry = OperationRegistry()
+    
+    def execute_func():
+        return {"status": "executed"}
+    
+    def check_state_func():
+        return {"status": "current"}
+    
+    op = registry.register(
+        name="test_op",
+        op_type=OperationType.CREATE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    assert op.name == "test_op"
+    assert registry.get("test_op") == op
+
+
+def test_operation_registry_duplicate():
+    """Test that duplicate registration raises error."""
+    registry = OperationRegistry()
+    
+    def execute_func():
+        return {"status": "executed"}
+    
+    def check_state_func():
+        return {"status": "current"}
+    
+    registry.register(
+        name="test_op",
+        op_type=OperationType.CREATE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    with pytest.raises(ValueError):
+        registry.register(
+            name="test_op",
+            op_type=OperationType.UPDATE,
+            execute_func=execute_func,
+            check_state_func=check_state_func
+        )
+
+
+def test_operation_registry_get_not_found():
+    """Test getting non-existent operation returns None."""
+    registry = OperationRegistry()
+    assert registry.get("nonexistent") is None
+
+
+def test_operation_registry_list_all():
+    """Test listing all operations."""
+    registry = OperationRegistry()
+    
+    def execute_func():
+        return {"status": "executed"}
+    
+    def check_state_func():
+        return {"status": "current"}
+    
+    registry.register("op1", OperationType.CREATE, execute_func, check_state_func)
+    registry.register("op2", OperationType.UPDATE, execute_func, check_state_func)
+    registry.register("op3", OperationType.DELETE, execute_func, check_state_func)
+    
+    ops = registry.list_operations()
+    assert len(ops) == 3
+
+
+def test_operation_registry_list_by_type():
+    """Test listing operations filtered by type."""
+    registry = OperationRegistry()
+    
+    def execute_func():
+        return {"status": "executed"}
+    
+    def check_state_func():
+        return {"status": "current"}
+    
+    registry.register("op1", OperationType.CREATE, execute_func, check_state_func)
+    registry.register("op2", OperationType.CREATE, execute_func, check_state_func)
+    registry.register("op3", OperationType.UPDATE, execute_func, check_state_func)
+    
+    create_ops = registry.list_create_operations()
+    assert len(create_ops) == 2
+    
+    update_ops = registry.list_update_operations()
+    assert len(update_ops) == 1
+    
+    delete_ops = registry.list_delete_operations()
+    assert len(delete_ops) == 0
+
+
+def test_global_register_operation():
+    """Test global register_operation function."""
+    def execute_func():
+        return {"status": "executed"}
+    
+    def check_state_func():
+        return {"status": "current"}
+    
+    op = register_operation(
+        name="global_op",
+        op_type=OperationType.CREATE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    assert op.name == "global_op"
+    assert get_operation("global_op") == op
+
+
+def test_global_get_registry():
+    """Test getting global registry."""
+    registry = get_registry()
+    assert isinstance(registry, OperationRegistry)
+
+
+def test_operation_execute_create_noop():
+    """Test operation execution with no-op (state already exists)."""
+    def execute_func():
+        return {"status": "created"}
+    
+    def check_state_func():
+        return {"status": "already_exists"}
+    
+    op = Operation(
+        name="test_create",
+        op_type=OperationType.CREATE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    result = op.execute(desired_state={"status": "already_exists"})
+    
+    assert result["status"] == "noop"
+    assert "already in desired state" in result["message"]
+
+
+def test_operation_execute_create_actual():
+    """Test operation execution with actual create."""
+    def execute_func():
+        return {"status": "created"}
+    
+    def check_state_func():
+        return {"status": "not_exists"}
+    
+    op = Operation(
+        name="test_create",
+        op_type=OperationType.CREATE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    result = op.execute(desired_state={"status": "created"})
+    
+    assert result["status"] == "success"
+    assert "completed successfully" in result["message"]
+
+
+def test_operation_execute_update_noop():
+    """Test operation execution with no-op (state already matches)."""
+    def execute_func():
+        return {"status": "updated"}
+    
+    def check_state_func():
+        return {"status": "desired"}
+    
+    op = Operation(
+        name="test_update",
+        op_type=OperationType.UPDATE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    result = op.execute(desired_state={"status": "desired"})
+    
+    assert result["status"] == "noop"
+
+
+def test_operation_execute_update_actual():
+    """Test operation execution with actual update."""
+    def execute_func():
+        return {"status": "updated"}
+    
+    def check_state_func():
+        return {"status": "current"}
+    
+    op = Operation(
+        name="test_update",
+        op_type=OperationType.UPDATE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    result = op.execute(desired_state={"status": "updated"})
+    
+    assert result["status"] == "success"
+
+
+def test_operation_execute_delete_noop():
+    """Test operation execution with no-op (state doesn't exist)."""
+    def execute_func():
+        return {"status": "deleted"}
+    
+    def check_state_func():
+        return None
+    
+    op = Operation(
+        name="test_delete",
+        op_type=OperationType.DELETE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    result = op.execute()
+    
+    assert result["status"] == "noop"
+
+
+def test_operation_execute_delete_actual():
+    """Test operation execution with actual delete."""
+    def execute_func():
+        return {"status": "deleted"}
+    
+    def check_state_func():
+        return {"status": "exists"}
+    
+    op = Operation(
+        name="test_delete",
+        op_type=OperationType.DELETE,
+        execute_func=execute_func,
+        check_state_func=check_state_func
+    )
+    
+    result = op.execute()
+    
+    assert result["status"] == "success"

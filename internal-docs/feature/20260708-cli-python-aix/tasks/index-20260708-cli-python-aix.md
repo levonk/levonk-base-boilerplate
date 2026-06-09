@@ -36,8 +36,8 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
 | 03-001 | Structured Errors & Exit Codes | feature/current/20260708-cli-python-aix/story-03-001-structured-errors | 02-004 | Parallel-safe: true | [errors.py, output.py] | [x] Done |
-| 03-002 | No Interactive Prompts | feature/current/20260708-cli-python-aix/story-03-002-no-prompts | 03-001 | Parallel-safe: true | [cli.py, prompts.py] | [~] In-Progress |
-| 03-003 | Idempotent Operations | feature/current/20260708-cli-python-aix/story-03-003-idempotent-ops | 03-001, 03-002 | Parallel-safe: true | [operations.py, idempotent.py] |
+| 03-002 | No Interactive Prompts | feature/current/20260708-cli-python-aix/story-03-002-no-prompts | 03-001 | Parallel-safe: true | [cli.py, prompts.py] | [x] Done |
+| 03-003 | Idempotent Operations | feature/current/20260708-cli-python-aix/story-03-003-idempotent-ops | 03-001, 03-002 | Parallel-safe: true | [operations.py, idempotent.py] | [~] In-Progress |
 
 ### Phase 04: Session Integration (Week 2)
 
