@@ -35,6 +35,7 @@ pub use decoder::{ToonDecoder, from_str, from_str_with_options};
 use crate::internal::schema::{OutputSchema, FieldSelector, apply_schema_transforms};
 use crate::internal::truncation::{Truncator, TruncationMetadata};
 use crate::internal::aggregates::{AggregateInfo, CountFormatter};
+use crate::internal::emptystate::{EmptyStateFormatter, EmptyStateContext};
 
 /// Output format options
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -259,6 +260,42 @@ impl OutputFormatter {
         self.format
     }
 
+    /// Format an empty state message
+    pub fn format_empty_state(&self, context: &EmptyStateContext) -> String {
+        let formatter = EmptyStateFormatter::new();
+        let message = formatter.format(context);
+        
+        match self.format {
+            OutputFormat::Toon => {
+                // TOON format for empty state
+                let mut toon_obj = std::collections::BTreeMap::new();
+                toon_obj.insert("empty".to_string(), ToonValue::bool(true));
+                toon_obj.insert("message".to_string(), ToonValue::string(&message.message));
+                toon_obj.insert("context".to_string(), ToonValue::string(&message.context));
+                if let Some(suggestion) = &message.suggestion {
+                    toon_obj.insert("suggestion".to_string(), ToonValue::string(suggestion));
+                }
+                to_string(&ToonValue::Object(toon_obj)).unwrap_or_else(|_| message.message.clone())
+            }
+            OutputFormat::Json => {
+                // JSON format for empty state
+                let mut json_obj = serde_json::Map::new();
+                json_obj.insert("empty".to_string(), serde_json::Value::Bool(true));
+                json_obj.insert("message".to_string(), serde_json::Value::String(message.message.clone()));
+                json_obj.insert("context".to_string(), serde_json::Value::String(message.context));
+                if let Some(suggestion) = message.suggestion {
+                    json_obj.insert("suggestion".to_string(), serde_json::Value::String(suggestion));
+                }
+                serde_json::to_string_pretty(&serde_json::Value::Object(json_obj))
+                    .unwrap_or_else(|_| message.message)
+            }
+            OutputFormat::Human => {
+                // Human format for empty state
+                formatter.format_as_string(context)
+            }
+        }
+    }
+
     /// Apply truncation to a ToonValue if truncator is configured
     pub fn apply_truncation(&self, value: &ToonValue) -> (ToonValue, Option<TruncationMetadata>) {
         if let Some(truncator) = &self.truncator {
@@ -309,6 +346,7 @@ mod tests {
     use super::*;
     use crate::internal::mode::Mode;
     use crate::internal::aggregates::{CountInfo, DerivedStatus, DerivedField, AggregateInfo};
+    use crate::internal::emptystate::EmptyStateContext;
 
     #[test]
     fn test_output_format_from_str() {
@@ -475,5 +513,37 @@ mod tests {
         let result = formatter.format_value(&value).unwrap();
         assert!(result.contains("\"_count\""));
         assert!(result.contains("\"_derived\""));
+    }
+
+    #[test]
+    fn test_format_empty_state_toon() {
+        let formatter = OutputFormatter::new(OutputFormat::Toon);
+        let context = EmptyStateContext::new("list").with_filter("status", "active");
+        
+        let result = formatter.format_empty_state(&context);
+        assert!(result.contains("empty"));
+        assert!(result.contains("true"));
+        assert!(result.contains("No results found"));
+    }
+
+    #[test]
+    fn test_format_empty_state_json() {
+        let formatter = OutputFormatter::new(OutputFormat::Json);
+        let context = EmptyStateContext::new("list").with_filter("status", "active");
+        
+        let result = formatter.format_empty_state(&context);
+        assert!(result.contains("\"empty\""));
+        assert!(result.contains("true"));
+        assert!(result.contains("No results found"));
+    }
+
+    #[test]
+    fn test_format_empty_state_human() {
+        let formatter = OutputFormatter::new(OutputFormat::Human);
+        let context = EmptyStateContext::new("list").with_filter("status", "active");
+        
+        let result = formatter.format_empty_state(&context);
+        assert!(result.contains("No results found"));
+        assert!(result.contains("Query executed successfully"));
     }
 }

@@ -87,6 +87,20 @@ use std::time::Duration;
 ///
 /// Aggregates are automatically included in output when available from the backend.
 /// This optimizes agent interactions by providing commonly-needed data upfront.
+///
+/// # Empty States
+///
+/// When commands return no results, the CLI provides definitive empty state messages:
+/// - Clear indication that the query executed successfully
+/// - Context about filter criteria and scope
+/// - Suggestions for adjusting the query when applicable
+/// - Exit code 0 (success) for empty results
+///
+/// Empty state format varies by output format:
+/// - TOON/JSON: Structured object with "empty": true flag
+/// - Human: Readable message with context and suggestions
+///
+/// This prevents agents from re-running commands with different flags to verify empty results.
 #[derive(Parser)]
 #[command(name = "{{ project_slug }}", version, about = "{{ description }}", long_about = None)]
 pub struct Cli {
