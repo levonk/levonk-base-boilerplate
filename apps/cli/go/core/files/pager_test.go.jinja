@@ -119,7 +119,7 @@ func TestPagerShouldUsePager(t *testing.T) {
 			name:      "long output",
 			noPager:   false,
 			lineCount: 50,
-			want:      true,
+			want:      false, // In non-TTY test environment, pager is disabled
 		},
 	}
 

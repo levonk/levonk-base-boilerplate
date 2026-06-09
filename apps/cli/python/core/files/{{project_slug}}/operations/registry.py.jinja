@@ -65,10 +65,13 @@ class Operation:
         current_state = self.check_state_func(*args, **state_kwargs)
 
         # Determine desired state based on operation type
+        # Filter out desired_state from execute kwargs
+        exec_kwargs = {k: v for k, v in kwargs.items() if k != 'desired_state'}
+
         if self.op_type == OperationType.CREATE:
             desired_state = kwargs.get('desired_state', {})
             result = ensure_idempotent_create(
-                lambda: self.execute_func(*args, **kwargs),
+                lambda: self.execute_func(*args, **exec_kwargs),
                 current_state,
                 desired_state,
                 self.name
@@ -76,14 +79,14 @@ class Operation:
         elif self.op_type == OperationType.UPDATE:
             desired_state = kwargs.get('desired_state', {})
             result = ensure_idempotent_update(
-                lambda: self.execute_func(*args, **kwargs),
+                lambda: self.execute_func(*args, **exec_kwargs),
                 current_state,
                 desired_state,
                 self.name
             )
         elif self.op_type == OperationType.DELETE:
             result = ensure_idempotent_delete(
-                lambda: self.execute_func(*args, **kwargs),
+                lambda: self.execute_func(*args, **exec_kwargs),
                 current_state,
                 self.name
             )

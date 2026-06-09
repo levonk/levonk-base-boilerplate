@@ -27,7 +27,7 @@ Add health check endpoint for containerized deployments. Return service status a
 
 ## Sub-Tasks
 
-- [ ] Create health check module
+- [~] Create health check module
 - [ ] Implement health check HTTP endpoint
 - [ ] Add service status checks
 - [ ] Add readiness checks
