@@ -78,6 +78,15 @@ use std::time::Duration;
 /// - Truncated content size
 /// - Truncation indicator
 /// - Help suggestion for retrieving full content (use --full flag)
+///
+/// # Aggregate Information
+///
+/// List commands include aggregate information to reduce the need for follow-up API calls:
+/// - Total count: "count: 30 of 847 total" shows current page size vs total available
+/// - Derived status: Lightweight summaries like "3/3 passed", "7 comments", "5m 30s"
+///
+/// Aggregates are automatically included in output when available from the backend.
+/// This optimizes agent interactions by providing commonly-needed data upfront.
 #[derive(Parser)]
 #[command(name = "{{ project_slug }}", version, about = "{{ description }}", long_about = None)]
 pub struct Cli {

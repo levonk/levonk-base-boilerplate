@@ -34,6 +34,7 @@ pub use decoder::{ToonDecoder, from_str, from_str_with_options};
 
 use crate::internal::schema::{OutputSchema, FieldSelector, apply_schema_transforms};
 use crate::internal::truncation::{Truncator, TruncationMetadata};
+use crate::internal::aggregates::{AggregateInfo, CountFormatter};
 
 /// Output format options
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,6 +72,7 @@ impl OutputFormat {
 pub struct OutputFormatter {
     format: OutputFormat,
     truncator: Option<Truncator>,
+    aggregates: Option<AggregateInfo>,
 }
 
 impl OutputFormatter {
@@ -79,6 +81,7 @@ impl OutputFormatter {
         Self { 
             format,
             truncator: None,
+            aggregates: None,
         }
     }
 
@@ -87,6 +90,7 @@ impl OutputFormatter {
         Self {
             format,
             truncator: Some(Truncator::new(truncation_limit)),
+            aggregates: None,
         }
     }
 
@@ -95,6 +99,25 @@ impl OutputFormatter {
         Self {
             format,
             truncator: None,
+            aggregates: None,
+        }
+    }
+
+    /// Create a new output formatter with aggregate information
+    pub fn with_aggregates(format: OutputFormat, aggregates: AggregateInfo) -> Self {
+        Self {
+            format,
+            truncator: None,
+            aggregates: Some(aggregates),
+        }
+    }
+
+    /// Create a new output formatter with both truncation and aggregates
+    pub fn with_truncation_and_aggregates(format: OutputFormat, truncation_limit: usize, aggregates: AggregateInfo) -> Self {
+        Self {
+            format,
+            truncator: Some(Truncator::new(truncation_limit)),
+            aggregates: Some(aggregates),
         }
     }
 
@@ -147,6 +170,16 @@ impl OutputFormatter {
         }
     }
 
+    /// Set aggregate information on the formatter
+    pub fn set_aggregates(&mut self, aggregates: AggregateInfo) {
+        self.aggregates = Some(aggregates);
+    }
+
+    /// Get aggregate information
+    pub fn aggregates(&self) -> Option<&AggregateInfo> {
+        self.aggregates.as_ref()
+    }
+
     /// Format a ToonValue to the configured output format
     pub fn format_value(&self, value: &ToonValue) -> anyhow::Result<String> {
         self.format_value_with_schema(value, None, None, false)
@@ -169,6 +202,11 @@ impl OutputFormatter {
                 .map_err(|e| anyhow::anyhow!("Schema application error: {}", e))?;
         }
 
+        // Add aggregate information if available
+        if let Some(aggregates) = &self.aggregates {
+            self.apply_aggregates(&mut json_value, aggregates)?;
+        }
+
         // Format the transformed value
         match self.format {
             OutputFormat::Toon => {
@@ -187,6 +225,33 @@ impl OutputFormatter {
                     .map_err(|e| anyhow::anyhow!("JSON encoding error: {}", e))
             }
         }
+    }
+
+    /// Apply aggregate information to a JSON value
+    fn apply_aggregates(&self, json_value: &mut serde_json::Value, aggregates: &AggregateInfo) -> anyhow::Result<()> {
+        if let Some(count) = &aggregates.count {
+            if let Some(obj) = json_value.as_object_mut() {
+                obj.insert("_count".to_string(), serde_json::json!({
+                    "current": count.current,
+                    "total": count.total,
+                    "formatted": CountFormatter::format(count)
+                }));
+            }
+        }
+
+        if let Some(derived) = &aggregates.derived {
+            if let Some(obj) = json_value.as_object_mut() {
+                let mut derived_obj = serde_json::Map::new();
+                for (name, field) in &derived.fields {
+                    derived_obj.insert(name.clone(), serde_json::json!({
+                        "formatted": field.format()
+                    }));
+                }
+                obj.insert("_derived".to_string(), serde_json::Value::Object(derived_obj));
+            }
+        }
+
+        Ok(())
     }
 
     /// Get the current output format
@@ -243,6 +308,7 @@ impl OutputFormatter {
 mod tests {
     use super::*;
     use crate::internal::mode::Mode;
+    use crate::internal::aggregates::{CountInfo, DerivedStatus, DerivedField, AggregateInfo};
 
     #[test]
     fn test_output_format_from_str() {
@@ -328,5 +394,86 @@ mod tests {
         let value = ToonValue::string("hello");
         let result = formatter.format_value(&value).unwrap();
         assert_eq!(result, "\"hello\"");
+    }
+
+    #[test]
+    fn test_formatter_with_aggregates() {
+        let count = CountInfo::new(30, 847);
+        let aggregates = AggregateInfo::with_count(count);
+        let formatter = OutputFormatter::with_aggregates(OutputFormat::Toon, aggregates);
+        
+        assert!(formatter.aggregates().is_some());
+        assert_eq!(formatter.aggregates().unwrap().count.unwrap().current, 30);
+    }
+
+    #[test]
+    fn test_formatter_set_aggregates() {
+        let mut formatter = OutputFormatter::new(OutputFormat::Toon);
+        assert!(formatter.aggregates().is_none());
+        
+        let count = CountInfo::new(30, 847);
+        let aggregates = AggregateInfo::with_count(count);
+        formatter.set_aggregates(aggregates);
+        
+        assert!(formatter.aggregates().is_some());
+    }
+
+    #[test]
+    fn test_format_value_with_count_aggregate() {
+        let mut formatter = OutputFormatter::new(OutputFormat::Json);
+        let count = CountInfo::new(30, 847);
+        let aggregates = AggregateInfo::with_count(count);
+        formatter.set_aggregates(aggregates);
+        
+        let value = ToonValue::object({
+            let mut map = std::collections::BTreeMap::new();
+            map.insert("name".to_string(), ToonValue::string("test"));
+            map
+        });
+        
+        let result = formatter.format_value(&value).unwrap();
+        assert!(result.contains("\"_count\""));
+        assert!(result.contains("\"current\": 30"));
+        assert!(result.contains("\"total\": 847"));
+    }
+
+    #[test]
+    fn test_format_value_with_derived_aggregate() {
+        let mut formatter = OutputFormatter::new(OutputFormat::Json);
+        let mut derived = DerivedStatus::new();
+        derived.add_field("comments".to_string(), DerivedField::count("Comments", 7));
+        let aggregates = AggregateInfo::with_derived(derived);
+        formatter.set_aggregates(aggregates);
+        
+        let value = ToonValue::object({
+            let mut map = std::collections::BTreeMap::new();
+            map.insert("name".to_string(), ToonValue::string("test"));
+            map
+        });
+        
+        let result = formatter.format_value(&value).unwrap();
+        assert!(result.contains("\"_derived\""));
+        assert!(result.contains("\"comments\""));
+        assert!(result.contains("\"formatted\": \"Comments: 7\""));
+    }
+
+    #[test]
+    fn test_format_value_with_both_aggregates() {
+        let mut formatter = OutputFormatter::new(OutputFormat::Json);
+        let count = CountInfo::new(30, 847);
+        let mut derived = DerivedStatus::new();
+        derived.add_field("comments".to_string(), DerivedField::count("Comments", 7));
+        let aggregates = AggregateInfo::with_both(count, derived);
+        formatter.set_aggregates(aggregates);
+        
+        let value = ToonValue::object({
+            let mut map = std::collections::BTreeMap::new();
+            map.insert("name".to_string(), ToonValue::string("test"));
+            map
+        });
+        
+        let result = formatter.format_value(&value).unwrap();
+        assert!(result.contains("\"_count\""));
+        assert!(result.contains("\"_derived\""));
     }
 }
