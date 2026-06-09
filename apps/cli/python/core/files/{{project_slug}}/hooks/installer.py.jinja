@@ -1,0 +1,175 @@
+# vim: set ft=python :
+"""Hook installer for agent session hooks.
+
+This module provides utilities for installing and managing session hooks
+for various agent environments (Claude Code, Codex, etc.).
+"""
+
+from pathlib import Path
+from typing import Optional, Dict, Any
+import shutil
+import os
+import sys
+
+
+def find_executable(name: str) -> Optional[str]:
+    """Find executable in PATH or return absolute path if provided.
+    
+    Args:
+        name: Executable name or absolute path
+        
+    Returns:
+        Executable path or None if not found
+    """
+    # If it's an absolute path, verify it exists
+    if os.path.isabs(name):
+        if os.path.exists(name) and os.access(name, os.X_OK):
+            return name
+        return None
+    
+    # Search in PATH
+    path = shutil.which(name)
+    return path
+
+
+def get_current_executable() -> str:
+    """Get the current executable path.
+    
+    Returns:
+        Absolute path to current executable
+    """
+    # Try to get from sys.executable first
+    if sys.executable and os.path.exists(sys.executable):
+        return os.path.abspath(sys.executable)
+    
+    # Fallback to argv[0]
+    if sys.argv[0]:
+        if os.path.isabs(sys.argv[0]):
+            return sys.argv[0]
+        # Try to resolve relative path
+        return os.path.abspath(sys.argv[0])
+    
+    # Last resort
+    return sys.argv[0] if sys.argv[0] else "{{ project_slug }}"
+
+
+def verify_hook_path(hook_path: Path) -> bool:
+    """Verify hook file exists and is executable.
+    
+    Args:
+        hook_path: Path to hook file
+        
+    Returns:
+        True if hook is valid, False otherwise
+    """
+    if not hook_path.exists():
+        return False
+    
+    if not hook_path.is_file():
+        return False
+    
+    # Check if executable
+    return os.access(hook_path, os.X_OK)
+
+
+def make_executable(path: Path) -> bool:
+    """Make a file executable.
+    
+    Args:
+        path: Path to file
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        os.chmod(path, 0o755)
+        return True
+    except (OSError, PermissionError):
+        return False
+
+
+def install_hook(
+    hook_path: Path,
+    hook_content: str,
+    executable_path: str
+) -> Dict[str, Any]:
+    """Install a hook file with the given content.
+    
+    Args:
+        hook_path: Path where hook should be installed
+        hook_content: Content of the hook script
+        executable_path: Path to the CLI executable
+        
+    Returns:
+        Result dictionary with status and details
+    """
+    # Check if hook already exists with same content
+    if hook_path.exists():
+        try:
+            existing_content = hook_path.read_text()
+            if existing_content.strip() == hook_content.strip():
+                return {
+                    "status": "noop",
+                    "message": f"Hook already installed at {hook_path}",
+                    "path": str(hook_path)
+                }
+        except Exception:
+            pass
+    
+    # Create parent directory if needed
+    hook_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Write hook content
+    try:
+        hook_path.write_text(hook_content)
+    except (OSError, PermissionError) as e:
+        return {
+            "status": "error",
+            "message": f"Failed to write hook: {e}",
+            "path": str(hook_path)
+        }
+    
+    # Make executable
+    if not make_executable(hook_path):
+        return {
+            "status": "error",
+            "message": f"Failed to make hook executable",
+            "path": str(hook_path)
+        }
+    
+    return {
+        "status": "success",
+        "message": f"Hook installed at {hook_path}",
+        "path": str(hook_path)
+    }
+
+
+def uninstall_hook(hook_path: Path) -> Dict[str, Any]:
+    """Remove a hook file.
+    
+    Args:
+        hook_path: Path to hook file
+        
+    Returns:
+        Result dictionary with status and details
+    """
+    if not hook_path.exists():
+        return {
+            "status": "noop",
+            "message": f"Hook not found at {hook_path}",
+            "path": str(hook_path)
+        }
+    
+    try:
+        hook_path.unlink()
+        return {
+            "status": "success",
+            "message": f"Hook removed from {hook_path}",
+            "path": str(hook_path)
+        }
+    except (OSError, PermissionError) as e:
+        return {
+            "status": "error",
+            "message": f"Failed to remove hook: {e}",
+            "path": str(hook_path)
+        }

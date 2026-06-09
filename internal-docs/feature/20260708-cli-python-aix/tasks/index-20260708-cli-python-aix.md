@@ -37,13 +37,13 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
 | 03-001 | Structured Errors & Exit Codes | feature/current/20260708-cli-python-aix/story-03-001-structured-errors | 02-004 | Parallel-safe: true | [errors.py, output.py] | [x] Done |
 | 03-002 | No Interactive Prompts | feature/current/20260708-cli-python-aix/story-03-002-no-prompts | 03-001 | Parallel-safe: true | [cli.py, prompts.py] | [x] Done |
-| 03-003 | Idempotent Operations | feature/current/20260708-cli-python-aix/story-03-003-idempotent-ops | 03-001, 03-002 | Parallel-safe: true | [operations.py, idempotent.py] | [~] In-Progress |
+| 03-003 | Idempotent Operations | feature/current/20260708-cli-python-aix/story-03-003-idempotent-ops | 03-001, 03-002 | Parallel-safe: true | [operations.py, idempotent.py] | [x] Done |
 
 ### Phase 04: Session Integration (Week 2)
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-python-aix/story-04-001-session-hooks | 03-003 | Parallel-safe: true | [hooks.py, session.py] |
+| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-python-aix/story-04-001-session-hooks | 03-003 | Parallel-safe: true | [hooks.py, session.py] | [~] In-Progress |
 | 04-002 | Installable Agent Skill | feature/current/20260708-cli-python-aix/story-04-002-agent-skills | 04-001 | Parallel-safe: true | [skills.py, skill_generator.py] |
 
 ### Phase 05: UX Enhancement (Week 2)

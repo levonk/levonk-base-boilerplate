@@ -33,7 +33,7 @@ This index provides a summary of all stories for implementing CLI Tool Standards
 | 07-002 | Resource Limits | 07 | [x] Done | | true | — | 09-001, 09-003 | resources/ | feature/current/20260707-cli-typescript-standards/story-07-002-resource-limits |
 | 07-003 | Collection vs Processing Separation | 07 | [x] Done | | true | 05-002 | 09-001, 09-003 | daemon/, processing/ | feature/current/20260707-cli-typescript-standards/story-07-003-collection-processing-separation |
 | 08-001 | Error Message Formatting | 08 | [x] Done | | true | 01-002, 05-003 | 09-001, 09-003 | error handling | feature/current/20260707-cli-typescript-standards/story-08-001-error-message-formatting |
-| 08-002 | Health Checks for Containers | 08 | [~] In-Progress | | true | — | 09-001, 09-003 | health/ | feature/current/20260707-cli-typescript-standards/story-08-002-health-checks-containers |
+| 08-002 | Health Checks for Containers | 08 | [x] Done | | true | — | 09-001, 09-003 | health/ | feature/current/20260707-cli-typescript-standards/story-08-002-health-checks-containers |
 | 08-003 | Privacy Mode | 08 | [ ] Todo | | true | 02-001 | 09-001, 09-003 | logger.ts, config/ | feature/current/20260707-cli-typescript-standards/story-08-003-privacy-mode |
 | 08-004 | Audit Logging | 08 | [ ] Todo | | true | 02-001 | 09-001, 09-003 | audit/ | feature/current/20260707-cli-typescript-standards/story-08-004-audit-logging |
 | 08-005 | Legacy Deprecation Policy | 08 | [ ] Todo | | true | — | 09-001, 09-003 | config/, deprecation/ | feature/current/20260707-cli-typescript-standards/story-08-005-legacy-deprecation-policy |

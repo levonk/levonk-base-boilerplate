@@ -627,6 +627,70 @@ def health_check():
 
 
 @app.command()
+def session_context(
+    directory: Optional[str] = typer.Option(None, "--directory", "-d", help="Directory to scope context to (defaults to cwd)"),
+):
+    """
+    Output compact session context in TOON format for agent ambient context injection.
+
+    This command outputs directory-scoped state in a token-efficient format
+    suitable for agent consumption.
+    """
+    from {{project_slug}}.session import get_session_context_toon
+    from pathlib import Path
+
+    dir_path = Path(directory) if directory else None
+    toon_output = get_session_context_toon(dir_path)
+    print(toon_output)
+
+
+@app.command()
+def install_agent_hooks(
+    agent: str = typer.Argument(..., help="Agent type (claude, codex, or all)"),
+    executable: Optional[str] = typer.Option(None, "--executable", "-e", help="Path to CLI executable (auto-detected if not provided)"),
+    uninstall: bool = typer.Option(False, "--uninstall", "-u", help="Uninstall hooks instead of installing"),
+):
+    """
+    Install session hooks for agent ambient context injection.
+
+    This command registers session-end hooks that run the session-context command
+    when an agent session ends, providing ambient context for the next session.
+    """
+    from {{project_slug}}.hooks import (
+        install_claude_hook,
+        uninstall_claude_hook,
+        install_codex_hook,
+        uninstall_codex_hook,
+    )
+
+    results = []
+
+    if agent in ("claude", "all"):
+        if uninstall:
+            result = uninstall_claude_hook()
+        else:
+            result = install_claude_hook(executable)
+        results.append(result)
+
+    if agent in ("codex", "all"):
+        if uninstall:
+            result = uninstall_codex_hook()
+        else:
+            result = install_codex_hook(executable)
+        results.append(result)
+
+    # Output results
+    for result in results:
+        if result["status"] == "success":
+            print(f"✓ {result['message']}")
+        elif result["status"] == "noop":
+            print(f"○ {result['message']}")
+        else:
+            print(f"✗ {result['message']}")
+            sys.exit(EXIT_ERROR)
+
+
+@app.command()
 def reload_config_cmd():
     """
     Manually trigger configuration reload.

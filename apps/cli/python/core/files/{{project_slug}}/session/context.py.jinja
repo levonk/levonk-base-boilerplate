@@ -1,0 +1,114 @@
+# vim: set ft=python :
+"""Session context management for agent ambient context injection.
+
+This module provides utilities for generating compact, token-budget-aware
+session context output in TOON format for agent consumption.
+"""
+
+from pathlib import Path
+from typing import Dict, Any, Optional
+import os
+import json
+
+
+def get_directory_state(directory: Path) -> Dict[str, Any]:
+    """Get directory-scoped state for session context.
+    
+    Args:
+        directory: The directory to scan for state
+        
+    Returns:
+        Dictionary containing directory state
+    """
+    if not directory.exists():
+        return {"error": "directory_not_found"}
+    
+    state = {
+        "path": str(directory.absolute()),
+        "type": "directory",
+    }
+    
+    # Get git status if in git repo
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            state["git_dirty"] = len(result.stdout.strip()) > 0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    
+    # Get file count
+    try:
+        file_count = sum(1 for _ in directory.rglob("*") if _.is_file())
+        state["file_count"] = file_count
+    except PermissionError:
+        state["file_count"] = -1
+    
+    return state
+
+
+def get_session_context(directory: Optional[Path] = None) -> Dict[str, Any]:
+    """Get compact session context in TOON format.
+    
+    Args:
+        directory: Optional directory to scope context to. Defaults to cwd.
+        
+    Returns:
+        Dictionary containing session context
+    """
+    if directory is None:
+        directory = Path.cwd()
+    
+    context = {
+        "cwd": str(directory.absolute()),
+        "dir": get_directory_state(directory),
+    }
+    
+    return context
+
+
+def format_session_context_toon(context: Dict[str, Any]) -> str:
+    """Format session context to TOON (token-efficient) format.
+    
+    Args:
+        context: The session context dictionary
+        
+    Returns:
+        TOON-formatted string
+    """
+    lines = []
+    
+    # Current working directory
+    lines.append(f"cwd:{context['cwd']}")
+    
+    # Directory state
+    dir_state = context.get('dir', {})
+    if dir_state.get('error'):
+        lines.append(f"dir:err:{dir_state['error']}")
+    else:
+        lines.append(f"dir:{dir_state.get('path', '')}")
+        if dir_state.get('git_dirty'):
+            lines.append("git:dirty")
+        if dir_state.get('file_count', 0) >= 0:
+            lines.append(f"files:{dir_state['file_count']}")
+    
+    return "\n".join(lines)
+
+
+def get_session_context_toon(directory: Optional[Path] = None) -> str:
+    """Get session context directly in TOON format.
+    
+    Args:
+        directory: Optional directory to scope context to. Defaults to cwd.
+        
+    Returns:
+        TOON-formatted string
+    """
+    context = get_session_context(directory)
+    return format_session_context_toon(context)

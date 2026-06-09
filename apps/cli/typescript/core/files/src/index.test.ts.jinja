@@ -1336,4 +1336,86 @@ describe('CLI', () => {
             expect(stderr).toContain('ERROR:');
         });
     });
+
+    describe('Health Checks', () => {
+        it('should return healthy status with --health flag', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.status).toBe('healthy');
+        });
+
+        it('should return valid JSON with --health flag', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            expect(() => JSON.parse(stdout)).not.toThrow();
+        });
+
+        it('should include timestamp in health check output', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.timestamp).toBeDefined();
+        });
+
+        it('should include uptime in health check output', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.uptime).toBeDefined();
+        });
+
+        it('should include version in health check output', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.version).toBeDefined();
+        });
+
+        it('should include checks array in health check output', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.checks).toBeDefined();
+            expect(Array.isArray(result.checks)).toBe(true);
+        });
+
+        it('should include liveness check', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            const livenessCheck = result.checks.find((c: any) => c.name === 'liveness');
+            expect(livenessCheck).toBeDefined();
+            expect(livenessCheck.status).toBe('pass');
+        });
+
+        it('should include readiness check', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            const readinessCheck = result.checks.find((c: any) => c.name === 'readiness');
+            expect(readinessCheck).toBeDefined();
+            expect(readinessCheck.status).toBe('pass');
+        });
+
+        it('should exit with code 0 for healthy status', async () => {
+            try {
+                await execAsync('node dist/index.js --health');
+                // Success - no error thrown
+                expect(true).toBe(true);
+            } catch (error: any) {
+                expect.fail('Should not have thrown an error for healthy status');
+            }
+        });
+
+        it('should respect custom timeout with --health-timeout', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health --health-timeout 50');
+            const result = JSON.parse(stdout);
+            expect(result.status).toBeDefined();
+        });
+
+        it('should show health check in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--health');
+        });
+
+        it('should complete health check quickly', async () => {
+            const start = Date.now();
+            await execAsync('node dist/index.js --health');
+            const duration = Date.now() - start;
+            expect(duration).toBeLessThan(200);
+        });
+    });
 });

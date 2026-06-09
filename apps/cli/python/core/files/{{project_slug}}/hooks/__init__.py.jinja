@@ -1,0 +1,36 @@
+# vim: set ft=python :
+"""Hooks module for agent session hook installation.
+
+This module provides utilities for installing and managing session hooks
+for various agent environments (Claude Code, Codex, etc.).
+"""
+
+from {{project_slug}}.hooks.installer import (
+    find_executable,
+    get_current_executable,
+    verify_hook_path,
+    make_executable,
+    install_hook,
+    uninstall_hook,
+)
+from {{project_slug}}.hooks.claude import (
+    install_claude_hook,
+    uninstall_claude_hook,
+)
+from {{project_slug}}.hooks.codex import (
+    install_codex_hook,
+    uninstall_codex_hook,
+)
+
+__all__ = [
+    "find_executable",
+    "get_current_executable",
+    "verify_hook_path",
+    "make_executable",
+    "install_hook",
+    "uninstall_hook",
+    "install_claude_hook",
+    "uninstall_claude_hook",
+    "install_codex_hook",
+    "uninstall_codex_hook",
+]

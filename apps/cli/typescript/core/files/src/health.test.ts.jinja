@@ -1,0 +1,269 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  getHealthCheck,
+  getHealthCheckJson,
+  getHealthCheckResponse,
+  isHealthy,
+  registerDependencyCheck,
+  unregisterDependencyCheck,
+  type HealthCheckOptions,
+  type HealthCheckResult,
+} from './health.js';
+
+describe('Health Check Module', () => {
+  beforeEach(() => {
+    // Clear all registered dependencies before each test
+    const allChecks = Array.from((global as any).dependencyChecks?.keys() || []);
+    for (const name of allChecks) {
+      unregisterDependencyCheck(name);
+    }
+  });
+
+  describe('Basic Health Check', () => {
+    it('should return healthy status when all checks pass', async () => {
+      const result = await getHealthCheck();
+      expect(result.status).toBe('healthy');
+      expect(result.checks).toBeDefined();
+      expect(result.checks.length).toBeGreaterThan(0);
+    });
+
+    it('should include timestamp in result', async () => {
+      const result = await getHealthCheck();
+      expect(result.timestamp).toBeDefined();
+      expect(new Date(result.timestamp)).toBeInstanceOf(Date);
+    });
+
+    it('should include uptime in result', async () => {
+      const result = await getHealthCheck();
+      expect(result.uptime).toBeDefined();
+      expect(result.uptime).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should include version in result', async () => {
+      const result = await getHealthCheck();
+      expect(result.version).toBeDefined();
+    });
+
+    it('should include liveness check', async () => {
+      const result = await getHealthCheck();
+      const livenessCheck = result.checks.find(c => c.name === 'liveness');
+      expect(livenessCheck).toBeDefined();
+      expect(livenessCheck?.status).toBe('pass');
+    });
+
+    it('should include readiness check', async () => {
+      const result = await getHealthCheck();
+      const readinessCheck = result.checks.find(c => c.name === 'readiness');
+      expect(readinessCheck).toBeDefined();
+      expect(readinessCheck?.status).toBe('pass');
+    });
+
+    it('should measure check duration', async () => {
+      const result = await getHealthCheck();
+      for (const check of result.checks) {
+        expect(check.duration_ms).toBeDefined();
+        expect(check.duration_ms).toBeGreaterThanOrEqual(0);
+      }
+    });
+  });
+
+  describe('Health Check Options', () => {
+    it('should respect custom timeout', async () => {
+      const options: HealthCheckOptions = { timeout: 50 };
+      const result = await getHealthCheck(options);
+      expect(result.status).toBeDefined();
+    });
+
+    it('should include dependencies when requested', async () => {
+      registerDependencyCheck('test-dep', async () => true);
+      const options: HealthCheckOptions = { includeDependencies: true };
+      const result = await getHealthCheck(options);
+      const depCheck = result.checks.find(c => c.name === 'dependency:test-dep');
+      expect(depCheck).toBeDefined();
+    });
+
+    it('should not include dependencies when not requested', async () => {
+      registerDependencyCheck('test-dep', async () => true);
+      const options: HealthCheckOptions = { includeDependencies: false };
+      const result = await getHealthCheck(options);
+      const depCheck = result.checks.find(c => c.name === 'dependency:test-dep');
+      expect(depCheck).toBeUndefined();
+    });
+
+    it('should use default timeout when not specified', async () => {
+      const result = await getHealthCheck();
+      expect(result.status).toBeDefined();
+    });
+  });
+
+  describe('Dependency Checks', () => {
+    it('should register dependency check', () => {
+      const checkFn = async () => true;
+      registerDependencyCheck('test-dep', checkFn);
+      // Check is registered - no error thrown
+      expect(true).toBe(true);
+    });
+
+    it('should unregister dependency check', () => {
+      const checkFn = async () => true;
+      registerDependencyCheck('test-dep', checkFn);
+      unregisterDependencyCheck('test-dep');
+      // Check is unregistered - no error thrown
+      expect(true).toBe(true);
+    });
+
+    it('should pass healthy dependency check', async () => {
+      registerDependencyCheck('healthy-dep', async () => true);
+      const options: HealthCheckOptions = { includeDependencies: true };
+      const result = await getHealthCheck(options);
+      const depCheck = result.checks.find(c => c.name === 'dependency:healthy-dep');
+      expect(depCheck?.status).toBe('pass');
+    });
+
+    it('should fail unhealthy dependency check', async () => {
+      registerDependencyCheck('unhealthy-dep', async () => false);
+      const options: HealthCheckOptions = { includeDependencies: true };
+      const result = await getHealthCheck(options);
+      const depCheck = result.checks.find(c => c.name === 'dependency:unhealthy-dep');
+      expect(depCheck?.status).toBe('fail');
+    });
+
+    it('should handle dependency check errors', async () => {
+      registerDependencyCheck('error-dep', async () => {
+        throw new Error('Dependency error');
+      });
+      const options: HealthCheckOptions = { includeDependencies: true };
+      const result = await getHealthCheck(options);
+      const depCheck = result.checks.find(c => c.name === 'dependency:error-dep');
+      expect(depCheck?.status).toBe('fail');
+      expect(depCheck?.message).toBeDefined();
+    });
+
+    it('should handle synchronous dependency checks', async () => {
+      registerDependencyCheck('sync-dep', () => true);
+      const options: HealthCheckOptions = { includeDependencies: true };
+      const result = await getHealthCheck(options);
+      const depCheck = result.checks.find(c => c.name === 'dependency:sync-dep');
+      expect(depCheck?.status).toBe('pass');
+    });
+
+    it('should mark overall status as unhealthy when dependency fails', async () => {
+      registerDependencyCheck('failing-dep', async () => false);
+      const options: HealthCheckOptions = { includeDependencies: true };
+      const result = await getHealthCheck(options);
+      expect(result.status).toBe('unhealthy');
+    });
+  });
+
+  describe('Health Check JSON Output', () => {
+    it('should return valid JSON string', async () => {
+      const json = await getHealthCheckJson();
+      expect(() => JSON.parse(json)).not.toThrow();
+    });
+
+    it('should parse to valid health check result', async () => {
+      const json = await getHealthCheckJson();
+      const result = JSON.parse(json) as HealthCheckResult;
+      expect(result.status).toBeDefined();
+      expect(result.timestamp).toBeDefined();
+      expect(result.checks).toBeDefined();
+    });
+  });
+
+  describe('Health Check Response', () => {
+    it('should return 200 status code for healthy', async () => {
+      const response = await getHealthCheckResponse();
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('should return 503 status code for unhealthy', async () => {
+      registerDependencyCheck('failing-dep', async () => false);
+      const options: HealthCheckOptions = { includeDependencies: true };
+      const response = await getHealthCheckResponse(options);
+      expect(response.statusCode).toBe(503);
+    });
+
+    it('should return JSON body', async () => {
+      const response = await getHealthCheckResponse();
+      expect(() => JSON.parse(response.body)).not.toThrow();
+    });
+  });
+
+  describe('isHealthy Synchronous Check', () => {
+    it('should return true for healthy state', () => {
+      const healthy = isHealthy();
+      expect(healthy).toBe(true);
+    });
+  });
+
+  describe('Timeout Handling', () => {
+    it('should timeout slow health checks', async () => {
+      registerDependencyCheck('slow-dep', async () => {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        return true;
+      });
+      const options: HealthCheckOptions = { timeout: 50, includeDependencies: true };
+      const result = await getHealthCheck(options);
+      expect(result.status).toBe('unhealthy');
+    });
+
+    it('should handle timeout gracefully', async () => {
+      registerDependencyCheck('timeout-dep', async () => {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        return true;
+      });
+      const options: HealthCheckOptions = { timeout: 50, includeDependencies: true };
+      const result = await getHealthCheck(options);
+      const timeoutCheck = result.checks.find(c => c.name === 'health_check');
+      expect(timeoutCheck?.status).toBe('fail');
+      expect(timeoutCheck?.message).toContain('timeout');
+    });
+  });
+
+  describe('No Side Effects', () => {
+    it('should not modify process state', async () => {
+      const originalUptime = process.uptime();
+      await getHealthCheck();
+      expect(process.uptime()).toBeGreaterThanOrEqual(originalUptime);
+    });
+
+    it('should not write to filesystem', async () => {
+      const fs = await import('fs/promises');
+      const writeFileSpy = vi.spyOn(fs, 'writeFile');
+      await getHealthCheck();
+      expect(writeFileSpy).not.toHaveBeenCalled();
+      writeFileSpy.mockRestore();
+    });
+
+    it('should not make network requests', async () => {
+      const http = await import('http');
+      const requestSpy = vi.spyOn(http, 'request');
+      await getHealthCheck();
+      expect(requestSpy).not.toHaveBeenCalled();
+      requestSpy.mockRestore();
+    });
+
+    it('should be idempotent', async () => {
+      const result1 = await getHealthCheck();
+      const result2 = await getHealthCheck();
+      expect(result1.status).toBe(result2.status);
+    });
+  });
+
+  describe('Performance', () => {
+    it('should complete health check within default timeout', async () => {
+      const start = Date.now();
+      await getHealthCheck();
+      const duration = Date.now() - start;
+      expect(duration).toBeLessThan(100);
+    });
+
+    it('should complete basic checks quickly', async () => {
+      const start = Date.now();
+      const result = await getHealthCheck();
+      const duration = Date.now() - start;
+      expect(result.status).toBe('healthy');
+      expect(duration).toBeLessThan(50);
+    });
+  });
+});

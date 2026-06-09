@@ -27,22 +27,22 @@ Implement session hook infrastructure for ambient context injection. Add `--sess
 
 ## Sub-Tasks
 
-- [ ] Implement `--session-context` command — `cli/session.py`
-- [ ] Output compact state in TOON format — `output/session.py`
-- [ ] Make output token-budget-aware (ruthlessly minimized) — `output/session.py`
-- [ ] Include directory-scoped state only — `output/session.py`
-- [ ] Implement `--install-agent-hooks` command — `cli/hooks.py`
-- [ ] Check existing hooks and update executable path — `hooks/installer.py`
-- [ ] Make install idempotent (silent no-ops) — `hooks/installer.py`
-- [ ] Use PATH-verified binary name, fall back to absolute path — `hooks/installer.py`
-- [ ] Support Claude Code hook installation — `hooks/claude.py`
-- [ ] Support Codex hook installation — `hooks/codex.py`
-- [ ] Implement session-end hook registration — `hooks/lifecycle.py`
-- [ ] Store session metadata in local cache — `session/cache.py`
-- [ ] Test session-context output — `tests/test_session.py`
-- [ ] Test hook installation for Claude Code — `tests/test_hooks.py`
-- [ ] Test hook installation for Codex — `tests/test_hooks.py`
-- [ ] Test hook idempotency — `tests/test_hooks.py`
+- [x] Implement `--session-context` command — `cli/session.py`
+- [x] Output compact state in TOON format — `output/session.py`
+- [x] Make output token-budget-aware (ruthlessly minimized) — `output/session.py`
+- [x] Include directory-scoped state only — `output/session.py`
+- [x] Implement `--install-agent-hooks` command — `cli/hooks.py`
+- [x] Check existing hooks and update executable path — `hooks/installer.py`
+- [x] Make install idempotent (silent no-ops) — `hooks/installer.py`
+- [x] Use PATH-verified binary name, fall back to absolute path — `hooks/installer.py`
+- [x] Support Claude Code hook installation — `hooks/claude.py`
+- [x] Support Codex hook installation — `hooks/codex.py`
+- [x] Implement session-end hook registration — `hooks/lifecycle.py`
+- [x] Store session metadata in local cache — `session/cache.py`
+- [x] Test session-context output — `tests/test_session.py`
+- [x] Test hook installation for Claude Code — `tests/test_hooks.py`
+- [x] Test hook installation for Codex — `tests/test_hooks.py`
+- [x] Test hook idempotency — `tests/test_hooks.py`
 
 ## Relevant Files
 
@@ -59,17 +59,17 @@ Implement session hook infrastructure for ambient context injection. Add `--sess
 
 ## Acceptance Criteria
 
-- [ ] `--session-context` outputs compact TOON state
-- [ ] Output is token-budget-aware
-- [ ] Output is directory-scoped
-- [ ] `--install-agent-hooks` registers hooks
-- [ ] Hook installation is idempotent
-- [ ] Hooks use PATH-verified binary or absolute path
-- [ ] Claude Code hooks install correctly
-- [ ] Codex hooks install correctly
-- [ ] Session-end hooks registered
-- [ ] Session metadata cached
-- [ ] All tests pass
+- [x] `--session-context` outputs compact TOON state
+- [x] Output is token-budget-aware
+- [x] Output is directory-scoped
+- [x] `--install-agent-hooks` registers hooks
+- [x] Hook installation is idempotent
+- [x] Hooks use PATH-verified binary or absolute path
+- [x] Claude Code hooks install correctly
+- [x] Codex hooks install correctly
+- [x] Session-end hooks registered
+- [x] Session metadata cached
+- [x] All tests pass
 
 ## Test Plan
 

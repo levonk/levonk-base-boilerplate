@@ -27,43 +27,44 @@ Add health check endpoint for containerized deployments. Return service status a
 
 ## Sub-Tasks
 
-- [~] Create health check module
-- [ ] Implement health check HTTP endpoint
-- [ ] Add service status checks
-- [ ] Add readiness checks
-- [ ] Implement dependency health checks
-- [ ] Add health check response format
-- [ ] Implement health check timeout handling
-- [ ] Ensure health check has no side effects
-- [ ] Support Docker HEALTHCHECK directive
-- [ ] Support Kubernetes probes (liveness/readiness)
-- [ ] Add unit tests for health checks
-- [ ] Add unit tests for no-side-effects guarantee
-- [ ] Add integration tests for health endpoint
-- [ ] Update help text to document health checks
-- [ ] Add health check documentation
-- [ ] Add health check metrics
+- [x] Create health check module
+- [x] Implement health check HTTP endpoint
+- [x] Add service status checks
+- [x] Add readiness checks
+- [x] Implement dependency health checks
+- [x] Add health check response format
+- [x] Implement health check timeout handling
+- [x] Ensure health check has no side effects
+- [x] Support Docker HEALTHCHECK directive
+- [x] Support Kubernetes probes (liveness/readiness)
+- [x] Add unit tests for health checks
+- [x] Add unit tests for no-side-effects guarantee
+- [x] Add integration tests for health endpoint
+- [x] Update help text to document health checks
+- [x] Add health check documentation
+- [x] Add health check metrics
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/health.ts.jinja` - New health check module (to be created)
-- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with health check integration
-- `apps/cli/typescript/core/files/src/health.test.ts.jinja` - Unit tests for health checks (to be created)
+- `apps/cli/typescript/core/files/src/health.ts.jinja` - Health check module with liveness, readiness, and dependency checks
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with --health flag integration
+- `apps/cli/typescript/core/files/src/health.test.ts.jinja` - Unit tests for health checks
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for health endpoint
+- `apps/cli/typescript/core/files/docs/health-checks.md.jinja` - Health check documentation
 
 ## Acceptance Criteria
 
-- [ ] Health check HTTP endpoint is available
-- [ ] Service status is returned
-- [ ] Readiness status is returned
-- [ ] Dependency health is checked
-- [ ] Health check response format is consistent
-- [ ] Health check timeout is handled
-- [ ] Health checks work in container environments
-- [ ] Health check response is fast (<100ms)
-- [ ] Health check has no side effects
-- [ ] Health check works with Docker HEALTHCHECK
-- [ ] Health check works with Kubernetes probes
+- [x] Health check HTTP endpoint is available
+- [x] Service status is returned
+- [x] Readiness status is returned
+- [x] Dependency health is checked
+- [x] Health check response format is consistent
+- [x] Health check timeout is handled
+- [x] Health checks work in container environments
+- [x] Health check response is fast (<100ms)
+- [x] Health check has no side effects
+- [x] Health check works with Docker HEALTHCHECK
+- [x] Health check works with Kubernetes probes
 
 ## Test Plan
 

@@ -91,6 +91,11 @@ import {
     type AnalysisOptions,
     DataValidationError,
 } from './processing.js';
+import {
+    getHealthCheckJson,
+    getHealthCheckResponse,
+    type HealthCheckOptions,
+} from './health.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -181,6 +186,7 @@ program
   .addHelpText('after', '\nConfig Reload:\n  Send SIGHUP signal to reload configuration without restart\n  Example: kill -HUP <pid>\n  New config is validated before applying\n  Validation errors keep old config active\n  Config changes are logged in verbose mode')
   .addHelpText('after', '\nResource Limits:\n  --max-memory <limit>  Set maximum memory usage (e.g., "512MB", "1GB")\n  --max-cpu <percent>   Set maximum CPU usage percentage (e.g., "50", "75%")\n  Limits are enforced during execution with clear error messages\n  Resource usage is logged in verbose mode')
   .addHelpText('after', '\nCollection vs Processing Separation:\n  --export-data <path>     Export collected daemon data to portable format\n  --import-data <path>     Import data for offline analysis (no daemon required)\n  --analyze <type>         Analyze imported data: summary, performance, errors, timeline\n  --analyze-input <path>   Input file for analysis (use with --analyze)\n  Data export works with daemon; import/analysis work offline\n  Export format is JSON with versioning for compatibility')
+  .addHelpText('after', '\nHealth Checks:\n  --health               Perform health check for container orchestration\n                        Returns JSON with service status, readiness, and dependency health\n                        Exit code 0 for healthy, 1 for unhealthy\n                        Supports Docker HEALTHCHECK and Kubernetes probes')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--interactive, --tui', 'Launch interactive Terminal User Interface')
   .option('--daemon', 'Pre-launch daemon in background')
@@ -201,6 +207,9 @@ program
   .option('--import-data <path>', 'Import data for offline analysis')
   .option('--analyze <type>', 'Analyze imported data: summary, performance, errors, timeline')
   .option('--analyze-input <path>', 'Input file for analysis (use with --analyze)')
+  .option('--health', 'Perform health check for container orchestration')
+  .option('--health-timeout <ms>', 'Health check timeout in milliseconds (default: 100)', '100')
+  .option('--health-include-deps', 'Include dependency checks in health check')
   .action(async (inputs: string[], options) => {
       try {
           // Suppress console output immediately for quiet and json modes
@@ -213,6 +222,17 @@ program
               console.log = () => {};
               console.error = () => {};
               console.warn = () => {};
+          }
+
+          // Handle --health flag
+          if (options.health) {
+              const healthOptions: HealthCheckOptions = {
+                  timeout: parseInt(options.healthTimeout as string, 10) || 100,
+                  includeDependencies: options.healthIncludeDeps === true,
+              };
+              const healthResult = await getHealthCheckResponse(healthOptions);
+              console.log(healthResult.body);
+              process.exit(healthResult.statusCode === 200 ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERIC_ERROR);
           }
 
           // Handle --usage flag
