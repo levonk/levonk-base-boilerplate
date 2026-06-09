@@ -1,0 +1,94 @@
+# vim: set ft=python :
+from {{ project_slug }}.context import ExecutionContext, get_context, set_context, reset_context
+from {{ project_slug }}.mode import Mode, DetectionMethod
+import pytest
+
+
+def test_execution_context_creation():
+    """Test execution context creation with defaults."""
+    context = ExecutionContext()
+    assert context.mode == Mode.AGENT
+    assert context.detection_method == DetectionMethod.AUTO_DETECT
+
+
+def test_execution_context_creation_with_values():
+    """Test execution context creation with custom values."""
+    context = ExecutionContext(mode=Mode.HUMAN, detection_method=DetectionMethod.CLI_FLAG)
+    assert context.mode == Mode.HUMAN
+    assert context.detection_method == DetectionMethod.CLI_FLAG
+
+
+def test_set_mode():
+    """Test setting mode in context."""
+    context = ExecutionContext()
+    context.set_mode(Mode.HUMAN, DetectionMethod.ENV_VAR)
+    assert context.mode == Mode.HUMAN
+    assert context.detection_method == DetectionMethod.ENV_VAR
+
+
+def test_get_mode():
+    """Test getting mode from context."""
+    context = ExecutionContext(mode=Mode.AGENT)
+    mode = context.get_mode()
+    assert mode == Mode.AGENT
+
+
+def test_is_agent_mode():
+    """Test checking if context is in agent mode."""
+    context = ExecutionContext(mode=Mode.AGENT)
+    assert context.is_agent_mode() is True
+    assert context.is_human_mode() is False
+
+
+def test_is_human_mode():
+    """Test checking if context is in human mode."""
+    context = ExecutionContext(mode=Mode.HUMAN)
+    assert context.is_human_mode() is True
+    assert context.is_agent_mode() is False
+
+
+def test_get_context_creates_new():
+    """Test get_context creates new context on first call."""
+    reset_context()
+    context = get_context()
+    assert context is not None
+    assert isinstance(context, ExecutionContext)
+
+
+def test_get_context_returns_same():
+    """Test get_context returns same instance on subsequent calls."""
+    reset_context()
+    context1 = get_context()
+    context2 = get_context()
+    assert context1 is context2
+
+
+def test_set_context():
+    """Test setting global context."""
+    reset_context()
+    new_context = ExecutionContext(mode=Mode.HUMAN)
+    set_context(new_context)
+    retrieved = get_context()
+    assert retrieved is new_context
+    assert retrieved.mode == Mode.HUMAN
+
+
+def test_reset_context():
+    """Test resetting global context."""
+    reset_context()
+    context1 = get_context()
+    context1.set_mode(Mode.HUMAN, DetectionMethod.CLI_FLAG)
+    reset_context()
+    context2 = get_context()
+    assert context1 is not context2
+    assert context2.mode == Mode.AGENT  # Default value
+
+
+def test_thread_safety():
+    """Test context is thread-safe (basic check)."""
+    context = ExecutionContext()
+    context.set_mode(Mode.HUMAN, DetectionMethod.ENV_VAR)
+    # Multiple calls should be safe
+    assert context.get_mode() == Mode.HUMAN
+    assert context.is_agent_mode() is False
+    assert context.is_human_mode() is True

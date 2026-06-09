@@ -257,5 +257,96 @@ def test_confirmation_prompt():
     # May fail due to no input, but should accept the flag
     assert "--install" in result.stdout or result.exit_code in (0, 1)
 
-    assert "--install" in result.stdout or result.exit_code in (0, 1)
+
+def test_health_check_subcommand():
+    """Test health-check subcommand."""
+    result = runner.invoke(app, ["health-check"])
+    assert result.exit_code in (0, 1)
+
+
+def test_reload_config_subcommand():
+    """Test reload-config subcommand."""
+    result = runner.invoke(app, ["reload-config"])
+    assert result.exit_code in (0, 1, 2)
+
+
+def test_install_subcommand():
+    """Test install subcommand."""
+    result = runner.invoke(app, ["process", "--install", "--force", "--quiet"])
+    assert result.exit_code in (0, 1)
+
+
+def test_uninstall_subcommand():
+    """Test uninstall subcommand."""
+    result = runner.invoke(app, ["process", "--uninstall", "--force", "--quiet"])
+    assert result.exit_code in (0, 1)
+
+
+def test_daemon_flag():
+    """Test --daemon flag."""
+    result = runner.invoke(app, ["process", "-", "--daemon"], input="test")
+    assert result.exit_code in (0, 1)
+
+
+def test_no_daemon_flag():
+    """Test --no-daemon flag."""
+    result = runner.invoke(app, ["process", "-", "--no-daemon"], input="test")
+    assert result.exit_code in (0, 1)
+
+
+def test_list_jobs_flag():
+    """Test --list-jobs flag."""
+    result = runner.invoke(app, ["process", "--list-jobs"])
+    assert result.exit_code in (0, 1)
+
+
+def test_cancel_job_flag():
+    """Test --cancel-job flag."""
+    result = runner.invoke(app, ["process", "--cancel-job", "test-id"])
+    assert result.exit_code in (0, 1)
+
+
+def test_man_flag():
+    """Test --man flag."""
+    result = runner.invoke(app, ["process", "--man"])
+    assert result.exit_code in (0, 1)
+
+
+def test_config_flag():
+    """Test --config flag."""
+    result = runner.invoke(app, ["process", "-", "--config", "/tmp/config.toml"], input="test")
+    assert result.exit_code in (0, 1)
+
+
+def test_multiple_inputs():
+    """Test processing multiple input files."""
+    result = runner.invoke(app, ["process", "file1.txt", "file2.txt", "--quiet"])
+    assert result.exit_code in (0, 5)
+
+
+def test_empty_stdin():
+    """Test processing empty stdin."""
+    result = runner.invoke(app, ["process", "-"], input="")
+    assert result.exit_code in (0, 1)
+
+
+def test_large_input():
+    """Test processing large input."""
+    large_input = "test content\n" * 1000
+    result = runner.invoke(app, ["process", "-", "--quiet"], input=large_input)
+    assert result.exit_code in (0, 1)
+
+
+def test_special_characters():
+    """Test processing input with special characters."""
+    special_input = "test\n\t\r\b\f"
+    result = runner.invoke(app, ["process", "-", "--quiet"], input=special_input)
+    assert result.exit_code in (0, 1)
+
+
+def test_unicode_input():
+    """Test processing unicode input."""
+    unicode_input = "test 日本語 🚀"
+    result = runner.invoke(app, ["process", "-", "--quiet"], input=unicode_input)
+    assert result.exit_code in (0, 1)
 

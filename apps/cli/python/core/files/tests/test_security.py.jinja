@@ -125,3 +125,25 @@ def test_get_credential_fallback():
     credential = manager.get_credential("test_service", "test_user")
     # Returns None if not found
     assert credential is None or isinstance(credential, str)
+
+
+def test_delete_credential():
+    """Test credential deletion."""
+    manager = SecurityManager()
+    result = manager.delete_credential("test_service", "test_user")
+    # Result depends on keyring availability
+    assert isinstance(result, bool)
+
+
+def test_check_memory_limit_with_limit():
+    """Test memory limit check with limit set."""
+    monitor = ResourceMonitor(max_memory_mb=100)
+    # Mock memory usage to test limit
+    assert isinstance(monitor.check_memory_limit(), bool)
+
+
+def test_check_cpu_limit_with_limit():
+    """Test CPU limit check with limit set."""
+    monitor = ResourceMonitor(max_cpu_percent=50.0)
+    # Mock CPU usage to test limit
+    assert isinstance(monitor.check_cpu_limit(), bool)

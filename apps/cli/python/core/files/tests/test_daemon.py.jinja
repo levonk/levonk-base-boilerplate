@@ -74,3 +74,19 @@ def test_is_daemon_running():
     running = manager.is_daemon_running()
     # Should return boolean
     assert isinstance(running, bool)
+
+
+def test_start_daemon():
+    """Test starting daemon process."""
+    manager = DaemonManager()
+    result = manager.start_daemon()
+    # Should return PID (int) or None
+    assert result is None or isinstance(result, int)
+
+
+def test_stop_daemon():
+    """Test stopping daemon process."""
+    manager = DaemonManager()
+    result = manager.stop_daemon()
+    # Should return boolean
+    assert isinstance(result, bool)

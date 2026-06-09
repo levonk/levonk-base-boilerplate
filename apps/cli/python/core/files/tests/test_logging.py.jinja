@@ -207,3 +207,60 @@ def test_get_logger_with_log_format():
     """Test get_logger accepts log_format parameter."""
     logger = get_logger(name="{{ project_slug }}", log_format="json")
     assert logger.log_format == "json"
+
+
+def test_logger_debug_mode():
+    """Test logger with debug mode enabled."""
+    logger = Logger(name="{{ project_slug }}", debug_mode=True)
+    assert logger.debug_mode is True
+
+
+def test_logger_verbose_mode():
+    """Test logger with verbose mode enabled."""
+    logger = Logger(name="{{ project_slug }}", verbose=True)
+    assert logger.verbose is True
+
+
+def test_logger_quiet_mode():
+    """Test logger with quiet mode enabled."""
+    logger = Logger(name="{{ project_slug }}", quiet=True)
+    assert logger.quiet is True
+
+
+def test_configure_logging_with_debug():
+    """Test configure_logging with debug mode."""
+    configure_logging(name="{{ project_slug }}", debug_mode=True)
+    logger = get_logger()
+    assert logger.debug_mode is True
+
+
+def test_configure_logging_with_verbose():
+    """Test configure_logging with verbose mode."""
+    configure_logging(name="{{ project_slug }}", verbose=True)
+    logger = get_logger()
+    assert logger.verbose is True
+
+
+def test_configure_logging_with_quiet():
+    """Test configure_logging with quiet mode."""
+    configure_logging(name="{{ project_slug }}", quiet=True)
+    logger = get_logger()
+    assert logger.quiet is True
+
+
+def test_resolve_log_level_invalid():
+    """Test resolve_log_level with invalid level."""
+    level = resolve_log_level(cli_level="INVALID")
+    # Function returns the invalid value as-is
+    assert level == "INVALID"
+
+
+def test_resolve_log_level_env_invalid():
+    """Test resolve_log_level with invalid env var."""
+    os.environ["LOG_LEVEL"] = "INVALID"
+    try:
+        level = resolve_log_level()
+        # Function returns the invalid value as-is
+        assert level == "INVALID"
+    finally:
+        del os.environ["LOG_LEVEL"]

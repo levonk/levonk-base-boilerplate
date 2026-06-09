@@ -1,0 +1,64 @@
+# vim: set ft=python :
+from {{ project_slug }}.man_page import generate_man_page, get_man_page_dir, install_man_page, uninstall_man_page, print_man_page
+from pathlib import Path
+import tempfile
+import pytest
+
+
+def test_generate_man_page():
+    """Test man page generation."""
+    man_content = generate_man_page()
+    assert man_content is not None
+    assert isinstance(man_content, str)
+    assert ".TH" in man_content
+    assert ".SH NAME" in man_content
+    assert "{{ project_slug }}" in man_content
+
+
+def test_get_man_page_dir():
+    """Test getting man page directory."""
+    man_dir = get_man_page_dir()
+    assert man_dir is not None
+    assert isinstance(man_dir, Path)
+    assert man_dir.exists()
+
+
+def test_install_man_page():
+    """Test man page installation."""
+    result = install_man_page(force=True)
+    assert isinstance(result, bool)
+
+
+def test_install_man_page_no_force():
+    """Test man page installation without force (checks existing)."""
+    # First install
+    install_man_page(force=True)
+    # Try to install again without force
+    result = install_man_page(force=False)
+    assert isinstance(result, bool)
+
+
+def test_uninstall_man_page():
+    """Test man page uninstallation."""
+    # First install
+    install_man_page(force=True)
+    # Then uninstall
+    result = uninstall_man_page()
+    assert isinstance(result, bool)
+
+
+def test_uninstall_man_page_not_exists():
+    """Test uninstalling when man page doesn't exist."""
+    # First uninstall to ensure it doesn't exist
+    uninstall_man_page()
+    # Try to uninstall again
+    result = uninstall_man_page()
+    assert isinstance(result, bool)
+
+
+def test_print_man_page(capsys):
+    """Test printing man page to stdout."""
+    print_man_page()
+    captured = capsys.readouterr()
+    assert captured.out is not None
+    assert ".TH" in captured.out
