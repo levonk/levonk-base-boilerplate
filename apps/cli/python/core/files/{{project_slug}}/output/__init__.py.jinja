@@ -1,0 +1,88 @@
+# vim: set ft=python:
+"""
+Output formatting and truncation system.
+"""
+
+from {{ project_slug }}.output.formatter import OutputFormatter, get_formatter, OutputFormat
+from {{ project_slug }}.output.schema import (
+    FieldSchema,
+    SchemaManager,
+    get_schema_manager,
+    apply_field_selection
+)
+from {{ project_slug }}.output.toon import (
+    ToonEncoder,
+    ToonDecoder,
+    to_dumps,
+    to_loads,
+    estimate_token_savings
+)
+from {{ project_slug }}.output.truncation import (
+    Truncator,
+    TruncationResult,
+    get_truncator,
+    truncate_text,
+    apply_truncation
+)
+from {{ project_slug }}.output.aggregates import (
+    AggregateType,
+    AggregateResult,
+    CountAggregate,
+    StatusAggregate,
+    SummaryAggregate,
+    AggregateComputer,
+    get_aggregate_computer,
+    compute_aggregates,
+    add_aggregates_to_output
+)
+from {{ project_slug }}.output.empty import (
+    EmptyState,
+    EmptyStateContext,
+    EmptyStateDetector,
+    get_empty_state_detector,
+    detect_empty_state,
+    format_empty_state,
+    ensure_empty_state_exit_code
+)
+
+__all__ = [
+    # Formatter
+    "OutputFormatter",
+    "get_formatter",
+    "OutputFormat",
+    # Schema
+    "FieldSchema",
+    "SchemaManager",
+    "get_schema_manager",
+    "apply_field_selection",
+    # TOON
+    "ToonEncoder",
+    "ToonDecoder",
+    "to_dumps",
+    "to_loads",
+    "estimate_token_savings",
+    # Truncation
+    "Truncator",
+    "TruncationResult",
+    "get_truncator",
+    "truncate_text",
+    "apply_truncation",
+    # Aggregates
+    "AggregateType",
+    "AggregateResult",
+    "CountAggregate",
+    "StatusAggregate",
+    "SummaryAggregate",
+    "AggregateComputer",
+    "get_aggregate_computer",
+    "compute_aggregates",
+    "add_aggregates_to_output",
+    # Empty States
+    "EmptyState",
+    "EmptyStateContext",
+    "EmptyStateDetector",
+    "get_empty_state_detector",
+    "detect_empty_state",
+    "format_empty_state",
+    "ensure_empty_state_exit_code",
+]

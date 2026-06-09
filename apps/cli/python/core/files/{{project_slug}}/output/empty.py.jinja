@@ -1,0 +1,319 @@
+# vim: set ft=python:
+"""
+Empty state detection and formatting system.
+
+Provides definitive empty states for all commands. When answer is "nothing",
+state the zero with context. Make clear command succeeded — absence of results
+is the answer. Ensure exit code 0 for successful empty queries.
+"""
+
+from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field
+
+
+@dataclass
+class EmptyStateContext:
+    """Context information for empty state messages."""
+    
+    command: str
+    """Command name"""
+    
+    filters: Optional[Dict[str, Any]] = None
+    """Filter criteria applied"""
+    
+    scope: Optional[str] = None
+    """Scope of the query (e.g., "all", "active", "closed")"""
+    
+    resource_type: Optional[str] = None
+    """Type of resource being queried (e.g., "tasks", "items")"""
+    
+    def get_filter_description(self) -> str:
+        """
+        Get human-readable description of filters.
+        
+        Returns:
+            Filter description string
+        """
+        if not self.filters:
+            return ""
+        
+        filter_parts = []
+        for key, value in self.filters.items():
+            if value is not None and value != "":
+                filter_parts.append(f"{key}={value}")
+        
+        if filter_parts:
+            return f" with filters: {', '.join(filter_parts)}"
+        return ""
+
+
+@dataclass
+class EmptyState:
+    """Empty state result with message and metadata."""
+    
+    count: int
+    """Count of results (should be 0 for empty state)"""
+    
+    message: str
+    """Human-readable empty state message"""
+    
+    context: EmptyStateContext
+    """Context information"""
+    
+    success: bool = True
+    """Whether the command succeeded (empty result is success)"""
+    
+    exit_code: int = 0
+    """Exit code (0 for successful empty queries)"""
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert empty state to dictionary.
+        
+        Returns:
+            Dictionary representation
+        """
+        return {
+            "count": self.count,
+            "message": self.message,
+            "context": {
+                "command": self.context.command,
+                "filters": self.context.filters,
+                "scope": self.context.scope,
+                "resource_type": self.context.resource_type,
+            },
+            "success": self.success,
+        }
+
+
+class EmptyStateDetector:
+    """Detects and formats empty states for command results."""
+    
+    def __init__(self):
+        """Initialize empty state detector."""
+        self._resource_type_map = {
+            "list": "items",
+            "status": "statuses",
+            "config": "config entries",
+            "resource": "resources",
+            "task": "tasks",
+            "item": "items",
+        }
+    
+    def is_empty(self, data: Any) -> bool:
+        """
+        Check if data represents an empty result.
+        
+        Args:
+            data: Data to check
+            
+        Returns:
+            True if data is empty
+        """
+        if data is None:
+            return True
+        if isinstance(data, (list, tuple, set)):
+            return len(data) == 0
+        if isinstance(data, dict):
+            return len(data) == 0
+        if isinstance(data, str):
+            return len(data.strip()) == 0
+        return False
+    
+    def get_count(self, data: Any) -> int:
+        """
+        Get count of items in data.
+        
+        Args:
+            data: Data to count
+            
+        Returns:
+            Number of items
+        """
+        if data is None:
+            return 0
+        if isinstance(data, (list, tuple, set)):
+            return len(data)
+        if isinstance(data, dict):
+            return len(data)
+        if isinstance(data, str):
+            return len(data.split()) if data.strip() else 0
+        return 1  # Single item
+    
+    def get_resource_type(self, command: str) -> str:
+        """
+        Get resource type for a command.
+        
+        Args:
+            command: Command name
+            
+        Returns:
+            Resource type string
+        """
+        return self._resource_type_map.get(command, "items")
+    
+    def create_empty_state(
+        self,
+        data: Any,
+        command: str,
+        filters: Optional[Dict[str, Any]] = None,
+        scope: Optional[str] = None,
+        resource_type: Optional[str] = None
+    ) -> Optional[EmptyState]:
+        """
+        Create empty state if data is empty.
+        
+        Args:
+            data: Data to check
+            command: Command name
+            filters: Optional filter criteria
+            scope: Optional scope description
+            resource_type: Optional resource type override
+            
+        Returns:
+            EmptyState if data is empty, None otherwise
+        """
+        if not self.is_empty(data):
+            return None
+        
+        count = self.get_count(data)
+        context = EmptyStateContext(
+            command=command,
+            filters=filters,
+            scope=scope,
+            resource_type=resource_type or self.get_resource_type(command)
+        )
+        
+        message = self._format_empty_message(context, count)
+        
+        return EmptyState(
+            count=count,
+            message=message,
+            context=context,
+            success=True,
+            exit_code=0
+        )
+    
+    def _format_empty_message(self, context: EmptyStateContext, count: int) -> str:
+        """
+        Format empty state message with context.
+        
+        Args:
+            context: Empty state context
+            count: Count of results
+            
+        Returns:
+            Formatted message
+        """
+        resource = context.resource_type or "items"
+        filter_desc = context.get_filter_description()
+        scope_desc = f" {context.scope}" if context.scope else ""
+        
+        # State the zero explicitly
+        message = f"{count} {resource}{scope_desc} found"
+        
+        if filter_desc:
+            message += filter_desc
+        
+        # Make clear command succeeded
+        message += ". Command succeeded."
+        
+        return message
+    
+    def format_for_output(
+        self,
+        empty_state: EmptyState,
+        format_type: str = "human"
+    ) -> str:
+        """
+        Format empty state for output.
+        
+        Args:
+            empty_state: Empty state to format
+            format_type: Output format ("human", "json", "toon")
+            
+        Returns:
+            Formatted string
+        """
+        if format_type == "json":
+            import json
+            return json.dumps(empty_state.to_dict(), indent=2)
+        elif format_type == "toon":
+            from {{ project_slug }}.output.toon import to_dumps
+            return to_dumps(empty_state.to_dict())
+        else:
+            return empty_state.message
+
+
+# Global empty state detector instance
+_default_detector: Optional[EmptyStateDetector] = None
+
+
+def get_empty_state_detector() -> EmptyStateDetector:
+    """
+    Get the global empty state detector instance.
+    
+    Returns:
+        EmptyStateDetector instance
+    """
+    global _default_detector
+    if _default_detector is None:
+        _default_detector = EmptyStateDetector()
+    return _default_detector
+
+
+def detect_empty_state(
+    data: Any,
+    command: str,
+    filters: Optional[Dict[str, Any]] = None,
+    scope: Optional[str] = None,
+    resource_type: Optional[str] = None
+) -> Optional[EmptyState]:
+    """
+    Detect empty state in data.
+    
+    Args:
+        data: Data to check
+        command: Command name
+        filters: Optional filter criteria
+        scope: Optional scope description
+        resource_type: Optional resource type override
+        
+    Returns:
+        EmptyState if data is empty, None otherwise
+    """
+    detector = get_empty_state_detector()
+    return detector.create_empty_state(data, command, filters, scope, resource_type)
+
+
+def format_empty_state(
+    empty_state: EmptyState,
+    format_type: str = "human"
+) -> str:
+    """
+    Format empty state for output.
+    
+    Args:
+        empty_state: Empty state to format
+        format_type: Output format ("human", "json", "toon")
+        
+    Returns:
+        Formatted string
+    """
+    detector = get_empty_state_detector()
+    return detector.format_for_output(empty_state, format_type)
+
+
+def ensure_empty_state_exit_code(data: Any) -> int:
+    """
+    Ensure exit code 0 for successful empty queries.
+    
+    Args:
+        data: Data to check
+        
+    Returns:
+        Exit code (0 for empty or non-empty successful data)
+    """
+    detector = get_empty_state_detector()
+    # Empty result is still success (exit code 0)
+    return 0

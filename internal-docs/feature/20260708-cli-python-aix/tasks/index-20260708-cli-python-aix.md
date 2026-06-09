@@ -28,8 +28,8 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
 | 02-001 | Minimal Default Schemas | feature/current/20260708-cli-python-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output.py, schema.py] | [x] Done |
 | 02-002 | Content Truncation | feature/current/20260708-cli-python-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output.py, truncation.py] | [x] Done
-| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-python-aix/story-02-003-aggregates | 02-001 | Parallel-safe: true | [output.py, aggregates.py] | [~] In-Progress |
-| 02-004 | Definitive Empty States | feature/current/20260708-cli-python-aix/story-02-004-empty-states | 02-001 | Parallel-safe: true | [output.py, empty.py] |
+| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-python-aix/story-02-003-aggregates | 02-001 | Parallel-safe: true | [output.py, aggregates.py] | [x] Done |
+| 02-004 | Definitive Empty States | feature/current/20260708-cli-python-aix/story-02-004-empty-states | 02-001 | Parallel-safe: true | [output.py, empty.py] | [x] Done |
 
 ### Phase 03: Error Handling & Idempotency (Week 2)
 

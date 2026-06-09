@@ -27,16 +27,16 @@ Implement definitive empty states for all commands. When answer is "nothing", st
 
 ## Sub-Tasks
 
-- [ ] Implement empty result detection across all commands — `output/empty.py`
-- [ ] Format empty states consistently — `output/empty.py`
-- [ ] Include context in empty states (filter criteria, scope) — `output/empty.py`
-- [ ] State the zero explicitly (e.g., "0 closed tasks found") — `output/empty.py`
-- [ ] Ensure exit code 0 for successful empty queries — `output/empty.py`
-- [ ] Make clear command succeeded — `output/empty.py`
-- [ ] Apply empty state formatting to all commands — `output/empty.py`
-- [ ] Test empty state detection for all commands — `tests/test_empty.py`
-- [ ] Test empty state formatting — `tests/test_empty.py`
-- [ ] Test exit code 0 for empty queries — `tests/test_empty.py`
+- [x] Implement empty result detection across all commands — `output/empty.py`
+- [x] Format empty states consistently — `output/empty.py`
+- [x] Include context in empty states (filter criteria, scope) — `output/empty.py`
+- [x] State the zero explicitly (e.g., "0 closed tasks found") — `output/empty.py`
+- [x] Ensure exit code 0 for successful empty queries — `output/empty.py`
+- [x] Make clear command succeeded — `output/empty.py`
+- [x] Apply empty state formatting to all commands — `output/empty.py`
+- [x] Test empty state detection for all commands — `tests/test_empty.py`
+- [x] Test empty state formatting — `tests/test_empty.py`
+- [x] Test exit code 0 for empty queries — `tests/test_empty.py`
 
 ## Relevant Files
 
@@ -45,14 +45,14 @@ Implement definitive empty states for all commands. When answer is "nothing", st
 
 ## Acceptance Criteria
 
-- [ ] Empty result sets are detected across all commands
-- [ ] Empty states are formatted consistently
-- [ ] Empty states include context (filter criteria, scope)
-- [ ] Zero is stated explicitly
-- [ ] Exit code 0 for successful empty queries
-- [ ] Command success is clear
-- [ ] Empty state formatting applies to all commands
-- [ ] All tests pass
+- [x] Empty result sets are detected across all commands
+- [x] Empty states are formatted consistently
+- [x] Empty states include context (filter criteria, scope)
+- [x] Zero is stated explicitly
+- [x] Exit code 0 for successful empty queries
+- [x] Command success is clear
+- [x] Empty state formatting applies to all commands
+- [x] All tests pass
 
 ## Test Plan
 

@@ -1,0 +1,306 @@
+# vim: set ft=python:
+"""
+Tests for empty state detection and formatting.
+"""
+
+import pytest
+from {{ project_slug }}.output.empty import (
+    EmptyState,
+    EmptyStateContext,
+    EmptyStateDetector,
+    get_empty_state_detector,
+    detect_empty_state,
+    format_empty_state,
+    ensure_empty_state_exit_code
+)
+
+
+class TestEmptyStateDetector:
+    """Test empty state detection."""
+    
+    def test_is_empty_with_none(self):
+        """Test empty detection with None."""
+        detector = EmptyStateDetector()
+        assert detector.is_empty(None) is True
+    
+    def test_is_empty_with_empty_list(self):
+        """Test empty detection with empty list."""
+        detector = EmptyStateDetector()
+        assert detector.is_empty([]) is True
+        assert detector.is_empty(()) is True
+        assert detector.is_empty(set()) is True
+    
+    def test_is_empty_with_empty_dict(self):
+        """Test empty detection with empty dict."""
+        detector = EmptyStateDetector()
+        assert detector.is_empty({}) is True
+    
+    def test_is_empty_with_empty_string(self):
+        """Test empty detection with empty string."""
+        detector = EmptyStateDetector()
+        assert detector.is_empty("") is True
+        assert detector.is_empty("   ") is True
+    
+    def test_is_empty_with_non_empty_data(self):
+        """Test empty detection with non-empty data."""
+        detector = EmptyStateDetector()
+        assert detector.is_empty([1, 2, 3]) is False
+        assert detector.is_empty({"key": "value"}) is False
+        assert detector.is_empty("test") is False
+        assert detector.is_empty(0) is False
+    
+    def test_get_count(self):
+        """Test count retrieval."""
+        detector = EmptyStateDetector()
+        assert detector.get_count(None) == 0
+        assert detector.get_count([]) == 0
+        assert detector.get_count([1, 2, 3]) == 3
+        assert detector.get_count({}) == 0
+        assert detector.get_count({"a": 1, "b": 2}) == 2
+        assert detector.get_count("") == 0
+        assert detector.get_count("test data") == 2
+    
+    def test_get_resource_type(self):
+        """Test resource type mapping."""
+        detector = EmptyStateDetector()
+        assert detector.get_resource_type("list") == "items"
+        assert detector.get_resource_type("status") == "statuses"
+        assert detector.get_resource_type("config") == "config entries"
+        assert detector.get_resource_type("resource") == "resources"
+        assert detector.get_resource_type("task") == "tasks"
+        assert detector.get_resource_type("unknown") == "items"
+    
+    def test_create_empty_state_with_empty_list(self):
+        """Test creating empty state with empty list."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state([], "list")
+        
+        assert empty_state is not None
+        assert empty_state.count == 0
+        assert empty_state.success is True
+        assert empty_state.exit_code == 0
+        assert "0 items found" in empty_state.message
+        assert "Command succeeded" in empty_state.message
+    
+    def test_create_empty_state_with_filters(self):
+        """Test creating empty state with filters."""
+        detector = EmptyStateDetector()
+        filters = {"status": "closed", "priority": "high"}
+        empty_state = detector.create_empty_state([], "task", filters=filters)
+        
+        assert empty_state is not None
+        assert "with filters" in empty_state.message
+        assert "status=closed" in empty_state.message
+        assert "priority=high" in empty_state.message
+    
+    def test_create_empty_state_with_scope(self):
+        """Test creating empty state with scope."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state([], "task", scope="active")
+        
+        assert empty_state is not None
+        assert "active" in empty_state.message
+    
+    def test_create_empty_state_with_custom_resource_type(self):
+        """Test creating empty state with custom resource type."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state([], "list", resource_type="projects")
+        
+        assert empty_state is not None
+        assert "0 projects found" in empty_state.message
+    
+    def test_create_empty_state_with_non_empty_data(self):
+        """Test creating empty state with non-empty data returns None."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state([1, 2, 3], "list")
+        
+        assert empty_state is None
+
+
+class TestEmptyStateFormatting:
+    """Test empty state formatting."""
+    
+    def test_format_for_human_output(self):
+        """Test formatting for human output."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state([], "list")
+        
+        formatted = detector.format_for_output(empty_state, "human")
+        
+        assert "0 items found" in formatted
+        assert "Command succeeded" in formatted
+    
+    def test_format_for_json_output(self):
+        """Test formatting for JSON output."""
+        import json
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state([], "list")
+        
+        formatted = detector.format_for_output(empty_state, "json")
+        parsed = json.loads(formatted)
+        
+        assert parsed["count"] == 0
+        assert parsed["success"] is True
+        assert "message" in parsed
+        assert "context" in parsed
+    
+    def test_format_for_toon_output(self):
+        """Test formatting for TOON output."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state([], "list")
+        
+        formatted = detector.format_for_output(empty_state, "toon")
+        
+        # TOON format should be compact
+        assert len(formatted) > 0
+        assert "0" in formatted
+
+
+class TestEmptyStateContext:
+    """Test empty state context."""
+    
+    def test_get_filter_description(self):
+        """Test filter description generation."""
+        context = EmptyStateContext(
+            command="list",
+            filters={"status": "active", "priority": "high"}
+        )
+        
+        desc = context.get_filter_description()
+        assert "status=active" in desc
+        assert "priority=high" in desc
+    
+    def test_get_filter_description_empty(self):
+        """Test filter description with no filters."""
+        context = EmptyStateContext(command="list")
+        
+        desc = context.get_filter_description()
+        assert desc == ""
+    
+    def test_get_filter_description_with_none_values(self):
+        """Test filter description ignores None values."""
+        context = EmptyStateContext(
+            command="list",
+            filters={"status": "active", "priority": None, "owner": ""}
+        )
+        
+        desc = context.get_filter_description()
+        assert "status=active" in desc
+        assert "priority" not in desc
+        assert "owner" not in desc
+
+
+class TestEmptyStateToDict:
+    """Test EmptyState to_dict conversion."""
+    
+    def test_to_dict(self):
+        """Test converting empty state to dictionary."""
+        context = EmptyStateContext(
+            command="list",
+            filters={"status": "active"},
+            scope="all",
+            resource_type="items"
+        )
+        empty_state = EmptyState(
+            count=0,
+            message="0 items found",
+            context=context,
+            success=True,
+            exit_code=0
+        )
+        
+        result = empty_state.to_dict()
+        
+        assert result["count"] == 0
+        assert result["message"] == "0 items found"
+        assert result["success"] is True
+        assert result["context"]["command"] == "list"
+        assert result["context"]["filters"] == {"status": "active"}
+        assert result["context"]["scope"] == "all"
+        assert result["context"]["resource_type"] == "items"
+
+
+class TestGlobalFunctions:
+    """Test global convenience functions."""
+    
+    def test_get_empty_state_detector(self):
+        """Test getting global detector instance."""
+        detector1 = get_empty_state_detector()
+        detector2 = get_empty_state_detector()
+        
+        # Should return same instance
+        assert detector1 is detector2
+    
+    def test_detect_empty_state(self):
+        """Test detect_empty_state convenience function."""
+        empty_state = detect_empty_state([], "list")
+        
+        assert empty_state is not None
+        assert empty_state.count == 0
+    
+    def test_detect_empty_state_non_empty(self):
+        """Test detect_empty_state with non-empty data."""
+        empty_state = detect_empty_state([1, 2, 3], "list")
+        
+        assert empty_state is None
+    
+    def test_format_empty_state(self):
+        """Test format_empty_state convenience function."""
+        empty_state = detect_empty_state([], "list")
+        formatted = format_empty_state(empty_state, "human")
+        
+        assert "0 items found" in formatted
+    
+    def test_ensure_empty_state_exit_code(self):
+        """Test ensure_empty_state_exit_code function."""
+        assert ensure_empty_state_exit_code([]) == 0
+        assert ensure_empty_state_exit_code([1, 2, 3]) == 0
+        assert ensure_empty_state_exit_code({}) == 0
+        assert ensure_empty_state_exit_code(None) == 0
+
+
+class TestEmptyStateIntegration:
+    """Integration tests for empty state with various data types."""
+    
+    def test_empty_list_with_command_context(self):
+        """Test empty list with command-specific context."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state([], "status")
+        
+        assert "statuses" in empty_state.message
+    
+    def test_empty_dict_with_command_context(self):
+        """Test empty dict with command-specific context."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state({}, "config")
+        
+        assert "config entries" in empty_state.message
+    
+    def test_complex_filter_combination(self):
+        """Test empty state with complex filter combination."""
+        detector = EmptyStateDetector()
+        filters = {
+            "status": "closed",
+            "priority": "high",
+            "assignee": "user@example.com",
+            "due_before": "2025-01-01"
+        }
+        empty_state = detector.create_empty_state([], "task", filters=filters)
+        
+        assert "status=closed" in empty_state.message
+        assert "priority=high" in empty_state.message
+        assert "assignee=user@example.com" in empty_state.message
+        assert "due_before=2025-01-01" in empty_state.message
+    
+    def test_scope_and_filters_combination(self):
+        """Test empty state with both scope and filters."""
+        detector = EmptyStateDetector()
+        empty_state = detector.create_empty_state(
+            [],
+            "task",
+            filters={"status": "active"},
+            scope="project-123"
+        )
+        
+        assert "project-123" in empty_state.message
+        assert "status=active" in empty_state.message

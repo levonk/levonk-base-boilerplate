@@ -1,0 +1,220 @@
+# vim: set ft=python:
+"""
+Output formatter with format selection logic.
+
+Supports TOON, JSON, and human-readable output formats.
+"""
+
+from typing import Any, Optional
+from enum import Enum
+import json
+import sys
+
+from {{ project_slug }}.output.toon import to_dumps, estimate_token_savings
+from {{ project_slug }}.output.schema import apply_field_selection, get_schema_manager
+from {{ project_slug }}.output.empty import (
+    detect_empty_state,
+    format_empty_state,
+    ensure_empty_state_exit_code
+)
+from {{ project_slug }}.mode import Mode
+
+
+class OutputFormat(Enum):
+    """Output format options."""
+    TOON = "toon"
+    JSON = "json"
+    HUMAN = "human"
+
+
+class OutputFormatter:
+    """Formats output based on mode and format selection."""
+
+    def __init__(
+        self,
+        mode: Mode = Mode.AGENT,
+        format_override: Optional[OutputFormat] = None,
+        command: Optional[str] = None,
+        fields: Optional[str] = None,
+        filters: Optional[dict] = None,
+        scope: Optional[str] = None,
+        resource_type: Optional[str] = None
+    ):
+        """
+        Initialize output formatter.
+
+        Args:
+            mode: Execution mode (AGENT or HUMAN)
+            format_override: Explicit format selection (overrides mode default)
+            command: Command name for schema application
+            fields: Optional field selection string
+            filters: Optional filter criteria for empty state context
+            scope: Optional scope for empty state context
+            resource_type: Optional resource type for empty state context
+        """
+        self.mode = mode
+        self.format_override = format_override
+        self.command = command
+        self.fields = fields
+        self.filters = filters
+        self.scope = scope
+        self.resource_type = resource_type
+
+    def get_format(self) -> OutputFormat:
+        """
+        Determine output format based on mode and override.
+
+        Returns:
+            Selected OutputFormat
+        """
+        if self.format_override:
+            return self.format_override
+        
+        # Default: TOON in agent mode, JSON/human in human mode
+        if self.mode == Mode.AGENT:
+            return OutputFormat.TOON
+        else:
+            return OutputFormat.HUMAN
+
+    def format_output(self, data: Any) -> str:
+        """
+        Format data to string.
+
+        Args:
+            data: Data to format
+
+        Returns:
+            Formatted string
+        """
+        # Check for empty state first
+        empty_state = detect_empty_state(
+            data,
+            self.command or "unknown",
+            self.filters,
+            self.scope,
+            self.resource_type
+        )
+        
+        if empty_state:
+            # Format empty state with context
+            format_type = self.get_format().value
+            return format_empty_state(empty_state, format_type)
+        
+        # Apply schema-based field selection if command and fields are provided
+        if self.command and (self.fields or self.command):
+            data = apply_field_selection(data, self.command, self.fields)
+        
+        output_format = self.get_format()
+        
+        if output_format == OutputFormat.TOON:
+            return self._format_toon(data)
+        elif output_format == OutputFormat.JSON:
+            return self._format_json(data)
+        else:
+            return self._format_human(data)
+
+    def _format_toon(self, data: Any) -> str:
+        """Format data as TOON."""
+        return to_dumps(data)
+
+    def _format_json(self, data: Any) -> str:
+        """Format data as JSON."""
+        return json.dumps(data, indent=2)
+
+    def _format_human(self, data: Any) -> str:
+        """Format data as human-readable."""
+        # Simple human-readable formatting
+        lines = []
+        if isinstance(data, dict):
+            for key, value in data.items():
+                lines.append(f"{key}: {value}")
+        elif isinstance(data, list):
+            for item in data:
+                lines.append(f"- {item}")
+        else:
+            lines.append(str(data))
+        return '\n'.join(lines)
+
+    def format_error(self, error_message: str, suggestion: Optional[str] = None) -> str:
+        """
+        Format error message in structured format.
+
+        Args:
+            error_message: Error description
+            suggestion: Optional suggestion for fixing the error
+
+        Returns:
+            Formatted error string
+        """
+        output_format = self.get_format()
+        
+        if output_format == OutputFormat.TOON:
+            error_data = {"error": error_message}
+            if suggestion:
+                error_data["help"] = suggestion
+            return to_dumps(error_data)
+        elif output_format == OutputFormat.JSON:
+            error_data = {"error": error_message}
+            if suggestion:
+                error_data["help"] = suggestion
+            return json.dumps(error_data, indent=2)
+        else:
+            lines = [f"Error: {error_message}"]
+            if suggestion:
+                lines.append(f"Help: {suggestion}")
+            return '\n'.join(lines)
+    
+    def get_exit_code(self, data: Any) -> int:
+        """
+        Get appropriate exit code for the data.
+        
+        Args:
+            data: Data to check
+            
+        Returns:
+            Exit code (0 for success, including empty results)
+        """
+        return ensure_empty_state_exit_code(data)
+
+
+def get_formatter(
+    mode: Mode,
+    toon: bool = False,
+    json_output: bool = False,
+    command: Optional[str] = None,
+    fields: Optional[str] = None,
+    filters: Optional[dict] = None,
+    scope: Optional[str] = None,
+    resource_type: Optional[str] = None
+) -> OutputFormatter:
+    """
+    Create an OutputFormatter with the specified settings.
+
+    Args:
+        mode: Execution mode
+        toon: Force TOON format
+        json_output: Force JSON format
+        command: Command name for schema application
+        fields: Optional field selection string
+        filters: Optional filter criteria for empty state context
+        scope: Optional scope for empty state context
+        resource_type: Optional resource type for empty state context
+
+    Returns:
+        Configured OutputFormatter
+    """
+    format_override = None
+    if toon:
+        format_override = OutputFormat.TOON
+    elif json_output:
+        format_override = OutputFormat.JSON
+    
+    return OutputFormatter(
+        mode=mode,
+        format_override=format_override,
+        command=command,
+        fields=fields,
+        filters=filters,
+        scope=scope,
+        resource_type=resource_type
+    )
