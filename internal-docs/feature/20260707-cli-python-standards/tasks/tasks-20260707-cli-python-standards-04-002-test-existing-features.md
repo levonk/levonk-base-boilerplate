@@ -45,10 +45,10 @@ Ensure tests for existing CLI features (pre-existing in the boilerplate) are com
 
 ## Acceptance Criteria
 
-- [ ] All existing features have tests
-- [ ] All existing tests pass
-- [ ] Tests verify existing behavior
-- [ ] Tests include edge cases
+- [x] All existing features have tests
+- [x] All existing tests pass
+- [x] Tests verify existing behavior
+- [x] Tests include edge cases
 
 ## Test Plan
 
