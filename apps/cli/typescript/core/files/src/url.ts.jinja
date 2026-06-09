@@ -53,6 +53,9 @@ export function normalizeURL(url: string): string {
   // Trim whitespace
   let normalized = url.trim();
 
+  // Track if original had a trailing slash
+  const hadTrailingSlash = normalized.endsWith('/');
+
   // Add protocol if missing (default to https)
   if (!normalized.match(/^https?:\/\//)) {
     normalized = `https://${normalized}`;
@@ -60,7 +63,14 @@ export function normalizeURL(url: string): string {
 
   try {
     const urlObj = new URL(normalized);
-    return urlObj.toString();
+    let result = urlObj.toString();
+
+    // Remove trailing slash if original didn't have one and path is empty
+    if (!hadTrailingSlash && urlObj.pathname === '/') {
+      result = result.replace(/\/$/, '');
+    }
+
+    return result;
   } catch (error) {
     throw new Error(`Invalid URL: ${url}`);
   }
@@ -94,8 +104,8 @@ export function formatURL(url: string, options: URLOptions = {}): string {
       const urlObj = new URL(formattedURL);
       // Encode path and query parameters
       const encodedPath = encodeURLComponent(urlObj.pathname);
-      const encodedSearch = encodeURLComponent(urlObj.search);
-      formattedURL = `${urlObj.protocol}//${urlObj.host}${encodedPath}${encodedSearch}`;
+      const encodedSearch = urlObj.search ? encodeURLComponent(urlObj.search.substring(1)) : '';
+      formattedURL = `${urlObj.protocol}//${urlObj.host}${encodedPath}${encodedSearch ? '?' + encodedSearch : ''}`;
     } catch (error) {
       // If encoding fails, use the normalized URL
     }
