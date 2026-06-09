@@ -1,6 +1,7 @@
 # vim: set ft=python :
 from {{ project_slug }}.security import SecurityManager, mask_sensitive_data, is_sensitive_key
 from {{ project_slug }}.resource import ResourceMonitor, get_resource_monitor
+from unittest.mock import patch, MagicMock
 import pytest
 
 
@@ -111,28 +112,31 @@ def test_get_resource_monitor():
 
 def test_store_credential_fallback():
     """Test credential storage fallback when keyring unavailable."""
-    manager = SecurityManager()
-    # This should use fallback (environment variable)
-    result = manager.store_credential("test_service", "test_user", "test_pass")
-    # Result depends on keyring availability
-    assert isinstance(result, bool)
+    with patch('{{ project_slug }}.security.SecurityManager._check_keyring_available', return_value=False):
+        manager = SecurityManager()
+        # This should use fallback (environment variable)
+        result = manager.store_credential("test_service", "test_user", "test_pass")
+        # Result depends on keyring availability
+        assert isinstance(result, bool)
 
 
 def test_get_credential_fallback():
     """Test credential retrieval fallback when keyring unavailable."""
-    manager = SecurityManager()
-    # This should use fallback (environment variable)
-    credential = manager.get_credential("test_service", "test_user")
-    # Returns None if not found
-    assert credential is None or isinstance(credential, str)
+    with patch('{{ project_slug }}.security.SecurityManager._check_keyring_available', return_value=False):
+        manager = SecurityManager()
+        # This should use fallback (environment variable)
+        credential = manager.get_credential("test_service", "test_user")
+        # Returns None if not found
+        assert credential is None or isinstance(credential, str)
 
 
 def test_delete_credential():
     """Test credential deletion."""
-    manager = SecurityManager()
-    result = manager.delete_credential("test_service", "test_user")
-    # Result depends on keyring availability
-    assert isinstance(result, bool)
+    with patch('{{ project_slug }}.security.SecurityManager._check_keyring_available', return_value=False):
+        manager = SecurityManager()
+        result = manager.delete_credential("test_service", "test_user")
+        # Result depends on keyring availability
+        assert isinstance(result, bool)
 
 
 def test_check_memory_limit_with_limit():
