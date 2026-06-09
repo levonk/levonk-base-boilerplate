@@ -43,10 +43,10 @@ Support SIGHUP to reload config files without restart. Validate new config befor
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config module with reload logic
-- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with signal handling
-- `apps/cli/typescript/core/files/src/config.test.ts.jinja` - Unit tests for config reload
-- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for signals
+- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config module with reload logic (added reloadConfig function and ConfigReloadResult interface)
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with signal handling (added SIGHUP handler and global state)
+- `apps/cli/typescript/core/files/src/config.test.ts.jinja` - Unit tests for config reload (added reloadConfig test suite)
+- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for signals (added Config Reload test suite)
 
 ## Acceptance Criteria
 

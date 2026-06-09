@@ -1,0 +1,214 @@
+package truncation
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestDefaultConfig(t *testing.T) {
+	config := DefaultConfig()
+
+	if config.DisableTruncation {
+		t.Error("DefaultConfig should not disable truncation")
+	}
+
+	if config.DescriptionLimit != DefaultDescriptionLimit {
+		t.Errorf("Expected DescriptionLimit %d, got %d", DefaultDescriptionLimit, config.DescriptionLimit)
+	}
+
+	if config.BodyLimit != DefaultBodyLimit {
+		t.Errorf("Expected BodyLimit %d, got %d", DefaultBodyLimit, config.BodyLimit)
+	}
+
+	if config.LogLimit != DefaultLogLimit {
+		t.Errorf("Expected LogLimit %d, got %d", DefaultLogLimit, config.LogLimit)
+	}
+
+	if config.GenericLimit != DefaultGenericLimit {
+		t.Errorf("Expected GenericLimit %d, got %d", DefaultGenericLimit, config.GenericLimit)
+	}
+}
+
+func TestGetLimit(t *testing.T) {
+	config := DefaultConfig()
+
+	tests := []struct {
+		fieldType FieldType
+		expected  int
+	}{
+		{FieldTypeDescription, DefaultDescriptionLimit},
+		{FieldTypeBody, DefaultBodyLimit},
+		{FieldTypeLog, DefaultLogLimit},
+		{FieldTypeGeneric, DefaultGenericLimit},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.fieldType), func(t *testing.T) {
+			got := config.GetLimit(tt.fieldType)
+			if got != tt.expected {
+				t.Errorf("GetLimit(%s) = %d, want %d", tt.fieldType, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTruncate(t *testing.T) {
+	config := DefaultConfig()
+	truncator := NewTruncator(config)
+
+	tests := []struct {
+		name       string
+		text       string
+		fieldType  FieldType
+		wantTrunc  bool
+		minLength  int
+	}{
+		{
+			name:      "short text under threshold",
+			text:      "short",
+			fieldType: FieldTypeDescription,
+			wantTrunc: false,
+			minLength: 5,
+		},
+		{
+			name:      "text under limit but over threshold",
+			text:      string(make([]byte, 300)), // 300 chars
+			fieldType: FieldTypeDescription,
+			wantTrunc: false,
+			minLength: 300,
+		},
+		{
+			name:      "text over limit",
+			text:      string(make([]byte, 1000)), // 1000 chars
+			fieldType: FieldTypeDescription,
+			wantTrunc: true,
+			minLength: 500,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, metadata := truncator.Truncate(tt.text, tt.fieldType)
+
+			if metadata.IsTruncated() != tt.wantTrunc {
+				t.Errorf("Truncate() truncated = %v, want %v", metadata.IsTruncated(), tt.wantTrunc)
+			}
+
+			if len(result) < tt.minLength {
+				t.Errorf("Truncate() result length = %d, want >= %d", len(result), tt.minLength)
+			}
+		})
+	}
+}
+
+func TestTruncateDisabled(t *testing.T) {
+	config := DefaultConfig()
+	config.DisableTruncation = true
+	truncator := NewTruncator(config)
+
+	longText := string(make([]byte, 10000))
+	result, metadata := truncator.Truncate(longText, FieldTypeDescription)
+
+	if metadata.IsTruncated() {
+		t.Error("Truncate() should not truncate when disabled")
+	}
+
+	if len(result) != len(longText) {
+		t.Errorf("Truncate() result length = %d, want %d", len(result), len(longText))
+	}
+}
+
+func TestSmartTruncate(t *testing.T) {
+	config := DefaultConfig()
+	truncator := NewTruncator(config)
+
+	text := "This is a long sentence that should be truncated at a word boundary when possible"
+	result, _ := truncator.Truncate(text, FieldTypeDescription)
+
+	// Check that result ends with ellipsis if truncated
+	if len(result) < len(text) && !strings.HasSuffix(result, "...") {
+		t.Error("Truncated text should end with ellipsis")
+	}
+}
+
+func TestInferFieldType(t *testing.T) {
+	config := DefaultConfig()
+	truncator := NewTruncator(config)
+
+	tests := []struct {
+		fieldName string
+		expected  FieldType
+	}{
+		{"description", FieldTypeDescription},
+		{"desc", FieldTypeDescription},
+		{"Description", FieldTypeDescription},
+		{"body", FieldTypeBody},
+		{"Body", FieldTypeBody},
+		{"log", FieldTypeLog},
+		{"Log", FieldTypeLog},
+		{"message", FieldTypeGeneric},
+		{"content", FieldTypeGeneric},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.fieldName, func(t *testing.T) {
+			got := truncator.inferFieldType(tt.fieldName)
+			if got != tt.expected {
+				t.Errorf("inferFieldType(%s) = %v, want %v", tt.fieldName, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestTruncateField(t *testing.T) {
+	config := DefaultConfig()
+	truncator := NewTruncator(config)
+
+	longText := string(make([]byte, 1000))
+	result, metadata := truncator.TruncateField("description", longText)
+
+	if !metadata.IsTruncated() {
+		t.Error("TruncateField() should truncate long description")
+	}
+
+	if len(result) >= len(longText) {
+		t.Error("TruncateField() should reduce text length")
+	}
+}
+
+func TestMetadata(t *testing.T) {
+	metadata := NewMetadata(1000, 500, 500, FieldTypeDescription)
+
+	if !metadata.IsTruncated() {
+		t.Error("Metadata should indicate truncation")
+	}
+
+	if metadata.OriginalLength != 1000 {
+		t.Errorf("OriginalLength = %d, want 1000", metadata.OriginalLength)
+	}
+
+	if metadata.TruncatedLength != 500 {
+		t.Errorf("TruncatedLength = %d, want 500", metadata.TruncatedLength)
+	}
+
+	if metadata.TruncationLimit != 500 {
+		t.Errorf("TruncationLimit = %d, want 500", metadata.TruncationLimit)
+	}
+
+	if metadata.FieldType != string(FieldTypeDescription) {
+		t.Errorf("FieldType = %s, want %s", metadata.FieldType, FieldTypeDescription)
+	}
+}
+
+func TestMetadataNotTruncated(t *testing.T) {
+	metadata := NewMetadata(300, 300, 500, FieldTypeDescription)
+
+	if metadata.IsTruncated() {
+		t.Error("Metadata should not indicate truncation for short text")
+	}
+
+	helpText := metadata.HelpText()
+	if helpText != "" {
+		t.Error("HelpText should be empty for non-truncated content")
+	}
+}

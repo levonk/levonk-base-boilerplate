@@ -6,6 +6,7 @@ import (
 
 	"{{ project_slug }}/internal/schema"
 	"{{ project_slug }}/internal/toon"
+	"{{ project_slug }}/internal/truncation"
 )
 
 // Format represents the output format type
@@ -28,6 +29,8 @@ type Formatter struct {
 	jsonOutput    bool
 	schema        *schema.Schema
 	fieldSelector *schema.Selector
+	truncator     *truncation.Truncator
+	fullFlag      bool
 }
 
 // Mode represents the CLI operation mode
@@ -41,12 +44,18 @@ const (
 )
 
 // NewFormatter creates a new formatter with the given configuration
-func NewFormatter(mode Mode, toonFlag bool, formatFlag string, jsonOutput bool) *Formatter {
+func NewFormatter(mode Mode, toonFlag bool, formatFlag string, jsonOutput bool, fullFlag bool) *Formatter {
+	config := truncation.DefaultConfig()
+	if fullFlag {
+		config.DisableTruncation = true
+	}
 	return &Formatter{
 		mode:       mode,
 		toonFlag:   toonFlag,
 		formatFlag: formatFlag,
 		jsonOutput: jsonOutput,
+		truncator:  truncation.NewTruncator(config),
+		fullFlag:   fullFlag,
 	}
 }
 
@@ -179,9 +188,47 @@ func (f *Formatter) formatJSON(v interface{}) (string, error) {
 		}
 	}
 
+	// Apply truncation to string values in the data structure
+	v = f.applyTruncation(v)
+
 	// Use standard JSON encoding
 	// This is a placeholder - actual implementation would use encoding/json
 	return fmt.Sprintf("%#v", v), nil
+}
+
+// applyTruncation recursively applies truncation to string values in a data structure
+func (f *Formatter) applyTruncation(v interface{}) interface{} {
+	switch val := v.(type) {
+	case string:
+		truncated, _ := f.truncator.Truncate(val, truncation.FieldTypeGeneric)
+		return truncated
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, value := range val {
+			// Apply field-specific truncation for known field types
+			if strVal, ok := value.(string); ok {
+				truncated, _ := f.truncator.TruncateField(key, strVal)
+				result[key] = truncated
+			} else {
+				result[key] = f.applyTruncation(value)
+			}
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(val))
+		for i, item := range val {
+			result[i] = f.applyTruncation(item)
+		}
+		return result
+	case []map[string]interface{}:
+		result := make([]map[string]interface{}, len(val))
+		for i, item := range val {
+			result[i] = f.applyTruncation(item).(map[string]interface{})
+		}
+		return result
+	default:
+		return v
+	}
 }
 
 // formatHuman formats a value as human-readable
@@ -196,7 +243,9 @@ func (f *Formatter) convertToTOON(v interface{}) (toon.Value, error) {
 	// A full implementation would handle all Go types recursively
 	switch val := v.(type) {
 	case string:
-		return toon.StringValue(val), nil
+		// Apply truncation to string values
+		truncated, _ := f.truncator.Truncate(val, truncation.FieldTypeGeneric)
+		return toon.StringValue(truncated), nil
 	case int, int8, int16, int32, int64:
 		return toon.NumberValue(float64(val.(int64))), nil
 	case uint, uint8, uint16, uint32, uint64:
@@ -208,9 +257,14 @@ func (f *Formatter) convertToTOON(v interface{}) (toon.Value, error) {
 	case nil:
 		return toon.NullValue{}, nil
 	case map[string]interface{}:
-		// Convert map to TOON Object
+		// Convert map to TOON Object with field-aware truncation
 		fields := make(map[string]toon.Value)
 		for key, value := range val {
+			// Apply field-specific truncation for known field types
+			if strVal, ok := value.(string); ok {
+				truncated, _ := f.truncator.TruncateField(key, strVal)
+				value = truncated
+			}
 			toonValue, err := f.convertToTOON(value)
 			if err != nil {
 				return nil, err

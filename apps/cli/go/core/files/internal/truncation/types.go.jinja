@@ -1,0 +1,61 @@
+package truncation
+
+// FieldType represents the type of field being truncated
+type FieldType string
+
+const (
+	// FieldTypeDescription is for description fields
+	FieldTypeDescription FieldType = "description"
+	// FieldTypeBody is for body fields
+	FieldTypeBody FieldType = "body"
+	// FieldTypeLog is for log fields
+	FieldTypeLog FieldType = "log"
+	// FieldTypeGeneric is for generic text fields
+	FieldTypeGeneric FieldType = "generic"
+)
+
+// Default limits for different field types
+const (
+	DefaultDescriptionLimit = 500
+	DefaultBodyLimit        = 1000
+	DefaultLogLimit         = 1500
+	DefaultGenericLimit     = 1000
+)
+
+// Config holds truncation configuration
+type Config struct {
+	DisableTruncation bool
+	DescriptionLimit  int
+	BodyLimit         int
+	LogLimit          int
+	GenericLimit      int
+	MinThreshold      int // Minimum length before truncation is considered
+}
+
+// DefaultConfig returns the default truncation configuration
+func DefaultConfig() *Config {
+	return &Config{
+		DisableTruncation: false,
+		DescriptionLimit:  DefaultDescriptionLimit,
+		BodyLimit:         DefaultBodyLimit,
+		LogLimit:          DefaultLogLimit,
+		GenericLimit:      DefaultGenericLimit,
+		MinThreshold:      200,
+	}
+}
+
+// GetLimit returns the truncation limit for a given field type
+func (c *Config) GetLimit(fieldType FieldType) int {
+	switch fieldType {
+	case FieldTypeDescription:
+		return c.DescriptionLimit
+	case FieldTypeBody:
+		return c.BodyLimit
+	case FieldTypeLog:
+		return c.LogLimit
+	case FieldTypeGeneric:
+		return c.GenericLimit
+	default:
+		return c.GenericLimit
+	}
+}

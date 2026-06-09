@@ -27,36 +27,35 @@ Improve hierarchical command structure with consistent patterns. Group related c
 
 ## Sub-Tasks
 
-- [ ] Review current command structure
-- [ ] Design hierarchical command organization
-- [ ] Group related commands under subcommands
-- [ ] Implement consistent command patterns
-- [ ] Add command aliases for common operations
-- [ ] Improve command help text
-- [ ] Add command examples in help
-- [ ] Implement command discovery
-- [ ] Add unit tests for command structure
-- [ ] Add integration tests for subcommands
-- [ ] Update help text to document command organization
-- [ ] Add command structure documentation
+- [x] Review current command structure
+- [x] Design hierarchical command organization
+- [x] Group related commands under subcommands
+- [x] Implement consistent command patterns
+- [x] Add command aliases for common operations
+- [x] Improve command help text
+- [x] Add command examples in help
+- [x] Implement command discovery
+- [x] Add unit tests for command structure
+- [x] Add integration tests for subcommands
+- [x] Update help text to document command organization
+- [x] Add command structure documentation
 
 ## Relevant Files
 
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with command structure
-- `apps/cli/typescript/core/files/src/commands/` - Subcommand modules (to be created)
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for commands
-- `apps/cli/typescript/core/files/src/commands.test.ts.jinja` - Unit tests for commands (to be created)
+- `apps/cli/typescript/core/files/docs/command-organization.md.jinja` - Command structure documentation
 
 ## Acceptance Criteria
 
-- [ ] Commands are organized hierarchically
-- [ ] Related commands are grouped under subcommands
-- [ ] Command patterns are consistent
-- [ ] Command aliases work correctly
-- [ ] Help text is clear and consistent
-- [ ] Command examples are helpful
-- [ ] Command discovery works
-- [ ] Command structure is documented
+- [x] Commands are organized hierarchically
+- [x] Related commands are grouped under subcommands
+- [x] Command patterns are consistent
+- [x] Command aliases work correctly
+- [x] Help text is clear and consistent
+- [x] Command examples are helpful
+- [x] Command discovery works
+- [x] Command structure is documented
 
 ## Test Plan
 

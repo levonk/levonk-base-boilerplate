@@ -6,7 +6,7 @@
 | 01-002 | TOON Format Implementation | feature/current/20260708-cli-go-aix/story-01-002-toon-format | None | Parallel-safe: true | [output-formats] | [x] Done |
 | 01-003 | Configuration System Updates | feature/current/20260708-cli-go-aix/story-01-003-config-updates | None | Parallel-safe: true | [config] | [x] Done |
 | 02-001 | Minimal Default Schemas | feature/current/20260708-cli-go-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output-formats, cli-commands] | [x] Done |
-| 02-002 | Content Truncation | feature/current/20260708-cli-go-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] |
+| 02-002 | Content Truncation | feature/current/20260708-cli-go-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] | [~] In-Progress |
 | 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-go-aix/story-02-003-aggregates | 01-001 | Parallel-safe: true | [data-layer, output-formats] |
 | 02-004 | Definitive Empty States | feature/current/20260708-cli-go-aix/story-02-004-empty-states | 01-001 | Parallel-safe: true | [output-formats, cli-commands] |
 | 03-001 | Structured Errors & Exit Codes | feature/current/20260708-cli-go-aix/story-03-001-structured-errors | 01-001, 01-002 | Parallel-safe: true | [error-handling, output-formats] |

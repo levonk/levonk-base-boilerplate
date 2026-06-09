@@ -28,9 +28,21 @@
 # - human: Human-readable format
 # default_format: toon
 
-# Maximum characters to display before truncating content
-# Use 0 for no truncation
-# truncation_limit: 1000
+# Truncation settings for large text fields
+# truncation:
+#   # Disable truncation globally (overrides all other settings)
+#   # Can also be disabled with --full flag
+#   disable: false
+#   # Truncation limits per field type (in characters)
+#   # Use 0 for no truncation for a specific field type
+#   limits:
+#     description: 500  # Default limit for description fields
+#     body: 1000        # Default limit for body fields
+#     log: 1500         # Default limit for log fields
+#     generic: 1000     # Default limit for generic text fields
+#   # Minimum length before truncation is considered
+#   # Content shorter than this will never be truncated
+#   min_threshold: 200
 
 # Enable contextual help and suggestions in agent mode
 # When enabled, provides helpful context and suggestions for next actions

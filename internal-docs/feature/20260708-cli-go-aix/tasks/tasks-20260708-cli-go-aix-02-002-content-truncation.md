@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-go-aix/prd.md"
 phase: 2
 parallel_id: 2
 branch: "feature/current/20260708-cli-go-aix/story-02-002-content-truncation"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -27,17 +27,18 @@ Implement content truncation for large text fields (descriptions, bodies, logs) 
 
 ## Sub-Tasks
 
-- [ ] Design truncation strategy and configurable limits
-- [ ] Implement truncation function for text fields
-- [ ] Add truncation metadata generation (total size, truncation indicator)
-- [ ] Add help suggestion generation for truncated content
-- [ ] Add `--full` flag to CLI argument parser
-- [ ] Implement truncation logic for all large text fields
+- [x] Design truncation strategy and configurable limits
+- [x] Implement truncation function for text fields
+- [x] Add truncation metadata generation (total size, truncation indicator)
+- [x] Add help suggestion generation for truncated content
+- [x] Add `--full` flag to CLI argument parser
+- [x] Add truncation config to config file
+- [~] Integrate truncation into TOON output formatting
+- [ ] Integrate truncation into JSON output formatting
+- [ ] Integrate truncation into formatter with config support
 - [ ] Apply truncation to description fields
 - [ ] Apply truncation to body fields
 - [ ] Apply truncation to log fields
-- [ ] Integrate truncation into TOON output formatting
-- [ ] Integrate truncation into JSON output formatting
 - [ ] Ensure truncation is only applied when content exceeds limit
 - [ ] Apply truncation to both agent and human modes
 - [ ] Write unit tests for truncation function
@@ -104,3 +105,46 @@ Implement content truncation for large text fields (descriptions, bodies, logs) 
 - Truncation limit should be configurable per field type if needed
 - Consider adding smart truncation that breaks at word boundaries
 - Document recommended truncation limits for different content types
+
+## Truncation Strategy Design
+
+### Default Limits
+- **Description fields**: 500 characters
+- **Body fields**: 1000 characters
+- **Log fields**: 1500 characters
+- **Configurable**: All limits can be overridden via config file
+
+### Truncation Behavior
+- Smart truncation at word boundaries (when possible)
+- Ellipsis indicator (`...`) appended to truncated content
+- Metadata includes:
+  - `truncated`: boolean flag
+  - `original_length`: total character count
+  - `truncated_length`: displayed character count
+  - `truncation_limit`: the limit applied
+
+### Escape Hatch
+- `--full` flag disables all truncation
+- Config option `disable_truncation` for permanent disable
+
+### Help Suggestions
+When content is truncated, append help text:
+- For TOON format: Add `_truncated` metadata field
+- For JSON format: Add `__truncated` top-level field
+- For human format: Append `(truncated from N chars, use --full for complete content)`
+
+### Field Types
+Apply truncation to:
+- `description` fields
+- `body` fields
+- `log` fields
+- Any field > 200 characters (configurable threshold)
+
+### Implementation Structure
+```
+internal/truncation/
+  truncator.go       - Core truncation logic
+  metadata.go        - Metadata generation
+  types.go           - Truncation types and constants
+  truncator_test.go  - Unit tests
+```

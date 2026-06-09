@@ -1474,6 +1474,58 @@ describe('CLI', () => {
         });
     });
 
+    describe('Subcommand Organization', () => {
+        it('should list subcommands in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('completion');
+            expect(stdout).toContain('man');
+            expect(stdout).toContain('daemon');
+            expect(stdout).toContain('health');
+            expect(stdout).toContain('audit');
+            expect(stdout).toContain('deprecation');
+        });
+
+        it('should support completion subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js completion --help');
+            expect(stdout).toContain('Manage shell completion scripts');
+        });
+
+        it('should support man subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js man --help');
+            expect(stdout).toContain('Manage man pages');
+        });
+
+        it('should support daemon subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js daemon --help');
+            expect(stdout).toContain('Manage background daemon processes');
+        });
+
+        it('should support health subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js health --help');
+            expect(stdout).toContain('Perform health checks');
+        });
+
+        it('should support audit subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js audit --help');
+            expect(stdout).toContain('Manage audit logging');
+        });
+
+        it('should support deprecation subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js deprecation --help');
+            expect(stdout).toContain('Manage deprecation policy');
+        });
+
+        it('should support command aliases', async () => {
+            const { stdout } = await execAsync('node dist/index.js completions --help');
+            expect(stdout).toContain('Manage shell completion scripts');
+        });
+
+        it('should show examples in subcommand help', async () => {
+            const { stdout } = await execAsync('node dist/index.js completion --help');
+            expect(stdout).toContain('Examples:');
+        });
+    });
+
     describe('Config Reload (SIGHUP)', () => {
         it('should show config reload information in help text', async () => {
             const { stdout } = await execAsync('node dist/index.js --help');

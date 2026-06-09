@@ -51,6 +51,7 @@ var (
 	auditExportSince string
 	auditExportTypes string
 	humanModeFlag bool
+	fullFlag bool
 	logger *Logger
 	terminal *Terminal
 	deprecationManager *DeprecationManager
@@ -564,6 +565,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&toonFlag, "toon", false, "Output results in TOON format (token-efficient)")
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "", "Output format: toon, json, human (default: auto-detect based on mode)")
 	rootCmd.PersistentFlags().StringVar(&fieldsFlag, "fields", "", "Comma-separated list of fields to include in output (default: schema defaults)")
+	rootCmd.PersistentFlags().BoolVar(&fullFlag, "full", false, "Disable truncation and show full content for all fields")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging with stack traces")

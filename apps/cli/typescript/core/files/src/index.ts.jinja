@@ -204,6 +204,8 @@ program
   .addHelpText('after', '\nPrivacy Mode:\n  --privacy             Enable privacy mode for anonymous usage\n                        Redacts sensitive data from logs and telemetry\n                        Uses explicit ignore lists for identifiers\n                        Distinguishes between "unknown" and "anonymous" data\n                        Configurable privacy toggles disable specific data collection\n                        Environment Variables:\n  PRIVACY_MODE           Set to "true" or "1" to enable privacy mode')
   .addHelpText('after', '\nAudit Logging:\n  --audit               Enable audit logging for sensitive operations\n                        Logs configuration changes, file operations, and other sensitive actions\n                        Uses append-only SQLite database for tamper-evident storage\n                        Supports configurable retention policy and log rotation\n                        Audit logs can be exported for external analysis\n  --audit-path <path>   Custom path for audit log database\n                        Default: ~/.local/share/{{ project_slug }}/audit.db\n  --audit-retention <days>  Retention period in days (default: 90)\n  --audit-export <path> Export audit logs to JSON file\n  --audit-verify        Verify audit log integrity (tamper evidence)')
   .addHelpText('after', '\nDeprecation Policy:\n  --deprecation-status  Show status of all deprecated features\n                        Lists deprecated features with end-of-support dates and remaining time\n  --no-deprecation-warnings  Suppress deprecation warnings\n                        Disables warnings for deprecated features still in use\n                        Minimum deprecation period: 6 months from announcement\n                        Features are removed only after end-of-support date\n                        Environment Variables:\n  DEPRECATION_WARNINGS  Set to "false" or "0" to suppress deprecation warnings')
+  .addHelpText('after', '\nSubcommands:\n  {{ project_slug }} completion     Manage shell completion scripts\n  {{ project_slug }} man             Manage man pages\n  {{ project_slug }} daemon          Manage background daemon processes\n  {{ project_slug }} health           Perform health checks\n  {{ project_slug }} audit            Manage audit logging\n  {{ project_slug }} deprecation      Manage deprecation policy\n  Use "{{ project_slug }} <subcommand> --help" for more information on a subcommand.')
+  .addHelpText('after', '\nBackward Compatibility:\n  Most subcommand options are also available as top-level flags for compatibility.\n  Example: {{ project_slug }} --completion bash is equivalent to {{ project_slug }} completion --completion bash')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--interactive, --tui', 'Launch interactive Terminal User Interface')
   .option('--daemon', 'Pre-launch daemon in background')
@@ -234,8 +236,157 @@ program
   .option('--audit-export <path>', 'Export audit logs to JSON file')
   .option('--audit-verify', 'Verify audit log integrity')
   .option('--deprecation-status', 'Show status of all deprecated features')
+  .option('--no-deprecation-warnings', 'Suppress deprecation warnings');
+
+// Add subcommands for better organization
+const completionCommand = new Command('completion')
+  .description('Manage shell completion scripts')
+  .alias('completions')
+  .option('--completion <shell>', 'Generate shell completion script (bash, zsh, fish)')
+  .option('--completion-install <shell>', 'Show shell completion installation instructions')
+  .option('--output-dir <path>', 'Output directory for completion scripts', 'completions')
+  .option('--stdout', 'Output completion script to stdout instead of file')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} completion --completion bash\n  {{ project_slug }} completion --completion-install zsh')
+  .action(async (options) => {
+    const shell = options.completion as ShellType;
+    if (shell) {
+      const completionOptions: CompletionOptions = {
+        shell,
+        outputDir: options.outputDir,
+        stdout: options.stdout,
+      };
+      const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: '{{ project_slug }}' });
+      await writeCompletionScript(program, completionOptions, logger);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    if (options.completionInstall) {
+      const shell = options.completionInstall as ShellType;
+      const instructions = getCompletionInstallInstructions(shell, '{{ project_slug }}');
+      console.log(instructions);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    program.help();
+  });
+
+const manCommand = new Command('man')
+  .description('Manage man pages')
+  .alias('manpage')
+  .option('--man', 'Generate man page')
+  .option('--man-install', 'Show man page installation instructions')
+  .option('--man-output-dir <path>', 'Output directory for man pages', 'man')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} man --man\n  {{ project_slug }} man --man-install')
+  .action(async (options) => {
+    if (options.man) {
+      const manOptions: ManPageOptions = {
+        outputDir: options.manOutputDir,
+        stdout: options.stdout,
+      };
+      const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: '{{ project_slug }}' });
+      await writeManPage(program, manOptions, logger);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    if (options.manInstall) {
+      const instructions = getManPageInstallInstructions('{{ project_slug }}');
+      console.log(instructions);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    program.help();
+  });
+
+const daemonCommand = new Command('daemon')
+  .description('Manage background daemon processes')
+  .alias('jobs')
+  .option('--daemon', 'Pre-launch daemon in background')
+  .option('--no-daemon', 'Force synchronous operation (disable daemon)')
+  .option('--list-jobs', 'List background job status')
+  .option('--cancel-job <id>', 'Cancel a specific background job')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} daemon --list-jobs\n  {{ project_slug }} daemon --cancel-job abc123')
+  .action(async (options) => {
+    if (options.listJobs) {
+      const daemonManager = getDaemonManager();
+      const jobs = daemonManager.listJobs();
+      console.log(JSON.stringify(jobs, null, 2));
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    if (options.cancelJob) {
+      const daemonManager = getDaemonManager();
+      const cancelled = daemonManager.cancelJob(options.cancelJob as string);
+      if (cancelled) {
+        console.log(`Job ${options.cancelJob} cancelled`);
+        process.exit(EXIT_CODES.SUCCESS);
+      } else {
+        console.error(`Job ${options.cancelJob} not found`);
+        process.exit(EXIT_CODES.GENERIC_ERROR);
+      }
+    }
+    program.help();
+  });
+
+const healthCommand = new Command('health')
+  .description('Perform health checks')
+  .alias('status')
+  .option('--health', 'Perform health check for container orchestration')
+  .option('--health-timeout <ms>', 'Health check timeout in milliseconds (default: 100)', '100')
+  .option('--health-include-deps', 'Include dependency checks in health check')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} health\n  {{ project_slug }} health --health-timeout 200')
+  .action(async (options) => {
+    const healthOptions: HealthCheckOptions = {
+      timeout: parseInt(options.healthTimeout as string, 10) || 100,
+      includeDependencies: options.healthIncludeDeps === true,
+    };
+    const healthResult = await getHealthCheckResponse(healthOptions);
+    console.log(healthResult.body);
+    process.exit(healthResult.statusCode === 200 ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERIC_ERROR);
+  });
+
+const auditCommand = new Command('audit')
+  .description('Manage audit logging')
+  .alias('auditing')
+  .option('--audit', 'Enable audit logging for sensitive operations')
+  .option('--audit-path <path>', 'Custom path for audit log database')
+  .option('--audit-retention <days>', 'Retention period in days (default: 90)', '90')
+  .option('--audit-export <path>', 'Export audit logs to JSON file')
+  .option('--audit-verify', 'Verify audit log integrity')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} audit --audit-verify\n  {{ project_slug }} audit --audit-export /tmp/audit.json')
+  .action(async (options) => {
+    if (options.auditVerify) {
+      const auditLogger = createAuditLogger({ auditPath: options.auditPath as string });
+      const isValid = auditLogger.verifyIntegrity();
+      console.log(isValid ? 'Audit log integrity verified' : 'Audit log integrity check failed');
+      process.exit(isValid ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERIC_ERROR);
+    }
+    if (options.auditExport) {
+      const auditLogger = createAuditLogger({ auditPath: options.auditPath as string });
+      auditLogger.exportToJSON(options.auditExport as string);
+      console.log(`Audit logs exported to ${options.auditExport}`);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    program.help();
+  });
+
+const deprecationCommand = new Command('deprecation')
+  .description('Manage deprecation policy')
+  .alias('deprecated')
+  .option('--deprecation-status', 'Show status of all deprecated features')
   .option('--no-deprecation-warnings', 'Suppress deprecation warnings')
-  .action(async (inputs: string[], options) => {
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} deprecation --deprecation-status')
+  .action(async (options) => {
+    if (options.deprecationStatus) {
+      const report = generateDeprecationReport();
+      console.log(JSON.stringify(report, null, 2));
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    program.help();
+  });
+
+program.addCommand(completionCommand);
+program.addCommand(manCommand);
+program.addCommand(daemonCommand);
+program.addCommand(healthCommand);
+program.addCommand(auditCommand);
+program.addCommand(deprecationCommand);
+
+program.action(async (inputs: string[], options) => {
       try {
           // Suppress console output immediately for quiet and json modes
           // This must happen before any other processing to ensure all output is suppressed
