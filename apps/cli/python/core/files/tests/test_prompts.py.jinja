@@ -1,0 +1,100 @@
+# vim: set ft=python :
+"""Tests for prompt handling in CLI operations."""
+
+import pytest
+from {{project_slug}}.prompts import (
+    should_prompt,
+    confirm,
+    prompt_for_value,
+    require_value,
+    suppress_wrapped_tool_prompts,
+    PromptSuppressionError,
+)
+from {{project_slug}}.mode import Mode
+
+
+def test_should_prompt_agent_mode():
+    """Test that prompts are suppressed in agent mode."""
+    assert should_prompt(Mode.AGENT, force=False) is False
+    assert should_prompt(Mode.AGENT, force=True) is False
+
+
+def test_should_prompt_human_mode():
+    """Test that prompts are shown in human mode without force."""
+    assert should_prompt(Mode.HUMAN, force=False) is True
+    assert should_prompt(Mode.HUMAN, force=True) is False
+
+
+def test_confirm_agent_mode():
+    """Test confirm returns default in agent mode."""
+    assert confirm("Continue?", Mode.AGENT, force=False, default=True) is True
+    assert confirm("Continue?", Mode.AGENT, force=False, default=False) is False
+
+
+def test_confirm_human_mode_with_force():
+    """Test confirm returns default in human mode with force."""
+    assert confirm("Continue?", Mode.HUMAN, force=True, default=True) is True
+    assert confirm("Continue?", Mode.HUMAN, force=True, default=False) is False
+
+
+def test_prompt_for_value_agent_mode():
+    """Test prompt_for_value returns default in agent mode."""
+    assert prompt_for_value("Enter value", Mode.AGENT, force=False, default="test") == "test"
+    assert prompt_for_value("Enter value", Mode.AGENT, force=False, default=None) is None
+
+
+def test_prompt_for_value_human_mode_with_force():
+    """Test prompt_for_value returns default in human mode with force."""
+    assert prompt_for_value("Enter value", Mode.HUMAN, force=True, default="test") == "test"
+
+
+def test_require_value_present():
+    """Test require_value returns value when present."""
+    assert require_value("test", "field", Mode.AGENT) == "test"
+    assert require_value("test", "field", Mode.HUMAN) == "test"
+
+
+def test_require_value_missing_agent_mode():
+    """Test require_value raises error in agent mode when value missing."""
+    with pytest.raises(PromptSuppressionError):
+        require_value(None, "field", Mode.AGENT)
+
+    with pytest.raises(PromptSuppressionError):
+        require_value("", "field", Mode.AGENT)
+
+
+def test_require_value_missing_human_mode_with_force():
+    """Test require_value raises error in human mode with force when value missing."""
+    with pytest.raises(PromptSuppressionError):
+        require_value(None, "field", Mode.HUMAN, force=True)
+
+
+def test_suppress_wrapped_tool_prompts_agent_mode():
+    """Test environment variables for agent mode."""
+    env = suppress_wrapped_tool_prompts(Mode.AGENT)
+
+    assert env['PIP_DISABLE_PIP_VERSION_CHECK'] == '1'
+    assert env['PIP_NO_INPUT'] == '1'
+    assert env['NPM_CONFIG_PRODUCTION'] == 'true'
+    assert env['GIT_TERMINAL_PROMPT'] == '0'
+    assert env['DEBIAN_FRONTEND'] == 'noninteractive'
+
+
+def test_suppress_wrapped_tool_prompts_human_mode():
+    """Test environment variables for human mode."""
+    env = suppress_wrapped_tool_prompts(Mode.HUMAN)
+
+    assert env == {}
+
+
+def test_prompt_for_value_with_validator():
+    """Test prompt_for_value with validator function."""
+    def validate_positive(value: str) -> bool:
+        try:
+            return int(value) > 0
+        except ValueError:
+            return False
+
+    # In agent mode, validator is not called
+    result = prompt_for_value("Enter number", Mode.AGENT, force=False, default="5", validator=validate_positive)
+    assert result == "5"
