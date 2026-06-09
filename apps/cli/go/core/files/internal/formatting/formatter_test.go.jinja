@@ -97,7 +97,7 @@ func TestDetermineFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			formatter := NewFormatter(tt.mode, tt.toonFlag, tt.formatFlag, tt.jsonOutput)
+			formatter := NewFormatter(tt.mode, tt.toonFlag, tt.formatFlag, tt.jsonOutput, false)
 			result := formatter.DetermineFormat()
 			if result != tt.expected {
 				t.Errorf("DetermineFormat() = %v, want %v", result, tt.expected)
@@ -113,31 +113,31 @@ func TestFormatPrecedence(t *testing.T) {
 	// 3. --json flag
 	// 4. Mode-based default
 
-	formatter := NewFormatter(ModeHuman, true, "json", true)
+	formatter := NewFormatter(ModeHuman, true, "json", true, false)
 	result := formatter.DetermineFormat()
 	if result != FormatTOON {
 		t.Errorf("Expected TOON when --toon flag is set, got %v", result)
 	}
 
-	formatter = NewFormatter(ModeHuman, false, "toon", true)
+	formatter = NewFormatter(ModeHuman, false, "toon", true, false)
 	result = formatter.DetermineFormat()
 	if result != FormatTOON {
 		t.Errorf("Expected TOON when --format=toon, got %v", result)
 	}
 
-	formatter = NewFormatter(ModeHuman, false, "json", true)
+	formatter = NewFormatter(ModeHuman, false, "json", true, false)
 	result = formatter.DetermineFormat()
 	if result != FormatJSON {
 		t.Errorf("Expected JSON when --json flag is set, got %v", result)
 	}
 
-	formatter = NewFormatter(ModeAgent, false, "", false)
+	formatter = NewFormatter(ModeAgent, false, "", false, false)
 	result = formatter.DetermineFormat()
 	if result != FormatTOON {
 		t.Errorf("Expected TOON in agent mode, got %v", result)
 	}
 
-	formatter = NewFormatter(ModeHuman, false, "", false)
+	formatter = NewFormatter(ModeHuman, false, "", false, false)
 	result = formatter.DetermineFormat()
 	if result != FormatJSON {
 		t.Errorf("Expected JSON in human mode, got %v", result)

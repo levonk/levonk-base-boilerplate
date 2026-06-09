@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 9
 parallel_id: 2
 branch: "feature/current/20260707-cli-typescript-standards/story-09-002-subcommand-organization"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []

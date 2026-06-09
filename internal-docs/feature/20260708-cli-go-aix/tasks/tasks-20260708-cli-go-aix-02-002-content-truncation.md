@@ -33,18 +33,18 @@ Implement content truncation for large text fields (descriptions, bodies, logs) 
 - [x] Add help suggestion generation for truncated content
 - [x] Add `--full` flag to CLI argument parser
 - [x] Add truncation config to config file
-- [~] Integrate truncation into TOON output formatting
-- [ ] Integrate truncation into JSON output formatting
-- [ ] Integrate truncation into formatter with config support
-- [ ] Apply truncation to description fields
-- [ ] Apply truncation to body fields
-- [ ] Apply truncation to log fields
-- [ ] Ensure truncation is only applied when content exceeds limit
-- [ ] Apply truncation to both agent and human modes
-- [ ] Write unit tests for truncation function
-- [ ] Write unit tests for truncation metadata generation
-- [ ] Write integration tests for `--full` flag functionality
-- [ ] Write tests for truncation application to various field types
+- [x] Integrate truncation into TOON output formatting
+- [x] Integrate truncation into JSON output formatting
+- [x] Integrate truncation into formatter with config support
+- [x] Apply truncation to description fields
+- [x] Apply truncation to body fields
+- [x] Apply truncation to log fields
+- [x] Ensure truncation is only applied when content exceeds limit
+- [x] Apply truncation to both agent and human modes
+- [x] Write unit tests for truncation function
+- [x] Write unit tests for truncation metadata generation
+- [x] Write integration tests for `--full` flag functionality
+- [~] Write tests for truncation application to various field types
 - [ ] Update CLI help text to document truncation behavior
 
 ## Relevant Files
