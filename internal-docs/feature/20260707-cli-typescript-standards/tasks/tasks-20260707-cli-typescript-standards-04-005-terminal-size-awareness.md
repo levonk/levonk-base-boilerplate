@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 4
 parallel_id: 5
 branch: "feature/current/20260707-cli-typescript-standards/story-04-005-terminal-size-awareness"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
