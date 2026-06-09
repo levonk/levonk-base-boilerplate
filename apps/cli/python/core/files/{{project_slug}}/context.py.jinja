@@ -1,0 +1,121 @@
+# vim: set ft=python :
+"""
+Context module for maintaining execution state across CLI commands.
+
+Provides a thread-safe context object that holds the current execution mode
+and other state information needed by downstream commands.
+"""
+from dataclasses import dataclass, field
+from typing import Optional
+from threading import Lock
+
+from {{ project_slug }}.mode import Mode, DetectionMethod
+from {{ project_slug }}.logging import get_logger
+
+logger = get_logger()
+
+
+@dataclass
+class ExecutionContext:
+    """
+    Execution context for the current CLI invocation.
+    
+    Holds state that needs to be accessible across different parts of the
+    application, particularly the execution mode for AXI (Agent eXperience Interface).
+    """
+    mode: Mode = Mode.AGENT
+    detection_method: DetectionMethod = DetectionMethod.AUTO_DETECT
+    _lock: Lock = field(default_factory=Lock, init=False, repr=False)
+    
+    def set_mode(self, mode: Mode, detection_method: DetectionMethod):
+        """
+        Set the execution mode and detection method.
+        
+        Args:
+            mode: The execution mode (AGENT or HUMAN)
+            detection_method: How the mode was determined
+        """
+        with self._lock:
+            self.mode = mode
+            self.detection_method = detection_method
+            logger.debug(f"Context mode set to {mode.value} via {detection_method.value}", module="context")
+    
+    def get_mode(self) -> Mode:
+        """
+        Get the current execution mode.
+        
+        Returns:
+            The current execution mode
+        """
+        with self._lock:
+            return self.mode
+    
+    def is_agent_mode(self) -> bool:
+        """
+        Check if currently in agent mode.
+        
+        Returns:
+            True if in agent mode, False otherwise
+        """
+        with self._lock:
+            return self.mode == Mode.AGENT
+    
+    def is_human_mode(self) -> bool:
+        """
+        Check if currently in human mode.
+        
+        Returns:
+            True if in human mode, False otherwise
+        """
+        with self._lock:
+            return self.mode == Mode.HUMAN
+
+
+# Global context instance
+_global_context: Optional[ExecutionContext] = None
+_context_lock = Lock()
+
+
+def get_context() -> ExecutionContext:
+    """
+    Get the global execution context.
+    
+    Creates a new context if one doesn't exist.
+    
+    Returns:
+        The global execution context
+    """
+    global _global_context
+    
+    with _context_lock:
+        if _global_context is None:
+            _global_context = ExecutionContext()
+            logger.debug("Created new execution context", module="context")
+        return _global_context
+
+
+def set_context(context: ExecutionContext):
+    """
+    Set the global execution context.
+    
+    Args:
+        context: The execution context to set as global
+    """
+    global _global_context
+    
+    with _context_lock:
+        _global_context = context
+        logger.debug("Set global execution context", module="context")
+
+
+def reset_context():
+    """
+    Reset the global execution context to a new instance.
+    
+    Useful for testing or when starting a new CLI invocation.
+    """
+    global _global_context
+    
+    with _context_lock:
+        _global_context = ExecutionContext()
+        logger.debug("Reset execution context", module="context")

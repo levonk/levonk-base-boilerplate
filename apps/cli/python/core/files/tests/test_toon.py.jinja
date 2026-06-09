@@ -1,0 +1,226 @@
+# vim: set ft=python:
+"""
+Tests for TOON format encoder/decoder.
+"""
+
+import pytest
+from {{ project_slug }}.output.toon import ToonEncoder, ToonDecoder, to_dumps, to_loads, estimate_token_savings
+
+
+class TestToonEncoder:
+    """Test TOON encoder functionality."""
+
+    def test_encode_string_simple(self):
+        """Test encoding simple strings."""
+        encoder = ToonEncoder()
+        assert encoder.encode("hello") == "hello"
+        assert encoder.encode("hello world") == '"hello world"'
+
+    def test_encode_string_with_special_chars(self):
+        """Test encoding strings with special characters."""
+        encoder = ToonEncoder()
+        assert encoder.encode("hello,world") == '"hello,world"'
+        assert encoder.encode("key:value") == '"key:value"'
+        assert encoder.encode('test"quote') == r'"test\"quote"'
+
+    def test_encode_numbers(self):
+        """Test encoding numbers."""
+        encoder = ToonEncoder()
+        assert encoder.encode(42) == "42"
+        assert encoder.encode(3.14) == "3.14"
+        assert encoder.encode(-10) == "-10"
+
+    def test_encode_boolean(self):
+        """Test encoding booleans."""
+        encoder = ToonEncoder()
+        assert encoder.encode(True) == "true"
+        assert encoder.encode(False) == "false"
+
+    def test_encode_null(self):
+        """Test encoding null."""
+        encoder = ToonEncoder()
+        assert encoder.encode(None) == "null"
+
+    def test_encode_list(self):
+        """Test encoding lists."""
+        encoder = ToonEncoder()
+        assert encoder.encode([]) == "[]"
+        assert encoder.encode([1, 2, 3]) == "[1,2,3]"
+        assert encoder.encode(["a", "b", "c"]) == "[a,b,c]"
+        assert encoder.encode([1, "two", True]) == "[1,two,true]"
+
+    def test_encode_dict(self):
+        """Test encoding dictionaries."""
+        encoder = ToonEncoder()
+        assert encoder.encode({}) == "{}"
+        assert encoder.encode({"a": 1}) == "{a:1}"
+        assert encoder.encode({"name": "John", "age": 30}) == '{name:John,age:30}'
+        assert encoder.encode({"key with spaces": "value"}) == '{"key with spaces":value}'
+
+    def test_encode_nested_structures(self):
+        """Test encoding nested structures."""
+        encoder = ToonEncoder()
+        data = {"users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]}
+        result = encoder.encode(data)
+        assert "users" in result
+        assert "Alice" in result
+        assert "Bob" in result
+
+
+class TestToonDecoder:
+    """Test TOON decoder functionality."""
+
+    def test_decode_string_simple(self):
+        """Test decoding simple strings."""
+        decoder = ToonDecoder()
+        assert decoder.decode("hello") == "hello"
+        assert decoder.decode('"hello world"') == "hello world"
+
+    def test_decode_numbers(self):
+        """Test decoding numbers."""
+        decoder = ToonDecoder()
+        assert decoder.decode("42") == 42
+        assert decoder.decode("3.14") == 3.14
+        assert decoder.decode("-10") == -10
+
+    def test_decode_boolean(self):
+        """Test decoding booleans."""
+        decoder = ToonDecoder()
+        assert decoder.decode("true") is True
+        assert decoder.decode("false") is False
+
+    def test_decode_null(self):
+        """Test decoding null."""
+        decoder = ToonDecoder()
+        assert decoder.decode("null") is None
+
+    def test_decode_list(self):
+        """Test decoding lists."""
+        decoder = ToonDecoder()
+        assert decoder.decode("[]") == []
+        assert decoder.decode("[1,2,3]") == [1, 2, 3]
+        assert decoder.decode('[a,b,c]') == ["a", "b", "c"]
+        assert decoder.decode('[1,two,true]') == [1, "two", True]
+
+    def test_decode_dict(self):
+        """Test decoding dictionaries."""
+        decoder = ToonDecoder()
+        assert decoder.decode("{}") == {}
+        assert decoder.decode("{a:1}") == {"a": 1}
+        assert decoder.decode('{name:John,age:30}') == {"name": "John", "age": 30}
+
+    def test_decode_nested_structures(self):
+        """Test decoding nested structures."""
+        decoder = ToonDecoder()
+        data = '{users:[{name:Alice,age:30},{name:Bob,age:25}]}'
+        result = decoder.decode(data)
+        assert "users" in result
+        assert len(result["users"]) == 2
+        assert result["users"][0]["name"] == "Alice"
+
+    def test_roundtrip(self):
+        """Test encoding and decoding roundtrip."""
+        data = {
+            "tasks": [
+                {"id": 1, "title": "Fix bug", "status": "open"},
+                {"id": 2, "title": "Add feature", "status": "closed"}
+            ],
+            "count": 2
+        }
+        encoder = ToonEncoder()
+        decoder = ToonDecoder()
+
+        toon_str = encoder.encode(data)
+        decoded = decoder.decode(toon_str)
+
+        assert decoded == data
+
+
+class TestToonHelpers:
+    """Test TOON helper functions."""
+
+    def test_to_dumps(self):
+        """Test to_dumps helper."""
+        assert to_dumps(42) == "42"
+        assert to_dumps([1, 2, 3]) == "[1,2,3]"
+        assert to_dumps({"a": 1}) == "{a:1}"
+
+    def test_to_loads(self):
+        """Test to_loads helper."""
+        assert to_loads("42") == 42
+        assert to_loads("[1,2,3]") == [1, 2, 3]
+        assert to_loads("{a:1}") == {"a": 1}
+
+    def test_estimate_token_savings(self):
+        """Test token savings estimation."""
+        data = {"tasks": [{"id": 1, "title": "Fix bug", "status": "open"}]}
+        savings = estimate_token_savings(data)
+
+        assert "json_tokens" in savings
+        assert "toon_tokens" in savings
+        assert "savings_percent" in savings
+        assert savings["toon_tokens"] < savings["json_tokens"]
+        assert savings["savings_percent"] > 0
+
+    def test_token_savings_complex_data(self):
+        """Test token savings with complex data."""
+        data = {
+            "users": [
+                {"id": 1, "name": "Alice", "email": "alice@example.com"},
+                {"id": 2, "name": "Bob", "email": "bob@example.com"},
+                {"id": 3, "name": "Charlie", "email": "charlie@example.com"}
+            ],
+            "total": 3
+        }
+        savings = estimate_token_savings(data)
+
+        # TOON should achieve significant savings (target ~40%)
+        assert savings["savings_percent"] > 20  # At least 20% savings
+
+
+class TestToonEdgeCases:
+    """Test TOON edge cases and error handling."""
+
+    def test_empty_string(self):
+        """Test empty string."""
+        encoder = ToonEncoder()
+        assert encoder.encode("") == '""'
+
+    def test_string_with_escaped_chars(self):
+        """Test string with escaped characters."""
+        encoder = ToonEncoder()
+        decoder = ToonDecoder()
+
+        original = 'test\\backslash'
+        encoded = encoder.encode(original)
+        decoded = decoder.decode(encoded)
+
+        assert decoded == original
+
+    def test_deeply_nested(self):
+        """Test deeply nested structures."""
+        data = {"a": {"b": {"c": {"d": [1, 2, 3]}}}}
+        encoder = ToonEncoder()
+        decoder = ToonDecoder()
+
+        toon_str = encoder.encode(data)
+        decoded = decoder.decode(toon_str)
+
+        assert decoded == data
+
+    def test_invalid_toon_string(self):
+        """Test decoding invalid TOON string."""
+        decoder = ToonDecoder()
+        with pytest.raises(ValueError):
+            decoder.decode("{invalid")
+
+    def test_mixed_types_in_list(self):
+        """Test list with mixed types."""
+        data = [1, "two", True, None, {"key": "value"}]
+        encoder = ToonEncoder()
+        decoder = ToonDecoder()
+
+        toon_str = encoder.encode(data)
+        decoded = decoder.decode(toon_str)
+
+        assert decoded == data

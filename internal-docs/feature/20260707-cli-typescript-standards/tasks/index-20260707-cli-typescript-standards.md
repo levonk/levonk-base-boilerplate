@@ -26,10 +26,10 @@ This index provides a summary of all stories for implementing CLI Tool Standards
 | 05-003 | File Reference Formatting | 05 | [x] Done | | true | 01-002 | 08-001, 09-001, 09-003 | logger.ts, error handling | feature/current/20260707-cli-typescript-standards/story-05-003-file-reference-formatting |
 | 05-004 | URL Formatting | 05 | [x] Done | | true | — | 09-001, 09-003 | utils/ | feature/current/20260707-cli-typescript-standards/story-05-004-url-formatting |
 | 06-001 | Configuration Validation | 06 | [x] Done | | true | 02-002 | 06-004, 09-001, 09-003 | config/, validation/ | feature/current/20260707-cli-typescript-standards/story-06-001-config-validation |
-| 06-002 | Config Auto-Migration | 06 | [ ] Todo | | true | 02-002 | 09-001, 09-003 | config/ | feature/current/20260707-cli-typescript-standards/story-06-002-config-auto-migration |
-| 06-003 | Credential/Secret Handling | 06 | [ ] Todo | | true | — | 09-001, 09-003 | secrets/ | feature/current/20260707-cli-typescript-standards/story-06-003-credential-secret-handling |
-| 06-004 | Signal-Based Config Reload | 06 | [ ] Todo | | true | 02-002, 06-001 | 09-001, 09-003 | config/ | feature/current/20260707-cli-typescript-standards/story-06-004-signal-based-config-reload |
-| 07-001 | Cross-Platform Path Handling | 07 | [ ] Todo | | true | — | 09-001, 09-003 | utils/ | feature/current/20260707-cli-typescript-standards/story-07-001-cross-platform-path-handling |
+| 06-002 | Config Auto-Migration | 06 | [x] Done | | true | 02-002 | 09-001, 09-003 | config/ | feature/current/20260707-cli-typescript-standards/story-06-002-config-auto-migration |
+| 06-003 | Credential/Secret Handling | 06 | [x] Done | | true | — | 09-001, 09-003 | secrets/ | feature/current/20260707-cli-typescript-standards/story-06-003-credential-secret-handling |
+| 06-004 | Signal-Based Config Reload | 06 | [~] In-Progress | | true | 02-002, 06-001 | 09-001, 09-003 | config/ | feature/current/20260707-cli-typescript-standards/story-06-004-signal-based-config-reload |
+| 07-001 | Cross-Platform Path Handling | 07 | [~] In-Progress | | true | — | 09-001, 09-003 | utils/ | feature/current/20260707-cli-typescript-standards/story-07-001-cross-platform-path-handling |
 | 07-002 | Resource Limits | 07 | [ ] Todo | | true | — | 09-001, 09-003 | resources/ | feature/current/20260707-cli-typescript-standards/story-07-002-resource-limits |
 | 07-003 | Collection vs Processing Separation | 07 | [ ] Todo | | true | 05-002 | 09-001, 09-003 | daemon/, processing/ | feature/current/20260707-cli-typescript-standards/story-07-003-collection-processing-separation |
 | 08-001 | Error Message Formatting | 08 | [ ] Todo | | true | 01-002, 05-003 | 09-001, 09-003 | error handling | feature/current/20260707-cli-typescript-standards/story-08-001-error-message-formatting |

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 6
 parallel_id: 2
 branch: "feature/current/20260707-cli-typescript-standards/story-06-002-config-auto-migration"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["02-002"]
@@ -27,12 +27,12 @@ Auto-migrate legacy configs to new format on first run. Create backup of old con
 
 ## Sub-Tasks
 
-- [ ] Implement config version tracking
-- [ ] Create migration module with version-specific migrations
-- [ ] Implement legacy config detection
-- [ ] Add config backup creation (.bak suffix)
-- [ ] Implement config migration logic
-- [ ] Add migrated config validation
+- [x] Implement config version tracking
+- [x] Create migration module with version-specific migrations
+- [x] Implement legacy config detection
+- [x] Add config backup creation (.bak suffix)
+- [x] Implement config migration logic
+- [x] Add migrated config validation
 - [ ] Implement deprecation warnings for legacy format
 - [ ] Add support for both legacy and new formats
 - [ ] Log migration actions
@@ -44,8 +44,9 @@ Auto-migrate legacy configs to new format on first run. Create backup of old con
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/migration.ts.jinja` - New migration module (to be created)
-- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config module with migration
+- `apps/cli/typescript/core/files/src/migration.ts.jinja` - Migration module (created)
+- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config module with migration integration
+- `apps/cli/typescript/core/files/src/validation.ts.jinja` - Config schema with _version field
 - `apps/cli/typescript/core/files/src/migration.test.ts.jinja` - Unit tests for migration (to be created)
 - `apps/cli/typescript/core/files/src/config.test.ts.jinja` - Integration tests for migration
 

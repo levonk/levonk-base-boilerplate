@@ -389,7 +389,7 @@ log_level = "invalid"
 
             try {
                 await loadConfig(testConfigPath);
-                fail('Should have thrown an error');
+                expect.fail('Should have thrown an error');
             } catch (error) {
                 expect((error as Error).message).toContain('log_level');
                 expect((error as Error).message).toContain('Suggestion');
@@ -443,7 +443,7 @@ quiet = "not-a-boolean"
 
             try {
                 await loadConfig(testConfigPath);
-                fail('Should have thrown an error');
+                expect.fail('Should have thrown an error');
             } catch (error) {
                 expect((error as Error).message).toContain('Configuration validation failed');
             }

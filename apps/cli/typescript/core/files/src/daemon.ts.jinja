@@ -51,7 +51,7 @@ class DaemonManager {
     this.stateDir = join(homedir(), '.{{ project_slug }}', 'daemon');
     this.pidFile = join(this.stateDir, 'daemon.pid');
     this.jobsFile = join(this.stateDir, 'jobs.json');
-    
+
     // Ensure state directory exists
     if (!existsSync(this.stateDir)) {
       mkdirSync(this.stateDir, { recursive: true });
@@ -105,7 +105,9 @@ class DaemonManager {
     daemonProcess.unref();
 
     // Write PID file
-    writeFileSync(this.pidFile, daemonProcess.pid.toString());
+    if (daemonProcess.pid) {
+        writeFileSync(this.pidFile, daemonProcess.pid.toString());
+    }
 
     this.logger.info(`Daemon started with PID ${daemonProcess.pid}`);
   }
@@ -120,7 +122,7 @@ class DaemonManager {
     }
 
     const pid = parseInt(readFileSync(this.pidFile, 'utf-8').trim());
-    
+
     try {
       process.kill(pid, 'SIGTERM');
       this.logger.info(`Daemon process ${pid} stopped`);
@@ -311,7 +313,7 @@ class DaemonManager {
    */
   async shutdown(): Promise<void> {
     this.logger.info('Shutting down daemon...');
-    
+
     // Cancel all running jobs
     for (const [jobId, job] of this.jobs.entries()) {
       if (job.status === 'running') {

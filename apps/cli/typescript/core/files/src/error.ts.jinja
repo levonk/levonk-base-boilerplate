@@ -13,7 +13,8 @@
  * - 130: SIGINT (Ctrl+C)
  */
 
-import { formatErrorFileRef, type FileLocation } from './file-ref';
+import { formatErrorFileRef, type FileLocation } from './file-ref.js';
+import { redactSecretsFromObject, detectSecrets } from './secrets.js';
 
 /**
  * Standard exit codes
@@ -50,13 +51,33 @@ export class CLIError extends Error {
      * Get a formatted error message with exit code information
      */
     getFormattedMessage(): string {
-        const contextStr = this.context
-            ? ` ${JSON.stringify(this.context)}`
+        // Redact secrets from message and context
+        const redactedMessage = this.redactSecrets(this.message);
+        const redactedContext = this.context ? redactSecretsFromObject(this.context) : undefined;
+
+        const contextStr = redactedContext
+            ? ` ${JSON.stringify(redactedContext)}`
             : '';
         const fileRefStr = this.fileLocation
             ? ` ${formatErrorFileRef(this.fileLocation)}`
             : '';
-        return `${this.name}: ${this.message} (exit code: ${this.exitCode})${fileRefStr}${contextStr}`;
+        return `${this.name}: ${redactedMessage} (exit code: ${this.exitCode})${fileRefStr}${contextStr}`;
+    }
+
+    /**
+     * Redact secrets from a message string
+     * @param message - Message to redact
+     * @returns Redacted message
+     */
+    private redactSecrets(message: string): string {
+        const secrets = detectSecrets(message);
+        if (secrets.length === 0) {
+            return message;
+        }
+
+        // Import redactSecrets dynamically to avoid circular dependency
+        const { redactSecrets: redact } = require('./secrets.js');
+        return redact(message, secrets);
     }
 }
 

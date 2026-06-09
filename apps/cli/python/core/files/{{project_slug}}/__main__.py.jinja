@@ -20,6 +20,8 @@ from {{ project_slug }}.resource import get_resource_monitor
 from {{ project_slug }}.health import perform_health_check
 from {{ project_slug }}.privacy import get_privacy_manager
 from {{ project_slug }}.audit import get_audit_logger
+from {{ project_slug }}.mode import Mode, determine_mode
+from {{ project_slug }}.output.formatter import OutputFormatter, get_formatter
 {% if include_tui %}
 from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
 {% endif %}
@@ -187,6 +189,8 @@ def process(
     inputs: Optional[List[str]] = typer.Argument(None, help="Input files or glob patterns. Use '-' for stdin."),
     config: Path = typer.Option(None, envvar="{{ project_slug | upper | replace('-', '_') }}_CONFIG", help="Path to config file"),
     json_output: bool = typer.Option(False, "--json", help="Output results as JSON to stdout"),
+    toon: bool = typer.Option(False, "--toon", help="Output results in TOON format (token-efficient)"),
+    format: Optional[str] = typer.Option(None, "--format", help="Output format: toon, json, or human"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress all log output"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
     debug: bool = typer.Option(False, "--debug", help="Enable detailed debugging output"),
@@ -198,6 +202,7 @@ def process(
 {% if include_tui %}
     interactive: bool = typer.Option(False, "--interactive", "--tui", help="Launch TUI mode for interactive configuration"),
 {% endif %}
+    human: bool = typer.Option(False, "--human", help="Force human mode (interactive terminal mode)"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without executing"),
     force: bool = typer.Option(False, "--force", help="Force overwrite during install and bypass confirmation prompts"),
     daemon: bool = typer.Option(False, "--daemon", help="Run in daemon mode (background process)"),
@@ -234,6 +239,37 @@ def process(
         log_format=log_format
     )
     logger = get_logger()
+
+    # Determine execution mode (AXI - Agent eXperience Interface)
+    cli_mode = Mode.HUMAN if human else None
+{% if include_tui %}
+    # Interactive/TUI flag also forces human mode
+    if interactive:
+        cli_mode = Mode.HUMAN
+{% endif %}
+    config_mode_value = None
+{% if include_advanced_config %}
+    # Get mode from config if available
+    try:
+        config_manager = get_config_manager()
+        config_mode_value = config_manager.get("mode", None)
+    except Exception:
+        # Config not initialized yet, that's ok
+        pass
+{% endif %}
+    mode, detection_method = determine_mode(cli_flag=cli_mode, config_mode=config_mode_value)
+    logger.info(f"Execution mode: {mode.value} (detected via {detection_method.value})", module="mode")
+
+    # Initialize output formatter
+    formatter = get_formatter(mode=mode, toon=toon, json_output=json_output)
+    if format:
+        from {{ project_slug }}.output.formatter import OutputFormat
+        try:
+            format_enum = OutputFormat(format.lower())
+            formatter = OutputFormatter(mode=mode, format_override=format_enum)
+        except ValueError:
+            logger.error(f"Invalid format: {format}. Valid options: toon, json, human", module="output")
+            sys.exit(EXIT_USAGE)
 
     # Handle daemon-related flags
     daemon_manager = get_daemon_manager()
@@ -553,8 +589,10 @@ def process(
                         sys.exit(EXIT_ERROR)
 
     # Output Strategy
-    if json_output:
-        print(json.dumps(results, indent=2))
+    if json_output or toon or format:
+        # Use formatter for structured output
+        output_str = formatter.format_output(results)
+        print(output_str)
     else:
         # Human readable output logic here
         output_lines = []

@@ -95,9 +95,43 @@ Example config:
 
 ```toml
 version = 1
+
+# AXI execution mode: agent or human
+mode = "agent"
+
+# Default output format: toon, json, or human
+default_format = "toon"
+
+# Maximum characters for content truncation
+truncation_limit = 1000
+
+# Default fields to include in output (comma-separated)
+# fields_default = ["id", "name", "status"]
+
 log_level = "info"
 color = "auto"
 ```
+
+#### AXI Agent Mode Settings
+
+The CLI supports AXI (Agent eXperience Interface) mode for AI agent integration:
+
+- **mode**: Execution mode (`agent` or `human`)
+  - `agent`: Optimized for AI agent consumption with structured output
+  - `human`: Optimized for human readability with rich formatting
+
+- **default_format**: Default output format (`toon`, `json`, or `human`)
+  - `toon`: Token-optimized notation for efficient agent consumption
+  - `json`: Standard JSON output
+  - `human`: Human-readable formatted output
+
+- **truncation_limit**: Maximum characters for content truncation (default: 1000)
+  - Limits output size to reduce token usage
+  - Applies to long text fields in agent mode
+
+- **fields_default**: List of default fields to include in output
+  - Comma-separated list of field names
+  - Empty list includes all available fields
 
 #### Config Precedence
 
@@ -305,6 +339,10 @@ The CLI respects the following environment variables:
 | Variable | Description |
 |----------|-------------|
 | `{{ project_slug | upper | replace('-', '_') }}_CONFIG` | Path to config file |
+| `{{ project_slug | upper | replace('-', '_') }}_MODE` | Execution mode (agent, human) |
+| `{{ project_slug | upper | replace('-', '_') }}_DEFAULT_FORMAT` | Default output format (toon, json, human) |
+| `{{ project_slug | upper | replace('-', '_') }}_TRUNCATION_LIMIT` | Maximum characters for content truncation |
+| `{{ project_slug | upper | replace('-', '_') }}_FIELDS_DEFAULT` | Default fields to include (comma-separated) |
 | `{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL` | Log level (debug, info, warn, error) |
 | `{{ project_slug | upper | replace('-', '_') }}_COLOR` | Color mode (auto, always, never) |
 | `NO_COLOR` | Disable colors (takes precedence over other color settings) |

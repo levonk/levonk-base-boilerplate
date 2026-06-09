@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -71,7 +72,7 @@ func (a *AuditLogger) initSchema() error {
 	query := `
 	CREATE TABLE IF NOT EXISTS audit_events (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		timestamp DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+		timestamp TEXT NOT NULL DEFAULT (datetime('now')),
 		event_type TEXT NOT NULL,
 		source TEXT NOT NULL,
 		metadata TEXT
@@ -149,11 +150,13 @@ func (a *AuditLogger) ExportEvents(ctx context.Context, outputPath string, event
 	// Filter by event types if specified
 	if len(eventTypes) > 0 {
 		placeholders := make([]string, len(eventTypes))
-		for i, et := range eventTypes {
+		for i := range eventTypes {
 			placeholders[i] = "?"
+		}
+		query += fmt.Sprintf(" AND event_type IN (%s)", strings.Join(placeholders, ","))
+		for _, et := range eventTypes {
 			args = append(args, et)
 		}
-		query += fmt.Sprintf(" AND event_type IN (%s)", placeholders)
 		argIndex += len(eventTypes)
 	}
 
@@ -181,9 +184,13 @@ func (a *AuditLogger) ExportEvents(ctx context.Context, outputPath string, event
 			return fmt.Errorf("failed to scan audit event: %w", err)
 		}
 
-		event.Timestamp, err = time.Parse("2006-01-02 15:04:05", timestampStr)
+		// Try ISO8601 format first, then fallback to custom format
+		event.Timestamp, err = time.Parse(time.RFC3339, timestampStr)
 		if err != nil {
-			return fmt.Errorf("failed to parse timestamp: %w", err)
+			event.Timestamp, err = time.Parse("2006-01-02 15:04:05", timestampStr)
+			if err != nil {
+				return fmt.Errorf("failed to parse timestamp: %w", err)
+			}
 		}
 
 		events = append(events, event)

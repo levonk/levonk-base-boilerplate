@@ -1,0 +1,244 @@
+# Security Best Practices
+
+This document outlines security best practices for using {{ project_name }}.
+
+## Secret Management
+
+### Recommended Storage Methods
+
+1. **Keyring (Recommended)**
+   - Use the system keyring for secure storage
+   - Supported on macOS (Keychain), Linux (Secret Service), and Windows (Credential Manager)
+   - Set `SECRET_STORAGE_METHOD=keyring` to use keyring storage
+   - Requires the `keytar` library (included as a dependency)
+
+2. **Environment Variables**
+   - Store secrets in environment variables
+   - Set `SECRET_STORAGE_METHOD=environment` to use environment variables
+   - Never commit environment files to version control
+   - Use `.env` files with appropriate `.gitignore` rules
+
+3. **Config Files (Not Recommended)**
+   - Storing secrets in config files is insecure
+   - If you must use config files, ensure they have restrictive permissions (600)
+   - Set `SECRET_STORAGE_METHOD=config` (will trigger warnings)
+   - **Warning**: Config files can be accidentally committed or exposed
+
+### Secret Redaction
+
+{{ project_name }} automatically redacts secrets from:
+- Log output (all levels: debug, info, warn, error, fatal)
+- Error messages
+- Debug output
+- Stack traces
+
+Supported secret patterns:
+- API keys (e.g., `api_key=sk_live_...`)
+- Passwords (e.g., `password=...`)
+- Tokens (e.g., `token=...`, JWT tokens)
+- Secret keys (e.g., `secret_key=...`)
+- AWS keys (e.g., `aws_access_key_id=...`)
+- GitHub tokens (e.g., `ghp_...`)
+- Stripe keys (e.g., `sk_live_...`)
+- Generic base64-like strings (32+ characters)
+
+### Secret Validation
+
+Secrets are validated before storage:
+- Minimum length: 8 characters (warning if shorter)
+- Common weak patterns are rejected (e.g., "password", "123456")
+- Empty secrets are rejected
+
+## Environment Variables
+
+### Security-Related Environment Variables
+
+- `SECRET_STORAGE_METHOD`: Storage method for secrets (`keyring`, `environment`, `config`)
+- `LOG_LEVEL`: Log level (`debug`, `info`, `warn`, `error`, `fatal`)
+- `NODE_ENV`: Node environment (`development`, `production`)
+- `NO_COLOR`: Disable colored output (also disables clickable URLs)
+
+### Best Practices
+
+1. **Never hardcode secrets** in source code
+2. **Use environment variables** for configuration secrets
+3. **Rotate secrets regularly** (at least every 90 days)
+4. **Use strong, unique secrets** for different services
+5. **Never commit secrets** to version control
+6. **Use `.env` files** for local development (add to `.gitignore`)
+7. **Use secret scanning tools** to detect accidentally committed secrets
+8. **Audit access logs** regularly for suspicious activity
+
+## Configuration Security
+
+### Config File Permissions
+
+Ensure configuration files have restrictive permissions:
+```bash
+chmod 600 ~/.config/{{ project_slug }}/config.toml
+```
+
+### Config File Location
+
+Config files are searched in the following order (highest to lowest):
+1. CLI arguments
+2. Environment variables (`{{ PROJECT_SLUG }}_*`)
+3. Local project config (`./.{{ project_slug }}/config.toml`)
+4. User config (`~/.config/{{ project_slug }}/config.toml`)
+5. System config (`/etc/{{ project_slug }}/config.toml`)
+6. Hardcoded defaults
+
+### Config Precedence
+
+Higher precedence sources override lower precedence sources. This allows you to:
+- Override system defaults with user config
+- Override user config with project-specific config
+- Override config files with environment variables
+- Override everything with CLI arguments
+
+## Logging Security
+
+### Log Redaction
+
+All log output automatically redacts detected secrets. This includes:
+- Structured JSON logs
+- Text logs
+- Debug logs
+- Error logs
+
+### Log File Permissions
+
+If logging to files, ensure restrictive permissions:
+```bash
+chmod 600 /var/log/{{ project_slug }}/*.log
+```
+
+### Log Rotation
+
+Configure log rotation to:
+- Prevent disk space exhaustion
+- Limit log retention period
+- Compress old logs
+- Securely delete old logs
+
+## Network Security
+
+### HTTPS Only
+
+All network requests should use HTTPS:
+- Never use HTTP for sensitive data
+- Validate SSL/TLS certificates
+- Use certificate pinning for critical services
+
+### API Keys
+
+When using API keys:
+- Use scoped keys with minimal permissions
+- Rotate keys regularly
+- Revoke unused keys
+- Monitor key usage for anomalies
+
+## Dependency Security
+
+### Keep Dependencies Updated
+
+Regularly update dependencies:
+```bash
+pnpm update
+pnpm audit
+```
+
+### Use Lock Files
+
+Always commit lock files (`pnpm-lock.yaml`) to ensure reproducible builds.
+
+### Audit Dependencies
+
+Run security audits regularly:
+```bash
+pnpm audit
+pnpm audit fix
+```
+
+## Development Security
+
+### Local Development
+
+1. Use `.env` files for local secrets (add to `.gitignore`)
+2. Never commit `.env` files
+3. Use different secrets for development and production
+4. Enable debug mode only in development (`NODE_ENV=development`)
+
+### Code Review
+
+During code review, check for:
+- Hardcoded secrets
+- Insecure secret storage
+- Missing secret redaction
+- Weak secret validation
+- Insecure config file permissions
+
+## Production Security
+
+### Deployment Checklist
+
+Before deploying to production:
+- [ ] All secrets are stored securely (keyring or environment variables)
+- [ ] No secrets in config files
+- [ ] No secrets in source code
+- [ ] Config files have restrictive permissions
+- [ ] Log files have restrictive permissions
+- [ ] Dependencies are up to date
+- [ ] Security audit passes (`pnpm audit`)
+- [ ] Debug mode is disabled (`NODE_ENV=production`)
+- [ ] Log level is appropriate (not `debug` in production)
+- [ ] HTTPS is enforced for all network requests
+- [ ] API keys are scoped and rotated
+
+### Monitoring
+
+Monitor for security issues:
+- Failed authentication attempts
+- Unusual API usage patterns
+- Secret access logs
+- Error logs for secret-related errors
+- Dependency vulnerability alerts
+
+## Incident Response
+
+### Secret Exposure
+
+If a secret is accidentally exposed:
+1. **Immediately rotate** the exposed secret
+2. **Revoke** the old secret
+3. **Audit** access logs for suspicious activity
+4. **Review** code for other exposed secrets
+5. **Update** documentation and procedures
+6. **Notify** affected parties if necessary
+
+### Security Vulnerability
+
+If a security vulnerability is discovered:
+1. **Assess** the severity and impact
+2. **Patch** the vulnerability immediately
+3. **Update** dependencies
+4. **Test** the patch thoroughly
+5. **Deploy** the patch
+6. **Monitor** for exploitation attempts
+7. **Document** the incident and response
+
+## Additional Resources
+
+- [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/)
+- [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
+- [npm Security](https://docs.npmjs.com/cli/v9/commands/npm-audit)
+- [Keytar Documentation](https://github.com/atom/node-keytar)
+
+## Reporting Security Issues
+
+If you discover a security vulnerability in {{ project_name }}:
+1. Do not open a public issue
+2. Send details to the security team privately
+3. Include steps to reproduce the vulnerability
+4. Allow time for the issue to be fixed before disclosure
+5. Follow responsible disclosure practices

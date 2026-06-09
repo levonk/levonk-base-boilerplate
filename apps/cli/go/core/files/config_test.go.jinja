@@ -7,9 +7,137 @@ import (
 	"testing"
 )
 
+func TestModeString(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     Mode
+		expected string
+	}{
+		{"Agent mode", ModeAgent, "agent"},
+		{"Human mode", ModeHuman, "human"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.mode.String(); got != tt.expected {
+				t.Errorf("Mode.String() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestModeIsValid(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     Mode
+		expected bool
+	}{
+		{"Agent mode valid", ModeAgent, true},
+		{"Human mode valid", ModeHuman, true},
+		{"Invalid mode", Mode("invalid"), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.mode.IsValid(); got != tt.expected {
+				t.Errorf("Mode.IsValid() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetModeFromEnv(t *testing.T) {
+	// Save original value
+	original := os.Getenv("MYTOOL_MODE")
+	defer os.Setenv("MYTOOL_MODE", original)
+
+	tests := []struct {
+		name     string
+		envValue string
+		expected string
+	}{
+		{"Agent mode from env", "agent", "agent"},
+		{"Human mode from env", "human", "human"},
+		{"Empty env", "", ""},
+		{"Invalid env", "invalid", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("MYTOOL_MODE", tt.envValue)
+			got := GetModeFromEnv()
+			if got != tt.expected {
+				t.Errorf("GetModeFromEnv() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsAgentSession(t *testing.T) {
+	// Save original values
+	originalClaude := os.Getenv("CLAUDE_SESSION")
+	originalCodex := os.Getenv("CODEX_SESSION")
+	defer os.Setenv("CLAUDE_SESSION", originalClaude)
+	defer os.Setenv("CODEX_SESSION", originalCodex)
+
+	tests := []struct {
+		name           string
+		claudeSession  string
+		codexSession   string
+		expected       bool
+	}{
+		{"Claude session detected", "test-session", "", true},
+		{"Codex session detected", "", "test-session", true},
+		{"No session detected", "", "", false},
+		{"Both sessions", "test", "test", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("CLAUDE_SESSION", tt.claudeSession)
+			os.Setenv("CODEX_SESSION", tt.codexSession)
+			got := IsAgentSession()
+			if got != tt.expected {
+				t.Errorf("IsAgentSession() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDetermineMode(t *testing.T) {
+	tests := []struct {
+		name        string
+		humanFlag  bool
+		configMode string
+		envMode    string
+		expected   Mode
+	}{
+		{"Human flag overrides all", true, "agent", "agent", ModeHuman},
+		{"Env overrides config", false, "agent", "human", ModeHuman},
+		{"Config used when no env", false, "human", "", ModeHuman},
+		{"Config used when invalid env", false, "agent", "invalid", ModeAgent},
+		{"Auto-detection when no config", false, "", "", ModeAgent}, // Default to agent in tests
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set env if needed
+			if tt.envMode != "" {
+				os.Setenv("MYTOOL_MODE", tt.envMode)
+				defer os.Unsetenv("MYTOOL_MODE")
+			}
+
+			got := DetermineMode(tt.humanFlag, tt.configMode)
+			if got != tt.expected {
+				t.Errorf("DetermineMode() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestDefaultConfigTemplate(t *testing.T) {
 	// Read the default config template
-	templatePath := "config.default.yaml.jinja"
+	templatePath := "config.default.yaml"
 	content, err := os.ReadFile(templatePath)
 	if err != nil {
 		t.Fatalf("Failed to read default config template: %v", err)

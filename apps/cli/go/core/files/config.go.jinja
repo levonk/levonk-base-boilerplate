@@ -7,6 +7,26 @@ import (
 	"strings"
 )
 
+// Mode represents the CLI operation mode
+type Mode string
+
+const (
+	// ModeAgent is the agent mode (default for non-interactive environments)
+	ModeAgent Mode = "agent"
+	// ModeHuman is the human mode (interactive)
+	ModeHuman Mode = "human"
+)
+
+// String returns the string representation of the mode
+func (m Mode) String() string {
+	return string(m)
+}
+
+// IsValid checks if the mode is valid
+func (m Mode) IsValid() bool {
+	return m == ModeAgent || m == ModeHuman
+}
+
 // IsFirstRun checks if this is the first run by detecting if the config file exists
 func IsFirstRun(configPath string) bool {
 	if configPath == "" {
@@ -265,7 +285,133 @@ func GetHardcodedDefaults() map[string]interface{} {
 		"debug":   false,
 		"color":   "auto",
 		"json":    false,
+		"mode":    string(ModeAgent), // Default to agent mode
 	}
+}
+
+// GetModeFromEnv returns the mode from the MYTOOL_MODE environment variable
+// Returns empty string if not set or invalid
+func GetModeFromEnv() string {
+	envMode := os.Getenv("MYTOOL_MODE")
+	if envMode == "" {
+		return ""
+	}
+
+	// Validate the mode
+	mode := Mode(envMode)
+	if !mode.IsValid() {
+		return ""
+	}
+
+	return envMode
+}
+
+// IsTerminal checks if stdout is a TTY
+func IsTerminal() bool {
+	return isatty.IsTerminal(os.Stdout.Fd())
+}
+
+// IsAgentSession checks if the CLI is running in an agent session
+// by checking for known agent session environment variables
+func IsAgentSession() bool {
+	// Check for Claude session
+	if os.Getenv("CLAUDE_SESSION") != "" {
+		return true
+	}
+
+	// Check for Codex session
+	if os.Getenv("CODEX_SESSION") != "" {
+		return true
+	}
+
+	return false
+}
+
+// GetParentProcessName returns the name of the parent process
+// This can be used to detect if running under an agent
+func GetParentProcessName() (string, error) {
+	// Get current process ID
+	currentPid := os.Getpid()
+
+	// On Unix-like systems, read /proc/{pid}/status or use ps
+	// For cross-platform compatibility, we'll use a simple approach
+	// In production, this would use platform-specific code
+
+	// For now, return empty string - this is a placeholder
+	// that would be implemented with platform-specific code
+	return "", nil
+}
+
+// IsRunningUnderAgent checks if the CLI is running under an agent
+// by examining the parent process
+func IsRunningUnderAgent() (bool, error) {
+	parentName, err := GetParentProcessName()
+	if err != nil {
+		return false, err
+	}
+
+	// Known agent process names
+	agentProcesses := map[string]bool{
+		"claude": true,
+		"codex": true,
+		"cursor": true,
+		"windsurf": true,
+		"copilot": true,
+	}
+
+	if agentProcesses[parentName] {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// DetectMode automatically detects the appropriate mode based on environment
+// Returns agent mode if no TTY or agent session detected, human mode otherwise
+func DetectMode() Mode {
+	// If no TTY, assume agent mode
+	if !IsTerminal() {
+		return ModeAgent
+	}
+
+	// If agent session detected, use agent mode
+	if IsAgentSession() {
+		return ModeAgent
+	}
+
+	// Check if running under agent process
+	if runningUnderAgent, err := IsRunningUnderAgent(); err == nil && runningUnderAgent {
+		return ModeAgent
+	}
+
+	// Default to human mode when TTY present and no agent detected
+	return ModeHuman
+}
+
+// DetermineMode determines the mode based on precedence chain:
+// CLI flags > env vars > config file > auto-detection
+func DetermineMode(humanFlag bool, configMode string) Mode {
+	// 1. CLI flags have highest precedence
+	if humanFlag {
+		return ModeHuman
+	}
+
+	// 2. Environment variables
+	envMode := GetModeFromEnv()
+	if envMode != "" {
+		return Mode(envMode)
+	}
+
+	// 3. Config file setting
+	if configMode != "" {
+		mode := Mode(configMode)
+		if mode.IsValid() {
+			return mode
+		}
+	}
+
+	// 4. Auto-detection
+	return DetectMode()
 }
 
 // ConfigValidationError represents a configuration validation error with context
@@ -322,6 +468,12 @@ func GetConfigSchema() ConfigSchema {
 				Type:         "bool",
 				Required:     false,
 				DefaultValue: false,
+			},
+			"mode": {
+				Type:         "enum",
+				Required:     false,
+				AllowedValues: []string{string(ModeAgent), string(ModeHuman)},
+				DefaultValue: string(ModeAgent),
 			},
 		},
 	}

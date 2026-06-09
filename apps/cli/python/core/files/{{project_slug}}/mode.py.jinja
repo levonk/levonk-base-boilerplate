@@ -1,0 +1,227 @@
+# vim: set ft=python :
+"""
+Mode detection and selection module for Agent eXperience Interface (AXI).
+
+Supports automatic mode detection based on TTY presence and agent session detection,
+with explicit override mechanisms via CLI flags, environment variables, and config files.
+
+Mode precedence chain: CLI flags > environment variable > config file > auto-detection
+"""
+import os
+import sys
+from enum import Enum
+from typing import Optional
+from pathlib import Path
+
+from {{ project_slug }}.logging import get_logger
+
+logger = get_logger()
+
+
+class Mode(Enum):
+    """Execution mode for the CLI."""
+    AGENT = "agent"
+    HUMAN = "human"
+
+
+class DetectionMethod(Enum):
+    """Method used to determine the mode."""
+    AUTO_DETECT = "auto_detect"
+    CLI_FLAG = "cli_flag"
+    ENV_VAR = "env_var"
+    CONFIG = "config"
+
+
+def is_tty() -> bool:
+    """Check if running in a TTY (interactive terminal)."""
+    return sys.stdout.isatty() and sys.stdin.isatty()
+
+
+def detect_agent_session() -> bool:
+    """
+    Detect if running in an AI agent session.
+    
+    Checks for common agent session environment variables:
+    - CLAUDE_SESSION (Anthropic Claude)
+    - CODEX_SESSION (OpenAI Codex)
+    - AI_SESSION (Generic)
+    
+    Returns:
+        True if agent session detected, False otherwise
+    """
+    agent_env_vars = [
+        "CLAUDE_SESSION",
+        "CODEX_SESSION",
+        "AI_SESSION",
+        "ANTHROPIC_API_KEY",  # Presence suggests agent usage
+        "OPENAI_API_KEY",    # Presence suggests agent usage
+    ]
+    
+    for var in agent_env_vars:
+        if os.environ.get(var):
+            logger.debug(f"Agent session detected via environment variable: {var}")
+            return True
+    
+    return False
+
+
+def detect_agent_parent_process() -> bool:
+    """
+    Detect if parent process is an AI agent.
+    
+    Checks process parent for known agent process names.
+    This is a fallback when environment variables are not set.
+    
+    Returns:
+        True if agent parent process detected, False otherwise
+    """
+    try:
+        import psutil
+        parent = psutil.Process(os.getppid())
+        parent_name = parent.name().lower()
+        
+        agent_process_names = [
+            "claude",
+            "codex",
+            "cursor",
+            "windsurf",
+            "aider",
+            "copilot",
+        ]
+        
+        for agent_name in agent_process_names:
+            if agent_name in parent_name:
+                logger.debug(f"Agent parent process detected: {parent_name}")
+                return True
+                
+    except (ImportError, ProcessLookupError, psutil.NoSuchProcess):
+        # psutil not available or process lookup failed
+        pass
+    
+    return False
+
+
+def auto_detect_mode() -> Mode:
+    """
+    Auto-detect the appropriate mode based on environment.
+    
+    Detection logic:
+    - If NOT a TTY OR agent session detected -> Agent mode
+    - If TTY present AND no agent session -> Human mode
+    
+    Returns:
+        Detected mode (AGENT or HUMAN)
+    """
+    tty_present = is_tty()
+    agent_detected = detect_agent_session() or detect_agent_parent_process()
+    
+    if not tty_present or agent_detected:
+        logger.debug(f"Auto-detected AGENT mode (TTY={tty_present}, Agent={agent_detected})")
+        return Mode.AGENT
+    else:
+        logger.debug(f"Auto-detected HUMAN mode (TTY={tty_present}, Agent={agent_detected})")
+        return Mode.HUMAN
+
+
+def get_mode_from_env() -> Optional[Mode]:
+    """
+    Get mode from environment variable.
+    
+    Environment variable: {{ project_slug|upper }}_MODE
+    Accepted values: "agent", "human"
+    
+    Returns:
+        Mode if set and valid, None otherwise
+    """
+    env_var = "{{ project_slug|upper }}_MODE"
+    mode_str = os.environ.get(env_var, "").lower()
+    
+    if mode_str == "agent":
+        logger.debug(f"Mode from environment variable: {env_var}={mode_str}")
+        return Mode.AGENT
+    elif mode_str == "human":
+        logger.debug(f"Mode from environment variable: {env_var}={mode_str}")
+        return Mode.HUMAN
+    elif mode_str:
+        logger.warning(f"Invalid mode in environment variable: {env_var}={mode_str}")
+    
+    return None
+
+
+def get_mode_from_config(config_mode: Optional[str]) -> Optional[Mode]:
+    """
+    Get mode from configuration file.
+    
+    Args:
+        config_mode: Mode string from config file ("agent" or "human")
+    
+    Returns:
+        Mode if set and valid, None otherwise
+    """
+    if config_mode:
+        mode_str = config_mode.lower()
+        if mode_str == "agent":
+            logger.debug(f"Mode from config file: {mode_str}")
+            return Mode.AGENT
+        elif mode_str == "human":
+            logger.debug(f"Mode from config file: {mode_str}")
+            return Mode.HUMAN
+        else:
+            logger.warning(f"Invalid mode in config file: {mode_str}")
+    
+    return None
+
+
+def determine_mode(
+    cli_flag: Optional[Mode] = None,
+    config_mode: Optional[str] = None,
+    default_to_agent: bool = True,
+) -> tuple[Mode, DetectionMethod]:
+    """
+    Determine the execution mode using precedence chain.
+    
+    Precedence chain:
+    1. CLI flag (highest priority)
+    2. Environment variable
+    3. Config file
+    4. Auto-detection (lowest priority)
+    
+    Args:
+        cli_flag: Mode from CLI flag (if explicitly set)
+        config_mode: Mode string from config file
+        default_to_agent: If True, default to agent mode when auto-detection is ambiguous
+    
+    Returns:
+        Tuple of (Mode, DetectionMethod)
+    """
+    # 1. Check CLI flag (highest priority)
+    if cli_flag:
+        logger.info(f"Mode from CLI flag: {cli_flag.value}")
+        return cli_flag, DetectionMethod.CLI_FLAG
+    
+    # 2. Check environment variable
+    env_mode = get_mode_from_env()
+    if env_mode:
+        logger.info(f"Mode from environment variable: {env_mode.value}")
+        return env_mode, DetectionMethod.ENV_VAR
+    
+    # 3. Check config file
+    config_mode_result = get_mode_from_config(config_mode)
+    if config_mode_result:
+        logger.info(f"Mode from config file: {config_mode_result.value}")
+        return config_mode_result, DetectionMethod.CONFIG
+    
+    # 4. Auto-detection (lowest priority)
+    detected_mode = auto_detect_mode()
+    logger.info(f"Mode from auto-detection: {detected_mode.value}")
+    return detected_mode, DetectionMethod.AUTO_DETECT
+
+
+def is_agent_mode(mode: Mode) -> bool:
+    """Check if the mode is agent mode."""
+    return mode == Mode.AGENT
+
+
+def is_human_mode(mode: Mode) -> bool:
+    """Check if the mode is human mode."""
+    return mode == Mode.HUMAN

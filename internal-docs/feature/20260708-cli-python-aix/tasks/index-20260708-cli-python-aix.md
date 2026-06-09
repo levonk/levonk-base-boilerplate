@@ -18,9 +18,9 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 01-001 | Mode Selection Implementation | feature/current/20260708-cli-python-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli.py, config.py] |
-| 01-002 | TOON Format Implementation | feature/current/20260708-cli-python-aix/story-01-002-toon-format | None | Parallel-safe: true | [output.py, toon.py] |
-| 01-003 | Config Updates for Agent Mode | feature/current/20260708-cli-python-aix/story-01-003-config-updates | None | Parallel-safe: true | [config.py] |
+| 01-001 | Mode Selection Implementation | feature/current/20260708-cli-python-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli.py, config.py] | [x] Done |
+| 01-002 | TOON Format Implementation | feature/current/20260708-cli-python-aix/story-01-002-toon-format | None | Parallel-safe: true | [output.py, toon.py] | [x] Done |
+| 01-003 | Config Updates for Agent Mode | feature/current/20260708-cli-python-aix/story-01-003-config-updates | None | Parallel-safe: true | [config.py] | [~] In-Progress |
 
 ### Phase 02: Output Optimization (Week 1)
 

@@ -27,11 +27,11 @@ Implement TOON (Token-Oriented Object Notation) format support for token-efficie
 
 ## Sub-Tasks
 
-- [ ] Research TOON format specification from https://toonformat.dev/reference/spec.html
-- [ ] Design TOON data structures and encoding strategy for Go
-- [ ] Implement TOON encoder for basic types (strings, numbers, booleans, null)
-- [ ] Implement TOON encoder for arrays with schema headers
-- [ ] Implement TOON encoder for objects with field definitions
+- [x] Research TOON format specification from https://toonformat.dev/reference/spec.html
+- [x] Design TOON data structures and encoding strategy for Go
+- [x] Implement TOON encoder for basic types (strings, numbers, booleans, null)
+- [x] Implement TOON encoder for arrays with schema headers
+- [~] Implement TOON encoder for objects with field definitions
 - [ ] Implement TOON decoder for parsing TOON format back to Go structs
 - [ ] Add `--toon` flag to CLI argument parser
 - [ ] Add `--format=toon|json|human` flag to CLI argument parser

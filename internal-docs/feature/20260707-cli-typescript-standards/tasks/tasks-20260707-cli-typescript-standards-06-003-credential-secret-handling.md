@@ -27,20 +27,20 @@ Implement secure handling of sensitive data with no logging of secrets. Support 
 
 ## Sub-Tasks
 
-- [ ] Create secrets module for credential management
-- [ ] Implement secret detection and redaction
-- [ ] Add secure storage option using keyring library
-- [ ] Add environment variable support for secrets
-- [ ] Implement secret validation
-- [ ] Add insecure config method warnings
-- [ ] Implement secret redaction in all log output
-- [ ] Add secret redaction in error messages
-- [ ] Add secret redaction in debug output
-- [ ] Add unit tests for secret detection
-- [ ] Add unit tests for secret redaction
-- [ ] Add integration tests for secret handling
-- [ ] Update help text to document secret handling
-- [ ] Add security best practices documentation
+- [x] Create secrets module for credential management
+- [x] Implement secret detection and redaction
+- [x] Add secure storage option using keyring library
+- [x] Add environment variable support for secrets
+- [x] Implement secret validation
+- [x] Add insecure config method warnings
+- [x] Implement secret redaction in all log output
+- [x] Add secret redaction in error messages
+- [x] Add secret redaction in debug output
+- [x] Add unit tests for secret detection
+- [x] Add unit tests for secret redaction
+- [x] Add integration tests for secret handling
+- [x] Update help text to document secret handling
+- [x] Add security best practices documentation
 
 ## Relevant Files
 
@@ -53,16 +53,16 @@ Implement secure handling of sensitive data with no logging of secrets. Support 
 
 ## Acceptance Criteria
 
-- [ ] Secrets are never logged in plain text
-- [ ] Secrets are redacted from all log output
-- [ ] Secrets are redacted from error messages
-- [ ] Secrets are redacted from debug output
-- [ ] Secure storage using keyring is available
-- [ ] Environment variable support for secrets is available
-- [ ] Insecure config methods show clear warnings
-- [ ] Secret detection works for common patterns
-- [ ] Secret redaction is comprehensive
-- [ ] Security best practices are documented
+- [x] Secrets are never logged in plain text
+- [x] Secrets are redacted from all log output
+- [x] Secrets are redacted from error messages
+- [x] Secrets are redacted from debug output
+- [x] Secure storage using keyring is available
+- [x] Environment variable support for secrets is available
+- [x] Insecure config methods show clear warnings
+- [x] Secret detection works for common patterns
+- [x] Secret redaction is comprehensive
+- [x] Security best practices are documented
 
 ## Test Plan
 

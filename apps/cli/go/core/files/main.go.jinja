@@ -44,6 +44,7 @@ var (
 	auditExportFile string
 	auditExportSince string
 	auditExportTypes string
+	humanModeFlag bool
 	logger *Logger
 	terminal *Terminal
 	deprecationManager *DeprecationManager
@@ -55,6 +56,28 @@ var (
 		Short: "{{ description }}",
 		Long: `{{ description }}
 
+Mode Selection:
+  The CLI operates in two modes: agent (default) and human (interactive).
+
+  Agent Mode:
+    - Default for non-interactive environments
+    - Automatically detected when no TTY or agent session is present
+    - Optimized for automation and AI agent integration
+    - Can be forced with MYTOOL_MODE=agent environment variable
+
+  Human Mode:
+    - Interactive mode for human users
+    - Automatically detected when TTY is present and no agent session
+    - Can be forced with --human or --interactive flags
+    - Can be forced with MYTOOL_MODE=human environment variable
+    - Can be set in config file with mode: human
+
+  Mode Precedence (highest to lowest):
+    1. CLI flags (--human, --interactive)
+    2. Environment variables (MYTOOL_MODE)
+    3. Config file setting
+    4. Auto-detection based on environment
+
 Examples:
   {{ project_slug }} file.txt
   {{ project_slug }} "**/*.txt"
@@ -62,6 +85,19 @@ Examples:
 		Version: version,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			// Determine the operation mode
+			// Get mode from config file if available
+			configMode := ""
+			if viper.IsSet("mode") {
+				configMode = viper.GetString("mode")
+			}
+
+			// Determine mode based on precedence chain
+			mode := DetermineMode(humanModeFlag, configMode)
+
+			// Add mode to context for use by other features
+			ctx = context.WithValue(ctx, "mode", mode)
 
 			// Handle --health-check flag
 			if healthCheckFlag {
@@ -474,7 +510,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without executing them")
 	rootCmd.Flags().BoolVarP(&force, "force", "f", false, "Bypass confirmation prompts for destructive operations")
 	rootCmd.Flags().BoolVar(&noPager, "no-pager", false, "Disable automatic paging for long output")
-	rootCmd.Flags().BoolVar(&interactiveFlag, "interactive", false, "Launch interactive TUI mode")
+	rootCmd.Flags().BoolVar(&humanModeFlag, "human", false, "Force human mode (interactive)")
+	rootCmd.Flags().BoolVar(&interactiveFlag, "interactive", false, "Force human mode (alias for --human)")
 	rootCmd.Flags().BoolVar(&tuiFlag, "tui", false, "Launch TUI mode (alias for --interactive)")
 	rootCmd.Flags().BoolVar(&daemonFlag, "daemon", false, "Pre-launch daemon in background")
 	rootCmd.Flags().BoolVar(&noDaemonFlag, "no-daemon", false, "Force synchronous operation (disable daemon)")

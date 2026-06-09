@@ -1,7 +1,8 @@
 import chalk from 'chalk';
 import supportsColor from 'supports-color';
 import process from 'process';
-import { formatLogFileRef, type FileLocation } from './file-ref';
+import { formatLogFileRef, type FileLocation } from './file-ref.js';
+import { redactSecretsFromObject, detectSecrets } from './secrets.js';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 export type ColorMode = 'auto' | 'always' | 'never';
@@ -152,9 +153,13 @@ export class Logger {
   ): string {
     const module = this.options.module || '{{ project_slug }}';
 
+    // Redact secrets from message and extra data
+    const redactedMessage = this.redactSecrets(message);
+    const redactedExtra = extra ? redactSecretsFromObject(extra) : undefined;
+
     // Use JSON format if specified
     if (this.options.logFormat === 'json') {
-      return formatJsonMessage(level, message, module, extra);
+      return formatJsonMessage(level, redactedMessage, module, redactedExtra);
     }
 
     // Text format (existing logic)
@@ -167,25 +172,41 @@ export class Logger {
     const levelStr = levelFn(`[${level.toUpperCase()}]`);
     const moduleStr = moduleFn(`[${module}]`);
 
-    let output = `${timestamp} ${moduleStr} ${levelStr} ${message}`;
+    let output = `${timestamp} ${moduleStr} ${levelStr} ${redactedMessage}`;
 
     // Format file location if present in extra
-    if (extra && 'fileLocation' in extra && extra.fileLocation) {
-      const fileLocation = extra.fileLocation as FileLocation;
+    if (redactedExtra && 'fileLocation' in redactedExtra && redactedExtra.fileLocation) {
+      const fileLocation = redactedExtra.fileLocation as FileLocation;
       output += ` ${formatLogFileRef(fileLocation)}`;
       // Remove fileLocation from extra to avoid duplication
-      const { fileLocation: _, ...restExtra } = extra;
-      extra = restExtra;
+      const { fileLocation: _, ...restExtra } = redactedExtra;
+      redactedExtra = restExtra;
     }
 
-    if (extra && this.options.verbose) {
-      const extraStr = Object.entries(extra)
+    if (redactedExtra && this.options.verbose) {
+      const extraStr = Object.entries(redactedExtra)
         .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
         .join(' ');
       output += ` ${extraStr}`;
     }
 
     return output;
+  }
+
+  /**
+   * Redact secrets from a message string
+   * @param message - Message to redact
+   * @returns Redacted message
+   */
+  private redactSecrets(message: string): string {
+    const secrets = detectSecrets(message);
+    if (secrets.length === 0) {
+      return message;
+    }
+
+    // Import redactSecrets dynamically to avoid circular dependency
+    const { redactSecrets: redact } = require('./secrets.js');
+    return redact(message, secrets);
   }
 
   debug(message: string, extra?: Record<string, unknown>): void {

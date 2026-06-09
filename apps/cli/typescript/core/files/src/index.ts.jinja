@@ -67,11 +67,63 @@ import {
     type DaemonConfig,
     type Job,
 } from './daemon.js';
+import {
+    reloadConfig,
+    type ConfigReloadResult,
+} from './config.js';
+import {
+    ensurePath,
+    formatErrorPath,
+    formatLogPath,
+    type PathOptions,
+} from './path.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
     process.stderr.write('\nOperation cancelled.\n');
     process.exit(EXIT_CODES.SIGINT);
+});
+
+// Global state for config reload
+let currentConfigOptions: ConfigOptions | null = null;
+let currentCliArgs: Partial<Config> | null = null;
+let currentLogger: any = null;
+
+/**
+ * Handle SIGHUP signal for config reload
+ * Reloads config from file, validates it, and applies if valid
+ * Keeps old config active on validation errors
+ */
+process.on('SIGHUP', async () => {
+    if (!currentConfigOptions || !currentLogger) {
+        return;
+    }
+
+    try {
+        currentLogger.info('Received SIGHUP signal, reloading configuration...');
+
+        const reloadResult: ConfigReloadResult = await reloadConfig(
+            currentConfigOptions,
+            currentCliArgs || undefined,
+            currentLogger.options.verbose
+        );
+
+        if (reloadResult.success) {
+            currentLogger.info('Configuration reloaded successfully');
+            if (reloadResult.diff && Object.keys(reloadResult.diff).length > 0) {
+                currentLogger.debug('Configuration changes:');
+                for (const [key, change] of Object.entries(reloadResult.diff)) {
+                    currentLogger.debug(`  ${key}: ${JSON.stringify(change.old)} -> ${JSON.stringify(change.new)}`);
+                }
+            }
+        } else {
+            currentLogger.error(`Configuration reload failed: ${reloadResult.error}`);
+            currentLogger.error('Keeping previous configuration active');
+        }
+    } catch (error) {
+        currentLogger.error(`Error during config reload: ${error}`);
+        currentLogger.error('Keeping previous configuration active');
+    }
 });
 
 const program = new Command();
@@ -82,6 +134,7 @@ program
   .version('1.0.0', '-v, --version', 'Output the version number')
   .helpOption('-h, --help', 'Display help for command')
   .addHelpText('after', 'Use "{{ project_slug }} help <command>" for more information on a command.')
+  .addHelpText('after', '\nPath Handling:\n  This CLI automatically handles cross-platform path differences:\n  - Normalizes both forward (/) and backward (\\) slashes\n  - Uses platform-appropriate separators for output\n  - Resolves . and .. segments in paths\n  - Handles paths with spaces and special characters\n  - Works consistently on Windows, Linux, and macOS')
   .addHelpText('after', '\nExit Codes:\n  0   Success\n  1   Generic error\n  2   Usage error (invalid arguments, missing required args)\n  3   Network error (connection failures, timeouts)\n  4   Validation error (invalid config, schema validation failures)\n  5   File not found\n  6   Permission denied\n  130 SIGINT (Ctrl+C)')
   .argument('[inputs...]', 'Input files or glob patterns. Use "-" for stdin.')
   .option('-q, --quiet', 'Suppress all output except errors')
@@ -98,6 +151,7 @@ program
   .option('-c, --config <path>', 'Config file path (default: ~/.config/{{ project_slug }}/config.toml)', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
   .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables ({{ PROJECT_SLUG }}_*)\n  3. Local project config (./.{{ project_slug }}/config.toml)\n  4. User config (~/.config/{{ project_slug }}/config.toml)\n  5. System config (/etc/{{ project_slug }}/config.toml)\n  6. Hardcoded defaults')
   .addHelpText('after', '\nLogging Options:\n  --debug       Enable debug-level logging\n  --log-format  Log format: text (default) or json\n  --quiet        Suppress all output except errors\n  --verbose      Enable verbose output with extra details\n  Environment Variables:\n  LOG_LEVEL      Set log level (debug, info, warn, error, fatal)\n  NODE_ENV       Set to "development" to enable debug mode')
+  .addHelpText('after', '\nSecret Handling:\n  Secrets are automatically redacted from all log output, error messages,\n  and debug output. Supported secret patterns include API keys, passwords,\n  tokens, and other sensitive data. Secrets are never logged in plain text.\n  Environment Variables:\n  SECRET_STORAGE_METHOD  Storage method: keyring (recommended), environment, or config')
   .addHelpText('after', '\nURL Formatting:\n  URLs in output are automatically formatted for terminal display\n  - Clickable links are enabled in supported terminals (OSC 8 escape sequences)\n  - URLs are normalized to use HTTP/HTTPS protocol\n  - Special characters are properly encoded\n  - Fallback to plain text for terminals without URL support\n  - NO_COLOR environment variable disables clickable URLs')
   .addHelpText('after', '\nDry-Run Mode:\n  --dry-run     Preview changes without executing them\n                Shows what would be done without making any changes')
   .addHelpText('after', '\nConfirmation Prompts:\n  --force       Bypass confirmation prompts for destructive operations\n                Use with caution in automated scripts\n  Environment Variables:\n  CONFIRM_BYPASS Set to "true" or "1" to bypass prompts in non-TTY environments')
@@ -109,6 +163,7 @@ program
   .addHelpText('after', '\nPager:\n  Long output is automatically paged using the PAGER environment variable (default: less)\n  Use --no-pager to disable paging\n  Paging is disabled for JSON output mode and piped output\n  Environment Variables:\n  PAGER         Set pager command (default: less)')
   .addHelpText('after', '\nTUI Mode:\n  --interactive, --tui  Launch interactive Terminal User Interface\n                        Allows viewing and modifying all arguments before execution\n                        Falls back to CLI mode in non-TTY environments')
   .addHelpText('after', '\nDaemon Mode:\n  --daemon              Pre-launch daemon in background for long-running operations\n  --no-daemon           Force synchronous operation (disable daemon)\n  --list-jobs           List background job status\n  --cancel-job <id>     Cancel a specific background job\n  Daemon auto-spawns on first async operation unless --no-daemon is set')
+  .addHelpText('after', '\nConfig Reload:\n  Send SIGHUP signal to reload configuration without restart\n  Example: kill -HUP <pid>\n  New config is validated before applying\n  Validation errors keep old config active\n  Config changes are logged in verbose mode')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--interactive, --tui', 'Launch interactive Terminal User Interface')
   .option('--daemon', 'Pre-launch daemon in background')
@@ -302,6 +357,10 @@ program
           if (options.logFormat !== undefined) cliArgs.log_format = options.logFormat;
           if (options.json !== undefined) cliArgs.json = options.json;
 
+          // Store global state for SIGHUP config reload
+          currentConfigOptions = configOptions;
+          currentCliArgs = cliArgs;
+
           let config = await loadConfigWithPrecedence(configOptions, cliArgs);
 
           // Use TUI-modified config if available
@@ -338,6 +397,9 @@ program
               module: '{{ project_slug }}',
           };
           const logger = createLogger(loggerOptions);
+
+          // Store logger globally for SIGHUP config reload
+          currentLogger = logger;
 
           // Handle daemon mode
           const daemonConfig: Partial<DaemonConfig> = {
@@ -418,17 +480,18 @@ program
               const bar = progressManager.createBar(filesToProcess.length, 'Processing files');
               for (const file of filesToProcess) {
                   try {
-                      const content = await fs.readFile(file, 'utf-8');
-                      results.push({ source: file, length: content.length });
+                      const normalizedPath = ensurePath(file, { normalize: true });
+                      const content = await fs.readFile(normalizedPath, 'utf-8');
+                      results.push({ source: normalizedPath, length: content.length });
                       bar?.increment();
                   } catch (error) {
                       bar?.stop();
                       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-                          throw new FileNotFoundError(`File not found: ${file}`, { file });
+                          throw new FileNotFoundError(`File not found: ${formatErrorPath(file)}`, { file });
                       } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
-                          throw new PermissionDeniedError(`Permission denied: ${file}`, { file });
+                          throw new PermissionDeniedError(`Permission denied: ${formatErrorPath(file)}`, { file });
                       } else {
-                          throw new GenericError(`Error processing ${file}: ${error}`, { file, error });
+                          throw new GenericError(`Error processing ${formatErrorPath(file)}: ${error}`, { file, error });
                       }
                   }
               }
@@ -436,16 +499,17 @@ program
           } else {
               for (const file of filesToProcess) {
                   try {
-                      logger.info(`Processing ${file}...`);
-                      const content = await fs.readFile(file, 'utf-8');
-                      results.push({ source: file, length: content.length });
+                      const normalizedPath = ensurePath(file, { normalize: true });
+                      logger.info(`Processing ${formatLogPath(file, mergedOptions.debug)}...`);
+                      const content = await fs.readFile(normalizedPath, 'utf-8');
+                      results.push({ source: normalizedPath, length: content.length });
                   } catch (error) {
                       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-                      throw new FileNotFoundError(`File not found: ${file}`, { file });
+                      throw new FileNotFoundError(`File not found: ${formatErrorPath(file)}`, { file });
                   } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
-                      throw new PermissionDeniedError(`Permission denied: ${file}`, { file });
+                      throw new PermissionDeniedError(`Permission denied: ${formatErrorPath(file)}`, { file });
                   } else {
-                      throw new GenericError(`Error processing ${file}: ${error}`, { file, error });
+                      throw new GenericError(`Error processing ${formatErrorPath(file)}: ${error}`, { file, error });
                   }
                   }
               }

@@ -24,7 +24,7 @@ const progressContext: ProgressContext = {
 export class ProgressManager {
   private options: ProgressOptions;
   private bar: createProgressBar.SingleBar | null = null;
-  private spinner: createProgressBar.Presets.Spinner | null = null;
+  private spinner: createProgressBar.Preset | null = null;
 
   constructor(options: ProgressOptions = {}) {
     this.options = {
@@ -74,7 +74,7 @@ export class ProgressManager {
   /**
    * Create a spinner for indeterminate operations
    */
-  createSpinner(title?: string): createProgressBar.Presets.Spinner | null {
+  createSpinner(title?: string): createProgressBar.Preset | null {
     if (!this.shouldShowProgress()) return null;
 
     // Clean up any existing progress indicator

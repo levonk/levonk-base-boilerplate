@@ -27,16 +27,16 @@ Update config system to support agent mode settings. Add mode configuration opti
 
 ## Sub-Tasks
 
-- [ ] Add `mode` setting to config schema (agent|human) — `config/schema.py`
-- [ ] Add `default_format` setting to config schema (toon|json|human) — `config/schema.py`
-- [ ] Add `truncation_limit` setting to config schema (default 1000) — `config/schema.py`
-- [ ] Add `fields_default` setting to config schema — `config/schema.py`
-- [ ] Update config validation to include new agent settings — `config/validation.py`
-- [ ] Add config migration logic for existing configs — `config/migration.py`
-- [ ] Update default config template with agent settings — `config/default.yaml.jinja`
-- [ ] Add config documentation for agent mode settings — `config/README.md`
-- [ ] Test config loading with new settings — `tests/test_config.py`
-- [ ] Test config migration from old to new schema — `tests/test_migration.py`
+- [x] Add `mode` setting to config schema (agent|human) — `config/schema.py`
+- [x] Add `default_format` setting to config schema (toon|json|human) — `config/schema.py`
+- [x] Add `truncation_limit` setting to config schema (default 1000) — `config/schema.py`
+- [x] Add `fields_default` setting to config schema — `config/schema.py`
+- [x] Update config validation to include new agent settings — `config/validation.py`
+- [x] Add config migration logic for existing configs — `config/migration.py`
+- [x] Update default config template with agent settings — `config/default.yaml.jinja`
+- [x] Add config documentation for agent mode settings — `config/README.md`
+- [x] Test config loading with new settings — `tests/test_config.py`
+- [x] Test config migration from old to new schema — `tests/test_migration.py`
 
 ## Relevant Files
 
@@ -50,14 +50,14 @@ Update config system to support agent mode settings. Add mode configuration opti
 
 ## Acceptance Criteria
 
-- [ ] Config supports `mode` setting (agent|human)
-- [ ] Config supports `default_format` setting (toon|json|human)
-- [ ] Config supports `truncation_limit` setting (default 1000)
-- [ ] Config supports `fields_default` setting
-- [ ] Config validation includes new agent settings
-- [ ] Config migration works for existing configs
-- [ ] Default config template includes all agent settings
-- [ ] All tests pass
+- [x] Config supports `mode` setting (agent|human)
+- [x] Config supports `default_format` setting (toon|json|human)
+- [x] Config supports `truncation_limit` setting (default 1000)
+- [x] Config supports `fields_default` setting
+- [x] Config validation includes new agent settings
+- [x] Config migration works for existing configs
+- [x] Default config template includes all agent settings
+- [x] All tests pass
 
 ## Test Plan
 

@@ -8,7 +8,7 @@ import {
   formatHelpURL,
   formatLogURL,
   isValidURL,
-} from './url';
+} from './url.js';
 
 describe('URL Formatting', () => {
   describe('supportsClickableURLs', () => {
@@ -22,11 +22,11 @@ describe('URL Formatting', () => {
     it('should detect supported terminals', () => {
       const originalTerm = process.env.TERM;
       const originalIsTTY = process.stdout.isTTY;
-      
+
       Object.defineProperty(process.stdout, 'isTTY', { value: true });
       process.env.TERM = 'xterm-256color';
       expect(supportsClickableURLs()).toBe(true);
-      
+
       process.env.TERM = originalTerm;
       Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
     });
@@ -82,14 +82,14 @@ describe('URL Formatting', () => {
     it('should format URL with clickable escape sequences when supported', () => {
       const originalIsTTY = process.stdout.isTTY;
       const originalTerm = process.env.TERM;
-      
+
       Object.defineProperty(process.stdout, 'isTTY', { value: true });
       process.env.TERM = 'xterm-256color';
-      
+
       const result = formatURL('https://example.com', { clickable: true });
       expect(result).toContain('\x1b]8;;');
       expect(result).toContain('https://example.com');
-      
+
       process.env.TERM = originalTerm;
       Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
     });
@@ -102,30 +102,30 @@ describe('URL Formatting', () => {
     it('should return plain URL when terminal does not support clickable URLs', () => {
       const originalIsTTY = process.stdout.isTTY;
       Object.defineProperty(process.stdout, 'isTTY', { value: false });
-      
+
       const result = formatURL('https://example.com', { clickable: true });
       expect(result).toBe('https://example.com');
-      
+
       Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
     });
 
     it('should use fallback text when provided', () => {
       const originalIsTTY = process.stdout.isTTY;
       Object.defineProperty(process.stdout, 'isTTY', { value: false });
-      
-      const result = formatURL('https://example.com', { 
+
+      const result = formatURL('https://example.com', {
         clickable: true,
-        fallbackText: 'Click here' 
+        fallbackText: 'Click here'
       });
       expect(result).toBe('Click here');
-      
+
       Object.defineProperty(process.stdout, 'isTTY', { value: originalIsTTY });
     });
 
     it('should encode URL when encode option is true', () => {
-      const result = formatURL('https://example.com/path with spaces', { 
+      const result = formatURL('https://example.com/path with spaces', {
         clickable: false,
-        encode: true 
+        encode: true
       });
       expect(result).toContain('%20');
     });

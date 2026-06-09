@@ -29,7 +29,7 @@ export function TUI({ config, onExecute, onCancel, projectSlug }: TUIOptions): R
     const [showConfirm, setShowConfirm] = useState(false);
 
     // Convert config to argument items
-    const arguments: ArgumentItem[] = [
+    const argumentItems: ArgumentItem[] = [
         {
             key: 'quiet',
             label: 'Quiet Mode',
@@ -99,7 +99,7 @@ export function TUI({ config, onExecute, onCancel, projectSlug }: TUIOptions): R
         if (editingIndex !== null) {
             if (keyObj.return) {
                 // Save edit
-                const arg = arguments[editingIndex];
+                const arg = argumentItems[editingIndex];
                 const newConfig = { ...config };
                 if (arg.type === 'boolean') {
                     newConfig[arg.key as keyof Config] = (editValue.toLowerCase() === 'true') as any;
@@ -129,19 +129,19 @@ export function TUI({ config, onExecute, onCancel, projectSlug }: TUIOptions): R
         } else if (keyObj.upArrow) {
             setSelectedIndex(Math.max(0, selectedIndex - 1));
         } else if (keyObj.downArrow) {
-            setSelectedIndex(Math.min(arguments.length - 1, selectedIndex + 1));
+            setSelectedIndex(Math.min(argumentItems.length - 1, selectedIndex + 1));
         } else if (input === 'h' || input === 'H') {
             setShowHelp(true);
         } else if (input === ' ') {
             // Toggle boolean values
-            const arg = arguments[selectedIndex];
+            const arg = argumentItems[selectedIndex];
             if (arg.type === 'boolean') {
                 const newConfig = { ...config };
                 newConfig[arg.key as keyof Config] = !arg.value as any;
                 onExecute(newConfig);
             }
         }
-    }, [config, selectedIndex, editingIndex, editValue, showHelp, showConfirm, onExecute, onCancel, exit, arguments]);
+    }, [config, selectedIndex, editingIndex, editValue, showHelp, showConfirm, onExecute, onCancel, exit, argumentItems]);
 
     useInput(handleInput);
 
@@ -173,7 +173,7 @@ export function TUI({ config, onExecute, onCancel, projectSlug }: TUIOptions): R
                     <Text>Keyboard Shortcuts:</Text>
                 </Box>
                 <Box marginTop={1}>
-                    <Text>  ↑/↓    Navigate arguments</Text>
+                    <Text>  ↑/↓    Navigate argumentItems</Text>
                 </Box>
                 <Box>
                     <Text>  Space  Toggle boolean values</Text>
@@ -198,7 +198,7 @@ export function TUI({ config, onExecute, onCancel, projectSlug }: TUIOptions): R
     }
 
     if (editingIndex !== null) {
-        const arg = arguments[editingIndex];
+        const arg = argumentItems[editingIndex];
         return (
             <Box flexDirection="column" padding={1}>
                 <Box>
@@ -232,13 +232,13 @@ export function TUI({ config, onExecute, onCancel, projectSlug }: TUIOptions): R
                 <Text bold color="cyan">{projectSlug} - TUI Mode</Text>
             </Box>
             <Box marginTop={1}>
-                <Text color="dim">Configure arguments before execution</Text>
+                <Text color="dim">Configure argumentItems before execution</Text>
             </Box>
             <Box marginTop={1}>
                 <Text color="dim">Press H for help, Esc to cancel, Enter to execute</Text>
             </Box>
             <Box marginTop={1} flexDirection="column">
-                {arguments.map((arg, index) => (
+                {argumentItems.map((arg, index) => (
                     <Box key={arg.key}>
                         <Box>
                             {index === selectedIndex ? (
@@ -262,7 +262,7 @@ export function TUI({ config, onExecute, onCancel, projectSlug }: TUIOptions): R
 }
 
 export function launchTUI(options: TUIOptions): void {
-    const { exit } = render(<TUI {...options} />);
+    render(<TUI {...options} />);
 }
 
 export function isTTY(): boolean {

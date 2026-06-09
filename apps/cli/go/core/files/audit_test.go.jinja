@@ -117,8 +117,8 @@ func TestPruneOldEvents(t *testing.T) {
 		t.Errorf("Expected 5 events before prune, got %d", count)
 	}
 
-	// Prune events older than 1 day (should not prune anything)
-	cutoff := time.Now().AddDate(0, 0, -1)
+	// Prune events older than 10 days (should prune 1 event)
+	cutoff := time.Now().AddDate(0, 0, -10)
 	query := `UPDATE audit_events SET timestamp = ? WHERE id = ?`
 	auditLogger.db.Exec(query, cutoff.Format("2006-01-02 15:04:05"), 1)
 

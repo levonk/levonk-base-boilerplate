@@ -6,34 +6,33 @@
     "init": [
       "echo '📘 Setting up {{ project_name | default('ts-cli-app') }} development environment...'"
     ],
-    "scripts": {
-      "build": "tsc",
-      "build-watch": "tsc --watch",
-      "build-release": "tsc && npm pkg fix",
-      "test": "vitest",
-      "test-coverage": "vitest --coverage",
-      "lint": "eslint . --ext .ts,.js",
-      "format": "prettier --write .",
-      "format-check": "prettier --check .",
-      "run": "node dist/index.js",
-      "dev": "tsx watch src/index.ts",
-      "clean": "rm -rf dist/",
-      "type-check": "tsc --noEmit",
-      "check": "eslint . --ext .ts,.js && tsc --noEmit"
-    }
   },
-  "packages": {
-    "nixpkgs#nodejs_20": "",
-    "nixpkgs#nodePackages.typescript": "",
-    "nixpkgs#nodePackages.tsx": "",
-    "nixpkgs#nodePackages.vitest": "",
-    "nixpkgs#nodePackages.eslint": "",
-    "nixpkgs#nodePackages.prettier": "",
-    "nixpkgs#pnpm": "",
-    "nixpkgs#just": ""
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
+  "scripts": {
+    "build": "tsc",
+    "build-watch": "tsc --watch",
+    "build-release": "tsc && npm pkg fix",
+    "test": "vitest",
+    "test-coverage": "vitest --coverage",
+    "lint": "eslint . --ext .ts,.js",
+    "format": "prettier --write .",
+    "format-check": "prettier --check .",
+    "run": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "clean": "rm -rf dist/",
+    "type-check": "tsc --noEmit",
+    "check": "eslint . --ext .ts,.js && tsc --noEmit"
   },
+  "packages": [
+    "nixpkgs#nodejs",
+    "nixpkgs#typescript",
+    "nixpkgs#tsx",
+    "nixpkgs#eslint",
+    "nixpkgs#prettier",
+    "nixpkgs#pnpm",
+    "nixpkgs#just"
+  ],
   "env": {
-    "NODE_ENV": "{{ node_env | default('development') }}",
     "TS_NODE_PROJECT": "{{ ts_node_project | default('./tsconfig.json') }}",
     {% if include_development %}
     "LOG_LEVEL": "{{ log_level | default('info') }}",
@@ -42,5 +41,6 @@
     {% if include_config %}
     "CONFIG_PATH": "{{ config_path | default('./config.json') }}",
     {% endif %}
+    "NODE_ENV": "{{ node_env | default('development') }}"
   }
 }

@@ -1,0 +1,109 @@
+import fs from 'fs/promises';
+import path from 'path';
+import type { Config } from './config.js';
+
+/**
+ * Current config schema version
+ */
+export const CURRENT_CONFIG_VERSION = 1;
+
+/**
+ * Migration interface
+ */
+export interface Migration {
+    version: number;
+    description: string;
+    migrate: (config: any) => Config;
+}
+
+/**
+ * Migration registry
+ */
+const migrations: Migration[] = [];
+
+/**
+ * Register a migration
+ */
+export function registerMigration(migration: Migration): void {
+    migrations.push(migration);
+    migrations.sort((a, b) => a.version - b.version);
+}
+
+/**
+ * Get config version from config object
+ */
+export function getConfigVersion(config: any): number {
+    return config._version || 0;
+}
+
+/**
+ * Check if config needs migration
+ */
+export function needsMigration(config: any): boolean {
+    return getConfigVersion(config) < CURRENT_CONFIG_VERSION;
+}
+
+/**
+ * Detect if config is legacy (pre-versioning)
+ */
+export function isLegacyConfig(config: any): boolean {
+    return !config._version;
+}
+
+/**
+ * Backup config file
+ */
+export async function backupConfig(configPath: string): Promise<string> {
+    const backupPath = `${configPath}.bak`;
+    await fs.copyFile(configPath, backupPath);
+    return backupPath;
+}
+
+/**
+ * Apply migrations to config
+ */
+export function applyMigrations(config: any): Config {
+    let currentVersion = getConfigVersion(config);
+    let migratedConfig = { ...config };
+
+    for (const migration of migrations) {
+        if (migration.version > currentVersion && migration.version <= CURRENT_CONFIG_VERSION) {
+            migratedConfig = migration.migrate(migratedConfig);
+            currentVersion = migration.version;
+        }
+    }
+
+    migratedConfig._version = CURRENT_CONFIG_VERSION;
+    return migratedConfig;
+}
+
+/**
+ * Migration from version 0 to 1 (legacy to versioned config)
+ */
+registerMigration({
+    version: 1,
+    description: 'Add version field and normalize config',
+    migrate: (config: any): Config => {
+        // Normalize legacy config to version 1
+        const migrated: Config = {
+            _version: 1,
+            log_level: config.log_level || config.logLevel || 'info',
+            quiet: config.quiet || false,
+            verbose: config.verbose || false,
+            debug: config.debug || false,
+            color: config.color || config.colorMode || 'auto',
+            log_format: config.log_format || config.logFormat || 'text',
+            json: config.json || false,
+            file_ref_format: config.file_ref_format || config.fileRefFormat || 'auto',
+        };
+
+        // Copy any additional fields
+        for (const key in config) {
+            if (!migrated[key as keyof Config]) {
+                (migrated as any)[key] = config[key];
+            }
+        }
+
+        return migrated;
+    },
+});

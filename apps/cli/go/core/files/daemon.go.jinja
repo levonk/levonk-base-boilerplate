@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"runtime"
 	"sync"
@@ -54,6 +53,11 @@ type JobQueue struct {
 
 // NewDaemonManager creates a new daemon manager
 func NewDaemonManager(logger *Logger) *DaemonManager {
+	maxJobs := viper.GetInt("daemon.max_jobs")
+	if maxJobs <= 0 {
+		maxJobs = 10 // Default value
+	}
+
 	return &DaemonManager{
 		logger:  logger,
 		jobQueue: NewJobQueue(),
@@ -61,7 +65,7 @@ func NewDaemonManager(logger *Logger) *DaemonManager {
 			Enabled:       viper.GetBool("daemon.enabled"),
 			NoisyBehavior: viper.GetBool("daemon.noisy_behavior"),
 			JobDir:        viper.GetString("daemon.job_dir"),
-			MaxJobs:       viper.GetInt("daemon.max_jobs"),
+			MaxJobs:       maxJobs,
 		},
 	}
 }
@@ -301,10 +305,10 @@ func (dm *DaemonManager) CleanupCompletedJobs(maxAge time.Duration) {
 func (dm *DaemonManager) Start(s service.Service) error {
 	dm.logger.Info("Starting daemon service...")
 	dm.running = true
-	
+
 	// Start job cleanup routine
 	go dm.cleanupRoutine()
-	
+
 	return nil
 }
 
@@ -331,14 +335,14 @@ func (dm *DaemonManager) cleanupRoutine() {
 func RunListJobsCommand() error {
 	logger := NewLogger("daemon")
 	dm := NewDaemonManager(logger)
-	
+
 	jobs := dm.ListJobs()
-	
+
 	if len(jobs) == 0 {
 		logger.Info("No background jobs found")
 		return nil
 	}
-	
+
 	logger.Info("Background jobs (%d):", len(jobs))
 	for _, job := range jobs {
 		status := job.Status
@@ -350,7 +354,7 @@ func RunListJobsCommand() error {
 		}
 		logger.Info("  %s: %s %v - %s", job.ID, job.Command, job.Args, status)
 	}
-	
+
 	return nil
 }
 
@@ -358,11 +362,11 @@ func RunListJobsCommand() error {
 func RunCancelJobCommand(jobID string) error {
 	logger := NewLogger("daemon")
 	dm := NewDaemonManager(logger)
-	
+
 	if err := dm.CancelJob(jobID); err != nil {
 		return WrapError(err, ErrorTypeExecution, fmt.Sprintf("Failed to cancel job %s", jobID), "Check job ID and status")
 	}
-	
+
 	logger.Info("Job %s cancelled successfully", jobID)
 	return nil
 }

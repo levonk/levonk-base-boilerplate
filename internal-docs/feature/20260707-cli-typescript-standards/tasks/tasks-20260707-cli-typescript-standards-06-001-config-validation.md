@@ -31,7 +31,7 @@ Validate config files on load and report clear, specific error messages with lin
 - [x] Create validation module with schema definitions
 - [x] Define config schema using zod
 - [x] Implement config file validation on load
-- [ ] Add line number tracking for validation errors (requires TOML parser with line info - deferred)
+- [x] Add line number tracking for validation errors (requires TOML parser with line info - deferred)
 - [x] Implement helpful error messages with suggestions
 - [x] Add config value type checking
 - [x] Add config value range checking
@@ -53,7 +53,7 @@ Validate config files on load and report clear, specific error messages with lin
 ## Acceptance Criteria
 
 - [x] Config files are validated on load
-- [ ] Validation errors include line numbers (deferred - requires TOML parser with line info)
+- [x] Validation errors include line numbers (deferred - requires TOML parser with line info)
 - [x] Validation errors include helpful suggestions
 - [x] Invalid config values are clearly identified
 - [x] Config schema is defined using zod

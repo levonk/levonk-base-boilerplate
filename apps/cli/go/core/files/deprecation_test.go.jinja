@@ -435,7 +435,7 @@ func TestDeprecationQuietMode(t *testing.T) {
 
 	outputStr := string(output[:n])
 	if outputStr != "" {
-		t.Error("Expected no output in quiet mode, got: %s", outputStr)
+		t.Errorf("Expected no output in quiet mode, got: %s", outputStr)
 	}
 }
 

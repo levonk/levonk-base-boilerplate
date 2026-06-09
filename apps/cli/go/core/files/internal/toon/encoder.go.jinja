@@ -1,0 +1,515 @@
+package toon
+
+import (
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+	"unicode"
+)
+
+// Encoder encodes Go values to TOON format
+type Encoder struct {
+	opts EncoderOptions
+}
+
+// NewEncoder creates a new TOON encoder with the given options
+func NewEncoder(opts EncoderOptions) *Encoder {
+	if opts.IndentSpaces == 0 {
+		opts.IndentSpaces = 2
+	}
+	return &Encoder{opts: opts}
+}
+
+// EncodeValue encodes a TOON value to its string representation
+func (e *Encoder) EncodeValue(v Value) (string, error) {
+	switch val := v.(type) {
+	case StringValue:
+		return e.encodeString(string(val)), nil
+	case NumberValue:
+		return e.encodeNumber(float64(val)), nil
+	case BoolValue:
+		return e.encodeBool(bool(val)), nil
+	case NullValue:
+		return "null", nil
+	case Array:
+		return e.encodeArray(val)
+	case Object:
+		return e.encodeObject(val)
+	default:
+		return "", fmt.Errorf("unsupported value type: %T", v)
+	}
+}
+
+// encodeString encodes a string value with proper quoting and escaping
+func (e *Encoder) encodeString(s string) string {
+	// Check if string needs quoting
+	if e.needsQuoting(s) {
+		return e.quoteString(s)
+	}
+	return s
+}
+
+// needsQuoting determines if a string needs to be quoted
+func (e *Encoder) needsQuoting(s string) bool {
+	if s == "" {
+		return true
+	}
+
+	// Check for characters that require quoting
+	for _, r := range s {
+		if !unicode.IsPrint(r) || r == ' ' || r == ',' || r == '\t' || r == '|' || r == ':' || r == '#' || r == '-' {
+			return true
+		}
+	}
+
+	// Check if it's a reserved word
+	switch s {
+	case "true", "false", "null":
+		return true
+	}
+
+	return false
+}
+
+// quoteString quotes a string and escapes special characters
+func (e *Encoder) quoteString(s string) string {
+	var builder strings.Builder
+	builder.WriteRune('"')
+
+	for _, r := range s {
+		switch r {
+		case '\\':
+			builder.WriteString(`\\`)
+		case '"':
+			builder.WriteString(`\"`)
+		case '\n':
+			builder.WriteString(`\n`)
+		case '\r':
+			builder.WriteString(`\r`)
+		case '\t':
+			builder.WriteString(`\t`)
+		default:
+			// Escape control characters U+0000 to U+001F
+			if r < 32 {
+				builder.WriteString(fmt.Sprintf(`\u%04X`, r))
+			} else {
+				builder.WriteRune(r)
+			}
+		}
+	}
+
+	builder.WriteRune('"')
+	return builder.String()
+}
+
+// encodeNumber encodes a numeric value
+func (e *Encoder) encodeNumber(n float64) string {
+	// Handle special cases
+	if math.IsNaN(n) || math.IsInf(n, 0) {
+		// TOON spec requires normalization - NaN/Infinity should be handled before encoding
+		// For now, encode as string to preserve data
+		return e.quoteString(strconv.FormatFloat(n, 'g', -1, 64))
+	}
+
+	// Use canonical decimal for values in [1e-6, 1e21) or zero
+	if (n >= 1e-6 && n < 1e21) || n == 0 {
+		// Use decimal form without trailing zeros
+		s := strconv.FormatFloat(n, 'f', -1, 64)
+		// Remove trailing zeros after decimal point
+		if strings.Contains(s, ".") {
+			s = strings.TrimRight(s, "0")
+			s = strings.TrimRight(s, ".")
+		}
+		return s
+	}
+
+	// Use exponent form for values outside the range
+	return strconv.FormatFloat(n, 'g', -1, 64)
+}
+
+// encodeBool encodes a boolean value
+func (e *Encoder) encodeBool(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
+}
+
+// encodeKey encodes an object key
+func (e *Encoder) encodeKey(key string) string {
+	// Keys follow the same rules as strings but with additional constraints
+	// Unquoted keys must match: (ALPHA / "_") *(ALPHA / DIGIT / "_" / ".")
+	if e.isValidUnquotedKey(key) {
+		return key
+	}
+	return e.quoteString(key)
+}
+
+// isValidUnquotedKey checks if a key can be used unquoted
+func (e *Encoder) isValidUnquotedKey(key string) bool {
+	if key == "" {
+		return false
+	}
+
+	for i, r := range key {
+		if i == 0 {
+			// First character must be ALPHA or "_"
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_') {
+				return false
+			}
+		} else {
+			// Subsequent characters can be ALPHA, DIGIT, "_", or "."
+			if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+				(r >= '0' && r <= '9') || r == '_' || r == '.') {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// encodeArray encodes an array value
+func (e *Encoder) encodeArray(arr Array) (string, error) {
+	if arr.Length == 0 {
+		return "[]", nil
+	}
+
+	// Build header
+	header := e.buildHeader("", arr.Length, arr.Delimiter, arr.Fields)
+
+	// Primitive inline array
+	if !arr.IsTabular && e.isPrimitiveArray(arr) {
+		values := make([]string, len(arr.Items))
+		for i, item := range arr.Items {
+			encoded, err := e.EncodeValue(item)
+			if err != nil {
+				return "", err
+			}
+			values[i] = e.delimiterAwareQuote(encoded, arr.Delimiter)
+		}
+		return header + " " + strings.Join(values, arr.Delimiter.String()), nil
+	}
+
+	// Tabular array
+	if arr.IsTabular {
+		return e.encodeTabularArray(header, arr)
+	}
+
+	// Expanded list array
+	return e.encodeExpandedListArray(header, arr)
+}
+
+// isPrimitiveArray checks if an array contains only primitives
+func (e *Encoder) isPrimitiveArray(arr Array) bool {
+	for _, item := range arr.Items {
+		switch item.(type) {
+		case StringValue, NumberValue, BoolValue, NullValue:
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// delimiterAwareQuote adds quotes if the value contains the delimiter
+func (e *Encoder) delimiterAwareQuote(value string, delim Delimiter) string {
+	if strings.Contains(value, delim.String()) {
+		return e.quoteString(value)
+	}
+	return value
+}
+
+// buildHeader builds a TOON array header
+func (e *Encoder) buildHeader(key string, length int, delim Delimiter, fields []string) string {
+	var builder strings.Builder
+
+	if key != "" {
+		builder.WriteString(e.encodeKey(key))
+	}
+
+	builder.WriteString("[")
+	builder.WriteString(strconv.Itoa(length))
+
+	if delim != DelimiterComma {
+		builder.WriteRune(rune(delim))
+	}
+
+	builder.WriteString("]")
+
+	if len(fields) > 0 {
+		builder.WriteString("{")
+		encodedFields := make([]string, len(fields))
+		for i, field := range fields {
+			encodedFields[i] = e.encodeKey(field)
+		}
+		builder.WriteString(strings.Join(encodedFields, delim.String()))
+		builder.WriteString("}")
+	}
+
+	builder.WriteString(":")
+	return builder.String()
+}
+
+// encodeTabularArray encodes a tabular array of objects
+func (e *Encoder) encodeTabularArray(header string, arr Array) (string, error) {
+	var builder strings.Builder
+	builder.WriteString(header)
+	builder.WriteString("\n")
+
+	indent := strings.Repeat(" ", e.opts.IndentSpaces)
+
+	for _, item := range arr.Items {
+		obj, ok := item.(Object)
+		if !ok {
+			return "", fmt.Errorf("tabular array contains non-object item")
+		}
+
+		values := make([]string, len(arr.Fields))
+		for i, field := range arr.Fields {
+			if val, exists := obj.Fields[field]; exists {
+				encoded, err := e.EncodeValue(val)
+				if err != nil {
+					return "", err
+				}
+				values[i] = e.delimiterAwareQuote(encoded, arr.Delimiter)
+			} else {
+				values[i] = ""
+			}
+		}
+
+		builder.WriteString(indent)
+		builder.WriteString(strings.Join(values, arr.Delimiter.String()))
+		builder.WriteString("\n")
+	}
+
+	return builder.String(), nil
+}
+
+// encodeExpandedListArray encodes an array as an expanded list
+func (e *Encoder) encodeExpandedListArray(header string, arr Array) (string, error) {
+	var builder strings.Builder
+	builder.WriteString(header)
+	builder.WriteString("\n")
+
+	indent := strings.Repeat(" ", e.opts.IndentSpaces)
+
+	for _, item := range arr.Items {
+		builder.WriteString(indent)
+		builder.WriteString("- ")
+
+		encoded, err := e.EncodeValue(item)
+		if err != nil {
+			return "", err
+		}
+
+		// Handle nested arrays in list items
+		if nestedArr, ok := item.(Array); ok {
+			nestedHeader := e.buildHeader("", nestedArr.Length, nestedArr.Delimiter, nestedArr.Fields)
+			if nestedArr.IsTabular || !e.isPrimitiveArray(nestedArr) {
+				// Nested expanded list
+				builder.WriteString(nestedHeader)
+				builder.WriteString("\n")
+				nestedIndent := strings.Repeat(" ", e.opts.IndentSpaces*2)
+				for _, nestedItem := range nestedArr.Items {
+					builder.WriteString(nestedIndent)
+					builder.WriteString("- ")
+					nestedEncoded, err := e.EncodeValue(nestedItem)
+					if err != nil {
+						return "", err
+					}
+					builder.WriteString(nestedEncoded)
+					builder.WriteString("\n")
+				}
+			} else {
+				// Nested inline array
+				values := make([]string, len(nestedArr.Items))
+				for i, nestedItem := range nestedArr.Items {
+					nestedEncoded, err := e.EncodeValue(nestedItem)
+					if err != nil {
+						return "", err
+					}
+					values[i] = e.delimiterAwareQuote(nestedEncoded, nestedArr.Delimiter)
+				}
+				builder.WriteString(nestedHeader)
+				builder.WriteString(" ")
+				builder.WriteString(strings.Join(values, nestedArr.Delimiter.String()))
+				builder.WriteString("\n")
+			}
+		} else if obj, ok := item.(Object); ok {
+			// Object as list item
+			builder.WriteString(e.encodeObjectListItem(obj, indent))
+		} else {
+			// Primitive
+			builder.WriteString(encoded)
+			builder.WriteString("\n")
+		}
+	}
+
+	return builder.String(), nil
+}
+
+// encodeObject encodes an object value
+func (e *Encoder) encodeObject(obj Object) (string, error) {
+	if len(obj.Fields) == 0 {
+		return "", nil // Empty object produces no output
+	}
+
+	var builder strings.Builder
+	indent := strings.Repeat(" ", e.opts.IndentSpaces)
+
+	// Preserve encounter order by using a slice of keys
+	keys := e.orderedKeys(obj.Fields)
+
+	for i, key := range keys {
+		value := obj.Fields[key]
+		encodedKey := e.encodeKey(key)
+
+		// Check if value is a nested object or array
+		switch val := value.(type) {
+		case Object:
+			if len(val.Fields) == 0 {
+				// Empty object
+				builder.WriteString(encodedKey)
+				builder.WriteString(":\n")
+			} else {
+				// Nested object
+				builder.WriteString(encodedKey)
+				builder.WriteString(":\n")
+				nested, err := e.encodeObject(val)
+				if err != nil {
+					return "", err
+				}
+				for _, line := range strings.Split(nested, "\n") {
+					if line != "" {
+						builder.WriteString(indent)
+						builder.WriteString(line)
+						builder.WriteString("\n")
+					}
+				}
+			}
+		case Array:
+			encoded, err := e.encodeArray(val)
+			if err != nil {
+				return "", err
+			}
+			// Add key prefix if not root array
+			if key != "" {
+				encoded = strings.Replace(encoded, "[", encodedKey+"[", 1)
+			}
+			for _, line := range strings.Split(encoded, "\n") {
+				if line != "" {
+					builder.WriteString(line)
+					builder.WriteString("\n")
+				}
+			}
+		default:
+			// Primitive value
+			encoded, err := e.EncodeValue(val)
+			if err != nil {
+				return "", err
+			}
+			builder.WriteString(encodedKey)
+			builder.WriteString(": ")
+			builder.WriteString(encoded)
+			if i < len(keys)-1 {
+				builder.WriteString("\n")
+			}
+		}
+	}
+
+	return builder.String(), nil
+}
+
+// encodeObjectListItem encodes an object as a list item
+func (e *Encoder) encodeObjectListItem(obj Object, baseIndent string) string {
+	var builder strings.Builder
+	indent := strings.Repeat(" ", e.opts.IndentSpaces)
+
+	keys := e.orderedKeys(obj.Fields)
+	if len(keys) == 0 {
+		return "-\n" // Empty object list item
+	}
+
+	// First field on the hyphen line
+	firstKey := keys[0]
+	firstValue := obj.Fields[firstKey]
+	encodedKey := e.encodeKey(firstKey)
+
+	builder.WriteString("- ")
+	builder.WriteString(encodedKey)
+
+	switch val := firstValue.(type) {
+	case Object:
+		builder.WriteString(":\n")
+		nested, _ := e.encodeObject(val)
+		for _, line := range strings.Split(nested, "\n") {
+			if line != "" {
+				builder.WriteString(indent)
+				builder.WriteString(line)
+				builder.WriteString("\n")
+			}
+		}
+	case Array:
+		encoded, _ := e.encodeArray(val)
+		builder.WriteString(" ")
+		builder.WriteString(strings.TrimSpace(encoded))
+		builder.WriteString("\n")
+	default:
+		encoded, _ := e.EncodeValue(val)
+		builder.WriteString(": ")
+		builder.WriteString(encoded)
+		builder.WriteString("\n")
+	}
+
+	// Remaining fields at depth +1
+	for _, key := range keys[1:] {
+		value := obj.Fields[key]
+		encodedKey := e.encodeKey(key)
+
+		builder.WriteString(indent)
+		builder.WriteString(encodedKey)
+
+		switch val := value.(type) {
+		case Object:
+			builder.WriteString(":\n")
+			nested, _ := e.encodeObject(val)
+			for _, line := range strings.Split(nested, "\n") {
+				if line != "" {
+					builder.WriteString(indent)
+					builder.WriteString(line)
+					builder.WriteString("\n")
+				}
+			}
+		case Array:
+			encoded, _ := e.encodeArray(val)
+			for _, line := range strings.Split(encoded, "\n") {
+				if line != "" {
+					builder.WriteString(indent)
+					builder.WriteString(line)
+					builder.WriteString("\n")
+				}
+			}
+		default:
+			encoded, _ := e.EncodeValue(val)
+			builder.WriteString(": ")
+			builder.WriteString(encoded)
+			builder.WriteString("\n")
+		}
+	}
+
+	return builder.String()
+}
+
+// orderedKeys returns keys in encounter order (using a map iteration order)
+// Note: Go maps have random iteration order, so in a real implementation
+// you would use an ordered map or track key order separately
+func (e *Encoder) orderedKeys(fields map[string]Value) []string {
+	keys := make([]string, 0, len(fields))
+	for k := range fields {
+		keys = append(keys, k)
+	}
+	return keys
+}

@@ -787,4 +787,218 @@ describe('CLI', () => {
             expect(stdout).toContain('Usage:');
         });
     });
+
+    describe('Secret Handling', () => {
+        it('should redact secrets from log output', async () => {
+            // Set an environment variable with a secret
+            process.env.TEST_API_KEY = 'sk_live_1234567890abcdef1234567890abcdef';
+
+            try {
+                // Run a command that would log the secret
+                const { stdout, stderr } = await execAsync('node dist/index.js --help');
+
+                // Verify the secret is not in the output
+                const output = stdout + stderr;
+                expect(output).not.toContain('sk_live_1234567890abcdef1234567890abcdef');
+                expect(output).not.toContain('1234567890abcdef');
+            } finally {
+                delete process.env.TEST_API_KEY;
+            }
+        });
+
+        it('should redact secrets from error messages', async () => {
+            // Set an environment variable with a secret
+            process.env.TEST_PASSWORD = 'MySecretPassword123';
+
+            try {
+                // Run a command that might trigger an error with the secret
+                const { stdout, stderr } = await execAsync('node dist/index.js --help');
+
+                // Verify the secret is not in the output
+                const output = stdout + stderr;
+                expect(output).not.toContain('MySecretPassword123');
+            } finally {
+                delete process.env.TEST_PASSWORD;
+            }
+        });
+
+        it('should redact secrets from debug output', async () => {
+            // Set an environment variable with a secret
+            process.env.TEST_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
+
+            try {
+                // Run a command with debug enabled
+                const { stdout, stderr } = await execAsync('node dist/index.js --debug --help');
+
+                // Verify the secret is not in the output
+                const output = stdout + stderr;
+                expect(output).not.toContain('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
+            } finally {
+                delete process.env.TEST_TOKEN;
+            }
+        });
+
+        it('should warn about insecure config storage', async () => {
+            // Set secret storage method to config
+            process.env.SECRET_STORAGE_METHOD = 'config';
+
+            try {
+                const { stderr } = await execAsync('node dist/index.js --help');
+
+                // Should warn about insecure config storage
+                expect(stderr).toContain('insecure');
+            } finally {
+                delete process.env.SECRET_STORAGE_METHOD;
+            }
+        });
+    });
+
+    describe('Cross-Platform Path Handling', () => {
+        let tempDir: string;
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(os.tmpdir());
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should handle paths with forward slashes', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should handle paths with backward slashes on Windows', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Test with backslashes (will be normalized)
+            const backslashPath = testFile.replace(/\//g, '\\');
+            const { stdout } = await execAsync(`node dist/index.js "${backslashPath}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should handle paths with mixed slashes', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Create a path with mixed slashes
+            const mixedPath = tempDir + '/sub\\dir/test-file.txt';
+            const { stdout } = await execAsync(`node dist/index.js "${mixedPath}"`);
+            // Should handle gracefully even if file doesn't exist
+        });
+
+        it('should handle absolute paths', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should handle relative paths', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Change to temp directory and use relative path
+            const originalCwd = process.cwd();
+            try {
+                process.chdir(tempDir);
+                const { stdout } = await execAsync('node dist/index.js test-file.txt');
+                expect(stdout).toContain('Processed 1 inputs');
+            } finally {
+                process.chdir(originalCwd);
+            }
+        });
+
+        it('should handle paths with spaces', async () => {
+            const testFile = path.join(tempDir, 'test file with spaces.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should handle paths with special characters', async () => {
+            const testFile = path.join(tempDir, 'test-file_123.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should normalize paths with redundant separators', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Create path with redundant separators
+            const redundantPath = tempDir + '//' + path.sep + path.sep + 'test-file.txt';
+            const { stdout } = await execAsync(`node dist/index.js "${redundantPath}"`);
+            // Should handle gracefully
+        });
+
+        it('should handle paths with . and .. segments', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Use path with . segment
+            const dotPath = path.join(tempDir, '.', 'test-file.txt');
+            const { stdout } = await execAsync(`node dist/index.js "${dotPath}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should format error paths correctly', async () => {
+            const nonExistentFile = path.join(tempDir, 'non-existent.txt');
+
+            try {
+                await execAsync(`node dist/index.js "${nonExistentFile}"`);
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                // Error message should contain properly formatted path
+                const output = error.stderr || error.stdout;
+                expect(output).toBeTruthy();
+            }
+        });
+
+        it('should handle UNC paths on Windows', async () => {
+            if (process.platform !== 'win32') {
+                // Skip on non-Windows platforms
+                return;
+            }
+
+            // UNC paths are \\server\share\path
+            // We can't test actual UNC paths without a network share,
+            // but we can test that the CLI doesn't crash on UNC-like input
+            const uncPath = '\\\\server\\share\\file.txt';
+            try {
+                await execAsync(`node dist/index.js "${uncPath}"`);
+                // May fail due to non-existent path, but shouldn't crash
+            } catch (error: any) {
+                // Expected to fail, but should handle gracefully
+                expect(error).toBeTruthy();
+            }
+        });
+
+        it('should handle drive letters on Windows', async () => {
+            if (process.platform !== 'win32') {
+                // Skip on non-Windows platforms
+                return;
+            }
+
+            // Test with current drive letter
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+    });
 });

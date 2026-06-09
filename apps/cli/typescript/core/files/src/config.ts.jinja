@@ -2,12 +2,15 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import * as toml from '@iarna/toml';
-import { validateConfig, formatZodError, isValidConfig, getValidationErrors } from './validation.js';
+import { validateConfig, formatZodError, isValidConfig, getValidationErrors, ConfigSchema, ValidationError } from './validation.js';
+import { needsMigration, isLegacyConfig, backupConfig, applyMigrations, CURRENT_CONFIG_VERSION } from './migration.js';
 
 /**
  * Configuration schema with default values and descriptions
  */
 export interface Config {
+    /** Config schema version for migration tracking. Default: 1 */
+    _version?: number;
     /** Log level: error, warn, info, debug. Default: "info" */
     log_level?: 'error' | 'warn' | 'info' | 'debug';
     /** Suppress all output except errors. Default: false */
@@ -48,6 +51,7 @@ export interface ConfigWithSources extends Config {
  * Default configuration values
  */
 export const DEFAULT_CONFIG: Config = {
+    _version: 1,
     log_level: 'info',
     quiet: false,
     verbose: false,
@@ -192,25 +196,62 @@ export async function createDefaultConfig(configPath: string, verbose: boolean =
 /**
  * Load config from file and merge with defaults
  * Validates config against schema and throws helpful errors on invalid config
+ * Automatically migrates legacy configs to current version
  */
 export async function loadConfig(configPath: string, debug: boolean = false): Promise<Config> {
     try {
         const content = await fs.readFile(configPath, 'utf-8');
         const userConfig = toml.parse(content) as Config;
 
-        // Validate config against schema
-        if (!isValidConfig(userConfig)) {
-            const errors = getValidationErrors(userConfig);
+        // Check if config needs migration
+        if (isLegacyConfig(userConfig) || needsMigration(userConfig)) {
+            if (debug) {
+                console.error(`[config] Detected legacy or outdated config, migrating to version ${CURRENT_CONFIG_VERSION}`);
+            }
+
+            // Show deprecation warning for legacy format
+            if (isLegacyConfig(userConfig)) {
+                console.error(`[config] WARNING: Your config file uses a legacy format and has been automatically migrated to version ${CURRENT_CONFIG_VERSION}.`);
+                console.error(`[config] The original config has been backed up with a .bak suffix.`);
+                console.error(`[config] This legacy format will be deprecated in a future release.`);
+            }
+
+            // Backup original config
+            const backupPath = await backupConfig(configPath);
+            if (debug) {
+                console.error(`[config] Backed up original config to ${backupPath}`);
+            }
+
+            // Apply migrations
+            const migratedConfig = applyMigrations(userConfig);
+
+            // Write migrated config
+            const migratedContent = toml.stringify(migratedConfig as any);
+            await fs.writeFile(configPath, migratedContent, { mode: 0o644 });
+
+            if (debug) {
+                console.error(`[config] Successfully migrated config to version ${CURRENT_CONFIG_VERSION}`);
+            }
+
+            // Use migrated config for validation
+            userConfig._version = CURRENT_CONFIG_VERSION;
+        }
+
+        // Validate config against schema with line number tracking
+        const validationResult = ConfigSchema.safeParse(userConfig);
+        if (!validationResult.success) {
+            const errors = getValidationErrors(userConfig, content);
             if (debug) {
                 console.error(`[config] Validation errors for ${configPath}:`);
                 errors.forEach(err => {
-                    console.error(`  - ${err.path.join('.')}: ${err.message}`);
+                    const location = err.line ? `line ${err.line}` : 'unknown location';
+                    console.error(`  - ${err.path.join('.')} (${location}): ${err.message}`);
                     if (err.suggestion) {
                         console.error(`    Suggestion: ${err.suggestion}`);
                     }
                 });
             }
-            throw formatZodError(getValidationErrors(userConfig)[0] as any);
+            throw formatZodError(validationResult.error, content);
         }
 
         // Merge with defaults, user config takes precedence
@@ -411,4 +452,105 @@ export async function initializeConfig(options: ConfigOptions, verbose: boolean 
     // Return config without source tracking for normal use
     const { _sources, ...configWithoutSources } = config;
     return configWithoutSources;
+}
+
+/**
+ * Config reload result with status and details
+ */
+export interface ConfigReloadResult {
+    success: boolean;
+    oldConfig: Config;
+    newConfig: Config | null;
+    error?: string;
+    diff?: Record<string, { old: any; new: any }>;
+}
+
+/**
+ * Reload config from file with validation
+ * Validates new config before applying, keeps old config active on validation errors
+ */
+export async function reloadConfig(
+    options: ConfigOptions,
+    cliArgs?: Partial<Config>,
+    verbose: boolean = false
+): Promise<ConfigReloadResult> {
+    const configPath = getConfigFilePath(options.projectSlug, options.configPath);
+
+    // Load current config (old config)
+    const oldConfig = await loadConfigWithPrecedence(options, cliArgs);
+    const { _sources, ...oldConfigWithoutSources } = oldConfig;
+
+    try {
+        // Load new config from file
+        const newConfig = await loadConfigWithPrecedence(options, cliArgs);
+        const { _sources: newSources, ...newConfigWithoutSources } = newConfig;
+
+        // Validate new config
+        const validationResult = ConfigSchema.safeParse(newConfigWithoutSources);
+        if (!validationResult.success) {
+            const content = await fs.readFile(configPath, 'utf-8');
+            const errors = getValidationErrors(newConfigWithoutSources, content);
+            const errorDetails = errors.map(err => {
+                const location = err.line ? `line ${err.line}` : 'unknown location';
+                return `${err.path.join('.')} (${location}): ${err.message}`;
+            }).join('; ');
+
+            if (verbose) {
+                console.error(`[config] Validation failed for reloaded config: ${errorDetails}`);
+            }
+
+            return {
+                success: false,
+                oldConfig: oldConfigWithoutSources,
+                newConfig: null,
+                error: `Config validation failed: ${errorDetails}`,
+            };
+        }
+
+        // Calculate diff if verbose
+        let diff: Record<string, { old: any; new: any }> | undefined;
+        if (verbose) {
+            diff = {};
+            const allKeys = new Set([
+                ...Object.keys(oldConfigWithoutSources),
+                ...Object.keys(newConfigWithoutSources),
+            ]);
+
+            for (const key of allKeys) {
+                const oldValue = oldConfigWithoutSources[key as keyof Config];
+                const newValue = newConfigWithoutSources[key as keyof Config];
+                if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                    diff![key] = { old: oldValue, new: newValue };
+                }
+            }
+        }
+
+        if (verbose) {
+            console.error(`[config] Successfully reloaded config from ${configPath}`);
+            if (diff && Object.keys(diff).length > 0) {
+                console.error(`[config] Config changes:`);
+                for (const [key, change] of Object.entries(diff)) {
+                    console.error(`  ${key}: ${JSON.stringify(change.old)} -> ${JSON.stringify(change.new)}`);
+                }
+            }
+        }
+
+        return {
+            success: true,
+            oldConfig: oldConfigWithoutSources,
+            newConfig: newConfigWithoutSources,
+            diff,
+        };
+    } catch (error) {
+        if (verbose) {
+            console.error(`[config] Failed to reload config: ${error}`);
+        }
+
+        return {
+            success: false,
+            oldConfig: oldConfigWithoutSources,
+            newConfig: null,
+            error: error instanceof Error ? error.message : String(error),
+        };
+    }
 }

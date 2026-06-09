@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 6
 parallel_id: 4
 branch: "feature/current/20260707-cli-typescript-standards/story-06-004-signal-based-config-reload"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["02-002", "06-001"]

@@ -18,6 +18,10 @@ class TestConfigModel:
         """Test default configuration values."""
         config = ConfigModel()
         assert config.version == 1
+        assert config.mode == "agent"
+        assert config.default_format == "toon"
+        assert config.truncation_limit == 1000
+        assert config.fields_default == []
         assert config.log_level == "info"
         assert config.color == "auto"
         assert config.output_format == "text"
@@ -55,6 +59,24 @@ class TestConfigModel:
         with pytest.raises(ValueError) as exc_info:
             ConfigModel(timeout=0)
         assert "timeout must be greater than 0" in str(exc_info.value)
+
+    def test_invalid_mode(self):
+        """Test validation rejects invalid mode."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(mode="invalid")
+        assert "Invalid mode" in str(exc_info.value)
+
+    def test_invalid_default_format(self):
+        """Test validation rejects invalid default_format."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(default_format="invalid")
+        assert "Invalid default_format" in str(exc_info.value)
+
+    def test_invalid_truncation_limit(self):
+        """Test validation rejects zero truncation_limit."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(truncation_limit=0)
+        assert "truncation_limit must be greater than 0" in str(exc_info.value)
 
 
 class TestConfigManager:
@@ -94,6 +116,30 @@ class TestConfigManager:
             del os.environ["{{ project_slug | upper | replace('-', '_') }}_COLOR"]
             del os.environ["{{ project_slug | upper | replace('-', '_') }}_QUIET"]
 
+    def test_load_agent_mode_environment(self):
+        """Test loading agent mode settings from environment variables."""
+        import os
+
+        # Set agent mode environment variables
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_MODE"] = "human"
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_DEFAULT_FORMAT"] = "json"
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_TRUNCATION_LIMIT"] = "500"
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_FIELDS_DEFAULT"] = "id,name,status"
+
+        try:
+            manager = ConfigManager()
+            manager._load_environment()
+            assert manager.config.mode == "human"
+            assert manager.config.default_format == "json"
+            assert manager.config.truncation_limit == 500
+            assert manager.config.fields_default == ["id", "name", "status"]
+        finally:
+            # Clean up
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_MODE"]
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_DEFAULT_FORMAT"]
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_TRUNCATION_LIMIT"]
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_FIELDS_DEFAULT"]
+
     def test_parse_toml_config(self):
         """Test parsing TOML configuration."""
         toml_content = """
@@ -120,6 +166,33 @@ experimental = true
             assert config.max_concurrent == 8
             assert config.timeout == 60
             assert config.experimental is True
+        finally:
+            temp_path.unlink()
+
+    def test_parse_toml_config_with_agent_mode(self):
+        """Test parsing TOML configuration with agent mode settings."""
+        toml_content = """
+version = 1
+mode = "human"
+default_format = "json"
+truncation_limit = 500
+fields_default = ["id", "name", "status"]
+log_level = "debug"
+color = "never"
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
+            f.write(toml_content)
+            temp_path = Path(f.name)
+
+        try:
+            manager = ConfigManager()
+            config = manager._parse_config(toml_content, temp_path)
+            assert config.mode == "human"
+            assert config.default_format == "json"
+            assert config.truncation_limit == 500
+            assert config.fields_default == ["id", "name", "status"]
+            assert config.log_level == "debug"
+            assert config.color == "never"
         finally:
             temp_path.unlink()
 
@@ -218,6 +291,37 @@ log_level = "debug"
             # Check new config has updated version
             new_content = config_path.read_text()
             assert "version = 1" in new_content
+
+            # Clean up
+            backup_path.unlink()
+
+    def test_migrate_config_agent_mode(self):
+        """Test configuration migration adds agent mode settings."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+
+            # Write old version config without agent mode settings
+            old_content = """
+version = 0
+log_level = "debug"
+color = "never"
+"""
+            config_path.write_text(old_content)
+
+            old_config = ConfigModel(version=0, log_level="debug", color="never")
+            manager = ConfigManager()
+            manager._migrate_config(config_path, old_config)
+
+            # Check backup was created
+            backup_path = config_path.with_suffix(".toml.bak")
+            assert backup_path.exists()
+
+            # Check new config has agent mode settings with defaults
+            new_content = config_path.read_text()
+            assert "version = 1" in new_content
+            assert "mode = \"agent\"" in new_content
+            assert "default_format = \"toon\"" in new_content
+            assert "truncation_limit = 1000" in new_content
 
             # Clean up
             backup_path.unlink()

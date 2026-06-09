@@ -39,6 +39,12 @@ class ConfigModel(BaseModel):
     """Configuration model with validation."""
     version: int = Field(default=CONFIG_VERSION, description="Configuration version for migration tracking")
 
+    # AXI Mode settings
+    mode: str = Field(default="agent", description="Execution mode: agent or human")
+    default_format: str = Field(default="toon", description="Default output format: toon, json, or human")
+    truncation_limit: int = Field(default=1000, description="Maximum characters for content truncation")
+    fields_default: List[str] = Field(default_factory=list, description="Default fields to include in output")
+
     # Logging settings
     log_level: str = Field(default="info", description="Log level: error, warn, info, debug")
     quiet: bool = Field(default=False, description="Suppress non-error output")
@@ -55,6 +61,29 @@ class ConfigModel(BaseModel):
 
     # Feature flags
     experimental: bool = Field(default=False, description="Enable experimental features")
+
+    @field_validator('mode')
+    @classmethod
+    def validate_mode(cls, v):
+        valid_modes = ['agent', 'human']
+        if v not in valid_modes:
+            raise ValueError(f"Invalid mode: {v}. Must be one of: {', '.join(valid_modes)}")
+        return v
+
+    @field_validator('default_format')
+    @classmethod
+    def validate_default_format(cls, v):
+        valid_formats = ['toon', 'json', 'human']
+        if v not in valid_formats:
+            raise ValueError(f"Invalid default_format: {v}. Must be one of: {', '.join(valid_formats)}")
+        return v
+
+    @field_validator('truncation_limit')
+    @classmethod
+    def validate_truncation_limit(cls, v):
+        if v <= 0:
+            raise ValueError(f"truncation_limit must be greater than 0, got {v}")
+        return v
 
     @field_validator('log_level')
     @classmethod
@@ -147,6 +176,10 @@ class ConfigManager:
         env_prefix = PROJECT_SLUG.upper().replace("-", "_")
 
         env_mappings = {
+            f"{env_prefix}_MODE": "mode",
+            f"{env_prefix}_DEFAULT_FORMAT": "default_format",
+            f"{env_prefix}_TRUNCATION_LIMIT": "truncation_limit",
+            f"{env_prefix}_FIELDS_DEFAULT": "fields_default",
             f"{env_prefix}_LOG_LEVEL": "log_level",
             f"{env_prefix}_COLOR": "color",
             f"{env_prefix}_OUTPUT_FORMAT": "output_format",
@@ -162,12 +195,15 @@ class ConfigManager:
                 # Convert string to appropriate type
                 if config_key in ['quiet', 'experimental']:
                     value = value.lower() in ('true', '1', 'yes', 'on')
-                elif config_key in ['max_concurrent', 'timeout']:
+                elif config_key in ['max_concurrent', 'timeout', 'truncation_limit']:
                     try:
                         value = int(value)
                     except ValueError:
                         self.logger.warn(f"Invalid integer value for {env_var}: {value}", module="config")
                         continue
+                elif config_key == 'fields_default':
+                    # Parse comma-separated list
+                    value = [item.strip() for item in value.split(',') if item.strip()]
 
                 setattr(self.config, config_key, value)
                 self.logger.debug(f"Loaded {config_key} from environment", module="config")
@@ -236,6 +272,10 @@ class ConfigManager:
         # File sources (USER, LOCAL) always override completely
         # ENVIRONMENT and COMMAND_LINE only override if explicitly set (not default)
         if source in (ConfigSource.USER, ConfigSource.LOCAL):
+            self.config.mode = new_config.mode
+            self.config.default_format = new_config.default_format
+            self.config.truncation_limit = new_config.truncation_limit
+            self.config.fields_default = new_config.fields_default
             self.config.log_level = new_config.log_level
             self.config.color = new_config.color
             self.config.output_format = new_config.output_format
@@ -246,6 +286,14 @@ class ConfigManager:
         else:
             # For ENVIRONMENT and COMMAND_LINE, only override if explicitly set
             defaults = ConfigModel()
+            if new_config.mode != defaults.mode:
+                self.config.mode = new_config.mode
+            if new_config.default_format != defaults.default_format:
+                self.config.default_format = new_config.default_format
+            if new_config.truncation_limit != defaults.truncation_limit:
+                self.config.truncation_limit = new_config.truncation_limit
+            if new_config.fields_default != defaults.fields_default:
+                self.config.fields_default = new_config.fields_default
             if new_config.log_level != defaults.log_level:
                 self.config.log_level = new_config.log_level
             if new_config.color != defaults.color:
@@ -317,6 +365,20 @@ class ConfigManager:
             # Write version
             f.write(f"# Configuration version (do not modify)\n")
             f.write(f"version = {config_dict['version']}\n")
+            f.write("\n")
+
+            # Write AXI mode settings
+            f.write(f"# AXI execution mode: agent or human\n")
+            f.write(f"mode = \"{config_dict['mode']}\"\n")
+            f.write(f"# Default output format: toon, json, or human\n")
+            f.write(f"default_format = \"{config_dict['default_format']}\"\n")
+            f.write(f"# Maximum characters for content truncation\n")
+            f.write(f"truncation_limit = {config_dict['truncation_limit']}\n")
+            f.write(f"# Default fields to include in output (comma-separated)\n")
+            if config_dict['fields_default']:
+                f.write(f"fields_default = {config_dict['fields_default']}\n")
+            else:
+                f.write(f"# fields_default = []\n")
             f.write("\n")
 
             # Write logging settings

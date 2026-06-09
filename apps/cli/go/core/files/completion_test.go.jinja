@@ -43,6 +43,9 @@ func TestCompletionCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Initialize logger to prevent nil pointer dereference
+			logger = NewLogger("test")
+
 			// Create a test root command
 			testCmd := &cobra.Command{
 				Use: "{{ project_slug }}",
@@ -53,6 +56,7 @@ func TestCompletionCommand(t *testing.T) {
 			args := []string{"completion", tt.shell}
 			var out bytes.Buffer
 			testCmd.SetOut(&out)
+			testCmd.SetErr(&out)
 			testCmd.SetArgs(args)
 
 			err := testCmd.Execute()
