@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 4
 parallel_id: 1
 branch: "feature/current/20260707-cli-rust-standards/story-04-001-testing-suite"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-002", "01-003", "01-004"]
@@ -27,25 +27,25 @@ Implement comprehensive testing suite covering help output, globbing, stdin, con
 
 ## Sub-Tasks
 
-- [ ] Add assert_cmd, predicates, tempfile dependencies to Cargo.toml
-- [ ] Create test directory structure
-- [ ] Implement tests for help output validation
-- [ ] Implement tests for globbing patterns
-- [ ] Implement tests for stdin handling
-- [ ] Implement tests for config precedence (CLI > env > local > user > system > defaults)
-- [ ] Implement tests for JSON vs human output
-- [ ] Implement tests for exit-code behavior (0, 1, 2, specific codes)
-- [ ] Implement tests for standard arguments (--help, --version, --usage)
-- [ ] Implement tests for config file initialization
-- [ ] Implement tests for shell completion scripts
-- [ ] Implement tests for error handling and formatting
-- [ ] Implement tests for daemon mode operations
-- [ ] Add property-based tests for configuration logic
-- [ ] Add cross-platform tests for path handling
-- [ ] Add performance benchmarks for startup time
-- [ ] Set up test coverage reporting
-- [ ] Ensure >90% coverage for all new code
-- [ ] Add tests to CI pipeline
+- [x] Add assert_cmd, predicates, tempfile dependencies to Cargo.toml
+- [x] Create test directory structure
+- [x] Implement tests for help output validation
+- [x] Implement tests for globbing patterns
+- [x] Implement tests for stdin handling
+- [x] Implement tests for config precedence (CLI > env > local > user > system > defaults)
+- [x] Implement tests for JSON vs human output
+- [x] Implement tests for exit-code behavior (0, 1, 2, specific codes)
+- [x] Implement tests for standard arguments (--help, --version, --usage)
+- [x] Implement tests for config file initialization
+- [x] Implement tests for shell completion scripts
+- [x] Implement tests for error handling and formatting
+- [x] Implement tests for daemon mode operations
+- [x] Add property-based tests for configuration logic
+- [x] Add cross-platform tests for path handling
+- [x] Add performance benchmarks for startup time
+- [x] Set up test coverage reporting
+- [x] Ensure >90% coverage for all new code
+- [x] Add tests to CI pipeline
 
 ## Relevant Files
 

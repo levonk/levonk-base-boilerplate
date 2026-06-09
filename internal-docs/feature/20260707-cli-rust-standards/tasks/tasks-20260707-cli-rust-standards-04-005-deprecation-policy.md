@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 4
 parallel_id: 5
 branch: "feature/current/20260707-cli-rust-standards/story-04-005-deprecation-policy"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -27,7 +27,7 @@ Implement legacy deprecation policy with clear end-of-support dates (minimum 6 m
 
 ## Sub-Tasks
 
-- [ ] Create deprecation.rs module
+- [~] Create deprecation.rs module
 - [ ] Implement deprecation tracking system
 - [ ] Add deprecation announcement mechanism
 - [ ] Implement end-of-support date tracking

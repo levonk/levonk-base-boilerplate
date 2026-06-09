@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 4
 parallel_id: 3
 branch: "feature/current/20260707-cli-rust-standards/story-04-003-privacy-mode"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -27,19 +27,19 @@ Implement privacy mode with explicit ignore lists for sensitive identifiers, dis
 
 ## Sub-Tasks
 
-- [ ] Create privacy.rs module
-- [ ] Implement ignore list configuration in config file
-- [ ] Add privacy mode flag to CLI
-- [ ] Implement identifier detection logic
-- [ ] Add "unknown" vs "anonymous" distinction
-- [ ] Implement ignore list matching
-- [ ] Add configurable privacy toggles for data collection
-- [ ] Integrate privacy mode with data collection
-- [ ] Add privacy mode to logging
-- [ ] Create tests for ignore list functionality
-- [ ] Create tests for unknown vs anonymous distinction
-- [ ] Create tests for privacy toggles
-- [ ] Create tests for privacy mode integration
+- [x] Create privacy.rs module
+- [x] Implement ignore list configuration in config file
+- [x] Add privacy mode flag to CLI
+- [x] Implement identifier detection logic
+- [x] Add "unknown" vs "anonymous" distinction
+- [x] Implement ignore list matching
+- [x] Add configurable privacy toggles for data collection
+- [x] Integrate privacy mode with data collection
+- [x] Add privacy mode to logging
+- [x] Create tests for ignore list functionality
+- [x] Create tests for unknown vs anonymous distinction
+- [x] Create tests for privacy toggles
+- [x] Create tests for privacy mode integration
 
 ## Relevant Files
 
@@ -51,13 +51,13 @@ Implement privacy mode with explicit ignore lists for sensitive identifiers, dis
 
 ## Acceptance Criteria
 
-- [ ] Ignore list configuration works
-- [ ] Privacy mode flag toggles privacy features
-- [ ] "Unknown" identifiers logged but not assigned
-- [ ] "Anonymous" identifiers ignored entirely
-- [ ] Privacy toggles disable specific data collection
-- [ ] Privacy mode integrates with data collection
-- [ ] All tests pass
+- [x] Ignore list configuration works
+- [x] Privacy mode flag toggles privacy features
+- [x] "Unknown" identifiers logged but not assigned
+- [x] "Anonymous" identifiers ignored entirely
+- [x] Privacy toggles disable specific data collection
+- [x] Privacy mode integrates with data collection
+- [x] All tests pass
 
 ## Test Plan
 

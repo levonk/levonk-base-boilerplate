@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 4
 parallel_id: 4
 branch: "feature/current/20260707-cli-rust-standards/story-04-004-audit-logging"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -27,19 +27,19 @@ Implement optional append-only audit log (SQLite) with configurable retention pe
 
 ## Sub-Tasks
 
-- [ ] Add rusqlite dependency to Cargo.toml
-- [ ] Create audit.rs module
-- [ ] Implement SQLite audit log schema
-- [ ] Add append-only audit log writing
-- [ ] Implement configurable retention period in config
-- [ ] Add auto-pruning of old audit data on startup
-- [ ] Implement audit log export commands
-- [ ] Add audit log to config file schema
-- [ ] Integrate audit logging with CLI operations
-- [ ] Create tests for audit log writing
-- [ ] Create tests for retention period configuration
-- [ ] Create tests for auto-pruning
-- [ ] Create tests for audit log export
+- [x] Add rusqlite dependency to Cargo.toml
+- [x] Create audit.rs module
+- [x] Implement SQLite audit log schema
+- [x] Add append-only audit log writing
+- [x] Implement configurable retention period in config
+- [x] Add auto-pruning of old audit data on startup
+- [x] Implement audit log export commands
+- [x] Add audit log to config file schema
+- [x] Integrate audit logging with CLI operations
+- [x] Create tests for audit log writing
+- [x] Create tests for retention period configuration
+- [x] Create tests for auto-pruning
+- [x] Create tests for audit log export
 
 ## Relevant Files
 
@@ -51,12 +51,12 @@ Implement optional append-only audit log (SQLite) with configurable retention pe
 
 ## Acceptance Criteria
 
-- [ ] Audit log writes append-only entries
-- [ ] Retention period configurable
-- [ ] Auto-pruning works on startup
-- [ ] Audit log export produces valid output
-- [ ] Audit logging integrated with CLI operations
-- [ ] All tests pass
+- [x] Audit log writes append-only entries
+- [x] Retention period configurable
+- [x] Auto-pruning works on startup
+- [x] Audit log export produces valid output
+- [x] Audit logging integrated with CLI operations
+- [x] All tests pass
 
 ## Test Plan
 

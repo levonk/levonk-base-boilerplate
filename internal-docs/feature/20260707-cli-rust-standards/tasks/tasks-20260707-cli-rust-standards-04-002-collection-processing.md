@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-rust-standards/20260707-cli-rust-s
 phase: 4
 parallel_id: 2
 branch: "feature/current/20260707-cli-rust-standards/story-04-002-collection-processing"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["02-004"]
@@ -54,12 +54,12 @@ Implement separation of collection (daemon/background) from processing (offline 
 
 ## Acceptance Criteria
 
-- [ ] Data collection works in daemon mode
-- [ ] Data export commands produce valid export files
-- [ ] Offline analysis commands work on exported data
-- [ ] Collection and processing separated cleanly
-- [ ] Cross-environment workflow supported
-- [ ] All tests pass
+- [x] Data collection works in daemon mode
+- [x] Data export commands produce valid export files
+- [x] Offline analysis commands work on exported data
+- [x] Collection and processing separated cleanly
+- [x] Cross-environment workflow supported
+- [x] All tests pass
 
 ## Test Plan
 
