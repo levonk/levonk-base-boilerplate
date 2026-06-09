@@ -1,0 +1,184 @@
+package formatting
+
+import (
+	"testing"
+)
+
+func TestDetermineFormat(t *testing.T) {
+	tests := []struct {
+		name       string
+		mode       Mode
+		toonFlag   bool
+		formatFlag string
+		jsonOutput bool
+		expected   Format
+	}{
+		{
+			name:       "toon flag takes precedence",
+			mode:       ModeHuman,
+			toonFlag:   true,
+			formatFlag: "",
+			jsonOutput: false,
+			expected:   FormatTOON,
+		},
+		{
+			name:       "format flag toon",
+			mode:       ModeHuman,
+			toonFlag:   false,
+			formatFlag: "toon",
+			jsonOutput: false,
+			expected:   FormatTOON,
+		},
+		{
+			name:       "format flag json",
+			mode:       ModeAgent,
+			toonFlag:   false,
+			formatFlag: "json",
+			jsonOutput: false,
+			expected:   FormatJSON,
+		},
+		{
+			name:       "format flag human",
+			mode:       ModeAgent,
+			toonFlag:   false,
+			formatFlag: "human",
+			jsonOutput: false,
+			expected:   FormatHuman,
+		},
+		{
+			name:       "json flag",
+			mode:       ModeAgent,
+			toonFlag:   false,
+			formatFlag: "",
+			jsonOutput: true,
+			expected:   FormatJSON,
+		},
+		{
+			name:       "agent mode defaults to TOON",
+			mode:       ModeAgent,
+			toonFlag:   false,
+			formatFlag: "",
+			jsonOutput: false,
+			expected:   FormatTOON,
+		},
+		{
+			name:       "human mode defaults to JSON",
+			mode:       ModeHuman,
+			toonFlag:   false,
+			formatFlag: "",
+			jsonOutput: false,
+			expected:   FormatJSON,
+		},
+		{
+			name:       "invalid format flag falls through to mode default",
+			mode:       ModeAgent,
+			toonFlag:   false,
+			formatFlag: "invalid",
+			jsonOutput: false,
+			expected:   FormatTOON,
+		},
+		{
+			name:       "toon flag overrides format flag",
+			mode:       ModeHuman,
+			toonFlag:   true,
+			formatFlag: "json",
+			jsonOutput: false,
+			expected:   FormatTOON,
+		},
+		{
+			name:       "toon flag overrides json flag",
+			mode:       ModeHuman,
+			toonFlag:   true,
+			formatFlag: "",
+			jsonOutput: true,
+			expected:   FormatTOON,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			formatter := NewFormatter(tt.mode, tt.toonFlag, tt.formatFlag, tt.jsonOutput)
+			result := formatter.DetermineFormat()
+			if result != tt.expected {
+				t.Errorf("DetermineFormat() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormatPrecedence(t *testing.T) {
+	// Test the full precedence chain
+	// 1. --toon flag
+	// 2. --format flag
+	// 3. --json flag
+	// 4. Mode-based default
+
+	formatter := NewFormatter(ModeHuman, true, "json", true)
+	result := formatter.DetermineFormat()
+	if result != FormatTOON {
+		t.Errorf("Expected TOON when --toon flag is set, got %v", result)
+	}
+
+	formatter = NewFormatter(ModeHuman, false, "toon", true)
+	result = formatter.DetermineFormat()
+	if result != FormatTOON {
+		t.Errorf("Expected TOON when --format=toon, got %v", result)
+	}
+
+	formatter = NewFormatter(ModeHuman, false, "json", true)
+	result = formatter.DetermineFormat()
+	if result != FormatJSON {
+		t.Errorf("Expected JSON when --json flag is set, got %v", result)
+	}
+
+	formatter = NewFormatter(ModeAgent, false, "", false)
+	result = formatter.DetermineFormat()
+	if result != FormatTOON {
+		t.Errorf("Expected TOON in agent mode, got %v", result)
+	}
+
+	formatter = NewFormatter(ModeHuman, false, "", false)
+	result = formatter.DetermineFormat()
+	if result != FormatJSON {
+		t.Errorf("Expected JSON in human mode, got %v", result)
+	}
+}
+
+func TestFormatString(t *testing.T) {
+	tests := []struct {
+		input    Format
+		expected string
+	}{
+		{FormatTOON, "toon"},
+		{FormatJSON, "json"},
+		{FormatHuman, "human"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			result := string(tt.input)
+			if result != tt.expected {
+				t.Errorf("Format string = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestModeString(t *testing.T) {
+	tests := []struct {
+		input    Mode
+		expected string
+	}{
+		{ModeAgent, "agent"},
+		{ModeHuman, "human"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.expected, func(t *testing.T) {
+			result := string(tt.input)
+			if result != tt.expected {
+				t.Errorf("Mode string = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}

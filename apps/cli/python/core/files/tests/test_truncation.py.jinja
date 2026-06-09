@@ -1,0 +1,288 @@
+# vim: set ft=python:
+"""
+Tests for content truncation functionality.
+"""
+
+import pytest
+from {{ project_slug }}.output.truncation import Truncator, TruncationResult, truncate_text, apply_truncation
+
+
+class TestTruncationResult:
+    """Test TruncationResult dataclass."""
+    
+    def test_to_dict(self):
+        """Test conversion to dictionary."""
+        result = TruncationResult(
+            truncated_text="test...",
+            was_truncated=True,
+            original_length=100,
+            truncated_length=7,
+            limit=10
+        )
+        
+        expected = {
+            "text": "test...",
+            "truncated": True,
+            "original_length": 100,
+            "truncated_length": 7,
+            "limit": 10
+        }
+        
+        assert result.to_dict() == expected
+
+
+class TestTruncator:
+    """Test Truncator class."""
+    
+    def test_truncate_short_text(self):
+        """Test truncation of text shorter than limit."""
+        truncator = Truncator(limit=1000)
+        text = "short text"
+        result = truncator.truncate(text)
+        
+        assert result.was_truncated is False
+        assert result.truncated_text == text
+        assert result.original_length == len(text)
+        assert result.truncated_length == len(text)
+    
+    def test_truncate_exact_limit(self):
+        """Test truncation of text exactly at limit."""
+        truncator = Truncator(limit=10)
+        text = "0123456789"
+        result = truncator.truncate(text)
+        
+        assert result.was_truncated is False
+        assert result.truncated_text == text
+    
+    def test_truncate_long_text(self):
+        """Test truncation of text longer than limit."""
+        truncator = Truncator(limit=10)
+        text = "0123456789abcdef"
+        result = truncator.truncate(text)
+        
+        assert result.was_truncated is True
+        assert result.truncated_text == "0123456..."
+        assert result.original_length == 16
+        assert result.truncated_length == 10
+        assert result.limit == 10
+    
+    def test_truncate_empty_string(self):
+        """Test truncation of empty string."""
+        truncator = Truncator(limit=1000)
+        result = truncator.truncate("")
+        
+        assert result.was_truncated is False
+        assert result.truncated_text == ""
+        assert result.original_length == 0
+    
+    def test_custom_ellipsis(self):
+        """Test custom ellipsis string."""
+        truncator = Truncator(limit=10, ellipsis=" [more]")
+        text = "0123456789abcdef"
+        result = truncator.truncate(text)
+        
+        assert result.truncated_text == "012 [more]"
+    
+    def test_truncate_field_string(self):
+        """Test truncation of a string field."""
+        truncator = Truncator(limit=10)
+        value = "0123456789abcdef"
+        result = truncator.truncate_field(value, "description")
+        
+        assert isinstance(result, dict)
+        assert result["truncated"] is True
+        assert result["original_length"] == 16
+        assert result["field"] == "description"
+    
+    def test_truncate_field_non_string(self):
+        """Test truncation of non-string field (should pass through)."""
+        truncator = Truncator(limit=10)
+        value = 12345
+        result = truncator.truncate_field(value, "count")
+        
+        assert result == 12345
+    
+    def test_truncate_dict(self):
+        """Test truncation of dictionary fields."""
+        truncator = Truncator(limit=10)
+        data = {
+            "name": "short",
+            "description": "0123456789abcdef",
+            "count": 5
+        }
+        result = truncator.truncate_dict(data)
+        
+        assert result["name"] == "short"
+        assert isinstance(result["description"], dict)
+        assert result["description"]["truncated"] is True
+        assert result["count"] == 5
+    
+    def test_truncate_dict_specific_fields(self):
+        """Test truncation of specific dictionary fields only."""
+        truncator = Truncator(limit=10)
+        data = {
+            "name": "0123456789abcdef",
+            "description": "0123456789abcdef",
+            "count": 5
+        }
+        result = truncator.truncate_dict(data, fields=["description"])
+        
+        assert result["name"] == "0123456789abcdef"  # Not truncated
+        assert isinstance(result["description"], dict)  # Truncated
+        assert result["count"] == 5
+    
+    def test_get_suggestion_truncated(self):
+        """Test suggestion generation for truncated text."""
+        truncator = Truncator(limit=10)
+        result = truncator.truncate("0123456789abcdef")
+        suggestion = truncator.get_suggestion(result)
+        
+        assert suggestion is not None
+        assert "--full" in suggestion
+        assert "16 chars" in suggestion
+    
+    def test_get_suggestion_not_truncated(self):
+        """Test suggestion generation for non-truncated text."""
+        truncator = Truncator(limit=1000)
+        result = truncator.truncate("short")
+        suggestion = truncator.get_suggestion(result)
+        
+        assert suggestion is None
+    
+    def test_apply_to_output_string(self):
+        """Test applying truncation to string output."""
+        truncator = Truncator(limit=10)
+        data = "0123456789abcdef"
+        result = truncator.apply_to_output(data)
+        
+        assert isinstance(result, dict)
+        assert result["truncated"] is True
+        assert "suggestion" in result
+    
+    def test_apply_to_output_string_full(self):
+        """Test applying truncation to string with full_output=True."""
+        truncator = Truncator(limit=10)
+        data = "0123456789abcdef"
+        result = truncator.apply_to_output(data, full_output=True)
+        
+        assert result == "0123456789abcdef"
+    
+    def test_apply_to_output_dict(self):
+        """Test applying truncation to dict output."""
+        truncator = Truncator(limit=10)
+        data = {"description": "0123456789abcdef"}
+        result = truncator.apply_to_output(data)
+        
+        assert isinstance(result["description"], dict)
+        assert result["description"]["truncated"] is True
+    
+    def test_apply_to_output_list(self):
+        """Test applying truncation to list output."""
+        truncator = Truncator(limit=10)
+        data = ["short", "0123456789abcdef", 123]
+        result = truncator.apply_to_output(data)
+        
+        assert result[0] == "short"
+        assert isinstance(result[1], dict)
+        assert result[1]["truncated"] is True
+        assert result[2] == 123
+
+
+class TestTruncateText:
+    """Test truncate_text helper function."""
+    
+    def test_truncate_text_short(self):
+        """Test truncate_text with short text."""
+        result = truncate_text("short", limit=1000)
+        
+        assert result.was_truncated is False
+        assert result.truncated_text == "short"
+    
+    def test_truncate_text_long(self):
+        """Test truncate_text with long text."""
+        result = truncate_text("0123456789abcdef", limit=10)
+        
+        assert result.was_truncated is True
+        assert result.truncated_text == "0123456..."
+    
+    def test_truncate_text_custom_limit(self):
+        """Test truncate_text with custom limit."""
+        result = truncate_text("0123456789abcdef", limit=5)
+        
+        assert result.was_truncated is True
+        assert result.limit == 5
+
+
+class TestApplyTruncation:
+    """Test apply_truncation helper function."""
+    
+    def test_apply_truncation_string(self):
+        """Test apply_truncation on string."""
+        result = apply_truncation("0123456789abcdef", limit=10, full_output=False)
+        
+        assert isinstance(result, dict)
+        assert result["truncated"] is True
+    
+    def test_apply_truncation_string_full(self):
+        """Test apply_truncation on string with full_output=True."""
+        result = apply_truncation("0123456789abcdef", limit=10, full_output=True)
+        
+        assert result == "0123456789abcdef"
+    
+    def test_apply_truncation_dict(self):
+        """Test apply_truncation on dict."""
+        data = {"description": "0123456789abcdef"}
+        result = apply_truncation(data, limit=10, full_output=False)
+        
+        assert isinstance(result["description"], dict)
+        assert result["description"]["truncated"] is True
+    
+    def test_apply_truncation_list(self):
+        """Test apply_truncation on list."""
+        data = ["0123456789abcdef", "short"]
+        result = apply_truncation(data, limit=10, full_output=False)
+        
+        assert isinstance(result[0], dict)
+        assert result[0]["truncated"] is True
+        assert result[1] == "short"
+
+
+class TestTruncationEdgeCases:
+    """Test edge cases for truncation."""
+    
+    def test_unicode_text(self):
+        """Test truncation with unicode characters."""
+        truncator = Truncator(limit=10)
+        text = "Hello 世界 🌍"
+        result = truncator.truncate(text)
+        
+        # Unicode characters should be handled correctly
+        assert result.original_length == len(text)
+    
+    def test_very_long_text(self):
+        """Test truncation of very long text."""
+        truncator = Truncator(limit=1000)
+        text = "a" * 10000
+        result = truncator.truncate(text)
+        
+        assert result.was_truncated is True
+        assert result.truncated_length == 1000
+        assert result.original_length == 10000
+    
+    def test_zero_limit(self):
+        """Test truncation with zero limit."""
+        truncator = Truncator(limit=0)
+        text = "test"
+        result = truncator.truncate(text)
+        
+        # With zero limit, should still show ellipsis
+        assert result.was_truncated is True
+    
+    def test_multiline_text(self):
+        """Test truncation of multiline text."""
+        truncator = Truncator(limit=20)
+        text = "line1\nline2\nline3\nline4"
+        result = truncator.truncate(text)
+        
+        assert result.was_truncated is True
+        assert "\n" in result.truncated_text or len(result.truncated_text) <= 20

@@ -16,6 +16,17 @@ export interface Job {
   progress?: number;
   result?: any;
   error?: string;
+  resourceUsage?: {
+    memoryMB?: number;
+    cpuPercent?: number;
+  };
+}
+
+export interface JobEvent {
+  timestamp: Date;
+  type: 'job_created' | 'job_started' | 'job_completed' | 'job_failed' | 'job_cancelled';
+  jobId: string;
+  details?: any;
 }
 
 export interface DaemonConfig {
@@ -39,11 +50,13 @@ const DEFAULT_DAEMON_CONFIG: DaemonConfig = {
 class DaemonManager {
   private process: ChildProcess | null = null;
   private jobs: Map<string, Job> = new Map();
+  private events: JobEvent[] = [];
   private config: DaemonConfig;
   private logger: ReturnType<typeof createLogger>;
   private stateDir: string;
   private pidFile: string;
   private jobsFile: string;
+  private eventsFile: string;
 
   constructor(config: Partial<DaemonConfig> = {}, loggerOptions?: LoggerOptions) {
     this.config = { ...DEFAULT_DAEMON_CONFIG, ...config };
@@ -51,11 +64,16 @@ class DaemonManager {
     this.stateDir = join(homedir(), '.{{ project_slug }}', 'daemon');
     this.pidFile = join(this.stateDir, 'daemon.pid');
     this.jobsFile = join(this.stateDir, 'jobs.json');
+    this.eventsFile = join(this.stateDir, 'events.json');
 
     // Ensure state directory exists
     if (!existsSync(this.stateDir)) {
       mkdirSync(this.stateDir, { recursive: true });
     }
+
+    // Load existing jobs and events
+    this.loadJobs();
+    this.loadEvents();
   }
 
   /**
@@ -161,6 +179,9 @@ class DaemonManager {
     this.jobs.set(job.id, job);
     this.saveJobs();
 
+    // Record job creation event
+    this.recordEvent('job_created', job.id, { command, args });
+
     this.logger.info(`Created job ${job.id}: ${command} ${args.join(' ')}`);
     return job;
   }
@@ -177,6 +198,13 @@ class DaemonManager {
    */
   listJobs(): Job[] {
     return Array.from(this.jobs.values());
+  }
+
+  /**
+   * List all events
+   */
+  listEvents(): JobEvent[] {
+    return this.events;
   }
 
   /**
@@ -197,6 +225,9 @@ class DaemonManager {
     job.status = 'cancelled';
     job.endTime = new Date();
     this.saveJobs();
+
+    // Record job cancellation event
+    this.recordEvent('job_cancelled', job.id);
 
     this.logger.info(`Cancelled job ${jobId}`);
     return true;
@@ -224,6 +255,9 @@ class DaemonManager {
       job.result = result;
       job.progress = 100;
       this.saveJobs();
+
+      // Record job completion event
+      this.recordEvent('job_completed', job.id, { result });
     }
   }
 
@@ -237,6 +271,24 @@ class DaemonManager {
       job.endTime = new Date();
       job.error = error;
       this.saveJobs();
+
+      // Record job failure event
+      this.recordEvent('job_failed', job.id, { error });
+    }
+  }
+
+  /**
+   * Start a job
+   */
+  startJob(jobId: string): void {
+    const job = this.jobs.get(jobId);
+    if (job) {
+      job.status = 'running';
+      job.startTime = new Date();
+      this.saveJobs();
+
+      // Record job start event
+      this.recordEvent('job_started', job.id);
     }
   }
 
@@ -256,6 +308,24 @@ class DaemonManager {
   }
 
   /**
+   * Load events from disk
+   */
+  private loadEvents(): void {
+    if (existsSync(this.eventsFile)) {
+      try {
+        const data = readFileSync(this.eventsFile, 'utf-8');
+        const events = JSON.parse(data) as JobEvent[];
+        this.events = events.map(event => ({
+          ...event,
+          timestamp: new Date(event.timestamp),
+        }));
+      } catch (error) {
+        this.logger.error(`Failed to load events: ${error}`);
+      }
+    }
+  }
+
+  /**
    * Save jobs to disk
    */
   private saveJobs(): void {
@@ -265,6 +335,31 @@ class DaemonManager {
     } catch (error) {
       this.logger.error(`Failed to save jobs: ${error}`);
     }
+  }
+
+  /**
+   * Save events to disk
+   */
+  private saveEvents(): void {
+    try {
+      writeFileSync(this.eventsFile, JSON.stringify(this.events, null, 2));
+    } catch (error) {
+      this.logger.error(`Failed to save events: ${error}`);
+    }
+  }
+
+  /**
+   * Record a job event
+   */
+  private recordEvent(type: JobEvent['type'], jobId: string, details?: any): void {
+    const event: JobEvent = {
+      timestamp: new Date(),
+      type,
+      jobId,
+      details,
+    };
+    this.events.push(event);
+    this.saveEvents();
   }
 
   /**

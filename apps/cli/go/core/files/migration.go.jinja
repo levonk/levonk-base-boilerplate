@@ -8,7 +8,7 @@ import (
 
 const (
 	// CurrentConfigVersion is the current config schema version
-	CurrentConfigVersion = 2
+	CurrentConfigVersion = 3
 
 	// LegacyConfigVersion is the version before migration was needed
 	LegacyConfigVersion = 1
@@ -48,9 +48,16 @@ func NewMigrationManager(configPath string, logger *Logger) *MigrationManager {
 func (mm *MigrationManager) registerMigrations() {
 	// Add migration from version 1 to version 2
 	mm.migrations = append(mm.migrations, Migration{
-		FromVersion: LegacyConfigVersion,
-		ToVersion:   CurrentConfigVersion,
+		FromVersion: 1,
+		ToVersion:   2,
 		MigrateFunc: mm.migrateV1ToV2,
+	})
+
+	// Add migration from version 2 to version 3 (AXI fields)
+	mm.migrations = append(mm.migrations, Migration{
+		FromVersion: 2,
+		ToVersion:   3,
+		MigrateFunc: mm.migrateV2ToV3,
 	})
 }
 
@@ -245,6 +252,42 @@ func (mm *MigrationManager) migrateV1ToV2(config map[string]interface{}) (map[st
 		migrated[k] = v
 	}
 	migrated["version"] = 2
+
+	return migrated, nil
+}
+
+// migrateV2ToV3 migrates config from version 2 to version 3 (AXI fields)
+func (mm *MigrationManager) migrateV2ToV3(config map[string]interface{}) (map[string]interface{}, error) {
+	mm.logger.Debug("Applying V2 to V3 migration (adding AXI fields)")
+
+	// Copy existing config
+	migrated := make(map[string]interface{})
+	for k, v := range config {
+		migrated[k] = v
+	}
+
+	// Add new AXI fields with default values if not present
+	if _, ok := migrated["default_format"]; !ok {
+		migrated["default_format"] = string(FormatToon)
+		mm.logger.Debug("Added default_format field with value: toon")
+	}
+
+	if _, ok := migrated["truncation_limit"]; !ok {
+		migrated["truncation_limit"] = 1000
+		mm.logger.Debug("Added truncation_limit field with value: 1000")
+	}
+
+	if _, ok := migrated["enable_contextual_help"]; !ok {
+		migrated["enable_contextual_help"] = true
+		mm.logger.Debug("Added enable_contextual_help field with value: true")
+	}
+
+	if _, ok := migrated["session_context_enabled"]; !ok {
+		migrated["session_context_enabled"] = false
+		mm.logger.Debug("Added session_context_enabled field with value: false")
+	}
+
+	migrated["version"] = 3
 
 	return migrated, nil
 }

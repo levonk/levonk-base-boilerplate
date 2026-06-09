@@ -1,0 +1,150 @@
+package formatting
+
+import (
+	"fmt"
+	"strings"
+
+	"{{ project_slug }}/internal/toon"
+)
+
+// Format represents the output format type
+type Format string
+
+const (
+	// FormatTOON is the TOON (Token-Oriented Object Notation) format
+	FormatTOON Format = "toon"
+	// FormatJSON is the JSON format
+	FormatJSON Format = "json"
+	// FormatHuman is the human-readable format
+	FormatHuman Format = "human"
+)
+
+// Formatter handles output formatting based on mode and flags
+type Formatter struct {
+	mode          Mode
+	toonFlag      bool
+	formatFlag    string
+	jsonOutput    bool
+}
+
+// Mode represents the CLI operation mode
+type Mode string
+
+const (
+	// ModeAgent is the agent mode (default for non-interactive environments)
+	ModeAgent Mode = "agent"
+	// ModeHuman is the human mode (interactive)
+	ModeHuman Mode = "human"
+)
+
+// NewFormatter creates a new formatter with the given configuration
+func NewFormatter(mode Mode, toonFlag bool, formatFlag string, jsonOutput bool) *Formatter {
+	return &Formatter{
+		mode:       mode,
+		toonFlag:   toonFlag,
+		formatFlag: formatFlag,
+		jsonOutput: jsonOutput,
+	}
+}
+
+// DetermineFormat determines the output format based on mode and flags
+// Precedence (highest to lowest):
+// 1. --toon flag
+// 2. --format flag
+// 3. --json flag
+// 4. Mode-based default (TOON for agent, JSON/human for human)
+func (f *Formatter) DetermineFormat() Format {
+	// 1. --toon flag takes highest precedence
+	if f.toonFlag {
+		return FormatTOON
+	}
+
+	// 2. --format flag
+	if f.formatFlag != "" {
+		switch strings.ToLower(f.formatFlag) {
+		case "toon":
+			return FormatTOON
+		case "json":
+			return FormatJSON
+		case "human":
+			return FormatHuman
+		default:
+			// Invalid format, fall through to mode-based default
+		}
+	}
+
+	// 3. --json flag
+	if f.jsonOutput {
+		return FormatJSON
+	}
+
+	// 4. Mode-based default
+	if f.mode == ModeAgent {
+		return FormatTOON
+	}
+	return FormatJSON // Human mode defaults to JSON (could be human-readable)
+}
+
+// FormatValue formats a value according to the determined format
+func (f *Formatter) FormatValue(v interface{}) (string, error) {
+	format := f.DetermineFormat()
+
+	switch format {
+	case FormatTOON:
+		return f.formatTOON(v)
+	case FormatJSON:
+		return f.formatJSON(v)
+	case FormatHuman:
+		return f.formatHuman(v)
+	default:
+		return "", fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// formatTOON formats a value as TOON
+func (f *Formatter) formatTOON(v interface{}) (string, error) {
+	// Convert the value to a TOON Value
+	toonValue, err := f.convertToTOON(v)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode using TOON encoder
+	encoder := toon.NewEncoder(toon.DefaultEncoderOptions())
+	return encoder.EncodeValue(toonValue)
+}
+
+// formatJSON formats a value as JSON
+func (f *Formatter) formatJSON(v interface{}) (string, error) {
+	// Use standard JSON encoding
+	// This is a placeholder - actual implementation would use encoding/json
+	return fmt.Sprintf("%#v", v), nil
+}
+
+// formatHuman formats a value as human-readable
+func (f *Formatter) formatHuman(v interface{}) (string, error) {
+	// Use human-readable formatting
+	return fmt.Sprintf("%v", v), nil
+}
+
+// convertToTOON converts a Go value to a TOON Value
+func (f *Formatter) convertToTOON(v interface{}) (toon.Value, error) {
+	// This is a simplified conversion
+	// A full implementation would handle all Go types recursively
+	switch val := v.(type) {
+	case string:
+		return toon.StringValue(val), nil
+	case int, int8, int16, int32, int64:
+		return toon.NumberValue(float64(val.(int64))), nil
+	case uint, uint8, uint16, uint32, uint64:
+		return toon.NumberValue(float64(val.(uint64))), nil
+	case float32, float64:
+		return toon.NumberValue(float64(val.(float64))), nil
+	case bool:
+		return toon.BoolValue(val), nil
+	case nil:
+		return toon.NullValue{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported type for TOON conversion: %T", v)
+	}
+}

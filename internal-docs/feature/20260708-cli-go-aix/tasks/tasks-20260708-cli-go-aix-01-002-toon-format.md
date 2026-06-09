@@ -31,32 +31,33 @@ Implement TOON (Token-Oriented Object Notation) format support for token-efficie
 - [x] Design TOON data structures and encoding strategy for Go
 - [x] Implement TOON encoder for basic types (strings, numbers, booleans, null)
 - [x] Implement TOON encoder for arrays with schema headers
-- [~] Implement TOON encoder for objects with field definitions
-- [ ] Implement TOON decoder for parsing TOON format back to Go structs
-- [ ] Add `--toon` flag to CLI argument parser
-- [ ] Add `--format=toon|json|human` flag to CLI argument parser
-- [ ] Implement format selection logic based on mode and flags
-- [ ] Set TOON as default format in agent mode
-- [ ] Keep JSON/human-readable as default in human mode
-- [ ] Integrate TOON encoder into existing output pipeline
-- [ ] Add TOON format to all command outputs
-- [ ] Write unit tests for TOON encoder/decoder
-- [ ] Write integration tests for format selection logic
-- [ ] Write tests for TOON output format compliance
-- [ ] Add benchmarks for TOON vs JSON encoding performance
-- [ ] Update CLI help text to document format options
+- [x] Implement TOON encoder for objects with field definitions
+- [x] Implement TOON decoder for parsing TOON format back to Go structs
+- [x] Add `--toon` flag to CLI argument parser
+- [x] Add `--format=toon|json|human` flag to CLI argument parser
+- [x] Implement format selection logic based on mode and flags
+- [x] Set TOON as default format in agent mode
+- [x] Keep JSON/human-readable as default in human mode
+- [x] Integrate TOON encoder into existing output pipeline
+- [x] Add TOON format to all command outputs
+- [x] Write unit tests for TOON encoder/decoder
+- [x] Write integration tests for format selection logic
+- [x] Write tests for TOON output format compliance
+- [x] Add benchmarks for TOON vs JSON encoding performance
+- [x] Update CLI help text to document format options
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/toon/encoder.go` — TOON encoder implementation (new file)
-- `boilerplate/apps/cli/go/core/files/internal/toon/encoder_test.go` — Tests for TOON encoder (new file)
-- `boilerplate/apps/cli/go/core/files/internal/toon/decoder.go` — TOON decoder implementation (new file)
-- `boilerplate/apps/cli/go/core/files/internal/toon/decoder_test.go` — Tests for TOON decoder (new file)
-- `boilerplate/apps/cli/go/core/files/internal/toon/types.go` — TOON data structures (new file)
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter.go` — Output formatting logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter_test.go` — Tests for output formatter (new file)
-- `boilerplate/apps/cli/go/core/files/cli/root.go` — Add format flags to root command
-- `boilerplate/apps/cli/go/core/files/go.mod` — Add any required dependencies
+- `boilerplate/apps/cli/go/core/files/internal/toon/encoder.go.jinja` — TOON encoder implementation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/toon/encoder_test.go.jinja` — Tests for TOON encoder (new file)
+- `boilerplate/apps/cli/go/core/files/internal/toon/decoder.go.jinja` — TOON decoder implementation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/toon/decoder_test.go.jinja` — Tests for TOON decoder (new file)
+- `boilerplate/apps/cli/go/core/files/internal/toon/types.go.jinja` — TOON data structures (new file)
+- `boilerplate/apps/cli/go/core/files/internal/toon/compliance_test.go.jinja` — TOON spec compliance tests (new file)
+- `boilerplate/apps/cli/go/core/files/internal/toon/benchmark_test.go.jinja` — Performance benchmarks (new file)
+- `boilerplate/apps/cli/go/core/files/internal/formatting/formatter.go.jinja` — Output formatting logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/formatting/formatter_test.go.jinja` — Tests for output formatter (new file)
+- `boilerplate/apps/cli/go/core/files/main.go.jinja` — Add format flags and integrate formatter
 
 ## Acceptance Criteria
 

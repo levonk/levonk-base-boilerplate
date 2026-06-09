@@ -28,8 +28,8 @@ func TestMigrationManager_NeedsMigration(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
 	// Test with new config file (current version)
-	currentConfig := `# Config version: 2
-version: 2
+	currentConfig := `# Config version: 3
+version: 3
 quiet: false
 `
 	if err := os.WriteFile(configPath, []byte(currentConfig), 0600); err != nil {
@@ -186,7 +186,7 @@ debug: false
 	migratedContent := string(content)
 
 	// Verify version field was added
-	if !contains(migratedContent, "version: 2") {
+	if !contains(migratedContent, "version: 3") {
 		t.Errorf("Migrated config does not contain version field")
 	}
 
@@ -260,7 +260,7 @@ func TestMigrationManager_CheckLegacyFormat(t *testing.T) {
 	}
 
 	// Test with current format (has version field)
-	currentConfig := `version: 2
+	currentConfig := `version: 3
 quiet: false
 `
 	if err := os.WriteFile(configPath, []byte(currentConfig), 0600); err != nil {

@@ -22,6 +22,8 @@ from {{ project_slug }}.privacy import get_privacy_manager
 from {{ project_slug }}.audit import get_audit_logger
 from {{ project_slug }}.mode import Mode, determine_mode
 from {{ project_slug }}.output.formatter import OutputFormatter, get_formatter
+from {{ project_slug }}.output.schema import apply_field_selection, get_schema_manager
+from {{ project_slug }}.output.truncation import apply_truncation, get_truncator
 {% if include_tui %}
 from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
 {% endif %}
@@ -191,6 +193,7 @@ def process(
     json_output: bool = typer.Option(False, "--json", help="Output results as JSON to stdout"),
     toon: bool = typer.Option(False, "--toon", help="Output results in TOON format (token-efficient)"),
     format: Optional[str] = typer.Option(None, "--format", help="Output format: toon, json, or human"),
+    fields: Optional[str] = typer.Option(None, "--fields", help="Comma-separated list of fields to display (e.g., id,name,status)"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress all log output"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
     debug: bool = typer.Option(False, "--debug", help="Enable detailed debugging output"),
@@ -212,6 +215,7 @@ def process(
     man: bool = typer.Option(False, "--man", help="Display man page"),
     no_pager: bool = typer.Option(False, "--no-pager", help="Disable automatic paging of long output"),
     max_memory: Optional[int] = typer.Option(None, "--max-memory", help="Maximum memory usage in MB"),
+    full: bool = typer.Option(False, "--full", help="Disable truncation and show full content"),
     max_cpu: Optional[float] = typer.Option(None, "--max-cpu", help="Maximum CPU usage percentage"),
     privacy_mode: bool = typer.Option(False, "--privacy-mode", help="Enable privacy mode with anonymous lists"),
     audit_log: bool = typer.Option(False, "--audit-log", help="Enable audit logging with SQLite"),
@@ -261,12 +265,12 @@ def process(
     logger.info(f"Execution mode: {mode.value} (detected via {detection_method.value})", module="mode")
 
     # Initialize output formatter
-    formatter = get_formatter(mode=mode, toon=toon, json_output=json_output)
+    formatter = get_formatter(mode=mode, toon=toon, json_output=json_output, command="process", fields=fields)
     if format:
         from {{ project_slug }}.output.formatter import OutputFormat
         try:
             format_enum = OutputFormat(format.lower())
-            formatter = OutputFormatter(mode=mode, format_override=format_enum)
+            formatter = OutputFormatter(mode=mode, format_override=format_enum, command="process", fields=fields)
         except ValueError:
             logger.error(f"Invalid format: {format}. Valid options: toon, json, human", module="output")
             sys.exit(EXIT_USAGE)
@@ -587,6 +591,9 @@ def process(
                     if not resource_monitor.check_cpu_limit():
                         logger.error("CPU limit exceeded, aborting", module="resource")
                         sys.exit(EXIT_ERROR)
+        # Apply truncation to results if not in full mode
+        if not full:
+            results = apply_truncation(results, limit=1000, full_output=False)
 
     # Output Strategy
     if json_output or toon or format:

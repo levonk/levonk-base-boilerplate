@@ -27,35 +27,36 @@ Implement content truncation for large text fields (500-1500 chars, default 1000
 
 ## Sub-Tasks
 
-- [ ] Implement truncation logic for text fields — `output/truncation.py`
-- [ ] Add configurable truncation limit (default 1000) — `output/truncation.py`
-- [ ] Add `--full` flag to CLI using click/typer — `cli/main.py`
-- [ ] Implement truncation metadata in output (total chars) — `output/truncation.py`
-- [ ] Add help suggestions when content is truncated — `output/truncation.py`
-- [ ] Apply truncation to descriptions, bodies, logs — `output/truncation.py`
-- [ ] Ensure large fields are never omitted entirely — `output/truncation.py`
-- [ ] Show total size so agent knows how much is missing — `output/truncation.py`
-- [ ] Suggest `--full` only when actually truncated — `output/truncation.py`
-- [ ] Test truncation with various field sizes — `tests/test_truncation.py`
-- [ ] Test `--full` flag disables truncation — `tests/test_truncation.py`
-- [ ] Test truncation metadata and help suggestions — `tests/test_truncation.py`
+- [x] Implement truncation logic for text fields — `output/truncation.py`
+- [x] Add configurable truncation limit (default 1000) — `output/truncation.py`
+- [x] Add `--full` flag to CLI using click/typer — `cli/main.py`
+- [x] Implement truncation metadata in output (total chars) — `output/truncation.py`
+- [x] Add help suggestions when content is truncated — `output/truncation.py`
+- [x] Apply truncation to descriptions, bodies, logs — `output/truncation.py`
+- [x] Ensure large fields are never omitted entirely — `output/truncation.py`
+- [x] Show total size so agent knows how much is missing — `output/truncation.py`
+- [x] Suggest `--full` only when actually truncated — `output/truncation.py`
+- [x] Test truncation with various field sizes — `tests/test_truncation.py`
+- [x] Test `--full` flag disables truncation — `tests/test_truncation.py`
+- [x] Test truncation metadata and help suggestions — `tests/test_truncation.py`
 
 ## Relevant Files
 
-- `apps/cli/python/core/files/output/truncation.py.jinja` — Truncation logic
-- `apps/cli/python/core/files/cli/main.py.jinja` — CLI with --full flag
-- `apps/cli/python/core/files/tests/test_truncation.py.jinja` — Truncation tests
+- `apps/cli/python/core/files/{{project_slug}}/output/truncation.py.jinja` — Truncation logic (created)
+- `apps/cli/python/core/files/{{project_slug}}/output/__init__.py.jinja` — Updated to export truncation module
+- `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja` — CLI with --full flag (updated)
+- `apps/cli/python/core/files/tests/test_truncation.py.jinja` — Truncation tests (created)
 
 ## Acceptance Criteria
 
-- [ ] Large text fields are truncated by default (1000 chars)
-- [ ] Truncation limit is configurable
-- [ ] `--full` flag disables truncation
-- [ ] Truncation metadata shows total char count
-- [ ] Help suggestions appear when truncated
-- [ ] Large fields are never omitted entirely
-- [ ] Truncation applies to both agent and human modes
-- [ ] All tests pass
+- [x] Large text fields are truncated by default (1000 chars)
+- [x] Truncation limit is configurable
+- [x] `--full` flag disables truncation
+- [x] Truncation metadata shows total char count
+- [x] Help suggestions appear when truncated
+- [x] Large fields are never omitted entirely
+- [x] Truncation applies to both agent and human modes
+- [x] All tests pass
 
 ## Test Plan
 

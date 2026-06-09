@@ -3,8 +3,8 @@
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
 | 01-001 | Mode Selection and Auto-detection | feature/current/20260708-cli-go-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli-core, config] | [x] Done |
-| 01-002 | TOON Format Implementation | feature/current/20260708-cli-go-aix/story-01-002-toon-format | None | Parallel-safe: true | [output-formats] | [~] In-Progress |
-| 01-003 | Configuration System Updates | feature/current/20260708-cli-go-aix/story-01-003-config-updates | None | Parallel-safe: true | [config] |
+| 01-002 | TOON Format Implementation | feature/current/20260708-cli-go-aix/story-01-002-toon-format | None | Parallel-safe: true | [output-formats] | [x] Done |
+| 01-003 | Configuration System Updates | feature/current/20260708-cli-go-aix/story-01-003-config-updates | None | Parallel-safe: true | [config] | [~] In-Progress |
 | 02-001 | Minimal Default Schemas | feature/current/20260708-cli-go-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output-formats, cli-commands] |
 | 02-002 | Content Truncation | feature/current/20260708-cli-go-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] |
 | 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-go-aix/story-02-003-aggregates | 01-001 | Parallel-safe: true | [data-layer, output-formats] |

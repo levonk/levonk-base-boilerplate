@@ -179,7 +179,7 @@ export class Logger {
       const fileLocation = redactedExtra.fileLocation as FileLocation;
       output += ` ${formatLogFileRef(fileLocation)}`;
       // Remove fileLocation from extra to avoid duplication
-      const { fileLocation: _, ...restExtra } = redactedExtra;
+      let { fileLocation: _, ...restExtra } = redactedExtra;
       redactedExtra = restExtra;
     }
 

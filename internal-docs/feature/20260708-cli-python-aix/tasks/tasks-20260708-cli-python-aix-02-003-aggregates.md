@@ -27,18 +27,18 @@ Implement pre-computed aggregates including total counts in list output and deri
 
 ## Sub-Tasks
 
-- [ ] Implement aggregate count computation for list queries — `output/aggregates.py`
-- [ ] Add total count to list output format — `output/aggregates.py`
-- [ ] Format counts as "count: 30 of 847 total" — `output/aggregates.py`
-- [ ] Implement derived status field computation — `output/aggregates.py`
-- [ ] Add lightweight summary inline (e.g., checks: 3/3 passed) — `output/aggregates.py`
-- [ ] Only include derived fields backend can provide cheaply — `output/aggregates.py`
-- [ ] Apply aggregates to detail views — `output/aggregates.py`
-- [ ] Apply aggregates to list views where relevant — `output/aggregates.py`
-- [ ] Optimize count queries for efficiency — `output/aggregates.py`
-- [ ] Test aggregate counts for all list commands — `tests/test_aggregates.py`
-- [ ] Test derived status fields — `tests/test_aggregates.py`
-- [ ] Test aggregate computation performance — `tests/test_aggregates.py`
+- [x] Implement aggregate count computation for list queries — `output/aggregates.py`
+- [x] Add total count to list output format — `output/aggregates.py`
+- [x] Format counts as "count: 30 of 847 total" — `output/aggregates.py`
+- [x] Implement derived status field computation — `output/aggregates.py`
+- [x] Add lightweight summary inline (e.g., checks: 3/3 passed) — `output/aggregates.py`
+- [x] Only include derived fields backend can provide cheaply — `output/aggregates.py`
+- [x] Apply aggregates to detail views — `output/aggregates.py`
+- [x] Apply aggregates to list views where relevant — `output/aggregates.py`
+- [x] Optimize count queries for efficiency — `output/aggregates.py`
+- [x] Test aggregate counts for all list commands — `tests/test_aggregates.py`
+- [x] Test derived status fields — `tests/test_aggregates.py`
+- [x] Test aggregate computation performance — `tests/test_aggregates.py`
 
 ## Relevant Files
 

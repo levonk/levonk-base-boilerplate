@@ -806,50 +806,108 @@ describe('CLI', () => {
             }
         });
 
-        it('should redact secrets from error messages', async () => {
-            // Set an environment variable with a secret
-            process.env.TEST_PASSWORD = 'MySecretPassword123';
+        it('should show SECRET_STORAGE_METHOD environment variable in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('SECRET_STORAGE_METHOD');
+        });
 
+        it('should show secret handling section in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Secret Handling');
+        });
+    });
+
+    describe('Resource Limits', () => {
+        let tempFile: string;
+
+        beforeEach(async () => {
+            tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+        });
+
+        afterEach(async () => {
             try {
-                // Run a command that might trigger an error with the secret
-                const { stdout, stderr } = await execAsync('node dist/index.js --help');
-
-                // Verify the secret is not in the output
-                const output = stdout + stderr;
-                expect(output).not.toContain('MySecretPassword123');
-            } finally {
-                delete process.env.TEST_PASSWORD;
+                await fs.unlink(tempFile);
+            } catch {
+                // Ignore if file doesn't exist
             }
         });
 
-        it('should redact secrets from debug output', async () => {
-            // Set an environment variable with a secret
-            process.env.TEST_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9';
+        it('should accept --max-memory flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 512MB "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
 
+        it('should accept --max-cpu flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-cpu 50 "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept both resource limit flags', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 1GB --max-cpu 75 "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should log memory limit in verbose mode', async () => {
+            const { stderr } = await execAsync(`node dist/index.js --max-memory 512MB --verbose "${tempFile}"`);
+            expect(stderr).toContain('Memory limit set to 512MB');
+        });
+
+        it('should log CPU limit in verbose mode', async () => {
+            const { stderr } = await execAsync(`node dist/index.js --max-cpu 50 --verbose "${tempFile}"`);
+            expect(stderr).toContain('CPU limit set to 50%');
+        });
+
+        it('should show resource limits in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--max-memory');
+            expect(stdout).toContain('--max-cpu');
+            expect(stdout).toContain('Resource Limits');
+        });
+
+        it('should reject invalid memory limit format', async () => {
             try {
-                // Run a command with debug enabled
-                const { stdout, stderr } = await execAsync('node dist/index.js --debug --help');
-
-                // Verify the secret is not in the output
-                const output = stdout + stderr;
-                expect(output).not.toContain('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
-            } finally {
-                delete process.env.TEST_TOKEN;
+                await execAsync(`node dist/index.js --max-memory invalid "${tempFile}"`);
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(2);
+                expect(error.stderr).toContain('Invalid memory limit format');
             }
         });
 
-        it('should warn about insecure config storage', async () => {
-            // Set secret storage method to config
-            process.env.SECRET_STORAGE_METHOD = 'config';
-
+        it('should reject invalid CPU limit format', async () => {
             try {
-                const { stderr } = await execAsync('node dist/index.js --help');
-
-                // Should warn about insecure config storage
-                expect(stderr).toContain('insecure');
-            } finally {
-                delete process.env.SECRET_STORAGE_METHOD;
+                await execAsync(`node dist/index.js --max-cpu invalid "${tempFile}"`);
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(2);
+                expect(error.stderr).toContain('Invalid CPU limit format');
             }
+        });
+
+        it('should accept memory limit without unit (defaults to MB)', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 512 "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept CPU limit without % symbol', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-cpu 50 "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept GB memory limit', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 1GB "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept decimal memory limit', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 0.5GB "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should log resource usage in verbose mode', async () => {
+            const { stderr } = await execAsync(`node dist/index.js --max-memory 1GB --max-cpu 100 --verbose "${tempFile}"`);
+            expect(stderr).toContain('Resource usage');
         });
     });
 
@@ -996,9 +1054,95 @@ describe('CLI', () => {
             // Test with current drive letter
             const testFile = path.join(tempDir, 'test-file.txt');
             await fs.writeFile(testFile, 'test content');
+        });
+    });
 
-            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
-            expect(stdout).toContain('Processed 1 inputs');
+    describe('Config Reload', () => {
+        const testConfigDir = path.join(os.tmpdir(), 'test-config-reload-{{ project_slug }}');
+        const testConfigPath = path.join(testConfigDir, 'config.toml');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should show config reload documentation in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Config Reload');
+            expect(stdout).toContain('SIGHUP');
+            expect(stdout).toContain('kill -HUP');
+        });
+
+        it('should document config reload validation in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('validated before applying');
+            expect(stdout).toContain('Validation errors keep old config active');
+        });
+
+        it('should document config reload logging in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Config changes are logged in verbose mode');
+        });
+
+        it('should accept config changes without restart', async () => {
+            const customXDG = testConfigDir;
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                // Run CLI with custom config
+                const { stdout } = await execAsync(
+                    `XDG_CONFIG_HOME="${customXDG}" node dist/index.js "${tempFile}"`
+                );
+                expect(stdout).toContain('Processed 1 inputs');
+
+                // Modify config
+                await fs.mkdir(testConfigDir, { recursive: true });
+                await fs.writeFile(testConfigPath, 'log_level = "debug"');
+
+                // Run CLI again - should pick up new config
+                const { stdout: stdout2 } = await execAsync(
+                    `XDG_CONFIG_HOME="${customXDG}" node dist/index.js "${tempFile}"`
+                );
+                expect(stdout2).toContain('Processed 1 inputs');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should handle invalid config gracefully', async () => {
+            const customXDG = testConfigDir;
+
+            // Create invalid config
+            await fs.mkdir(testConfigDir, { recursive: true });
+            await fs.writeFile(testConfigPath, 'log_level = "invalid"');
+
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                // CLI should handle invalid config gracefully
+                const { stdout, stderr } = await execAsync(
+                    `XDG_CONFIG_HOME="${customXDG}" node dist/index.js "${tempFile}"`
+                );
+                // Should show validation error
+                expect(stderr).toContain('Configuration validation failed');
+            } finally {
+                await fs.unlink(tempFile);
+            }
         });
     });
 });

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 7
 parallel_id: 2
 branch: "feature/current/20260707-cli-typescript-standards/story-07-002-resource-limits"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,40 +27,40 @@ Add `--max-memory` and `--max-cpu` flags for resource limits where applicable. I
 
 ## Sub-Tasks
 
-- [ ] Create resource management module
-- [ ] Add `--max-memory` flag to index.ts
-- [ ] Add `--max-cpu` flag to index.ts
-- [ ] Implement memory usage monitoring
-- [ ] Implement CPU usage monitoring
-- [ ] Add memory limit enforcement
-- [ ] Add CPU limit enforcement
-- [ ] Implement graceful limit violation handling
-- [ ] Add clear error messages for limit violations
-- [ ] Add unit tests for resource monitoring
-- [ ] Add unit tests for limit enforcement
-- [ ] Add integration tests for resource limits
-- [ ] Update help text to document resource limits
-- [ ] Add resource usage logging in verbose mode
+- [x] Create resource management module
+- [x] Add `--max-memory` flag to index.ts
+- [x] Add `--max-cpu` flag to index.ts
+- [x] Implement memory usage monitoring
+- [x] Implement CPU usage monitoring
+- [x] Add memory limit enforcement
+- [x] Add CPU limit enforcement
+- [x] Implement graceful limit violation handling
+- [x] Add clear error messages for limit violations
+- [x] Add unit tests for resource monitoring
+- [x] Add unit tests for limit enforcement
+- [x] Add integration tests for resource limits
+- [x] Update help text to document resource limits
+- [x] Add resource usage logging in verbose mode
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/resources.ts.jinja` - New resource management module (to be created)
+- `apps/cli/typescript/core/files/src/resources.ts.jinja` - Resource management module
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with resource limit flags
-- `apps/cli/typescript/core/files/src/resources.test.ts.jinja` - Unit tests for resources (to be created)
-- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for resource limits
+- `apps/cli/typescript/core/files/src/resources.test.ts.jinja` - Unit tests for resources
+- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for resource limits (to be updated)
 
 ## Acceptance Criteria
 
-- [ ] `--max-memory` flag sets memory limit
-- [ ] `--max-cpu` flag sets CPU limit
-- [ ] Memory usage is monitored
-- [ ] CPU usage is monitored
-- [ ] Memory limit is enforced
-- [ ] CPU limit is enforced
-- [ ] Limit violations are handled gracefully
-- [ ] Clear error messages for limit violations
-- [ ] Resource usage is logged in verbose mode
-- [ ] Limits work across different platforms
+- [x] `--max-memory` flag sets memory limit
+- [x] `--max-cpu` flag sets CPU limit
+- [x] Memory usage is monitored
+- [x] CPU usage is monitored
+- [x] Memory limit is enforced
+- [x] CPU limit is enforced
+- [x] Limit violations are handled gracefully
+- [x] Clear error messages for limit violations
+- [x] Resource usage is logged in verbose mode
+- [x] Limits work across different platforms
 
 ## Test Plan
 

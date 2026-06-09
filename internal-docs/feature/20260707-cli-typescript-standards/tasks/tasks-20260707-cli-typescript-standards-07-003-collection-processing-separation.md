@@ -27,9 +27,9 @@ Separate collection (daemon/background) from processing (offline analysis). Allo
 
 ## Sub-Tasks
 
-- [ ] Design data collection schema
-- [ ] Implement data collection in daemon mode
-- [ ] Add data export command
+- [x] Design data collection schema
+- [x] Implement data collection in daemon mode
+- [~] Add data export command
 - [ ] Add data import command
 - [ ] Implement offline analysis commands
 - [ ] Add data format validation
@@ -44,8 +44,9 @@ Separate collection (daemon/background) from processing (offline analysis). Allo
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/processing.ts.jinja` - New processing module (to be created)
-- `apps/cli/typescript/core/files/src/daemon.ts.jinja` - Daemon with collection logic
+- `apps/cli/typescript/core/files/src/processing.ts.jinja` - Processing module with data schema and export/import
+- `apps/cli/typescript/core/files/src/daemon.ts.jinja` - Daemon with collection logic and event tracking
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - CLI with export/import/analysis commands
 - `apps/cli/typescript/core/files/src/processing.test.ts.jinja` - Unit tests for processing (to be created)
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for separation
 

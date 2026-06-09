@@ -27,19 +27,19 @@ Support SIGHUP to reload config files without restart. Validate new config befor
 
 ## Sub-Tasks
 
-- [ ] Implement SIGHUP signal handler
-- [ ] Add config reload logic
-- [ ] Implement new config validation before applying
-- [ ] Add config reload event logging
-- [ ] Implement graceful error handling (keep old config active)
-- [ ] Add config reload status reporting
-- [ ] Implement config diff logging
-- [ ] Add unit tests for signal handling
-- [ ] Add unit tests for config reload logic
-- [ ] Add unit tests for validation error handling
-- [ ] Add integration tests for SIGHUP workflow
-- [ ] Update help text to document config reload
-- [ ] Add config reload documentation
+- [x] Implement SIGHUP signal handler
+- [x] Add config reload logic
+- [x] Implement new config validation before applying
+- [x] Add config reload event logging
+- [x] Implement graceful error handling (keep old config active)
+- [x] Add config reload status reporting
+- [x] Implement config diff logging
+- [x] Add unit tests for signal handling
+- [x] Add unit tests for config reload logic
+- [x] Add unit tests for validation error handling
+- [x] Add integration tests for SIGHUP workflow
+- [x] Update help text to document config reload
+- [x] Add config reload documentation
 
 ## Relevant Files
 
@@ -50,14 +50,14 @@ Support SIGHUP to reload config files without restart. Validate new config befor
 
 ## Acceptance Criteria
 
-- [ ] SIGHUP signal triggers config reload
-- [ ] New config is validated before applying
-- [ ] Config reload events are logged
-- [ ] Validation errors keep old config active
-- [ ] Config reload status is reported
-- [ ] Config diff is logged in verbose mode
-- [ ] Reload works without process restart
-- [ ] Signal handling is platform-appropriate
+- [x] SIGHUP signal triggers config reload
+- [x] New config is validated before applying
+- [x] Config reload events are logged
+- [x] Validation errors keep old config active
+- [x] Config reload status is reported
+- [x] Config diff is logged in verbose mode
+- [x] Reload works without process restart
+- [x] Signal handling is platform-appropriate
 
 ## Test Plan
 

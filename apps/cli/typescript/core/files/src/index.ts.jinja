@@ -77,6 +77,13 @@ import {
     formatLogPath,
     type PathOptions,
 } from './path.js';
+import {
+    createResourceMonitor,
+    parseMemoryLimit,
+    parseCpuLimit,
+    type ResourceLimits,
+    ResourceLimitError,
+} from './resources.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -164,6 +171,7 @@ program
   .addHelpText('after', '\nTUI Mode:\n  --interactive, --tui  Launch interactive Terminal User Interface\n                        Allows viewing and modifying all arguments before execution\n                        Falls back to CLI mode in non-TTY environments')
   .addHelpText('after', '\nDaemon Mode:\n  --daemon              Pre-launch daemon in background for long-running operations\n  --no-daemon           Force synchronous operation (disable daemon)\n  --list-jobs           List background job status\n  --cancel-job <id>     Cancel a specific background job\n  Daemon auto-spawns on first async operation unless --no-daemon is set')
   .addHelpText('after', '\nConfig Reload:\n  Send SIGHUP signal to reload configuration without restart\n  Example: kill -HUP <pid>\n  New config is validated before applying\n  Validation errors keep old config active\n  Config changes are logged in verbose mode')
+  .addHelpText('after', '\nResource Limits:\n  --max-memory <limit>  Set maximum memory usage (e.g., "512MB", "1GB")\n  --max-cpu <percent>   Set maximum CPU usage percentage (e.g., "50", "75%")\n  Limits are enforced during execution with clear error messages\n  Resource usage is logged in verbose mode')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--interactive, --tui', 'Launch interactive Terminal User Interface')
   .option('--daemon', 'Pre-launch daemon in background')
@@ -178,6 +186,8 @@ program
   .option('--man-install', 'Show man page installation instructions')
   .option('--man-output-dir <path>', 'Output directory for man pages', 'man')
   .option('--no-pager', 'Disable pager for long output')
+  .option('--max-memory <limit>', 'Set maximum memory usage (e.g., "512MB", "1GB")')
+  .option('--max-cpu <percent>', 'Set maximum CPU usage percentage (e.g., "50", "75%")')
   .action(async (inputs: string[], options) => {
       try {
           // Suppress console output immediately for quiet and json modes
@@ -401,6 +411,38 @@ program
           // Store logger globally for SIGHUP config reload
           currentLogger = logger;
 
+          // Handle resource limits
+          const resourceLimits: ResourceLimits = {};
+          if (options.maxMemory) {
+              try {
+                  resourceLimits.maxMemoryMB = parseMemoryLimit(options.maxMemory);
+                  logger.info(`Memory limit set to ${resourceLimits.maxMemoryMB}MB`);
+              } catch (error) {
+                  throw new UsageError(`Invalid memory limit format: ${options.maxMemory}. Use format like "512MB" or "1GB"`);
+              }
+          }
+          if (options.maxCpu) {
+              try {
+                  resourceLimits.maxCpuPercent = parseCpuLimit(options.maxCpu);
+                  logger.info(`CPU limit set to ${resourceLimits.maxCpuPercent}%`);
+              } catch (error) {
+                  throw new UsageError(`Invalid CPU limit format: ${options.maxCpu}. Use format like "50" or "75%"`);
+              }
+          }
+
+          let resourceMonitor: ReturnType<typeof createResourceMonitor> | null = null;
+          if (Object.keys(resourceLimits).length > 0) {
+              resourceMonitor = createResourceMonitor(resourceLimits, {
+                  quiet: options.quiet === true || options.json === true,
+                  verbose: options.verbose === true,
+                  color: options.color !== undefined ? options.color : config.color,
+              });
+              // Log initial resource usage in verbose mode
+              if (options.verbose) {
+                  resourceMonitor.logUsage();
+              }
+          }
+
           // Handle daemon mode
           const daemonConfig: Partial<DaemonConfig> = {
               enabled: options.noDaemon !== true,
@@ -480,12 +522,23 @@ program
               const bar = progressManager.createBar(filesToProcess.length, 'Processing files');
               for (const file of filesToProcess) {
                   try {
+                      // Check resource limits before processing each file
+                      if (resourceMonitor) {
+                          resourceMonitor.checkLimits();
+                          if (options.verbose) {
+                              resourceMonitor.logUsage();
+                          }
+                      }
+
                       const normalizedPath = ensurePath(file, { normalize: true });
                       const content = await fs.readFile(normalizedPath, 'utf-8');
                       results.push({ source: normalizedPath, length: content.length });
                       bar?.increment();
                   } catch (error) {
                       bar?.stop();
+                      if (error instanceof ResourceLimitError) {
+                          throw error;
+                      }
                       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
                           throw new FileNotFoundError(`File not found: ${formatErrorPath(file)}`, { file });
                       } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
@@ -499,11 +552,22 @@ program
           } else {
               for (const file of filesToProcess) {
                   try {
+                      // Check resource limits before processing each file
+                      if (resourceMonitor) {
+                          resourceMonitor.checkLimits();
+                          if (options.verbose) {
+                              resourceMonitor.logUsage();
+                          }
+                      }
+
                       const normalizedPath = ensurePath(file, { normalize: true });
                       logger.info(`Processing ${formatLogPath(file, mergedOptions.debug)}...`);
                       const content = await fs.readFile(normalizedPath, 'utf-8');
                       results.push({ source: normalizedPath, length: content.length });
                   } catch (error) {
+                      if (error instanceof ResourceLimitError) {
+                          throw error;
+                      }
                       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
                       throw new FileNotFoundError(`File not found: ${formatErrorPath(file)}`, { file });
                   } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
@@ -513,6 +577,11 @@ program
                   }
                   }
               }
+          }
+
+          // Final resource check after processing
+          if (resourceMonitor && options.verbose) {
+              resourceMonitor.logUsage();
           }
 
           if (mergedOptions.json) {
@@ -566,6 +635,14 @@ program
           }
       } catch (error) {
           const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: '{{ project_slug }}' });
+          // Handle resource limit errors with specific guidance
+          if (error instanceof ResourceLimitError) {
+              logger.error(error.message);
+              logger.error(`Current usage: ${error.resourceType === 'memory' ? `${error.currentUsage.toFixed(2)}MB` : `${error.currentUsage.toFixed(2)}%`}`);
+              logger.error(`Limit: ${error.resourceType === 'memory' ? `${error.limit}MB` : `${error.limit}%`}`);
+              logger.error('Consider increasing the limit or optimizing resource usage');
+              process.exit(EXIT_CODES.GENERIC_ERROR);
+          }
           handleError(error, logger);
       }
   });

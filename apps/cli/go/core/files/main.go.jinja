@@ -17,11 +17,15 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"{{ project_slug }}/internal/formatting"
 )
 
 var (
 	cfgFile string
 	jsonOutput bool
+	toonFlag bool
+	formatFlag string
 	quiet bool
 	verbose bool
 	debug bool
@@ -64,6 +68,7 @@ Mode Selection:
     - Automatically detected when no TTY or agent session is present
     - Optimized for automation and AI agent integration
     - Can be forced with MYTOOL_MODE=agent environment variable
+    - Default output format: TOON (token-efficient for LLM contexts)
 
   Human Mode:
     - Interactive mode for human users
@@ -71,12 +76,37 @@ Mode Selection:
     - Can be forced with --human or --interactive flags
     - Can be forced with MYTOOL_MODE=human environment variable
     - Can be set in config file with mode: human
+    - Default output format: JSON (human-readable)
 
   Mode Precedence (highest to lowest):
     1. CLI flags (--human, --interactive)
     2. Environment variables (MYTOOL_MODE)
     3. Config file setting
     4. Auto-detection based on environment
+
+Output Format Selection:
+  The CLI supports multiple output formats for different use cases:
+
+  Format Options:
+    --toon           Output in TOON format (Token-Oriented Object Notation)
+                     Token-efficient (~40% savings over JSON) for LLM contexts
+    --format=toon    Explicitly select TOON format
+    --format=json    Explicitly select JSON format
+    --format=human   Explicitly select human-readable format
+    --json           Alias for --format=json
+
+  Format Precedence (highest to lowest):
+    1. --toon flag
+    2. --format flag
+    3. --json flag
+    4. Mode-based default (TOON for agent, JSON for human)
+
+  TOON Format:
+    - Compact, indentation-based notation
+    - Explicit array headers with length and fields
+    - Optimized for token efficiency in LLM prompts
+    - Human-readable while being machine-parseable
+    - See https://toonformat.dev for specification
 
 Examples:
   {{ project_slug }} file.txt
@@ -342,7 +372,21 @@ Examples:
 			}
 
 			// Output Strategy
-			if jsonOutput {
+			formatterMode := formatting.Mode(mode)
+			formatter := formatting.NewFormatter(formatterMode, toonFlag, formatFlag, jsonOutput)
+			outputFormat := formatter.DetermineFormat()
+
+			if outputFormat == formatting.FormatTOON {
+				// Use TOON formatter
+				for _, result := range results {
+					formatted, err := formatter.FormatValue(result)
+					if err != nil {
+						logger.Error("Failed to format output: %v", err)
+						continue
+					}
+					fmt.Println(formatted)
+				}
+			} else if jsonOutput {
 				enc := json.NewEncoder(os.Stdout)
 				enc.SetIndent("", "  ")
 				return enc.Encode(results)
@@ -497,6 +541,8 @@ func init() {
 	// Persistent flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/{{ project_slug }}/config.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
+	rootCmd.PersistentFlags().BoolVar(&toonFlag, "toon", false, "Output results in TOON format (token-efficient)")
+	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "", "Output format: toon, json, human (default: auto-detect based on mode)")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging with stack traces")

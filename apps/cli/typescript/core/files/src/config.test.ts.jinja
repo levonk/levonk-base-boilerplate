@@ -15,9 +15,11 @@ import {
     loadConfigWithPrecedence,
     loadEnvConfig,
     initializeConfig,
+    reloadConfig,
     DEFAULT_CONFIG,
     type ConfigOptions,
     type ConfigWithSources,
+    type ConfigReloadResult,
 } from './config.js';
 
 describe('config module', () => {
@@ -462,6 +464,117 @@ log_level = "debug"
             expect(config.log_level).toBe('debug');
             expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Successfully validated'));
             consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('Config Reload', () => {
+        it('should reload config successfully', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = 'log_level = "info"';
+            await fs.writeFile(testConfigPath, configContent);
+
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: testConfigDir };
+            const result = await reloadConfig(options, undefined, false);
+
+            expect(result.success).toBe(true);
+            expect(result.newConfig).toBeDefined();
+            expect(result.oldConfig).toBeDefined();
+            expect(result.error).toBeUndefined();
+        });
+
+        it('should detect config changes on reload', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = 'log_level = "info"';
+            await fs.writeFile(testConfigPath, configContent);
+
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: testConfigDir };
+            const result = await reloadConfig(options, undefined, true);
+
+            expect(result.success).toBe(true);
+            expect(result.diff).toBeDefined();
+        });
+
+        it('should keep old config active on validation error', async () => {
+            await ensureConfigDir(testConfigDir);
+            // Create an invalid config that will fail validation
+            const configContent = 'log_level = "invalid_value"';
+            await fs.writeFile(testConfigPath, configContent);
+
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: testConfigDir };
+            const result = await reloadConfig(options, undefined, false);
+
+            expect(result.success).toBe(false);
+            expect(result.newConfig).toBeNull();
+            expect(result.oldConfig).toBeDefined();
+            expect(result.error).toContain('Config validation failed');
+        });
+
+        it('should log validation errors in verbose mode', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            await ensureConfigDir(testConfigDir);
+            const configContent = 'log_level = "invalid_value"';
+            await fs.writeFile(testConfigPath, configContent);
+
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: testConfigDir };
+            const result = await reloadConfig(options, undefined, true);
+
+            expect(result.success).toBe(false);
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Validation failed'));
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should log config changes in verbose mode', async () => {
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            await ensureConfigDir(testConfigDir);
+            const configContent = 'log_level = "debug"';
+            await fs.writeFile(testConfigPath, configContent);
+
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: testConfigDir };
+            const result = await reloadConfig(options, undefined, true);
+
+            expect(result.success).toBe(true);
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Successfully reloaded'));
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('should handle missing config file gracefully', async () => {
+            // Don't create a config file - it should use defaults
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: testConfigDir };
+            const result = await reloadConfig(options, undefined, false);
+
+            // Should succeed with defaults
+            expect(result.success).toBe(true);
+            expect(result.newConfig).toBeDefined();
+            expect(result.oldConfig).toBeDefined();
+        });
+
+        it('should apply CLI args to reloaded config', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = 'log_level = "info"';
+            await fs.writeFile(testConfigPath, configContent);
+
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: testConfigDir };
+            const cliArgs = { log_level: 'debug' as const };
+            const result = await reloadConfig(options, cliArgs, false);
+
+            expect(result.success).toBe(true);
+            expect(result.newConfig?.log_level).toBe('debug');
+        });
+
+        it('should calculate diff correctly', async () => {
+            await ensureConfigDir(testConfigDir);
+            const configContent = 'log_level = "debug"';
+            await fs.writeFile(testConfigPath, configContent);
+
+            const options: ConfigOptions = { projectSlug: testSlug, configPath: testConfigDir };
+            const result = await reloadConfig(options, undefined, true);
+
+            expect(result.success).toBe(true);
+            expect(result.diff).toBeDefined();
+            if (result.diff && result.diff.log_level) {
+                expect(result.diff.log_level.old).toBeDefined();
+                expect(result.diff.log_level.new).toBeDefined();
+            }
         });
     });
 });

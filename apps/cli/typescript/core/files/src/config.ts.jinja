@@ -476,20 +476,26 @@ export async function reloadConfig(
 ): Promise<ConfigReloadResult> {
     const configPath = getConfigFilePath(options.projectSlug, options.configPath);
 
-    // Load current config (old config)
+    // Load current config (old config) with full precedence
     const oldConfig = await loadConfigWithPrecedence(options, cliArgs);
     const { _sources, ...oldConfigWithoutSources } = oldConfig;
 
     try {
-        // Load new config from file
-        const newConfig = await loadConfigWithPrecedence(options, cliArgs);
-        const { _sources: newSources, ...newConfigWithoutSources } = newConfig;
+        // Load new config from file only (without CLI args for validation)
+        // This ensures we validate the file content itself
+        let newConfigFromFile: Config;
+        try {
+            newConfigFromFile = await loadConfig(configPath, verbose);
+        } catch (error) {
+            // If file doesn't exist, use defaults
+            newConfigFromFile = { ...DEFAULT_CONFIG };
+        }
 
-        // Validate new config
-        const validationResult = ConfigSchema.safeParse(newConfigWithoutSources);
+        // Validate new config from file
+        const validationResult = ConfigSchema.safeParse(newConfigFromFile);
         if (!validationResult.success) {
             const content = await fs.readFile(configPath, 'utf-8');
-            const errors = getValidationErrors(newConfigWithoutSources, content);
+            const errors = getValidationErrors(newConfigFromFile, content);
             const errorDetails = errors.map(err => {
                 const location = err.line ? `line ${err.line}` : 'unknown location';
                 return `${err.path.join('.')} (${location}): ${err.message}`;
@@ -507,18 +513,24 @@ export async function reloadConfig(
             };
         }
 
+        // Apply CLI args to the validated new config
+        let newConfigWithArgs = { ...newConfigFromFile };
+        if (cliArgs) {
+            newConfigWithArgs = { ...newConfigWithArgs, ...cliArgs };
+        }
+
         // Calculate diff if verbose
         let diff: Record<string, { old: any; new: any }> | undefined;
         if (verbose) {
             diff = {};
             const allKeys = new Set([
                 ...Object.keys(oldConfigWithoutSources),
-                ...Object.keys(newConfigWithoutSources),
+                ...Object.keys(newConfigWithArgs),
             ]);
 
             for (const key of allKeys) {
                 const oldValue = oldConfigWithoutSources[key as keyof Config];
-                const newValue = newConfigWithoutSources[key as keyof Config];
+                const newValue = newConfigWithArgs[key as keyof Config];
                 if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
                     diff![key] = { old: oldValue, new: newValue };
                 }
@@ -538,7 +550,7 @@ export async function reloadConfig(
         return {
             success: true,
             oldConfig: oldConfigWithoutSources,
-            newConfig: newConfigWithoutSources,
+            newConfig: newConfigWithArgs,
             diff,
         };
     } catch (error) {

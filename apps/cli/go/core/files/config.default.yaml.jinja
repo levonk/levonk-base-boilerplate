@@ -9,6 +9,9 @@
 # 2. Environment variables ({{ project_slug | upper | replace('-', '_') }}_SETTING_NAME)
 # 3. Config file (this file)
 # 4. Default values
+#
+# AXI-specific settings (mode, default_format, truncation_limit, enable_contextual_help, session_context_enabled)
+# follow the same precedence chain as other settings.
 
 # -----------------------------------------------------------------------------
 # General Settings
@@ -18,6 +21,24 @@
 # - agent: Non-interactive mode for automation and agent environments (default)
 # - human: Interactive mode for human users
 # mode: agent
+
+# Default output format for agent mode
+# - toon: Structured TOON format (agent-friendly, default)
+# - json: JSON format
+# - human: Human-readable format
+# default_format: toon
+
+# Maximum characters to display before truncating content
+# Use 0 for no truncation
+# truncation_limit: 1000
+
+# Enable contextual help and suggestions in agent mode
+# When enabled, provides helpful context and suggestions for next actions
+# enable_contextual_help: true
+
+# Enable session context tracking
+# When enabled, maintains context across multiple CLI invocations in a session
+# session_context_enabled: false
 
 # Enable verbose output for debugging
 # verbose: false

@@ -46,6 +46,47 @@ func TestModeIsValid(t *testing.T) {
 	}
 }
 
+func TestFormatString(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   Format
+		expected string
+	}{
+		{"TOON format", FormatToon, "toon"},
+		{"JSON format", FormatJSON, "json"},
+		{"Human format", FormatHuman, "human"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.format.String(); got != tt.expected {
+				t.Errorf("Format.String() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormatIsValid(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   Format
+		expected bool
+	}{
+		{"TOON format valid", FormatToon, true},
+		{"JSON format valid", FormatJSON, true},
+		{"Human format valid", FormatHuman, true},
+		{"Invalid format", Format("invalid"), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.format.IsValid(); got != tt.expected {
+				t.Errorf("Format.IsValid() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestGetModeFromEnv(t *testing.T) {
 	// Save original value
 	original := os.Getenv("MYTOOL_MODE")
@@ -477,7 +518,7 @@ func TestConfigSchema(t *testing.T) {
 	schema := GetConfigSchema()
 
 	// Test that schema has expected fields
-	expectedFields := []string{"quiet", "verbose", "debug", "color", "json"}
+	expectedFields := []string{"quiet", "verbose", "debug", "color", "json", "mode", "default_format", "truncation_limit", "enable_contextual_help", "session_context_enabled"}
 	for _, field := range expectedFields {
 		if _, ok := schema.Fields[field]; !ok {
 			t.Errorf("ConfigSchema missing field: %s", field)
@@ -494,6 +535,57 @@ func TestConfigSchema(t *testing.T) {
 		if val != expectedValues[i] {
 			t.Errorf("color field allowed value %d should be %s, got %s", i, expectedValues[i], val)
 		}
+	}
+
+	// Test that mode field has correct enum values
+	modeField := schema.Fields["mode"]
+	if modeField.Type != "enum" {
+		t.Errorf("mode field should be enum type, got %s", modeField.Type)
+	}
+	expectedModeValues := []string{string(ModeAgent), string(ModeHuman)}
+	for i, val := range modeField.AllowedValues {
+		if val != expectedModeValues[i] {
+			t.Errorf("mode field allowed value %d should be %s, got %s", i, expectedModeValues[i], val)
+		}
+	}
+
+	// Test that default_format field has correct enum values
+	formatField := schema.Fields["default_format"]
+	if formatField.Type != "enum" {
+		t.Errorf("default_format field should be enum type, got %s", formatField.Type)
+	}
+	expectedFormatValues := []string{string(FormatToon), string(FormatJSON), string(FormatHuman)}
+	for i, val := range formatField.AllowedValues {
+		if val != expectedFormatValues[i] {
+			t.Errorf("default_format field allowed value %d should be %s, got %s", i, expectedFormatValues[i], val)
+		}
+	}
+
+	// Test that truncation_limit field is int type
+	truncationField := schema.Fields["truncation_limit"]
+	if truncationField.Type != "int" {
+		t.Errorf("truncation_limit field should be int type, got %s", truncationField.Type)
+	}
+	if truncationField.DefaultValue != 1000 {
+		t.Errorf("truncation_limit default value should be 1000, got %v", truncationField.DefaultValue)
+	}
+
+	// Test that enable_contextual_help field is bool type
+	helpField := schema.Fields["enable_contextual_help"]
+	if helpField.Type != "bool" {
+		t.Errorf("enable_contextual_help field should be bool type, got %s", helpField.Type)
+	}
+	if helpField.DefaultValue != true {
+		t.Errorf("enable_contextual_help default value should be true, got %v", helpField.DefaultValue)
+	}
+
+	// Test that session_context_enabled field is bool type
+	sessionField := schema.Fields["session_context_enabled"]
+	if sessionField.Type != "bool" {
+		t.Errorf("session_context_enabled field should be bool type, got %s", sessionField.Type)
+	}
+	if sessionField.DefaultValue != false {
+		t.Errorf("session_context_enabled default value should be false, got %v", sessionField.DefaultValue)
 	}
 }
 
@@ -538,6 +630,86 @@ func TestReloadConfigMissingFile(t *testing.T) {
 	err := ReloadConfig(configPath, logger)
 	if err == nil {
 		t.Errorf("ReloadConfig should fail with missing config file")
+	}
+}
+
+func TestGetHardcodedDefaultsAXI(t *testing.T) {
+	defaults := GetHardcodedDefaults()
+
+	// Test that AXI fields are present in defaults
+	if _, ok := defaults["mode"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include mode field")
+	}
+	if defaults["mode"] != string(ModeAgent) {
+		t.Errorf("mode default should be agent, got %v", defaults["mode"])
+	}
+
+	if _, ok := defaults["default_format"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include default_format field")
+	}
+	if defaults["default_format"] != string(FormatToon) {
+		t.Errorf("default_format default should be toon, got %v", defaults["default_format"])
+	}
+
+	if _, ok := defaults["truncation_limit"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include truncation_limit field")
+	}
+	if defaults["truncation_limit"] != 1000 {
+		t.Errorf("truncation_limit default should be 1000, got %v", defaults["truncation_limit"])
+	}
+
+	if _, ok := defaults["enable_contextual_help"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include enable_contextual_help field")
+	}
+	if defaults["enable_contextual_help"] != true {
+		t.Errorf("enable_contextual_help default should be true, got %v", defaults["enable_contextual_help"])
+	}
+
+	if _, ok := defaults["session_context_enabled"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include session_context_enabled field")
+	}
+	if defaults["session_context_enabled"] != false {
+		t.Errorf("session_context_enabled default should be false, got %v", defaults["session_context_enabled"])
+	}
+}
+
+func TestValidateConfigWithAXIFields(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	// Test valid AXI config
+	config := map[string]interface{}{
+		"mode":                   string(ModeAgent),
+		"default_format":         string(FormatToon),
+		"truncation_limit":       1000,
+		"enable_contextual_help":  true,
+		"session_context_enabled": false,
+	}
+	configContent := "mode: agent\ndefault_format: toon\ntruncation_limit: 1000\nenable_contextual_help: true\nsession_context_enabled: false"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) != 0 {
+		t.Errorf("ValidateConfig should not error on valid AXI config, got %d errors", len(errors))
+	}
+
+	// Test invalid default_format
+	config["default_format"] = "invalid"
+	configContent = "mode: agent\ndefault_format: invalid\ntruncation_limit: 1000"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+	errors = ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should error on invalid default_format")
+	}
+
+	// Test invalid truncation_limit type
+	config["default_format"] = string(FormatToon)
+	config["truncation_limit"] = "not_a_number"
+	configContent = "mode: agent\ndefault_format: toon\ntruncation_limit: not_a_number"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+	errors = ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should error on invalid truncation_limit type")
 	}
 }
 

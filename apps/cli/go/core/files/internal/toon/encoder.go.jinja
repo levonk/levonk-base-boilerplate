@@ -58,7 +58,7 @@ func (e *Encoder) needsQuoting(s string) bool {
 
 	// Check for characters that require quoting
 	for _, r := range s {
-		if !unicode.IsPrint(r) || r == ' ' || r == ',' || r == '\t' || r == '|' || r == ':' || r == '#' || r == '-' {
+		if !unicode.IsPrint(r) || r == ' ' || r == ',' || r == '\t' || r == '|' || r == ':' || r == '#' || r == '-' || r == '"' {
 			return true
 		}
 	}
@@ -113,6 +113,7 @@ func (e *Encoder) encodeNumber(n float64) string {
 	}
 
 	// Use canonical decimal for values in [1e-6, 1e21) or zero
+	// Note: 1e-6 is 0.000001, so values smaller than this should use exponent
 	if (n >= 1e-6 && n < 1e21) || n == 0 {
 		// Use decimal form without trailing zeros
 		s := strconv.FormatFloat(n, 'f', -1, 64)

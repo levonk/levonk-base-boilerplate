@@ -27,6 +27,28 @@ func (m Mode) IsValid() bool {
 	return m == ModeAgent || m == ModeHuman
 }
 
+// Format represents the output format
+type Format string
+
+const (
+	// FormatToon is the TOON format (structured, agent-friendly)
+	FormatToon Format = "toon"
+	// FormatJSON is the JSON format
+	FormatJSON Format = "json"
+	// FormatHuman is the human-readable format
+	FormatHuman Format = "human"
+)
+
+// String returns the string representation of the format
+func (f Format) String() string {
+	return string(f)
+}
+
+// IsValid checks if the format is valid
+func (f Format) IsValid() bool {
+	return f == FormatToon || f == FormatJSON || f == FormatHuman
+}
+
 // IsFirstRun checks if this is the first run by detecting if the config file exists
 func IsFirstRun(configPath string) bool {
 	if configPath == "" {
@@ -280,12 +302,16 @@ func GetConfigPrecedence() ([]string, error) {
 // These are used when no config file exists
 func GetHardcodedDefaults() map[string]interface{} {
 	return map[string]interface{}{
-		"quiet":   false,
-		"verbose": false,
-		"debug":   false,
-		"color":   "auto",
-		"json":    false,
-		"mode":    string(ModeAgent), // Default to agent mode
+		"quiet":                  false,
+		"verbose":                false,
+		"debug":                  false,
+		"color":                  "auto",
+		"json":                   false,
+		"mode":                   string(ModeAgent), // Default to agent mode
+		"default_format":         string(FormatToon), // Default to TOON format
+		"truncation_limit":       1000, // Default truncation limit
+		"enable_contextual_help":  true, // Default to enable contextual help
+		"session_context_enabled": false, // Default to disable session context
 	}
 }
 
@@ -304,11 +330,6 @@ func GetModeFromEnv() string {
 	}
 
 	return envMode
-}
-
-// IsTerminal checks if stdout is a TTY
-func IsTerminal() bool {
-	return isatty.IsTerminal(os.Stdout.Fd())
 }
 
 // IsAgentSession checks if the CLI is running in an agent session
@@ -330,9 +351,6 @@ func IsAgentSession() bool {
 // GetParentProcessName returns the name of the parent process
 // This can be used to detect if running under an agent
 func GetParentProcessName() (string, error) {
-	// Get current process ID
-	currentPid := os.Getpid()
-
 	// On Unix-like systems, read /proc/{pid}/status or use ps
 	// For cross-platform compatibility, we'll use a simple approach
 	// In production, this would use platform-specific code
@@ -474,6 +492,27 @@ func GetConfigSchema() ConfigSchema {
 				Required:     false,
 				AllowedValues: []string{string(ModeAgent), string(ModeHuman)},
 				DefaultValue: string(ModeAgent),
+			},
+			"default_format": {
+				Type:         "enum",
+				Required:     false,
+				AllowedValues: []string{string(FormatToon), string(FormatJSON), string(FormatHuman)},
+				DefaultValue: string(FormatToon),
+			},
+			"truncation_limit": {
+				Type:         "int",
+				Required:     false,
+				DefaultValue: 1000,
+			},
+			"enable_contextual_help": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: true,
+			},
+			"session_context_enabled": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
 			},
 		},
 	}

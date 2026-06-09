@@ -27,18 +27,18 @@ Implement minimal default output schemas (3-4 fields) for list commands. Add `--
 
 ## Sub-Tasks
 
-- [ ] Define default output schemas for each command (3-4 fields) — `output/schema.py`
-- [ ] Implement field selection logic — `output/schema.py`
-- [ ] Add `--fields` flag to CLI using click/typer — `cli/main.py`
-- [ ] Support comma-separated field names in `--fields` flag — `output/schema.py`
-- [ ] Validate field names against available fields — `output/schema.py`
-- [ ] Apply schema to TOON output format — `output/toon.py`
-- [ ] Apply schema to JSON output format — `output/json.py`
-- [ ] Set default limits for list commands (e.g., 100 items) — `output/schema.py`
-- [ ] Move long-form content to detail views only — `output/schema.py`
-- [ ] Test default schemas for all commands — `tests/test_schema.py`
-- [ ] Test field selection with `--fields` flag — `tests/test_schema.py`
-- [ ] Test schema application to TOON and JSON — `tests/test_schema.py`
+- [x] Define default output schemas for each command (3-4 fields) — `output/schema.py`
+- [x] Implement field selection logic — `output/schema.py`
+- [x] Add `--fields` flag to CLI using click/typer — `cli/main.py`
+- [x] Support comma-separated field names in `--fields` flag — `output/schema.py`
+- [x] Validate field names against available fields — `output/schema.py`
+- [x] Apply schema to TOON output format — `output/formatter.py`
+- [x] Apply schema to JSON output format — `output/formatter.py`
+- [x] Set default limits for list commands (e.g., 100 items) — `output/schema.py`
+- [x] Move long-form content to detail views only — `output/schema.py`
+- [x] Test default schemas for all commands — `tests/test_schema.py`
+- [x] Test field selection with `--fields` flag — `tests/test_schema.py`
+- [x] Test schema application to TOON and JSON — `tests/test_schema.py`
 
 ## Relevant Files
 
@@ -50,14 +50,14 @@ Implement minimal default output schemas (3-4 fields) for list commands. Add `--
 
 ## Acceptance Criteria
 
-- [ ] Default list schemas have 3-4 fields (identifier, title, status)
-- [ ] `--fields` flag allows explicit field selection
-- [ ] Field names are comma-separated
-- [ ] Invalid field names are rejected with clear error
-- [ ] Schema applies to both TOON and JSON formats
-- [ ] Default limits are appropriate for common cases
-- [ ] Long-form content only in detail views
-- [ ] All tests pass
+- [x] Default list schemas have 3-4 fields (identifier, title, status)
+- [x] `--fields` flag allows explicit field selection
+- [x] Field names are comma-separated
+- [x] Invalid field names are rejected with clear error
+- [x] Schema applies to both TOON and JSON formats
+- [x] Default limits are appropriate for common cases
+- [x] Long-form content only in detail views
+- [x] All tests pass
 
 ## Test Plan
 

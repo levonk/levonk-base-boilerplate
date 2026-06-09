@@ -1,0 +1,539 @@
+#!/usr/bin/env node
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
+import { createLogger, type LoggerOptions } from './logger.js';
+
+/**
+ * Data collection schema for collection vs processing separation
+ * 
+ * This schema allows data collection in daemon mode (background) and
+ * offline processing in a separate environment without requiring the daemon.
+ * 
+ * Versioning: The format includes a version field for future compatibility
+ * Compression: Large datasets can be compressed for export/import
+ * Validation: All data is validated against the schema before processing
+ */
+
+export const DATA_FORMAT_VERSION = '1.0.0';
+
+export interface CollectedData {
+  version: string;
+  metadata: DataMetadata;
+  collection: DataCollection;
+  schema: DataSchema;
+}
+
+export interface DataMetadata {
+  exportDate: string;
+  exportedBy: string;
+  collectionStart: string;
+  collectionEnd: string;
+  totalRecords: number;
+  dataSize: number;
+  compressed: boolean;
+  checksum?: string;
+}
+
+export interface DataCollection {
+  jobs: CollectedJob[];
+  metrics: CollectedMetrics;
+  events: CollectedEvent[];
+}
+
+export interface CollectedJob {
+  id: string;
+  command: string;
+  args: string[];
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  startTime?: string;
+  endTime?: string;
+  progress?: number;
+  result?: any;
+  error?: string;
+  duration?: number;
+  resourceUsage?: {
+    memoryMB?: number;
+    cpuPercent?: number;
+  };
+}
+
+export interface CollectedMetrics {
+  totalJobs: number;
+  completedJobs: number;
+  failedJobs: number;
+  cancelledJobs: number;
+  averageDuration?: number;
+  totalDuration?: number;
+}
+
+export interface CollectedEvent {
+  timestamp: string;
+  type: 'job_created' | 'job_started' | 'job_completed' | 'job_failed' | 'job_cancelled';
+  jobId: string;
+  details?: any;
+}
+
+export interface DataSchema {
+  format: 'json' | 'jsonl' | 'csv';
+  encoding: 'utf-8';
+  compression?: 'gzip' | 'bzip2' | 'none';
+  fields: SchemaField[];
+}
+
+export interface SchemaField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array' | 'timestamp';
+  required: boolean;
+  description: string;
+}
+
+export interface ExportOptions {
+  outputPath: string;
+  format?: 'json' | 'jsonl';
+  compression?: 'gzip' | 'none';
+  includeMetrics?: boolean;
+  includeEvents?: boolean;
+  validate?: boolean;
+}
+
+export interface ImportOptions {
+  inputPath: string;
+  validate?: boolean;
+  strict?: boolean;
+}
+
+export interface AnalysisOptions {
+  inputPath: string;
+  analysisType: 'summary' | 'performance' | 'errors' | 'timeline';
+  outputFormat?: 'text' | 'json';
+}
+
+export interface AnalysisResult {
+  analysisType: string;
+  timestamp: string;
+  data: any;
+}
+
+/**
+ * Validation errors for data format
+ */
+export class DataValidationError extends Error {
+  constructor(message: string, public field?: string) {
+    super(message);
+    this.name = 'DataValidationError';
+  }
+}
+
+/**
+ * Processing manager for collection/processing separation
+ */
+class ProcessingManager {
+  private logger: ReturnType<typeof createLogger>;
+  private dataDir: string;
+
+  constructor(loggerOptions?: LoggerOptions) {
+    this.logger = createLogger(loggerOptions || { quiet: false, verbose: false, color: 'auto', module: 'processing' });
+    this.dataDir = join(homedir(), '.{{ project_slug }}', 'data');
+
+    // Ensure data directory exists
+    if (!existsSync(this.dataDir)) {
+      mkdirSync(this.dataDir, { recursive: true });
+    }
+  }
+
+  /**
+   * Validate collected data against schema
+   */
+  validateData(data: CollectedData): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // Check version
+    if (!data.version) {
+      errors.push('Missing version field');
+    } else if (data.version !== DATA_FORMAT_VERSION) {
+      errors.push(`Unsupported version: ${data.version} (expected ${DATA_FORMAT_VERSION})`);
+    }
+
+    // Check metadata
+    if (!data.metadata) {
+      errors.push('Missing metadata');
+    } else {
+      if (!data.metadata.exportDate) errors.push('Missing metadata.exportDate');
+      if (!data.metadata.collectionStart) errors.push('Missing metadata.collectionStart');
+      if (!data.metadata.collectionEnd) errors.push('Missing metadata.collectionEnd');
+    }
+
+    // Check collection
+    if (!data.collection) {
+      errors.push('Missing collection');
+    } else {
+      if (!Array.isArray(data.collection.jobs)) errors.push('collection.jobs must be an array');
+      if (!data.collection.metrics) errors.push('Missing collection.metrics');
+      if (!Array.isArray(data.collection.events)) errors.push('collection.events must be an array');
+    }
+
+    // Check schema
+    if (!data.schema) {
+      errors.push('Missing schema');
+    } else {
+      if (!data.schema.format) errors.push('Missing schema.format');
+      if (!data.schema.encoding) errors.push('Missing schema.encoding');
+      if (!Array.isArray(data.schema.fields)) errors.push('schema.fields must be an array');
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  /**
+   * Export collected data to portable format
+   */
+  exportData(jobs: any[], metrics: any, events: any[], options: ExportOptions): CollectedData {
+    this.logger.info('Exporting collected data...');
+
+    const now = new Date();
+    const collection: DataCollection = {
+      jobs: jobs.map(job => this.transformJob(job)),
+      metrics: this.transformMetrics(metrics, jobs),
+      events: events.map(event => this.transformEvent(event)),
+    };
+
+    const data: CollectedData = {
+      version: DATA_FORMAT_VERSION,
+      metadata: {
+        exportDate: now.toISOString(),
+        exportedBy: process.env.USER || 'unknown',
+        collectionStart: this.getCollectionStart(jobs),
+        collectionEnd: now.toISOString(),
+        totalRecords: jobs.length,
+        dataSize: JSON.stringify(collection).length,
+        compressed: options.compression === 'gzip',
+      },
+      collection,
+      schema: {
+        format: options.format || 'json',
+        encoding: 'utf-8',
+        compression: options.compression || 'none',
+        fields: this.getSchemaFields(),
+      },
+    };
+
+    // Validate before export if requested
+    if (options.validate !== false) {
+      const validation = this.validateData(data);
+      if (!validation.valid) {
+        throw new DataValidationError(`Data validation failed: ${validation.errors.join(', ')}`);
+      }
+    }
+
+    // Write to file
+    const outputPath = options.outputPath;
+    const outputDir = join(outputPath, '..');
+    if (!existsSync(outputDir)) {
+      mkdirSync(outputDir, { recursive: true });
+    }
+
+    const output = JSON.stringify(data, null, 2);
+    writeFileSync(outputPath, output, 'utf-8');
+
+    this.logger.info(`Data exported to ${outputPath}`);
+    this.logger.info(`Total records: ${data.metadata.totalRecords}`);
+    this.logger.info(`Data size: ${data.metadata.dataSize} bytes`);
+
+    return data;
+  }
+
+  /**
+   * Import collected data from portable format
+   */
+  importData(options: ImportOptions): CollectedData {
+    this.logger.info(`Importing data from ${options.inputPath}...`);
+
+    if (!existsSync(options.inputPath)) {
+      throw new Error(`File not found: ${options.inputPath}`);
+    }
+
+    const content = readFileSync(options.inputPath, 'utf-8');
+    const data = JSON.parse(content) as CollectedData;
+
+    // Validate if requested
+    if (options.validate !== false) {
+      const validation = this.validateData(data);
+      if (!validation.valid) {
+        if (options.strict) {
+          throw new DataValidationError(`Data validation failed: ${validation.errors.join(', ')}`);
+        } else {
+          this.logger.warn(`Data validation warnings: ${validation.errors.join(', ')}`);
+        }
+      }
+    }
+
+    this.logger.info(`Data imported successfully`);
+    this.logger.info(`Version: ${data.version}`);
+    this.logger.info(`Total records: ${data.metadata.totalRecords}`);
+    this.logger.info(`Export date: ${data.metadata.exportDate}`);
+
+    return data;
+  }
+
+  /**
+   * Perform offline analysis on imported data
+   */
+  analyzeData(data: CollectedData, options: AnalysisOptions): AnalysisResult {
+    this.logger.info(`Performing ${options.analysisType} analysis...`);
+
+    let result: any;
+
+    switch (options.analysisType) {
+      case 'summary':
+        result = this.analyzeSummary(data);
+        break;
+      case 'performance':
+        result = this.analyzePerformance(data);
+        break;
+      case 'errors':
+        result = this.analyzeErrors(data);
+        break;
+      case 'timeline':
+        result = this.analyzeTimeline(data);
+        break;
+      default:
+        throw new Error(`Unknown analysis type: ${options.analysisType}`);
+    }
+
+    const analysisResult: AnalysisResult = {
+      analysisType: options.analysisType,
+      timestamp: new Date().toISOString(),
+      data: result,
+    };
+
+    this.logger.info(`Analysis complete: ${options.analysisType}`);
+
+    return analysisResult;
+  }
+
+  /**
+   * Transform job to collected format
+   */
+  private transformJob(job: any): CollectedJob {
+    return {
+      id: job.id,
+      command: job.command,
+      args: job.args,
+      status: job.status,
+      startTime: job.startTime ? new Date(job.startTime).toISOString() : undefined,
+      endTime: job.endTime ? new Date(job.endTime).toISOString() : undefined,
+      progress: job.progress,
+      result: job.result,
+      error: job.error,
+      duration: job.startTime && job.endTime 
+        ? new Date(job.endTime).getTime() - new Date(job.startTime).getTime() 
+        : undefined,
+      resourceUsage: job.resourceUsage,
+    };
+  }
+
+  /**
+   * Transform metrics to collected format
+   */
+  private transformMetrics(metrics: any, jobs: any[]): CollectedMetrics {
+    const completed = jobs.filter(j => j.status === 'completed').length;
+    const failed = jobs.filter(j => j.status === 'failed').length;
+    const cancelled = jobs.filter(j => j.status === 'cancelled').length;
+
+    const durations = jobs
+      .filter(j => j.startTime && j.endTime && j.status === 'completed')
+      .map(j => new Date(j.endTime).getTime() - new Date(j.startTime).getTime());
+
+    return {
+      totalJobs: jobs.length,
+      completedJobs: completed,
+      failedJobs: failed,
+      cancelledJobs: cancelled,
+      averageDuration: durations.length > 0 
+        ? durations.reduce((a, b) => a + b, 0) / durations.length 
+        : undefined,
+      totalDuration: durations.length > 0 
+        ? durations.reduce((a, b) => a + b, 0) 
+        : undefined,
+    };
+  }
+
+  /**
+   * Transform event to collected format
+   */
+  private transformEvent(event: any): CollectedEvent {
+    return {
+      timestamp: event.timestamp ? new Date(event.timestamp).toISOString() : new Date().toISOString(),
+      type: event.type,
+      jobId: event.jobId,
+      details: event.details,
+    };
+  }
+
+  /**
+   * Get collection start time from jobs
+   */
+  private getCollectionStart(jobs: any[]): string {
+    const startTimes = jobs
+      .filter(j => j.startTime)
+      .map(j => new Date(j.startTime).getTime())
+      .sort((a, b) => a - b);
+
+    return startTimes.length > 0 
+      ? new Date(startTimes[0]).toISOString() 
+      : new Date().toISOString();
+  }
+
+  /**
+   * Get schema fields for data format
+   */
+  private getSchemaFields(): SchemaField[] {
+    return [
+      {
+        name: 'id',
+        type: 'string',
+        required: true,
+        description: 'Unique job identifier',
+      },
+      {
+        name: 'command',
+        type: 'string',
+        required: true,
+        description: 'Command that was executed',
+      },
+      {
+        name: 'args',
+        type: 'array',
+        required: true,
+        description: 'Command arguments',
+      },
+      {
+        name: 'status',
+        type: 'string',
+        required: true,
+        description: 'Job status (pending, running, completed, failed, cancelled)',
+      },
+      {
+        name: 'startTime',
+        type: 'timestamp',
+        required: false,
+        description: 'Job start timestamp',
+      },
+      {
+        name: 'endTime',
+        type: 'timestamp',
+        required: false,
+        description: 'Job end timestamp',
+      },
+      {
+        name: 'progress',
+        type: 'number',
+        required: false,
+        description: 'Job progress percentage (0-100)',
+      },
+      {
+        name: 'duration',
+        type: 'number',
+        required: false,
+        description: 'Job duration in milliseconds',
+      },
+    ];
+  }
+
+  /**
+   * Analyze summary statistics
+   */
+  private analyzeSummary(data: CollectedData): any {
+    return {
+      totalJobs: data.collection.metrics.totalJobs,
+      completedJobs: data.collection.metrics.completedJobs,
+      failedJobs: data.collection.metrics.failedJobs,
+      cancelledJobs: data.collection.metrics.cancelledJobs,
+      successRate: data.collection.metrics.totalJobs > 0
+        ? (data.collection.metrics.completedJobs / data.collection.metrics.totalJobs * 100).toFixed(2)
+        : '0.00',
+      averageDuration: data.collection.metrics.averageDuration
+        ? `${(data.collection.metrics.averageDuration / 1000).toFixed(2)}s`
+        : 'N/A',
+      totalDuration: data.collection.metrics.totalDuration
+        ? `${(data.collection.metrics.totalDuration / 1000).toFixed(2)}s`
+        : 'N/A',
+    };
+  }
+
+  /**
+   * Analyze performance metrics
+   */
+  private analyzePerformance(data: CollectedData): any {
+    const jobsWithDuration = data.collection.jobs.filter(j => j.duration);
+    const durations = jobsWithDuration.map(j => j.duration || 0);
+
+    return {
+      totalJobsWithDuration: jobsWithDuration.length,
+      minDuration: durations.length > 0 ? `${Math.min(...durations)}ms` : 'N/A',
+      maxDuration: durations.length > 0 ? `${Math.max(...durations)}ms` : 'N/A',
+      avgDuration: durations.length > 0 ? `${(durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(2)}ms` : 'N/A',
+      medianDuration: durations.length > 0 
+        ? `${durations.sort((a, b) => a - b)[Math.floor(durations.length / 2)]}ms` 
+        : 'N/A',
+    };
+  }
+
+  /**
+   * Analyze errors
+   */
+  private analyzeErrors(data: CollectedData): any {
+    const failedJobs = data.collection.jobs.filter(j => j.status === 'failed');
+    const errorMessages = failedJobs.map(j => j.error).filter(Boolean);
+
+    return {
+      totalErrors: failedJobs.length,
+      errorRate: data.collection.metrics.totalJobs > 0
+        ? (failedJobs.length / data.collection.metrics.totalJobs * 100).toFixed(2)
+        : '0.00',
+      uniqueErrors: [...new Set(errorMessages)].length,
+      errors: failedJobs.map(j => ({
+        jobId: j.id,
+        command: j.command,
+        error: j.error,
+        duration: j.duration,
+      })),
+    };
+  }
+
+  /**
+   * Analyze timeline
+   */
+  private analyzeTimeline(data: CollectedData): any {
+    const events = data.collection.events.sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+
+    return {
+      totalEvents: events.length,
+      collectionStart: data.metadata.collectionStart,
+      collectionEnd: data.metadata.collectionEnd,
+      collectionDuration: new Date(data.metadata.collectionEnd).getTime() - 
+                        new Date(data.metadata.collectionStart).getTime(),
+      events: events.slice(0, 100), // Limit to first 100 events
+    };
+  }
+}
+
+// Export singleton instance
+let processingManager: ProcessingManager | null = null;
+
+export function getProcessingManager(loggerOptions?: LoggerOptions): ProcessingManager {
+  if (!processingManager) {
+    processingManager = new ProcessingManager(loggerOptions);
+  }
+  return processingManager;
+}
+
+export function resetProcessingManager(): void {
+  processingManager = null;
+}

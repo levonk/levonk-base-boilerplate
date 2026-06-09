@@ -1,0 +1,323 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import {
+  ResourceMonitor,
+  ResourceLimitError,
+  parseMemoryLimit,
+  parseCpuLimit,
+  createResourceMonitor,
+  type ResourceLimits,
+} from './resources.js';
+
+describe('parseMemoryLimit', () => {
+  it('should parse MB values', () => {
+    expect(parseMemoryLimit('512')).toBe(512);
+    expect(parseMemoryLimit('512MB')).toBe(512);
+    expect(parseMemoryLimit('1024MB')).toBe(1024);
+  });
+
+  it('should parse GB values', () => {
+    expect(parseMemoryLimit('1GB')).toBe(1024);
+    expect(parseMemoryLimit('2GB')).toBe(2048);
+    expect(parseMemoryLimit('0.5GB')).toBe(512);
+  });
+
+  it('should handle whitespace', () => {
+    expect(parseMemoryLimit(' 512 ')).toBe(512);
+    expect(parseMemoryLimit(' 512MB ')).toBe(512);
+    expect(parseMemoryLimit(' 1GB ')).toBe(1024);
+  });
+
+  it('should handle case insensitivity', () => {
+    expect(parseMemoryLimit('512mb')).toBe(512);
+    expect(parseMemoryLimit('512Mb')).toBe(512);
+    expect(parseMemoryLimit('1gb')).toBe(1024);
+    expect(parseMemoryLimit('1Gb')).toBe(1024);
+  });
+
+  it('should handle decimal values', () => {
+    expect(parseMemoryLimit('0.5')).toBe(0.5);
+    expect(parseMemoryLimit('1.5GB')).toBe(1536);
+  });
+});
+
+describe('parseCpuLimit', () => {
+  it('should parse percentage values', () => {
+    expect(parseCpuLimit('50')).toBe(50);
+    expect(parseCpuLimit('50%')).toBe(50);
+    expect(parseCpuLimit('75%')).toBe(75);
+  });
+
+  it('should handle whitespace', () => {
+    expect(parseCpuLimit(' 50 ')).toBe(50);
+    expect(parseCpuLimit(' 50% ')).toBe(50);
+  });
+
+  it('should handle case insensitivity', () => {
+    expect(parseCpuLimit('50%')).toBe(50);
+  });
+
+  it('should clamp values to 0-100', () => {
+    expect(parseCpuLimit('150')).toBe(100);
+    expect(parseCpuLimit('150%')).toBe(100);
+    expect(parseCpuLimit('-10')).toBe(0);
+    expect(parseCpuLimit('-10%')).toBe(0);
+  });
+
+  it('should handle decimal values', () => {
+    expect(parseCpuLimit('50.5')).toBe(50.5);
+    expect(parseCpuLimit('50.5%')).toBe(50.5);
+  });
+});
+
+describe('ResourceMonitor', () => {
+  let monitor: ResourceMonitor;
+
+  afterEach(() => {
+    if (monitor) {
+      monitor.stopMonitoring();
+    }
+  });
+
+  describe('getMemoryUsage', () => {
+    it('should return memory usage in MB', () => {
+      monitor = new ResourceMonitor({
+        limits: {},
+      });
+      const usage = monitor.getMemoryUsage();
+      expect(usage).toBeGreaterThan(0);
+      expect(typeof usage).toBe('number');
+    });
+  });
+
+  describe('getCpuUsage', () => {
+    it('should return CPU usage percentage', () => {
+      monitor = new ResourceMonitor({
+        limits: {},
+      });
+      const usage = monitor.getCpuUsage();
+      expect(usage).toBeGreaterThanOrEqual(0);
+      expect(usage).toBeLessThanOrEqual(100);
+      expect(typeof usage).toBe('number');
+    });
+  });
+
+  describe('getCurrentUsage', () => {
+    it('should return current resource usage', () => {
+      monitor = new ResourceMonitor({
+        limits: {},
+      });
+      const usage = monitor.getCurrentUsage();
+      expect(usage).toHaveProperty('memoryMB');
+      expect(usage).toHaveProperty('cpuPercent');
+      expect(usage.memoryMB).toBeGreaterThan(0);
+      expect(usage.cpuPercent).toBeGreaterThanOrEqual(0);
+      expect(usage.cpuPercent).toBeLessThanOrEqual(100);
+    });
+  });
+
+  describe('checkMemoryLimit', () => {
+    it('should not throw when memory limit is not set', () => {
+      monitor = new ResourceMonitor({
+        limits: {},
+      });
+      expect(() => monitor.checkMemoryLimit()).not.toThrow();
+    });
+
+    it('should not throw when memory is under limit', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 10000 }, // Very high limit
+      });
+      expect(() => monitor.checkMemoryLimit()).not.toThrow();
+    });
+
+    it('should throw ResourceLimitError when memory exceeds limit', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 0.1 }, // Very low limit
+      });
+      expect(() => monitor.checkMemoryLimit()).toThrow(ResourceLimitError);
+    });
+
+    it('should include current usage and limit in error', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 0.1 },
+      });
+      try {
+        monitor.checkMemoryLimit();
+        fail('Should have thrown ResourceLimitError');
+      } catch (error) {
+        if (error instanceof ResourceLimitError) {
+          expect(error.resourceType).toBe('memory');
+          expect(error.currentUsage).toBeGreaterThan(0);
+          expect(error.limit).toBe(0.1);
+          expect(error.message).toContain('Memory limit exceeded');
+        }
+      }
+    });
+  });
+
+  describe('checkCpuLimit', () => {
+    it('should not throw when CPU limit is not set', () => {
+      monitor = new ResourceMonitor({
+        limits: {},
+      });
+      expect(() => monitor.checkCpuLimit()).not.toThrow();
+    });
+
+    it('should not throw when CPU is under limit', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxCpuPercent: 100 }, // High limit
+      });
+      expect(() => monitor.checkCpuLimit()).not.toThrow();
+    });
+
+    it('should throw ResourceLimitError when CPU exceeds limit', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxCpuPercent: 0.1 }, // Very low limit
+      });
+      expect(() => monitor.checkCpuLimit()).toThrow(ResourceLimitError);
+    });
+
+    it('should include current usage and limit in error', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxCpuPercent: 0.1 },
+      });
+      try {
+        monitor.checkCpuLimit();
+        expect.fail('Should have thrown ResourceLimitError');
+      } catch (error) {
+        if (error instanceof ResourceLimitError) {
+          expect(error.resourceType).toBe('cpu');
+          expect(error.currentUsage).toBeGreaterThanOrEqual(0);
+          expect(error.limit).toBe(0.1);
+          expect(error.message).toContain('CPU limit exceeded');
+        }
+      }
+    });
+  });
+
+  describe('checkLimits', () => {
+    it('should check both memory and CPU limits', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 10000, maxCpuPercent: 100 },
+      });
+      expect(() => monitor.checkLimits()).not.toThrow();
+    });
+
+    it('should throw when memory limit is exceeded', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 0.1 },
+      });
+      expect(() => monitor.checkLimits()).toThrow(ResourceLimitError);
+    });
+
+    it('should throw when CPU limit is exceeded', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxCpuPercent: 0.1 },
+      });
+      expect(() => monitor.checkLimits()).toThrow(ResourceLimitError);
+    });
+  });
+
+  describe('logUsage', () => {
+    it('should log resource usage without throwing', () => {
+      monitor = new ResourceMonitor({
+        limits: {},
+      });
+      expect(() => monitor.logUsage()).not.toThrow();
+    });
+
+    it('should log usage with limits when limits are set', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 512, maxCpuPercent: 50 },
+      });
+      expect(() => monitor.logUsage()).not.toThrow();
+    });
+  });
+
+  describe('startMonitoring and stopMonitoring', () => {
+    it('should start and stop monitoring', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 10000, maxCpuPercent: 100 },
+        samplingInterval: 100,
+      });
+      expect(monitor.isMonitoring()).toBe(false);
+      monitor.startMonitoring();
+      expect(monitor.isMonitoring()).toBe(true);
+      monitor.stopMonitoring();
+      expect(monitor.isMonitoring()).toBe(false);
+    });
+
+    it('should not start monitoring if already started', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 10000 },
+        samplingInterval: 100,
+      });
+      monitor.startMonitoring();
+      expect(() => monitor.startMonitoring()).not.toThrow();
+      monitor.stopMonitoring();
+    });
+
+    it('should stop monitoring gracefully when not monitoring', () => {
+      monitor = new ResourceMonitor({
+        limits: {},
+      });
+      expect(() => monitor.stopMonitoring()).not.toThrow();
+    });
+  });
+
+  describe('isMonitoring', () => {
+    it('should return false when not monitoring', () => {
+      monitor = new ResourceMonitor({
+        limits: {},
+      });
+      expect(monitor.isMonitoring()).toBe(false);
+    });
+
+    it('should return true when monitoring', () => {
+      monitor = new ResourceMonitor({
+        limits: { maxMemoryMB: 10000 },
+        samplingInterval: 100,
+      });
+      monitor.startMonitoring();
+      expect(monitor.isMonitoring()).toBe(true);
+      monitor.stopMonitoring();
+    });
+  });
+});
+
+describe('createResourceMonitor', () => {
+  it('should create a ResourceMonitor instance', () => {
+    const limits: ResourceLimits = { maxMemoryMB: 512 };
+    const monitor = createResourceMonitor(limits);
+    expect(monitor).toBeInstanceOf(ResourceMonitor);
+    monitor.stopMonitoring();
+  });
+
+  it('should accept logger options', () => {
+    const limits: ResourceLimits = { maxCpuPercent: 50 };
+    const monitor = createResourceMonitor(limits, { verbose: true });
+    expect(monitor).toBeInstanceOf(ResourceMonitor);
+    monitor.stopMonitoring();
+  });
+});
+
+describe('ResourceLimitError', () => {
+  it('should create error with correct properties', () => {
+    const error = new ResourceLimitError(
+      'Test error',
+      'memory',
+      100,
+      50
+    );
+    expect(error.name).toBe('ResourceLimitError');
+    expect(error.message).toBe('Test error');
+    expect(error.resourceType).toBe('memory');
+    expect(error.currentUsage).toBe(100);
+    expect(error.limit).toBe(50);
+  });
+
+  it('should be instanceof Error', () => {
+    const error = new ResourceLimitError('Test', 'cpu', 75, 50);
+    expect(error).toBeInstanceOf(Error);
+  });
+});

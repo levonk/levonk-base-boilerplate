@@ -20,15 +20,15 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
 | 01-001 | Mode Selection Implementation | feature/current/20260708-cli-python-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli.py, config.py] | [x] Done |
 | 01-002 | TOON Format Implementation | feature/current/20260708-cli-python-aix/story-01-002-toon-format | None | Parallel-safe: true | [output.py, toon.py] | [x] Done |
-| 01-003 | Config Updates for Agent Mode | feature/current/20260708-cli-python-aix/story-01-003-config-updates | None | Parallel-safe: true | [config.py] | [~] In-Progress |
+| 01-003 | Config Updates for Agent Mode | feature/current/20260708-cli-python-aix/story-01-003-config-updates | None | Parallel-safe: true | [config.py] | [x] Done |
 
 ### Phase 02: Output Optimization (Week 1)
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 02-001 | Minimal Default Schemas | feature/current/20260708-cli-python-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output.py, schema.py] |
-| 02-002 | Content Truncation | feature/current/20260708-cli-python-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output.py, truncation.py] |
-| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-python-aix/story-02-003-aggregates | 02-001 | Parallel-safe: true | [output.py, aggregates.py] |
+| 02-001 | Minimal Default Schemas | feature/current/20260708-cli-python-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output.py, schema.py] | [x] Done |
+| 02-002 | Content Truncation | feature/current/20260708-cli-python-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output.py, truncation.py] | [x] Done
+| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-python-aix/story-02-003-aggregates | 02-001 | Parallel-safe: true | [output.py, aggregates.py] | [~] In-Progress |
 | 02-004 | Definitive Empty States | feature/current/20260708-cli-python-aix/story-02-004-empty-states | 02-001 | Parallel-safe: true | [output.py, empty.py] |
 
 ### Phase 03: Error Handling & Idempotency (Week 2)
