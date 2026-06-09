@@ -33,6 +33,7 @@ pub use encoder::{ToonEncoder, to_string, to_string_with_options};
 pub use decoder::{ToonDecoder, from_str, from_str_with_options};
 
 use crate::internal::schema::{OutputSchema, FieldSelector, apply_schema_transforms};
+use crate::internal::truncation::{Truncator, TruncationMetadata};
 
 /// Output format options
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -69,29 +70,61 @@ impl OutputFormat {
 /// Output formatter
 pub struct OutputFormatter {
     format: OutputFormat,
+    truncator: Option<Truncator>,
 }
 
 impl OutputFormatter {
     /// Create a new output formatter with the specified format
     pub fn new(format: OutputFormat) -> Self {
-        Self { format }
+        Self { 
+            format,
+            truncator: None,
+        }
+    }
+
+    /// Create a new output formatter with truncation support
+    pub fn with_truncation(format: OutputFormat, truncation_limit: usize) -> Self {
+        Self {
+            format,
+            truncator: Some(Truncator::new(truncation_limit)),
+        }
+    }
+
+    /// Create a new output formatter without truncation (full output)
+    pub fn without_truncation(format: OutputFormat) -> Self {
+        Self {
+            format,
+            truncator: None,
+        }
     }
 
     /// Auto-detect format based on mode and CLI flags
     pub fn auto_detect(mode: crate::internal::mode::Mode, toon_flag: bool, json_flag: bool, format_override: Option<&str>) -> anyhow::Result<Self> {
+        Self::auto_detect_with_truncation(mode, toon_flag, json_flag, format_override, None, false)
+    }
+
+    /// Auto-detect format with truncation configuration
+    pub fn auto_detect_with_truncation(
+        mode: crate::internal::mode::Mode,
+        toon_flag: bool,
+        json_flag: bool,
+        format_override: Option<&str>,
+        truncation_limit: Option<usize>,
+        full_output: bool,
+    ) -> anyhow::Result<Self> {
         // Priority: explicit format override > explicit flags > mode-based default
         if let Some(format_str) = format_override {
             let format = OutputFormat::from_str(format_str)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
-            return Ok(Self::new(format));
+            return Ok(Self::new_with_truncation_config(format, truncation_limit, full_output));
         }
 
         if toon_flag {
-            return Ok(Self::new(OutputFormat::Toon));
+            return Ok(Self::new_with_truncation_config(OutputFormat::Toon, truncation_limit, full_output));
         }
 
         if json_flag {
-            return Ok(Self::new(OutputFormat::Json));
+            return Ok(Self::new_with_truncation_config(OutputFormat::Json, truncation_limit, full_output));
         }
 
         // Mode-based default
@@ -100,7 +133,18 @@ impl OutputFormatter {
             crate::internal::mode::Mode::Human => OutputFormat::Human,
         };
 
-        Ok(Self::new(format))
+        Ok(Self::new_with_truncation_config(format, truncation_limit, full_output))
+    }
+
+    /// Create formatter with truncation configuration
+    fn new_with_truncation_config(format: OutputFormat, truncation_limit: Option<usize>, full_output: bool) -> Self {
+        if full_output {
+            Self::without_truncation(format)
+        } else if let Some(limit) = truncation_limit {
+            Self::with_truncation(format, limit)
+        } else {
+            Self::new(format)
+        }
     }
 
     /// Format a ToonValue to the configured output format
@@ -148,6 +192,50 @@ impl OutputFormatter {
     /// Get the current output format
     pub fn format(&self) -> OutputFormat {
         self.format
+    }
+
+    /// Apply truncation to a ToonValue if truncator is configured
+    pub fn apply_truncation(&self, value: &ToonValue) -> (ToonValue, Option<TruncationMetadata>) {
+        if let Some(truncator) = &self.truncator {
+            self.truncate_value(value, truncator)
+        } else {
+            (value.clone(), None)
+        }
+    }
+
+    /// Recursively truncate string values in a ToonValue
+    fn truncate_value(&self, value: &ToonValue, truncator: &Truncator) -> (ToonValue, Option<TruncationMetadata>) {
+        match value {
+            ToonValue::String(s) => {
+                let (truncated, metadata) = truncator.truncate(s);
+                (ToonValue::String(truncated.into_owned()), Some(metadata))
+            }
+            ToonValue::Array(arr) => {
+                let mut new_arr = Vec::new();
+                let mut metadata = None;
+                for item in arr {
+                    let (truncated_item, item_metadata) = self.truncate_value(item, truncator);
+                    new_arr.push(truncated_item);
+                    if item_metadata.is_some() {
+                        metadata = item_metadata;
+                    }
+                }
+                (ToonValue::Array(new_arr), metadata)
+            }
+            ToonValue::Object(obj) => {
+                let mut new_obj = std::collections::BTreeMap::new();
+                let mut metadata = None;
+                for (key, val) in obj {
+                    let (truncated_val, val_metadata) = self.truncate_value(val, truncator);
+                    new_obj.insert(key.clone(), truncated_val);
+                    if val_metadata.is_some() {
+                        metadata = val_metadata;
+                    }
+                }
+                (ToonValue::Object(new_obj), metadata)
+            }
+            _ => (value.clone(), None),
+        }
     }
 }
 

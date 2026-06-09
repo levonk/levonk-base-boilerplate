@@ -5,8 +5,8 @@
 | 01-001 | Mode Selection and Auto-detection | [x] Done | feature/current/20260708-cli-rust-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli-core, config] |
 | 01-002 | TOON Format Implementation | [x] Done | feature/current/20260708-cli-rust-aix/story-01-002-toon-format | None | Parallel-safe: true | [output-formats] |
 | 01-003 | Configuration System Updates | [x] Done | feature/current/20260708-cli-rust-aix/story-01-003-config-updates | None | Parallel-safe: true | [config] |
-| 02-001 | Minimal Default Schemas | [~] In-Progress | feature/current/20260708-cli-rust-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output-formats, cli-commands] |
-| 02-002 | Content Truncation | [ ] Todo | feature/current/20260708-cli-rust-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] |
+| 02-001 | Minimal Default Schemas | [x] Done | feature/current/20260708-cli-rust-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output-formats, cli-commands] |
+| 02-002 | Content Truncation | [~] In-Progress | feature/current/20260708-cli-rust-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] |
 | 02-003 | Pre-computed Aggregates | [ ] Todo | feature/current/20260708-cli-rust-aix/story-02-003-aggregates | 01-001 | Parallel-safe: true | [data-layer, output-formats] |
 | 02-004 | Definitive Empty States | [ ] Todo | feature/current/20260708-cli-rust-aix/story-02-004-empty-states | 01-001 | Parallel-safe: true | [output-formats, cli-commands] |
 | 03-001 | Structured Errors & Exit Codes | [ ] Todo | feature/current/20260708-cli-rust-aix/story-03-001-structured-errors | 01-001, 01-002 | Parallel-safe: true | [error-handling, output-formats] |

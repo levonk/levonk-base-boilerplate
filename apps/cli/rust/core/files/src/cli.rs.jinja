@@ -64,6 +64,20 @@ use std::time::Duration;
 ///
 /// Quick TOON output:
 ///   {{ project_slug }} --toon file1.txt
+///
+/// # Content Truncation
+///
+/// Large text fields (descriptions, bodies, logs) are automatically truncated to reduce token consumption in agent mode.
+/// Default truncation limit is 1000 characters (configurable via truncation_limit in config file).
+///
+/// Show full content without truncation:
+///   {{ project_slug }} --full file1.txt
+///
+/// Truncation metadata includes:
+/// - Original content size
+/// - Truncated content size
+/// - Truncation indicator
+/// - Help suggestion for retrieving full content (use --full flag)
 #[derive(Parser)]
 #[command(name = "{{ project_slug }}", version, about = "{{ description }}", long_about = None)]
 pub struct Cli {
@@ -90,6 +104,10 @@ pub struct Cli {
     /// Select specific fields for output (comma-separated, e.g., --fields id,name,status)
     #[arg(long, value_name = "FIELDS", help = "Select specific output fields (comma-separated, e.g., id,name,status)")]
     pub fields: Option<String>,
+
+    /// Show full content without truncation
+    #[arg(long, help = "Disable content truncation and show full output")]
+    pub full: bool,
 
     /// Quiet mode - suppress all output except errors
     #[arg(long, short = 'q')]

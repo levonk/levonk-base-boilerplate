@@ -27,49 +27,51 @@ Implement content truncation for large text fields (descriptions, bodies, logs) 
 
 ## Sub-Tasks
 
-- [ ] Design truncation strategy and configurable limits
-- [ ] Implement truncation function for text fields
-- [ ] Add truncation metadata generation (total size, truncation indicator)
-- [ ] Add help suggestion generation for truncated content
-- [ ] Add `--full` flag to CLI argument parser
-- [ ] Implement truncation logic for all large text fields
-- [ ] Apply truncation to description fields
-- [ ] Apply truncation to body fields
-- [ ] Apply truncation to log fields
-- [ ] Integrate truncation into TOON output formatting
-- [ ] Integrate truncation into JSON output formatting
-- [ ] Ensure truncation is only applied when content exceeds limit
-- [ ] Apply truncation to both agent and human modes
-- [ ] Write unit tests for truncation function
-- [ ] Write unit tests for truncation metadata generation
-- [ ] Write integration tests for `--full` flag functionality
-- [ ] Write tests for truncation application to various field types
-- [ ] Update CLI help text to document truncation behavior
+- [x] Design truncation strategy and configurable limits
+- [x] Implement truncation function for text fields
+- [x] Add truncation metadata generation (total size, truncation indicator)
+- [x] Add help suggestion generation for truncated content
+- [x] Add `--full` flag to CLI argument parser
+- [x] Implement truncation logic for all large text fields
+- [x] Apply truncation to description fields
+- [x] Apply truncation to body fields
+- [x] Apply truncation to log fields
+- [x] Integrate truncation into TOON output formatting
+- [x] Integrate truncation into JSON output formatting
+- [x] Ensure truncation is only applied when content exceeds limit
+- [x] Apply truncation to both agent and human modes
+- [x] Write unit tests for truncation function
+- [x] Write unit tests for truncation metadata generation
+- [x] Write integration tests for `--full` flag functionality
+- [x] Write tests for truncation application to various field types
+- [x] Update CLI help text to document truncation behavior
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/rust/core/src/internal/truncation/truncator.rs` — Truncation logic (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/truncation/tests.rs` — Tests for truncation (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/truncation/metadata.rs` — Truncation metadata generation (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/output/formatter.rs` — Integrate truncation into output formatting
-- `boilerplate/apps/cli/rust/core/src/internal/output/tests.rs` — Tests for truncation integration
-- `boilerplate/apps/cli/rust/core/src/cli/root.rs` — Add `--full` flag
-- `boilerplate/apps/cli/rust/core/src/config.rs` — Add truncation_limit config field
+- `apps/cli/rust/core/files/src/internal/truncation/mod.rs.jinja` — Truncation module exports (new file)
+- `apps/cli/rust/core/files/src/internal/truncation/truncator.rs.jinja` — Truncation logic (new file)
+- `apps/cli/rust/core/files/src/internal/truncation/tests.rs.jinja` — Integration tests for truncation (new file)
+- `apps/cli/rust/core/files/src/internal/truncation/metadata.rs.jinja` — Truncation metadata generation (new file)
+- `apps/cli/rust/core/files/src/internal/toon/mod.rs.jinja` — Integrate truncation into output formatting
+- `apps/cli/rust/core/files/src/internal/mod.rs.jinja` — Add truncation module export
+- `apps/cli/rust/core/files/src/cli.rs.jinja` — Add `--full` flag and truncation documentation
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Integrate truncation with CLI arguments
+- `apps/cli/rust/core/files/src/config.rs.jinja` — truncation_limit config field (already added in story 01-003)
 
 ## Acceptance Criteria
 
-- [ ] Truncation function correctly truncates text to specified limit
-- [ ] Truncation metadata includes total size and truncation indicator
-- [ ] Help suggestions are generated only when content is actually truncated
-- [ ] `--full` flag successfully disables truncation
-- [ ] Truncation is applied to all large text fields
-- [ ] Truncation works correctly for TOON output
-- [ ] Truncation works correctly for JSON output
-- [ ] Truncation is not applied when content is under limit
-- [ ] Truncation works in both agent and human modes
-- [ ] Configurable truncation limit is respected
-- [ ] All truncation functionality has test coverage
-- [ ] Help text documents truncation behavior and `--full` flag
+- [x] Truncation function correctly truncates text to specified limit
+- [x] Truncation metadata includes total size and truncation indicator
+- [x] Help suggestions are generated only when content is actually truncated
+- [x] `--full` flag successfully disables truncation
+- [x] Truncation is applied to all large text fields
+- [x] Truncation works correctly for TOON output
+- [x] Truncation works correctly for JSON output
+- [x] Truncation is not applied when content is under limit
+- [x] Truncation works in both agent and human modes
+- [x] Configurable truncation limit is respected
+- [x] All truncation functionality has test coverage
+- [x] Help text documents truncation behavior and `--full` flag
 
 ## Test Plan
 

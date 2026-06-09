@@ -263,13 +263,25 @@ async fn main() -> Result<()> {
     info!("CLI mode: {} (source: {})", mode_detection.mode.as_str(), mode_detection.source.as_str());
 
     // Detect output format with precedence chain
-    let output_formatter = OutputFormatter::auto_detect(
+    let truncation_limit = if cli.full {
+        None
+    } else {
+        Some(config_manager.get_config().truncation_limit)
+    };
+    let output_formatter = OutputFormatter::auto_detect_with_truncation(
         mode_detection.mode,
         cli.toon,
         cli.json,
         cli.format.as_deref(),
+        truncation_limit,
+        cli.full,
     )?;
     info!("Output format: {} (auto-detected based on mode and flags)", output_formatter.format().as_str());
+    if cli.full {
+        info!("Full output mode: truncation disabled");
+    } else if let Some(limit) = truncation_limit {
+        info!("Truncation limit: {} characters", limit);
+    }
 
     // Initialize schema registry for field selection
     let schema_registry = create_default_schema_registry();
