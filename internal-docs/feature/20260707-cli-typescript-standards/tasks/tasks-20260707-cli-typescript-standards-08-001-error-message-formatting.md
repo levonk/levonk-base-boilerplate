@@ -27,18 +27,18 @@ Implement consistent, actionable error messages with suggestions using the forma
 
 ## Sub-Tasks
 
-- [ ] Define error message format standard
-- [ ] Implement error message formatter
-- [ ] Add suggestion generation logic
-- [ ] Update all error paths to use new format
-- [ ] Add file references to error messages
-- [ ] Add context information to error messages
-- [ ] Implement error categorization
-- [ ] Add unit tests for error formatting
-- [ ] Add unit tests for suggestion generation
-- [ ] Add integration tests for error messages
-- [ ] Update help text to document error format
-- [ ] Add error message documentation
+- [x] Define error message format standard
+- [x] Implement error message formatter
+- [x] Add suggestion generation logic
+- [x] Update all error paths to use new format
+- [x] Add file references to error messages
+- [x] Add context information to error messages
+- [x] Implement error categorization
+- [x] Add unit tests for error formatting
+- [x] Add unit tests for suggestion generation
+- [x] Add integration tests for error messages
+- [x] Update help text to document error format
+- [x] Add error message documentation
 
 ## Relevant Files
 

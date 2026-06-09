@@ -173,12 +173,13 @@ func TestPrivacyModeIntegration(t *testing.T) {
 		t.Error("Expected privacy mode to be disabled initially")
 	}
 
-	pm.enabled = true
+	// Create a new instance with enabled=true to test toggle
+	pm = NewPrivacyMode(true)
 	if !pm.IsEnabled() {
 		t.Error("Expected privacy mode to be enabled after toggle")
 	}
 
-	pm.enabled = false
+	pm = NewPrivacyMode(false)
 	if pm.IsEnabled() {
 		t.Error("Expected privacy mode to be disabled after toggle")
 	}

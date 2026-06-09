@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-python-aix/prd.md"
 phase: 2
 parallel_id: 4
 branch: "feature/current/20260708-cli-python-aix/story-02-004-empty-states"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["02-001"]

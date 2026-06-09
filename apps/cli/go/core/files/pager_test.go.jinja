@@ -8,6 +8,8 @@ import (
 func TestGetTerminalHeight(t *testing.T) {
 	// Test that GetTerminalHeight returns a reasonable value
 	height := GetTerminalHeight()
+	// In non-TTY environments, GetTerminalHeight returns default 24
+	// Accept the default value as valid
 	if height < 10 {
 		t.Errorf("Expected terminal height to be at least 10, got %d", height)
 	}
@@ -18,6 +20,8 @@ func TestGetTerminalHeight(t *testing.T) {
 
 func TestGetTerminalSize(t *testing.T) {
 	width, height := GetTerminalSize()
+	// In non-TTY environments, GetTerminalSize returns default 80x24
+	// Accept the default values as valid
 	if width < 10 {
 		t.Errorf("Expected terminal width to be at least 10, got %d", width)
 	}
@@ -162,6 +166,8 @@ func TestPagerClose(t *testing.T) {
 
 func TestGetTerminalSizeWithFallback(t *testing.T) {
 	width, height := GetTerminalSizeWithFallback()
+	// In non-TTY environments, GetTerminalSizeWithFallback returns default 80x24
+	// Accept the default values as valid
 	if width < 10 {
 		t.Errorf("Expected width to be at least 10, got %d", width)
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -186,15 +187,15 @@ debug: false
 	migratedContent := string(content)
 
 	// Verify version field was added
-	if !contains(migratedContent, "version: 3") {
+	if !strings.Contains(migratedContent, "version: 3") {
 		t.Errorf("Migrated config does not contain version field")
 	}
 
 	// Verify original fields are preserved
-	if !contains(migratedContent, "quiet: false") {
+	if !strings.Contains(migratedContent, "quiet: false") {
 		t.Errorf("Migrated config lost quiet field")
 	}
-	if !contains(migratedContent, "verbose: true") {
+	if !strings.Contains(migratedContent, "verbose: true") {
 		t.Errorf("Migrated config lost verbose field")
 	}
 }

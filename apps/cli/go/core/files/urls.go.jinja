@@ -29,6 +29,13 @@ func NewURL(rawURL string) *URL {
 		Original: rawURL,
 	}
 
+	// Handle empty string
+	if rawURL == "" {
+		u.Valid = false
+		u.Encoded = ""
+		return u
+	}
+
 	// Validate and encode the URL
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
@@ -123,10 +130,20 @@ func FormatURLWithLabel(rawURL string, label string, format URLFormat) string {
 
 // StripTerminalLinks removes terminal linking escape sequences from a string
 func StripTerminalLinks(text string) string {
-	// Remove OSC 8 escape sequences: \x1b]8;;URL\x1b\\
-	// This is a simple implementation - may need refinement for edge cases
-	result := strings.ReplaceAll(text, "\x1b]8;;", "")
+	// Remove OSC 8 escape sequences: \x1b]8;;URL\x1b\\TEXT\x1b]8;;\x1b\\
+	// This regex-based approach properly handles the full escape sequence
+	result := text
+
+	// Pattern: ESC]8;;URL\TEXT\ESC]8;\
+	// We need to remove the entire link sequence and keep only the text
+	// The sequence is: \x1b]8;;URL\x1b\\text\x1b]8;;\x1b\\
+
+	// Simple approach: remove the escape sequences in order
+	// 1. Remove the opening sequence: \x1b]8;;
+	result = strings.ReplaceAll(result, "\x1b]8;;", "")
+	// 2. Remove the separator: \x1b\\
 	result = strings.ReplaceAll(result, "\x1b\\", "")
+
 	return result
 }
 

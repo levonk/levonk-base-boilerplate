@@ -147,7 +147,8 @@ program
   .description('{{ description }}')
   .version('1.0.0', '-v, --version', 'Output the version number')
   .helpOption('-h, --help', 'Display help for command')
-  .addHelpText('after', 'Use "{{ project_slug }} help <command>" for more information on a command.')
+  .addHelpText('after', '\nError Message Format:\n  All errors follow the format: ERROR: <description> - <suggestion>\n  This provides clear, actionable guidance for resolving issues.')
+  .addHelpText('after', '\nUse "{{ project_slug }} help <command>" for more information on a command.')
   .addHelpText('after', '\nPath Handling:\n  This CLI automatically handles cross-platform path differences:\n  - Normalizes both forward (/) and backward (\\) slashes\n  - Uses platform-appropriate separators for output\n  - Resolves . and .. segments in paths\n  - Handles paths with spaces and special characters\n  - Works consistently on Windows, Linux, and macOS')
   .addHelpText('after', '\nExit Codes:\n  0   Success\n  1   Generic error\n  2   Usage error (invalid arguments, missing required args)\n  3   Network error (connection failures, timeouts)\n  4   Validation error (invalid config, schema validation failures)\n  5   File not found\n  6   Permission denied\n  130 SIGINT (Ctrl+C)')
   .argument('[inputs...]', 'Input files or glob patterns. Use "-" for stdin.')
@@ -539,7 +540,12 @@ program
                   resourceLimits.maxMemoryMB = parseMemoryLimit(options.maxMemory);
                   logger.info(`Memory limit set to ${resourceLimits.maxMemoryMB}MB`);
               } catch (error) {
-                  throw new UsageError(`Invalid memory limit format: ${options.maxMemory}. Use format like "512MB" or "1GB"`);
+                  throw new UsageError(
+                      `Invalid memory limit format: ${options.maxMemory}`,
+                      { value: options.maxMemory },
+                      undefined,
+                      'Use format like "512MB" or "1GB"'
+                  );
               }
           }
           if (options.maxCpu) {
@@ -547,7 +553,12 @@ program
                   resourceLimits.maxCpuPercent = parseCpuLimit(options.maxCpu);
                   logger.info(`CPU limit set to ${resourceLimits.maxCpuPercent}%`);
               } catch (error) {
-                  throw new UsageError(`Invalid CPU limit format: ${options.maxCpu}. Use format like "50" or "75%"`);
+                  throw new UsageError(
+                      `Invalid CPU limit format: ${options.maxCpu}`,
+                      { value: options.maxCpu },
+                      undefined,
+                      'Use format like "50" or "75%"'
+                  );
               }
           }
 
@@ -607,7 +618,12 @@ program
           if (inputs.length === 0) {
               // Check if stdin is a TTY
               if (process.stdin.isTTY) {
-                  throw new UsageError('No inputs provided. Use "-" for stdin or provide file patterns.');
+                  throw new UsageError(
+                      'No inputs provided',
+                      undefined,
+                      undefined,
+                      'Use "-" for stdin or provide file patterns'
+                  );
               } else {
                   readStdin = true;
               }
@@ -661,11 +677,26 @@ program
                           throw error;
                       }
                       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-                          throw new FileNotFoundError(`File not found: ${formatErrorPath(file)}`, { file });
+                          throw new FileNotFoundError(
+                              `File not found: ${formatErrorPath(file)}`,
+                              { file },
+                              undefined,
+                              'Check that the file exists and the path is correct'
+                          );
                       } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
-                          throw new PermissionDeniedError(`Permission denied: ${formatErrorPath(file)}`, { file });
+                          throw new PermissionDeniedError(
+                              `Permission denied: ${formatErrorPath(file)}`,
+                              { file },
+                              undefined,
+                              'Check file permissions and try again with appropriate access'
+                          );
                       } else {
-                          throw new GenericError(`Error processing ${formatErrorPath(file)}: ${error}`, { file, error });
+                          throw new GenericError(
+                              `Error processing ${formatErrorPath(file)}: ${error}`,
+                              { file, error },
+                              undefined,
+                              'Try again or contact support if the issue persists'
+                          );
                       }
                   }
               }
@@ -690,12 +721,27 @@ program
                           throw error;
                       }
                       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-                      throw new FileNotFoundError(`File not found: ${formatErrorPath(file)}`, { file });
-                  } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
-                      throw new PermissionDeniedError(`Permission denied: ${formatErrorPath(file)}`, { file });
-                  } else {
-                      throw new GenericError(`Error processing ${formatErrorPath(file)}: ${error}`, { file, error });
-                  }
+                          throw new FileNotFoundError(
+                              `File not found: ${formatErrorPath(file)}`,
+                              { file },
+                              undefined,
+                              'Check that the file exists and the path is correct'
+                          );
+                      } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+                          throw new PermissionDeniedError(
+                              `Permission denied: ${formatErrorPath(file)}`,
+                              { file },
+                              undefined,
+                              'Check file permissions and try again with appropriate access'
+                          );
+                      } else {
+                          throw new GenericError(
+                              `Error processing ${formatErrorPath(file)}: ${error}`,
+                              { file, error },
+                              undefined,
+                              'Try again or contact support if the issue persists'
+                          );
+                      }
                   }
               }
           }

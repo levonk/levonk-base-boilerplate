@@ -112,7 +112,7 @@ func TestPromptForConfirmation_Force(t *testing.T) {
 
 	result := PromptForConfirmation(cfg)
 
-	if !bool(result) {
+	if !result {
 		t.Errorf("PromptForConfirmation() with force=true should return true, got %v", result)
 	}
 }
@@ -128,7 +128,7 @@ func TestPromptForConfirmation_Quiet(t *testing.T) {
 
 	result := PromptForConfirmation(cfg)
 
-	if bool(result) {
+	if result {
 		t.Errorf("PromptForConfirmation() with quiet=true should return false (safe default), got %v", result)
 	}
 }

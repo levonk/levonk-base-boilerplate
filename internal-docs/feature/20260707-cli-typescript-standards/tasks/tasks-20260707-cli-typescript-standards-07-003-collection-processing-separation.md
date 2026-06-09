@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 7
 parallel_id: 3
 branch: "feature/current/20260707-cli-typescript-standards/story-07-003-collection-processing-separation"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["05-002"]
@@ -29,38 +29,39 @@ Separate collection (daemon/background) from processing (offline analysis). Allo
 
 - [x] Design data collection schema
 - [x] Implement data collection in daemon mode
-- [~] Add data export command
-- [ ] Add data import command
-- [ ] Implement offline analysis commands
-- [ ] Add data format validation
-- [ ] Implement collection/processing separation logic
-- [ ] Add data serialization/deserialization
-- [ ] Add unit tests for data export
-- [ ] Add unit tests for data import
-- [ ] Add unit tests for offline analysis
-- [ ] Add integration tests for collection/processing workflow
-- [ ] Update help text to document separation
-- [ ] Add data format documentation
+- [x] Add data export command
+- [x] Add data import command
+- [x] Implement offline analysis commands
+- [x] Add data format validation
+- [x] Implement collection/processing separation logic
+- [x] Add data serialization/deserialization
+- [x] Add unit tests for data export
+- [x] Add unit tests for data import
+- [x] Add unit tests for offline analysis
+- [x] Add integration tests for collection/processing workflow
+- [x] Update help text to document separation
+- [x] Add data format documentation
 
 ## Relevant Files
 
 - `apps/cli/typescript/core/files/src/processing.ts.jinja` - Processing module with data schema and export/import
 - `apps/cli/typescript/core/files/src/daemon.ts.jinja` - Daemon with collection logic and event tracking
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - CLI with export/import/analysis commands
-- `apps/cli/typescript/core/files/src/processing.test.ts.jinja` - Unit tests for processing (to be created)
+- `apps/cli/typescript/core/files/src/processing.test.ts.jinja` - Unit tests for processing
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for separation
+- `apps/cli/typescript/core/files/docs/data-format.md.jinja` - Data format documentation
 
 ## Acceptance Criteria
 
-- [ ] Data collection works in daemon mode
-- [ ] Data can be exported to portable format
-- [ ] Data can be imported from exported format
-- [ ] Offline analysis works without daemon
-- [ ] Analysis commands operate on exported data
-- [ ] Data format is validated
-- [ ] Collection/processing separation is clean
-- [ ] Data format is well-documented
-- [ ] Export/import is reliable
+- [x] Data collection works in daemon mode
+- [x] Data can be exported to portable format
+- [x] Data can be imported from exported format
+- [x] Offline analysis works without daemon
+- [x] Analysis commands operate on exported data
+- [x] Data format is validated
+- [x] Collection/processing separation is clean
+- [x] Data format is well-documented
+- [x] Export/import is reliable
 
 ## Test Plan
 

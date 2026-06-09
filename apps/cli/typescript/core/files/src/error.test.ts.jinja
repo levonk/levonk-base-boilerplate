@@ -11,6 +11,8 @@ import {
     handleError,
     isCLIError,
     getExitCode,
+    SuggestionGenerator,
+    type ErrorCategory,
 } from './error.js';
 import type { FileLocation } from './file-ref.js';
 
@@ -41,14 +43,24 @@ describe('CLIError', () => {
         expect(error.context).toEqual(context);
     });
 
-    it('should format message with exit code', () => {
+    it('should include suggestion in error', () => {
+        const error = new CLIError('Test error', 1, undefined, undefined, 'Try again');
+        expect(error.suggestion).toBe('Try again');
+    });
+
+    it('should format message following ADR #14 format with suggestion', () => {
+        const error = new CLIError('Test error', 1, undefined, undefined, 'Try again');
+        expect(error.getFormattedMessage()).toBe('ERROR: Test error - Try again');
+    });
+
+    it('should format message without suggestion', () => {
         const error = new CLIError('Test error', 1);
-        expect(error.getFormattedMessage()).toBe('CLIError: Test error (exit code: 1)');
+        expect(error.getFormattedMessage()).toBe('ERROR: Test error');
     });
 
     it('should format message with context', () => {
         const error = new CLIError('Test error', 1, { file: 'test.txt' });
-        expect(error.getFormattedMessage()).toBe('CLIError: Test error (exit code: 1) {"file":"test.txt"}');
+        expect(error.getFormattedMessage()).toBe('ERROR: Test error {"file":"test.txt"}');
     });
 
     it('should format message with file location', () => {
@@ -59,19 +71,19 @@ describe('CLIError', () => {
         };
         const error = new CLIError('Test error', 1, undefined, fileLocation);
         const formatted = error.getFormattedMessage();
-        expect(formatted).toContain('Test error (exit code: 1)');
+        expect(formatted).toContain('ERROR: Test error');
         expect(formatted).toMatch(/file:\/.*\/path\/to\/file\.ts:10:5/);
     });
 
-    it('should format message with both context and file location', () => {
+    it('should format message with suggestion, context, and file location', () => {
         const fileLocation: FileLocation = {
             path: '/path/to/file.ts',
             line: 10,
             column: 5,
         };
-        const error = new CLIError('Test error', 1, { file: 'test.txt' }, fileLocation);
+        const error = new CLIError('Test error', 1, { file: 'test.txt' }, fileLocation, 'Try again');
         const formatted = error.getFormattedMessage();
-        expect(formatted).toContain('Test error (exit code: 1)');
+        expect(formatted).toContain('ERROR: Test error - Try again');
         expect(formatted).toMatch(/file:\/.*\/path\/to\/file\.ts:10:5/);
         expect(formatted).toContain('{"file":"test.txt"}');
     });
@@ -140,11 +152,11 @@ describe('handleError', () => {
         mockExit.mockRestore();
     });
 
-    it('should handle CLIError with correct exit code', () => {
-        const error = new UsageError('Test usage error');
+    it('should handle CLIError with correct exit code and ADR #14 format', () => {
+        const error = new UsageError('Test usage error', undefined, undefined, 'Run with --help');
         expect(() => handleError(error, mockLogger)).toThrow('process.exit called');
         expect(mockExit).toHaveBeenCalledWith(EXIT_CODES.USAGE_ERROR);
-        expect(mockLogger.error).toHaveBeenCalledWith('UsageError: Test usage error (exit code: 2)');
+        expect(mockLogger.error).toHaveBeenCalledWith('ERROR: Test usage error - Run with --help');
     });
 
     it('should handle generic Error with exit code 1', () => {
@@ -169,10 +181,10 @@ describe('handleError', () => {
     });
 
     it('should work without logger', () => {
-        const error = new UsageError('Test usage error');
+        const error = new UsageError('Test usage error', undefined, undefined, 'Run with --help');
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         expect(() => handleError(error)).toThrow('process.exit called');
-        expect(consoleErrorSpy).toHaveBeenCalledWith('UsageError: Test usage error (exit code: 2)');
+        expect(consoleErrorSpy).toHaveBeenCalledWith('ERROR: Test usage error - Run with --help');
         consoleErrorSpy.mockRestore();
     });
 });
@@ -207,5 +219,79 @@ describe('getExitCode', () => {
 
     it('should return generic exit code for unknown error', () => {
         expect(getExitCode(null)).toBe(EXIT_CODES.GENERIC_ERROR);
+    });
+});
+
+describe('SuggestionGenerator', () => {
+    describe('generate', () => {
+        it('should generate usage suggestion with missing arg context', () => {
+            const suggestion = SuggestionGenerator.generate('usage', { missing_arg: '--input' });
+            expect(suggestion).toBe('Provide the required argument: --input');
+        });
+
+        it('should generate usage suggestion with invalid arg context', () => {
+            const suggestion = SuggestionGenerator.generate('usage', { invalid_arg: '--invalid' });
+            expect(suggestion).toBe('Check the argument value: --invalid');
+        });
+
+        it('should generate default usage suggestion', () => {
+            const suggestion = SuggestionGenerator.generate('usage');
+            expect(suggestion).toBe('Run with --help to see usage information');
+        });
+
+        it('should generate network suggestion with URL context', () => {
+            const suggestion = SuggestionGenerator.generate('network', { url: 'https://example.com' });
+            expect(suggestion).toBe('Check your network connection and verify the URL: https://example.com');
+        });
+
+        it('should generate default network suggestion', () => {
+            const suggestion = SuggestionGenerator.generate('network');
+            expect(suggestion).toBe('Check your network connection and try again');
+        });
+
+        it('should generate validation suggestion with field context', () => {
+            const suggestion = SuggestionGenerator.generate('validation', { field: 'email' });
+            expect(suggestion).toBe('Fix the validation error in field: email');
+        });
+
+        it('should generate validation suggestion with config file context', () => {
+            const suggestion = SuggestionGenerator.generate('validation', { config_file: '/path/to/config.json' });
+            expect(suggestion).toBe('Check your configuration file: /path/to/config.json');
+        });
+
+        it('should generate default validation suggestion', () => {
+            const suggestion = SuggestionGenerator.generate('validation');
+            expect(suggestion).toBe('Review your configuration and fix validation errors');
+        });
+
+        it('should generate file not found suggestion with path context', () => {
+            const suggestion = SuggestionGenerator.generate('file_not_found', { path: '/path/to/file.txt' });
+            expect(suggestion).toBe('Verify the file exists at: /path/to/file.txt');
+        });
+
+        it('should generate default file not found suggestion', () => {
+            const suggestion = SuggestionGenerator.generate('file_not_found');
+            expect(suggestion).toBe('Check that the file exists and the path is correct');
+        });
+
+        it('should generate permission denied suggestion with path context', () => {
+            const suggestion = SuggestionGenerator.generate('permission_denied', { path: '/path/to/file.txt' });
+            expect(suggestion).toBe('Check permissions for: /path/to/file.txt');
+        });
+
+        it('should generate default permission denied suggestion', () => {
+            const suggestion = SuggestionGenerator.generate('permission_denied');
+            expect(suggestion).toBe('Check file permissions and try again with appropriate access');
+        });
+
+        it('should generate generic suggestion', () => {
+            const suggestion = SuggestionGenerator.generate('generic');
+            expect(suggestion).toBe('Try again or contact support if the issue persists');
+        });
+
+        it('should return undefined for unknown error type', () => {
+            const suggestion = SuggestionGenerator.generate('unknown' as ErrorCategory);
+            expect(suggestion).toBeUndefined();
+        });
     });
 });

@@ -9,8 +9,111 @@ from {{ project_slug }}.errors import (
     format_network_error,
     format_config_error
 )
+from {{ project_slug }}.errors.formatter import (
+    StructuredError,
+    format_structured_error,
+    format_validation_error as format_structured_validation_error,
+    format_missing_required_error,
+    format_file_not_found_error as format_structured_file_not_found_error,
+    format_permission_denied_error as format_structured_permission_denied_error,
+    format_network_error as format_structured_network_error,
+    format_config_error as format_structured_config_error,
+    format_generic_error,
+)
+from {{ project_slug }}.errors.translator import (
+    sanitize_error_message,
+    extract_actionable_suggestion,
+    translate_error,
+    translate_subprocess_error,
+    sanitize_dependency_name,
+    sanitize_path,
+)
+from {{ project_slug }}.errors.exit_codes import (
+    ExitCode,
+    determine_exit_code,
+    determine_exit_code_from_exception,
+    determine_exit_code_from_subprocess,
+    should_exit_with_error,
+    format_exit_message,
+    exit_with_code,
+    EXIT_SUCCESS,
+    EXIT_ERROR,
+    EXIT_USAGE,
+)
 from pathlib import Path
 import pytest
+
+
+# Keep existing tests for backward compatibility
+def test_error_format():
+    """Test error message format."""
+    result = format_error("Test error", "Try this fix")
+    assert result == "ERROR: Test error - Try this fix"
+
+
+def test_file_reference_vscode():
+    """Test VSCode-compatible file reference format."""
+    file_path = Path("/tmp/test.txt")
+    result = format_file_reference_vscode(file_path, line=10, column=5)
+    assert "file:///" in result
+    assert ":10" in result
+    assert ":5" in result
+
+
+def test_file_reference_standard():
+    """Test standard file reference format."""
+    file_path = Path("/tmp/test.txt")
+    result = format_file_reference_standard(file_path, line=10, column=5)
+    assert "/tmp/test.txt" in result
+    assert ":10" in result
+    assert ":5" in result
+
+
+def test_url_formatting():
+    """Test URL formatting."""
+    result = format_url("https://example.com")
+    assert result == "https://example.com"
+
+
+def test_file_not_found_error():
+    """Test file not found error formatting."""
+    file_path = Path("/tmp/nonexistent.txt")
+    result = format_file_not_found_error(file_path)
+    assert "ERROR:" in result
+    assert "File not found" in result
+    assert "Check the file path" in result
+
+
+def test_permission_denied_error():
+    """Test permission denied error formatting."""
+    file_path = Path("/tmp/no_perms.txt")
+    result = format_permission_denied_error(file_path)
+    assert "ERROR:" in result
+    assert "Permission denied" in result
+    assert "Check file permissions" in result
+
+
+def test_validation_error():
+    """Test validation error formatting."""
+    result = format_validation_error("port", "abc", "Must be a number")
+    assert "ERROR:" in result
+    assert "Validation failed" in result
+    assert "port" in result
+
+
+def test_network_error():
+    """Test network error formatting."""
+    result = format_network_error("https://example.com", "Connection timeout")
+    assert "ERROR:" in result
+    assert "Network error" in result
+
+
+def test_config_error():
+    """Test config error formatting."""
+    config_path = Path("/tmp/config.yaml")
+    result = format_config_error(config_path, "Invalid YAML")
+    assert "ERROR:" in result
+    assert "Configuration error" in result
 
 
 def test_error_format():
@@ -82,3 +185,225 @@ def test_config_error():
     result = format_config_error(config_path, "Invalid YAML")
     assert "ERROR:" in result
     assert "Configuration error" in result
+
+
+# Tests for structured error formatting
+def test_structured_error_to_dict():
+    """Test StructuredError to_dict conversion."""
+    error = StructuredError("Test error", "Fix it", "ERR001", {"key": "value"})
+    result = error.to_dict()
+
+    assert result["error"] is True
+    assert result["description"] == "Test error"
+    assert result["suggestion"] == "Fix it"
+    assert result["error_code"] == "ERR001"
+    assert result["context"] == {"key": "value"}
+
+
+def test_format_structured_error():
+    """Test structured error formatting."""
+    result = format_structured_error("Test error", "Fix it", "ERR001")
+
+    assert result["error"] is True
+    assert result["description"] == "Test error"
+    assert result["suggestion"] == "Fix it"
+    assert result["error_code"] == "ERR001"
+
+
+def test_format_structured_validation_error():
+    """Test structured validation error formatting."""
+    result = format_structured_validation_error("port", "abc", "Must be a number")
+
+    assert result["error"] is True
+    assert "Validation failed" in result["description"]
+    assert result["error_code"] == "VALIDATION_ERROR"
+    assert result["context"]["field"] == "port"
+
+
+def test_format_missing_required_error():
+    """Test missing required error formatting."""
+    result = format_missing_required_error("config")
+
+    assert result["error"] is True
+    assert "Missing required" in result["description"]
+    assert result["error_code"] == "MISSING_REQUIRED"
+
+
+def test_format_structured_file_not_found_error():
+    """Test structured file not found error formatting."""
+    result = format_structured_file_not_found_error("/tmp/test.txt")
+
+    assert result["error"] is True
+    assert "File not found" in result["description"]
+    assert result["error_code"] == "FILE_NOT_FOUND"
+
+
+def test_format_structured_permission_denied_error():
+    """Test structured permission denied error formatting."""
+    result = format_structured_permission_denied_error("/tmp/test.txt")
+
+    assert result["error"] is True
+    assert "Permission denied" in result["description"]
+    assert result["error_code"] == "PERMISSION_DENIED"
+
+
+def test_format_structured_network_error():
+    """Test structured network error formatting."""
+    result = format_structured_network_error("https://example.com", "Timeout")
+
+    assert result["error"] is True
+    assert "Network error" in result["description"]
+    assert result["error_code"] == "NETWORK_ERROR"
+
+
+def test_format_structured_config_error():
+    """Test structured config error formatting."""
+    result = format_structured_config_error("/tmp/config.yaml", "Invalid YAML")
+
+    assert result["error"] is True
+    assert "Configuration error" in result["description"]
+    assert result["error_code"] == "CONFIG_ERROR"
+
+
+def test_format_generic_error():
+    """Test generic error formatting."""
+    result = format_generic_error("Something went wrong", "Try again")
+
+    assert result["error"] is True
+    assert result["description"] == "Something went wrong"
+    assert result["suggestion"] == "Try again"
+
+
+# Tests for error translation and sanitization
+def test_sanitize_error_message():
+    """Test error message sanitization."""
+    message = "pip install failed at 0x1234"
+    result = sanitize_error_message(message)
+
+    assert "pip" not in result
+    assert "0x1234" not in result
+
+
+def test_sanitize_dependency_name():
+    """Test dependency name sanitization."""
+    assert sanitize_dependency_name("pip") == "package manager"
+    assert sanitize_dependency_name("npm") == "package manager"
+    assert sanitize_dependency_name("requests") == "HTTP library"
+
+
+def test_sanitize_path():
+    """Test path sanitization."""
+    path = "/usr/lib/python3.9/site-packages/requests/__init__.py"
+    result = sanitize_path(path)
+
+    assert "site-packages" not in result
+    assert "<internal>" in result
+
+
+def test_extract_actionable_suggestion():
+    """Test actionable suggestion extraction."""
+    error = FileNotFoundError("File not found")
+    suggestion = extract_actionable_suggestion(error)
+
+    assert "file path" in suggestion.lower()
+
+
+def test_translate_error():
+    """Test error translation."""
+    error = FileNotFoundError("File not found: /tmp/test.txt")
+    result = translate_error(error)
+
+    assert result["error"] is True
+    assert result["error_type"] == "FileNotFoundError"
+    assert result["suggestion"]
+    assert "File not found" in result["description"]
+
+
+def test_translate_subprocess_error():
+    """Test subprocess error translation."""
+    result = translate_subprocess_error(
+        returncode=1,
+        stdout="",
+        stderr="Command failed",
+        command=["pip", "install", "requests"]
+    )
+
+    assert result["error"] is True
+    assert result["returncode"] == 1
+    assert "pip" not in str(result.get("command", ""))
+
+
+# Tests for exit codes
+def test_exit_code_constants():
+    """Test exit code constants."""
+    assert EXIT_SUCCESS == 0
+    assert EXIT_ERROR == 1
+    assert EXIT_USAGE == 2
+
+
+def test_exit_code_get_description():
+    """Test exit code description."""
+    assert ExitCode.get_description(0) == "Success"
+    assert ExitCode.get_description(1) == "Error"
+    assert ExitCode.get_description(2) == "Usage error"
+
+
+def test_determine_exit_code_success():
+    """Test exit code determination for success."""
+    result = {"status": "success"}
+    assert determine_exit_code(result) == EXIT_SUCCESS
+
+
+def test_determine_exit_code_noop():
+    """Test exit code determination for no-op."""
+    result = {"status": "noop"}
+    assert determine_exit_code(result) == EXIT_SUCCESS
+
+
+def test_determine_exit_code_error():
+    """Test exit code determination for error."""
+    result = {"error": True, "error_type": "GENERIC_ERROR"}
+    assert determine_exit_code(result) == EXIT_ERROR
+
+
+def test_determine_exit_code_usage():
+    """Test exit code determination for usage error."""
+    result = {"error": True, "error_type": "VALIDATION_ERROR"}
+    assert determine_exit_code(result) == EXIT_USAGE
+
+
+def test_determine_exit_code_from_exception():
+    """Test exit code determination from exception."""
+    error = ValueError("Invalid value")
+    assert determine_exit_code_from_exception(error) == EXIT_USAGE
+
+
+def test_determine_exit_code_from_subprocess():
+    """Test exit code determination from subprocess."""
+    assert determine_exit_code_from_subprocess(0) == EXIT_SUCCESS
+    assert determine_exit_code_from_subprocess(1) == EXIT_ERROR
+    assert determine_exit_code_from_subprocess(2) == EXIT_USAGE
+    assert determine_exit_code_from_subprocess(127) == EXIT_USAGE
+
+
+def test_should_exit_with_error():
+    """Test should_exit_with_error."""
+    assert should_exit_with_error({"status": "success"}) is False
+    assert should_exit_with_error({"error": True}) is True
+
+
+def test_format_exit_message():
+    """Test exit message formatting."""
+    result = {"error": True, "description": "Test", "suggestion": "Fix it"}
+    message = format_exit_message(result, EXIT_ERROR)
+
+    assert "Error" in message
+    assert "Test" in message
+
+
+def test_exit_with_code():
+    """Test exit_with_code function."""
+    result = {"status": "success"}
+    exit_code = exit_with_code(result, show_message=False)
+
+    assert exit_code == EXIT_SUCCESS

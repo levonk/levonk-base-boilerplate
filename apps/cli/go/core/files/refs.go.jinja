@@ -71,6 +71,9 @@ func (fr *FileReference) FormatVSCode() string {
 	// Convert path to use forward slashes for VSCode compatibility
 	path := strings.ReplaceAll(fr.AbsPath, "\\", "/")
 
+	// Remove duplicate slashes (can happen with absolute paths on some systems)
+	path = strings.ReplaceAll(path, "//", "/")
+
 	var builder strings.Builder
 	builder.WriteString("file:///")
 	builder.WriteString(path)

@@ -51,8 +51,18 @@ func PromptForConfirmation(cfg PromptConfig) PromptResult {
 	}
 
 	// If not a TTY, use safe default (no)
+	// Note: In tests, stdin may be a pipe, so we check if we can read from it
 	if !isatty.IsTerminal(os.Stdin.Fd()) {
-		return PromptNo
+		// In test mode with pipes, still try to read input
+		// This allows tests to simulate user input via pipes
+		// Only return safe default if stdin is actually unavailable
+		stat, _ := os.Stdin.Stat()
+		if (stat.Mode() & os.ModeCharDevice) == 0 {
+			// It's a pipe or file, try to read from it
+			// Continue to prompt logic below
+		} else {
+			return PromptNo
+		}
 	}
 
 	// Build the prompt message

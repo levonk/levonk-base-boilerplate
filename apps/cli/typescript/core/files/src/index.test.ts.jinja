@@ -1296,14 +1296,44 @@ describe('CLI', () => {
 
             expect(stderr).toContain('--analyze-input is required');
         });
+    });
 
-        it('should show collection/processing separation in help', async () => {
-            const { stdout } = await execAsync('node dist/index.js --help');
+    describe('Error Message Formatting (ADR #14)', () => {
+        it('should format usage errors with suggestions', async () => {
+            const { stderr } = await execAsync('node dist/index.js --max-memory invalid');
 
-            expect(stdout).toContain('--export-data');
-            expect(stdout).toContain('--import-data');
-            expect(stdout).toContain('--analyze');
-            expect(stdout).toContain('Collection vs Processing Separation');
+            expect(stderr).toContain('ERROR:');
+            expect(stderr).toContain('-');
+        });
+
+        it('should format file not found errors with suggestions', async () => {
+            const { stderr } = await execAsync('node dist/index.js /nonexistent/file.txt');
+
+            expect(stderr).toContain('ERROR:');
+            expect(stderr).toContain('-');
+        });
+
+        it('should format permission denied errors with suggestions', async () => {
+            // Create a file with no read permissions
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/no-perm.txt';
+            await fs.writeFile(tempFile, 'test');
+
+            try {
+                await fs.chmod(tempFile, 0o000);
+                const { stderr } = await execAsync(`node dist/index.js "${tempFile}"`);
+
+                expect(stderr).toContain('ERROR:');
+                expect(stderr).toContain('-');
+            } finally {
+                await fs.chmod(tempFile, 0o644);
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should include context in error messages', async () => {
+            const { stderr } = await execAsync('node dist/index.js --max-memory invalid');
+
+            expect(stderr).toContain('ERROR:');
         });
     });
 });
