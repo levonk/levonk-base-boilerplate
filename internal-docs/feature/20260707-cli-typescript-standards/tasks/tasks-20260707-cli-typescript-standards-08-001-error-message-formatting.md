@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 8
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-08-001-error-message-formatting"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002", "05-003"]
