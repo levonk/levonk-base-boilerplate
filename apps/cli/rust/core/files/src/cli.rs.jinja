@@ -45,6 +45,25 @@ use std::time::Duration;
 ///
 /// Force agent mode via environment:
 ///   {{ project_slug | upper | replace('-', '_') }}_MODE=agent {{ project_slug }} file1.txt
+///
+/// # Output Format
+///
+/// The CLI supports multiple output formats optimized for different use cases:
+/// - **TOON** (Token-Oriented Object Notation): Token-efficient format for AI agents (~40% savings vs JSON)
+/// - **JSON**: Standard JSON format for machine processing
+/// - **Human**: Human-readable formatted output
+///
+/// Format selection is automatic based on mode:
+/// - Agent mode defaults to TOON format
+/// - Human mode defaults to human-readable output
+///
+/// Override format:
+///   {{ project_slug }} --format toon file1.txt
+///   {{ project_slug }} --format json file1.txt
+///   {{ project_slug }} --format human file1.txt
+///
+/// Quick TOON output:
+///   {{ project_slug }} --toon file1.txt
 #[derive(Parser)]
 #[command(name = "{{ project_slug }}", version, about = "{{ description }}", long_about = None)]
 pub struct Cli {
@@ -59,6 +78,14 @@ pub struct Cli {
     /// Output as JSON
     #[arg(long)]
     pub json: bool,
+
+    /// Output as TOON format (token-efficient for agents)
+    #[arg(long, help = "Output in TOON format (token-efficient for AI agents)")]
+    pub toon: bool,
+
+    /// Output format: toon, json, or human (default: auto-detect based on mode)
+    #[arg(long, value_name = "FORMAT", help = "Output format: toon, json, or human (default: auto-detect based on mode)")]
+    pub format: Option<String>,
 
     /// Quiet mode - suppress all output except errors
     #[arg(long, short = 'q')]

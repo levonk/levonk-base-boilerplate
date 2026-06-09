@@ -4,6 +4,31 @@
 
 version = 1
 
+# CLI mode: agent, human
+# Agent mode: Optimized for AI agent interaction with TOON format by default
+# Human mode: Optimized for human interaction with human-readable output
+mode = "agent"
+
+# Default output format for agent mode: toon, json, human
+# toon: Token-Oriented Object Notation (~40% token savings, AI-optimized)
+# json: Standard JSON format
+# human: Human-readable formatted output
+default_format = "toon"
+
+# Truncation limit for output content (default 1000)
+# Limits the length of output fields to prevent excessive token usage
+# Set to 0 for no truncation
+truncation_limit = 1000
+
+# Enable contextual help and suggestions
+# When true, provides helpful suggestions and context-aware assistance
+enable_contextual_help = true
+
+# Enable session context integration
+# When true, integrates with session context for enhanced AI interaction
+# Requires session hook infrastructure to be configured
+session_context_enabled = false
+
 # Log level: error, warn, info, debug, trace
 log_level = "info"
 

@@ -41,6 +41,7 @@ use resource::{ResourceLimits, ResourceLimiter};
 use export::{DataExporter, ExportConfig, ExportFormat, DataImporter, ImportConfig};
 use processor::{DataProcessor, ProcessingConfig, ProcessingOperation};
 use internal::mode::{detect_mode, Mode};
+use internal::toon::{OutputFormatter, OutputFormat};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -259,6 +260,15 @@ async fn main() -> Result<()> {
     // Detect CLI mode with precedence chain
     let mode_detection = detect_mode(Some(cli.human), config_manager.get_config().mode.as_deref())?;
     info!("CLI mode: {} (source: {})", mode_detection.mode.as_str(), mode_detection.source.as_str());
+
+    // Detect output format with precedence chain
+    let output_formatter = OutputFormatter::auto_detect(
+        mode_detection.mode,
+        cli.toon,
+        cli.json,
+        cli.format.as_deref(),
+    )?;
+    info!("Output format: {} (auto-detected based on mode and flags)", output_formatter.format().as_str());
 
     // Initialize logging
     let verbosity = Verbosity::from_count(cli.verbose, cli.quiet, cli.debug);

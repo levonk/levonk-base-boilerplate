@@ -1,0 +1,120 @@
+# Configuration Guide
+
+This guide explains the configuration options available for {{ project_name }}.
+
+## Configuration File Location
+
+Configuration files are loaded in the following order (higher precedence overrides lower):
+
+1. **System-wide**: `/etc/{{ project_slug }}/config.toml`
+2. **User**: `~/.config/{{ project_slug }}/config.toml` (XDG config directory)
+3. **Local**: `.config/{{ project_slug }}/config.toml` (project directory)
+4. **Environment**: Environment variables (prefixed with `{{ project_slug | upper | replace('-', '_') }}_`)
+5. **Command-line**: CLI arguments (highest precedence)
+
+## AXI Configuration Options
+
+The following configuration options are part of the Agent Experience Interface (AXI) system:
+
+### Mode
+
+```toml
+mode = "agent"  # or "human"
+```
+
+- **agent**: Optimized for AI agent interaction with TOON format by default
+- **human**: Optimized for human interaction with human-readable output
+
+### Default Format
+
+```toml
+default_format = "toon"  # or "json", "human"
+```
+
+- **toon**: Token-Oriented Object Notation (~40% token savings, AI-optimized)
+- **json**: Standard JSON format
+- **human**: Human-readable formatted output
+
+### Truncation Limit
+
+```toml
+truncation_limit = 1000  # Set to 0 for no truncation
+```
+
+Limits the length of output fields to prevent excessive token usage.
+
+### Contextual Help
+
+```toml
+enable_contextual_help = true  # or false
+```
+
+When true, provides helpful suggestions and context-aware assistance.
+
+### Session Context
+
+```toml
+session_context_enabled = false  # or true
+```
+
+When true, integrates with session context for enhanced AI interaction. Requires session hook infrastructure to be configured.
+
+## Example Configuration Files
+
+### Minimal Agent-Mode Configuration
+
+```toml
+version = 1
+mode = "agent"
+default_format = "toon"
+truncation_limit = 1000
+enable_contextual_help = true
+session_context_enabled = false
+```
+
+### Human-Mode Configuration
+
+```toml
+version = 1
+mode = "human"
+default_format = "human"
+truncation_limit = 0  # No truncation for human readability
+enable_contextual_help = true
+session_context_enabled = false
+```
+
+### Development Configuration
+
+```toml
+version = 1
+mode = "agent"
+default_format = "json"  # Use JSON for debugging
+truncation_limit = 500
+enable_contextual_help = true
+session_context_enabled = true
+log_level = "debug"
+```
+
+## Environment Variables
+
+All configuration options can be overridden via environment variables:
+
+```bash
+export {{ project_slug | upper | replace('-', '_') }}_MODE="agent"
+export {{ project_slug | upper | replace('-', '_') }}_DEFAULT_FORMAT="toon"
+export {{ project_slug | upper | replace('-', '_') }}_TRUNCATION_LIMIT="1000"
+export {{ project_slug | upper | replace('-', '_') }}_ENABLE_CONTEXTUAL_HELP="true"
+export {{ project_slug | upper | replace('-', '_') }}_SESSION_CONTEXT_ENABLED="false"
+```
+
+## Validation
+
+The configuration system validates all AXI settings:
+
+- `mode` must be one of: `agent`, `human`
+- `default_format` must be one of: `toon`, `json`, `human`
+- `truncation_limit` must be <= 100000
+- `enable_contextual_help` must be a boolean
+- `session_context_enabled` must be a boolean
+
+Invalid configurations will result in an error at startup.

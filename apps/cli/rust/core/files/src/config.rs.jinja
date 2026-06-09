@@ -22,6 +22,22 @@ pub struct Config {
     #[serde(default = "default_mode")]
     pub mode: String,
     
+    /// Default output format for agent mode: toon, json, human
+    #[serde(default = "default_format")]
+    pub default_format: String,
+    
+    /// Truncation limit for output content (default 1000)
+    #[serde(default = "default_truncation_limit")]
+    pub truncation_limit: usize,
+    
+    /// Enable contextual help and suggestions
+    #[serde(default = "default_enable_contextual_help")]
+    pub enable_contextual_help: bool,
+    
+    /// Enable session context integration
+    #[serde(default = "default_session_context_enabled")]
+    pub session_context_enabled: bool,
+    
     /// Log level (error, warn, info, debug, trace)
     #[serde(default = "default_log_level")]
     pub log_level: String,
@@ -99,6 +115,22 @@ fn default_mode() -> String {
     "agent".to_string()
 }
 
+fn default_format() -> String {
+    "toon".to_string()
+}
+
+fn default_truncation_limit() -> usize {
+    1000
+}
+
+fn default_enable_contextual_help() -> bool {
+    true
+}
+
+fn default_session_context_enabled() -> bool {
+    false
+}
+
 fn default_log_level() -> String {
     "info".to_string()
 }
@@ -152,6 +184,10 @@ impl Default for Config {
         Config {
             version: CONFIG_VERSION,
             mode: default_mode(),
+            default_format: default_format(),
+            truncation_limit: default_truncation_limit(),
+            enable_contextual_help: default_enable_contextual_help(),
+            session_context_enabled: default_session_context_enabled(),
             log_level: default_log_level(),
             color: default_color(),
             output_format: default_output_format(),
@@ -180,6 +216,9 @@ impl Config {
 }
 
 /// Configuration source for precedence tracking
+/// Precedence order (lowest to highest): Default < System < User < Local < Environment < CommandLine
+/// AXI configuration fields (mode, default_format, truncation_limit, enable_contextual_help, session_context_enabled)
+/// follow this same precedence chain
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ConfigSource {
     Default = 0,
@@ -263,6 +302,26 @@ impl ConfigManager {
             debug!("Loaded mode from environment");
         }
         
+        if let Ok(default_format) = std::env::var(format!("{}DEFAULT_FORMAT", env_prefix)) {
+            self.config.default_format = default_format;
+            debug!("Loaded default_format from environment");
+        }
+        
+        if let Ok(truncation_limit) = std::env::var(format!("{}TRUNCATION_LIMIT", env_prefix)) {
+            self.config.truncation_limit = truncation_limit.parse().unwrap_or(self.config.truncation_limit);
+            debug!("Loaded truncation_limit from environment");
+        }
+        
+        if let Ok(enable_contextual_help) = std::env::var(format!("{}ENABLE_CONTEXTUAL_HELP", env_prefix)) {
+            self.config.enable_contextual_help = enable_contextual_help.parse().unwrap_or(self.config.enable_contextual_help);
+            debug!("Loaded enable_contextual_help from environment");
+        }
+        
+        if let Ok(session_context_enabled) = std::env::var(format!("{}SESSION_CONTEXT_ENABLED", env_prefix)) {
+            self.config.session_context_enabled = session_context_enabled.parse().unwrap_or(self.config.session_context_enabled);
+            debug!("Loaded session_context_enabled from environment");
+        }
+        
         if let Ok(log_level) = std::env::var(format!("{}LOG_LEVEL", env_prefix)) {
             self.config.log_level = log_level;
             debug!("Loaded log_level from environment");
@@ -343,6 +402,21 @@ impl ConfigManager {
     /// Merge configuration with precedence
     fn merge_config(&mut self, new_config: Config, source: ConfigSource) {
         // Only override if the new value is not the default
+        if new_config.mode != default_mode() {
+            self.config.mode = new_config.mode;
+        }
+        if new_config.default_format != default_format() {
+            self.config.default_format = new_config.default_format;
+        }
+        if new_config.truncation_limit != default_truncation_limit() {
+            self.config.truncation_limit = new_config.truncation_limit;
+        }
+        if new_config.enable_contextual_help != default_enable_contextual_help() {
+            self.config.enable_contextual_help = new_config.enable_contextual_help;
+        }
+        if new_config.session_context_enabled != default_session_context_enabled() {
+            self.config.session_context_enabled = new_config.session_context_enabled;
+        }
         if new_config.log_level != default_log_level() {
             self.config.log_level = new_config.log_level;
         }
@@ -463,6 +537,25 @@ impl ConfigManager {
     
     /// Validate configuration
     pub fn validate(&self) -> Result<()> {
+        // Validate mode
+        match self.config.mode.as_str() {
+            "agent" | "human" => {},
+            _ => anyhow::bail!("Invalid mode: {}. Must be one of: agent, human",
+                             self.config.mode),
+        }
+
+        // Validate default_format
+        match self.config.default_format.as_str() {
+            "toon" | "json" | "human" => {},
+            _ => anyhow::bail!("Invalid default_format: {}. Must be one of: toon, json, human",
+                             self.config.default_format),
+        }
+
+        // Validate truncation_limit
+        if self.config.truncation_limit > 100000 {
+            anyhow::bail!("truncation_limit must be <= 100000");
+        }
+
         // Validate log level
         match self.config.log_level.as_str() {
             "error" | "warn" | "info" | "debug" | "trace" => {},
@@ -527,7 +620,22 @@ mod tests {
         // Valid config
         assert!(config.validate().is_ok());
         
+        // Invalid mode
+        config.mode = "invalid".to_string();
+        assert!(config.validate().is_err());
+        
+        // Invalid default_format
+        config.mode = "agent".to_string();
+        config.default_format = "invalid".to_string();
+        assert!(config.validate().is_err());
+        
+        // Invalid truncation_limit
+        config.default_format = "toon".to_string();
+        config.truncation_limit = 100001;
+        assert!(config.validate().is_err());
+        
         // Invalid log level
+        config.truncation_limit = 1000;
         config.log_level = "invalid".to_string();
         assert!(config.validate().is_err());
         
@@ -557,6 +665,63 @@ quiet = true
         assert_eq!(config.color, "never");
         assert_eq!(config.output_format, "json");
         assert_eq!(config.quiet, true);
+    }
+
+    #[test]
+    fn test_axi_config_defaults() {
+        let config = Config::default();
+        assert_eq!(config.mode, "agent");
+        assert_eq!(config.default_format, "toon");
+        assert_eq!(config.truncation_limit, 1000);
+        assert_eq!(config.enable_contextual_help, true);
+        assert_eq!(config.session_context_enabled, false);
+    }
+
+    #[test]
+    fn test_axi_config_parsing() {
+        let toml_content = r#"
+version = 1
+mode = "human"
+default_format = "json"
+truncation_limit = 500
+enable_contextual_help = false
+session_context_enabled = true
+"#;
+
+        let config: Config = toml::from_str(toml_content).unwrap();
+        assert_eq!(config.mode, "human");
+        assert_eq!(config.default_format, "json");
+        assert_eq!(config.truncation_limit, 500);
+        assert_eq!(config.enable_contextual_help, false);
+        assert_eq!(config.session_context_enabled, true);
+    }
+
+    #[test]
+    fn test_axi_config_environment_loading() {
+        let mut manager = ConfigManager::new();
+        manager.load_defaults().unwrap();
+        
+        // Set environment variables for AXI settings
+        std::env::set_var("{{ project_slug | upper | replace('-', '_') }}_MODE", "human");
+        std::env::set_var("{{ project_slug | upper | replace('-', '_') }}_DEFAULT_FORMAT", "json");
+        std::env::set_var("{{ project_slug | upper | replace('-', '_') }}_TRUNCATION_LIMIT", "500");
+        std::env::set_var("{{ project_slug | upper | replace('-', '_') }}_ENABLE_CONTEXTUAL_HELP", "false");
+        std::env::set_var("{{ project_slug | upper | replace('-', '_') }}_SESSION_CONTEXT_ENABLED", "true");
+        
+        manager.load_environment().unwrap();
+        
+        assert_eq!(manager.config().mode, "human");
+        assert_eq!(manager.config().default_format, "json");
+        assert_eq!(manager.config().truncation_limit, 500);
+        assert_eq!(manager.config().enable_contextual_help, false);
+        assert_eq!(manager.config().session_context_enabled, true);
+        
+        // Clean up
+        std::env::remove_var("{{ project_slug | upper | replace('-', '_') }}_MODE");
+        std::env::remove_var("{{ project_slug | upper | replace('-', '_') }}_DEFAULT_FORMAT");
+        std::env::remove_var("{{ project_slug | upper | replace('-', '_') }}_TRUNCATION_LIMIT");
+        std::env::remove_var("{{ project_slug | upper | replace('-', '_') }}_ENABLE_CONTEXTUAL_HELP");
+        std::env::remove_var("{{ project_slug | upper | replace('-', '_') }}_SESSION_CONTEXT_ENABLED");
     }
     
     #[test]

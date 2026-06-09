@@ -27,20 +27,20 @@ Update the configuration system to support agent mode settings, TOON format pref
 
 ## Sub-Tasks
 
-- [ ] Add `mode` field to config struct with "agent" and "human" values
-- [ ] Add `default_format` field to config struct with "toon", "json", "human" values
-- [ ] Add `truncation_limit` field to config struct with integer value (default 1000)
-- [ ] Add `enable_contextual_help` field to config struct with boolean value (default true)
-- [ ] Add `session_context_enabled` field to config struct with boolean value (default false)
-- [ ] Update config file template to include new AXI-related settings
-- [ ] Add comments explaining each new AXI configuration option
-- [ ] Update config validation to validate new AXI fields
-- [ ] Add config migration logic for adding new fields to existing configs
-- [ ] Update config precedence chain documentation
-- [ ] Write unit tests for new config fields
-- [ ] Write integration tests for config loading with AXI settings
-- [ ] Write tests for config validation of AXI settings
-- [ ] Update config file examples in documentation
+- [x] Add `mode` field to config struct with "agent" and "human" values
+- [x] Add `default_format` field to config struct with "toon", "json", "human" values
+- [x] Add `truncation_limit` field to config struct with integer value (default 1000)
+- [x] Add `enable_contextual_help` field to config struct with boolean value (default true)
+- [x] Add `session_context_enabled` field to config struct with boolean value (default false)
+- [x] Update config file template to include new AXI-related settings
+- [x] Add comments explaining each new AXI configuration option
+- [x] Update config validation to validate new AXI fields
+- [x] Add config migration logic for adding new fields to existing configs
+- [x] Update config precedence chain documentation
+- [x] Write unit tests for new config fields
+- [x] Write integration tests for config loading with AXI settings
+- [x] Write tests for config validation of AXI settings
+- [x] Update config file examples in documentation
 
 ## Relevant Files
 
@@ -53,14 +53,14 @@ Update the configuration system to support agent mode settings, TOON format pref
 
 ## Acceptance Criteria
 
-- [ ] Config struct includes all new AXI-related fields
-- [ ] Config file template includes all new AXI settings with comments
-- [ ] Config validation correctly validates new AXI fields
-- [ ] Config migration successfully adds new fields to existing configs
-- [ ] Config loading correctly reads and applies AXI settings
-- [ ] Config precedence chain works correctly with new settings
-- [ ] All new config functionality has test coverage
-- [ ] Documentation explains all new AXI configuration options
+- [x] Config struct includes all new AXI-related fields
+- [x] Config file template includes all new AXI settings with comments
+- [x] Config validation correctly validates new AXI fields
+- [x] Config migration successfully adds new fields to existing configs
+- [x] Config loading correctly reads and applies AXI settings
+- [x] Config precedence chain works correctly with new settings
+- [x] All new config functionality has test coverage
+- [x] Documentation explains all new AXI configuration options
 
 ## Test Plan
 

@@ -1,0 +1,85 @@
+//! TOON vs JSON encoding performance benchmarks
+//! 
+//! This module benchmarks TOON encoding performance against JSON encoding
+//! to validate the ~40% token savings claim and measure encoding overhead.
+
+use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use {{ project_slug }}::internal::toon::{ToonValue, to_string};
+use std::collections::BTreeMap;
+
+fn create_test_object(size: usize) -> ToonValue {
+    let mut obj = BTreeMap::new();
+    for i in 0..size {
+        obj.insert(format!("field_{}", i), ToonValue::string(format!("value_{}", i)));
+    }
+    ToonValue::object(obj)
+}
+
+fn create_test_array(size: usize) -> ToonValue {
+    let mut arr = Vec::new();
+    for i in 0..size {
+        arr.push(ToonValue::string(format!("item_{}", i)));
+    }
+    ToonValue::array(arr)
+}
+
+fn benchmark_toon_encoding(c: &mut Criterion) {
+    let mut group = c.benchmark_group("toon_encoding");
+    
+    for size in [10, 100, 1000].iter() {
+        let obj = create_test_object(*size);
+        
+        group.bench_with_input(BenchmarkId::new("object", size), &obj, |b, obj| {
+            b.iter(|| to_string(black_box(obj)))
+        });
+    }
+    
+    group.finish();
+}
+
+fn benchmark_json_encoding(c: &mut Criterion) {
+    let mut group = c.benchmark_group("json_encoding");
+    
+    for size in [10, 100, 1000].iter() {
+        let obj = create_test_object(*size);
+        
+        group.bench_with_input(BenchmarkId::new("object", size), &obj, |b, obj| {
+            b.iter(|| serde_json::to_string(black_box(obj)))
+        });
+    }
+    
+    group.finish();
+}
+
+fn benchmark_token_savings(c: &mut Criterion) {
+    let mut group = c.benchmark_group("token_savings");
+    
+    for size in [10, 100, 1000].iter() {
+        let obj = create_test_object(*size);
+        
+        // Measure TOON output size
+        let toon_output = to_string(&obj).unwrap();
+        let toon_tokens = toon_output.len();
+        
+        // Measure JSON output size
+        let json_output = serde_json::to_string(&obj).unwrap();
+        let json_tokens = json_output.len();
+        
+        // Calculate savings
+        let savings = ((json_tokens - toon_tokens) as f64 / json_tokens as f64) * 100.0;
+        
+        group.bench_with_input(BenchmarkId::new("savings_percent", size), &savings, |b, savings| {
+            b.iter(|| black_box(*savings))
+        });
+    }
+    
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    benchmark_toon_encoding,
+    benchmark_json_encoding,
+    benchmark_token_savings
+);
+criterion_main!(benches);

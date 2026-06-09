@@ -1,0 +1,219 @@
+//! TOON (Token-Oriented Object Notation) format support
+//! 
+//! This module provides encoding and decoding for TOON format, which offers ~40% token savings
+//! over equivalent JSON while remaining readable by agents. TOON is a line-oriented, 
+//! indentation-based notation defined by the TOON specification v3.3.
+//! 
+//! ## Example
+//! 
+//! ```rust
+//! use mytool::internal::toon::{ToonValue, to_string, from_str};
+//! 
+//! // Create a TOON value
+//! let value = ToonValue::object({
+//!     let mut map = std::collections::BTreeMap::new();
+//!     map.insert("name".to_string(), ToonValue::string("Alice"));
+//!     map.insert("age".to_string(), ToonValue::number("30"));
+//!     map
+//! });
+//! 
+//! // Encode to TOON format
+//! let toon_string = to_string(&value).unwrap();
+//! 
+//! // Decode back from TOON format
+//! let decoded = from_str(&toon_string).unwrap();
+//! ```
+
+pub mod types;
+pub mod encoder;
+pub mod decoder;
+
+pub use types::{ToonValue, ToonEncodeOptions, ToonDecodeOptions, ToonEncodeError, ToonDecodeError};
+pub use encoder::{ToonEncoder, to_string, to_string_with_options};
+pub use decoder::{ToonDecoder, from_str, from_str_with_options};
+
+/// Output format options
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputFormat {
+    /// TOON format (token-efficient for agents)
+    Toon,
+    /// JSON format (standard machine-readable)
+    Json,
+    /// Human-readable format (optimized for humans)
+    Human,
+}
+
+impl OutputFormat {
+    /// Parse format from string
+    pub fn from_str(s: &str) -> Result<Self, String> {
+        match s.to_lowercase().as_str() {
+            "toon" => Ok(OutputFormat::Toon),
+            "json" => Ok(OutputFormat::Json),
+            "human" => Ok(OutputFormat::Human),
+            _ => Err(format!("Invalid format: {}. Valid options: toon, json, human", s)),
+        }
+    }
+
+    /// Convert to string
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            OutputFormat::Toon => "toon",
+            OutputFormat::Json => "json",
+            OutputFormat::Human => "human",
+        }
+    }
+}
+
+/// Output formatter
+pub struct OutputFormatter {
+    format: OutputFormat,
+}
+
+impl OutputFormatter {
+    /// Create a new output formatter with the specified format
+    pub fn new(format: OutputFormat) -> Self {
+        Self { format }
+    }
+
+    /// Auto-detect format based on mode and CLI flags
+    pub fn auto_detect(mode: crate::internal::mode::Mode, toon_flag: bool, json_flag: bool, format_override: Option<&str>) -> anyhow::Result<Self> {
+        // Priority: explicit format override > explicit flags > mode-based default
+        if let Some(format_str) = format_override {
+            let format = OutputFormat::from_str(format_str)
+                .map_err(|e| anyhow::anyhow!("{}", e))?;
+            return Ok(Self::new(format));
+        }
+
+        if toon_flag {
+            return Ok(Self::new(OutputFormat::Toon));
+        }
+
+        if json_flag {
+            return Ok(Self::new(OutputFormat::Json));
+        }
+
+        // Mode-based default
+        let format = match mode {
+            crate::internal::mode::Mode::Agent => OutputFormat::Toon,
+            crate::internal::mode::Mode::Human => OutputFormat::Human,
+        };
+
+        Ok(Self::new(format))
+    }
+
+    /// Format a ToonValue to the configured output format
+    pub fn format_value(&self, value: &ToonValue) -> anyhow::Result<String> {
+        match self.format {
+            OutputFormat::Toon => {
+                to_string(value).map_err(|e| anyhow::anyhow!("TOON encoding error: {}", e))
+            }
+            OutputFormat::Json => {
+                serde_json::to_string_pretty(value)
+                    .map_err(|e| anyhow::anyhow!("JSON encoding error: {}", e))
+            }
+            OutputFormat::Human => {
+                // For human format, use JSON pretty-printed for now
+                // TODO: Implement proper human-readable formatting
+                serde_json::to_string_pretty(value)
+                    .map_err(|e| anyhow::anyhow!("JSON encoding error: {}", e))
+            }
+        }
+    }
+
+    /// Get the current output format
+    pub fn format(&self) -> OutputFormat {
+        self.format
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::internal::mode::Mode;
+
+    #[test]
+    fn test_output_format_from_str() {
+        assert_eq!(OutputFormat::from_str("toon").unwrap(), OutputFormat::Toon);
+        assert_eq!(OutputFormat::from_str("json").unwrap(), OutputFormat::Json);
+        assert_eq!(OutputFormat::from_str("human").unwrap(), OutputFormat::Human);
+        assert!(OutputFormat::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_output_format_as_str() {
+        assert_eq!(OutputFormat::Toon.as_str(), "toon");
+        assert_eq!(OutputFormat::Json.as_str(), "json");
+        assert_eq!(OutputFormat::Human.as_str(), "human");
+    }
+
+    #[test]
+    fn test_auto_detect_format_override() {
+        let formatter = OutputFormatter::auto_detect(
+            Mode::Agent,
+            false,
+            false,
+            Some("json")
+        ).unwrap();
+        assert_eq!(formatter.format(), OutputFormat::Json);
+    }
+
+    #[test]
+    fn test_auto_detect_toon_flag() {
+        let formatter = OutputFormatter::auto_detect(
+            Mode::Human,
+            true,
+            false,
+            None
+        ).unwrap();
+        assert_eq!(formatter.format(), OutputFormat::Toon);
+    }
+
+    #[test]
+    fn test_auto_detect_json_flag() {
+        let formatter = OutputFormatter::auto_detect(
+            Mode::Agent,
+            false,
+            true,
+            None
+        ).unwrap();
+        assert_eq!(formatter.format(), OutputFormat::Json);
+    }
+
+    #[test]
+    fn test_auto_detect_mode_agent() {
+        let formatter = OutputFormatter::auto_detect(
+            Mode::Agent,
+            false,
+            false,
+            None
+        ).unwrap();
+        assert_eq!(formatter.format(), OutputFormat::Toon);
+    }
+
+    #[test]
+    fn test_auto_detect_mode_human() {
+        let formatter = OutputFormatter::auto_detect(
+            Mode::Human,
+            false,
+            false,
+            None
+        ).unwrap();
+        assert_eq!(formatter.format(), OutputFormat::Human);
+    }
+
+    #[test]
+    fn test_format_toon() {
+        let formatter = OutputFormatter::new(OutputFormat::Toon);
+        let value = ToonValue::string("hello");
+        let result = formatter.format_value(&value).unwrap();
+        assert_eq!(result, "hello");
+    }
+
+    #[test]
+    fn test_format_json() {
+        let formatter = OutputFormatter::new(OutputFormat::Json);
+        let value = ToonValue::string("hello");
+        let result = formatter.format_value(&value).unwrap();
+        assert_eq!(result, "\"hello\"");
+    }
+}
