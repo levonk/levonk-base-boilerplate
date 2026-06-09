@@ -264,6 +264,17 @@ def process(
     mode, detection_method = determine_mode(cli_flag=cli_mode, config_mode=config_mode_value)
     logger.info(f"Execution mode: {mode.value} (detected via {detection_method.value})", module="mode")
 
+    # Content-first no-args behavior
+    # If no inputs provided and stdin is a terminal (not piped), show relevant content
+    if inputs is None and sys.stdin.isatty():
+        # No inputs and not piped - show content-first output
+        from {{project_slug}}.noargs import show_no_args_content
+        from pathlib import Path
+
+        content = show_no_args_content(directory=Path.cwd(), mode=mode)
+        print(content)
+        sys.exit(EXIT_SUCCESS)
+
     # Initialize output formatter
     formatter = get_formatter(mode=mode, toon=toon, json_output=json_output, command="process", fields=fields)
     if format:

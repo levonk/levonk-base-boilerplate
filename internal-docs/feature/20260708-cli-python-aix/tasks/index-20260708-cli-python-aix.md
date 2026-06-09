@@ -44,13 +44,13 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
 | 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-python-aix/story-04-001-session-hooks | 03-003 | Parallel-safe: true | [hooks.py, session.py] | [x] Done |
-| 04-002 | Installable Agent Skill | feature/current/20260708-cli-python-aix/story-04-002-agent-skills | 04-001 | Parallel-safe: true | [skills.py, skill_generator.py] | [~] In-Progress |
+| 04-002 | Installable Agent Skill | feature/current/20260708-cli-python-aix/story-04-002-agent-skills | 04-001 | Parallel-safe: true | [skills.py, skill_generator.py] | [x] Done |
 
 ### Phase 05: UX Enhancement (Week 2)
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 05-001 | Content First No-Args | feature/current/20260708-cli-python-aix/story-05-001-content-first | 04-002 | Parallel-safe: false | [cli.py, output.py] |
+| 05-001 | Content First No-Args | feature/current/20260708-cli-python-aix/story-05-001-content-first | 04-002 | Parallel-safe: false | [cli.py, output.py] | [~] In-Progress |
 | 05-002 | Contextual Disclosure with Next Steps | feature/current/20260708-cli-python-aix/story-05-002-contextual-disclosure | 05-001 | Parallel-safe: false | [output.py, suggestions.py] |
 
 ## Dependency Graph

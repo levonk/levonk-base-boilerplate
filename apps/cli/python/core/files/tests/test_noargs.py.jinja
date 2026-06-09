@@ -1,0 +1,172 @@
+# vim: set ft=python :
+"""Tests for content-first no-args behavior."""
+
+import pytest
+from pathlib import Path
+from {{project_slug}}.noargs import (
+    get_directory_context,
+    get_relevant_content,
+    format_content_toon,
+    format_content_human,
+    show_no_args_content,
+)
+from {{project_slug}}.mode import Mode
+
+
+def test_get_directory_context_exists(tmp_path):
+    """Test getting context for existing directory."""
+    context = get_directory_context(tmp_path)
+    
+    assert context["path"] == str(tmp_path.absolute())
+    assert context["exists"] is True
+    assert context["is_dir"] is True
+
+
+def test_get_directory_context_not_exists():
+    """Test getting context for non-existent directory."""
+    context = get_directory_context(Path("/nonexistent/path"))
+    
+    assert context["exists"] is False
+    assert context["is_dir"] is False
+
+
+def test_get_directory_context_is_file(tmp_path):
+    """Test getting context for a file path."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("test")
+    
+    context = get_directory_context(test_file)
+    
+    assert context["exists"] is True
+    assert context["is_dir"] is False
+
+
+def test_get_directory_context_git_repo(tmp_path):
+    """Test detecting git repository."""
+    (tmp_path / ".git").mkdir()
+    
+    context = get_directory_context(tmp_path)
+    
+    assert context["is_git_repo"] is True
+
+
+def test_get_directory_context_node_project(tmp_path):
+    """Test detecting Node.js project."""
+    (tmp_path / "package.json").write_text("{}")
+    
+    context = get_directory_context(tmp_path)
+    
+    assert context["has_package_json"] is True
+
+
+def test_get_directory_context_python_project(tmp_path):
+    """Test detecting Python project."""
+    (tmp_path / "pyproject.toml").write_text("[project]")
+    
+    context = get_directory_context(tmp_path)
+    
+    assert context["has_pyproject"] is True
+
+
+def test_get_directory_context_rust_project(tmp_path):
+    """Test detecting Rust project."""
+    (tmp_path / "Cargo.toml").write_text("[package]")
+    
+    context = get_directory_context(tmp_path)
+    
+    assert context["has_cargo_toml"] is True
+
+
+def test_format_content_toon_directory(tmp_path):
+    """Test formatting content in TOON for directory."""
+    context = {
+        "path": str(tmp_path),
+        "exists": True,
+        "is_dir": True,
+        "file_count": 5,
+        "has_files": True,
+        "is_git_repo": True,
+    }
+    
+    toon = format_content_toon(context)
+    
+    assert f"cwd:{tmp_path}" in toon
+    assert "vcs:git" in toon
+    assert "files:5" in toon
+
+
+def test_format_content_toon_not_exists():
+    """Test formatting content in TOON for non-existent path."""
+    context = {
+        "path": "/nonexistent",
+        "exists": False,
+        "is_dir": False,
+    }
+    
+    toon = format_content_toon(context)
+    
+    assert "state:dir_not_found" in toon
+
+
+def test_format_content_human_directory(tmp_path):
+    """Test formatting content in human-readable for directory."""
+    context = {
+        "path": str(tmp_path),
+        "exists": True,
+        "is_dir": True,
+        "file_count": 5,
+        "has_files": True,
+        "is_git_repo": True,
+    }
+    
+    human = format_content_human(context)
+    
+    assert str(tmp_path) in human
+    assert "Git repository" in human
+    assert "5 items" in human
+
+
+def test_format_content_human_not_exists():
+    """Test formatting content in human-readable for non-existent path."""
+    context = {
+        "path": "/nonexistent",
+        "exists": False,
+        "is_dir": False,
+    }
+    
+    human = format_content_human(context)
+    
+    assert "not found" in human
+    assert "--help" in human
+
+
+def test_get_relevant_content_agent_mode(tmp_path):
+    """Test getting relevant content in agent mode."""
+    content = get_relevant_content(tmp_path, Mode.AGENT)
+    
+    # Should be TOON format
+    assert "cwd:" in content or "state:" in content
+
+
+def test_get_relevant_content_human_mode(tmp_path):
+    """Test getting relevant content in human mode."""
+    content = get_relevant_content(tmp_path, Mode.HUMAN)
+    
+    # Should be human-readable
+    assert "Current directory" in content or "not found" in content
+
+
+def test_show_no_args_content_default():
+    """Test showing no-args content with default directory."""
+    content = show_no_args_content()
+    
+    assert content is not None
+    assert len(content) > 0
+
+
+def test_show_no_args_content_custom(tmp_path):
+    """Test showing no-args content with custom directory."""
+    content = show_no_args_content(directory=tmp_path, mode=Mode.AGENT)
+    
+    assert content is not None
+    assert len(content) > 0
