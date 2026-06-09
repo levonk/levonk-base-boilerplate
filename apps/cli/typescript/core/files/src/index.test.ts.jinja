@@ -1145,4 +1145,165 @@ describe('CLI', () => {
             }
         });
     });
+
+    describe('Collection vs Processing Separation', () => {
+        const testDataDir = path.join(os.tmpdir(), '{{ project_slug }}-collection-test');
+
+        beforeEach(async () => {
+            // Ensure test directory exists
+            await fs.mkdir(testDataDir, { recursive: true });
+        });
+
+        afterEach(async () => {
+            // Clean up test directory
+            try {
+                await fs.rm(testDataDir, { recursive: true, force: true });
+            } catch (error) {
+                // Ignore cleanup errors
+            }
+        });
+
+        it('should export collected data to portable format', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // Create some test data by running the CLI
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                // Export data
+                const { stdout, stderr } = await execAsync(
+                    `node dist/index.js --export-data "${exportPath}" "${tempFile}"`
+                );
+
+                // Should succeed even with no daemon data
+                const successMessage = 'Data export completed successfully';
+                expect(stdout.includes(successMessage) || stderr.includes(successMessage)).toBe(true);
+
+                // Check file was created
+                const fileExists = await fs.access(exportPath).then(() => true).catch(() => false);
+                expect(fileExists).toBe(true);
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should import data from exported format', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Import the data
+                const { stdout } = await execAsync(`node dist/index.js --import-data "${exportPath}"`);
+
+                expect(stdout).toContain('Imported');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should analyze imported data with summary', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Analyze with summary
+                const { stdout } = await execAsync(
+                    `node dist/index.js --analyze summary --analyze-input "${exportPath}"`
+                );
+
+                expect(stdout).toContain('summary');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should analyze imported data with performance', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Analyze with performance
+                const { stdout } = await execAsync(
+                    `node dist/index.js --analyze performance --analyze-input "${exportPath}"`
+                );
+
+                expect(stdout).toContain('performance');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should analyze imported data with errors', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Analyze with errors
+                const { stdout } = await execAsync(
+                    `node dist/index.js --analyze errors --analyze-input "${exportPath}"`
+                );
+
+                expect(stdout).toContain('errors');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should analyze imported data with timeline', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Analyze with timeline
+                const { stdout } = await execAsync(
+                    `node dist/index.js --analyze timeline --analyze-input "${exportPath}"`
+                );
+
+                expect(stdout).toContain('timeline');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should require --analyze-input when using --analyze', async () => {
+            const { stderr } = await execAsync('node dist/index.js --analyze summary');
+
+            expect(stderr).toContain('--analyze-input is required');
+        });
+
+        it('should show collection/processing separation in help', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+
+            expect(stdout).toContain('--export-data');
+            expect(stdout).toContain('--import-data');
+            expect(stdout).toContain('--analyze');
+            expect(stdout).toContain('Collection vs Processing Separation');
+        });
+    });
 });

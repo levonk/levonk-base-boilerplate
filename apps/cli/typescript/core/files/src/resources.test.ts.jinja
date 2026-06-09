@@ -143,7 +143,7 @@ describe('ResourceMonitor', () => {
       });
       try {
         monitor.checkMemoryLimit();
-        fail('Should have thrown ResourceLimitError');
+        expect.fail('Should have thrown ResourceLimitError');
       } catch (error) {
         if (error instanceof ResourceLimitError) {
           expect(error.resourceType).toBe('memory');

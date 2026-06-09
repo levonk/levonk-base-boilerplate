@@ -1,0 +1,382 @@
+# Data Format Documentation
+
+## Overview
+
+This document describes the portable data format used for collection vs processing separation in {{ project_name }}. This format allows data collection in one environment (daemon mode) and offline processing in another environment without requiring the collection daemon.
+
+## Format Version
+
+Current version: `1.0.0`
+
+The format includes a version field for future compatibility and migration support.
+
+## File Format
+
+The data is stored in JSON format with the following structure:
+
+```json
+{
+  "version": "1.0.0",
+  "metadata": {
+    "exportDate": "2026-07-07T12:00:00.000Z",
+    "exportedBy": "user",
+    "collectionStart": "2026-07-07T10:00:00.000Z",
+    "collectionEnd": "2026-07-07T12:00:00.000Z",
+    "totalRecords": 10,
+    "dataSize": 4096,
+    "compressed": false,
+    "checksum": "sha256:..."
+  },
+  "collection": {
+    "jobs": [...],
+    "metrics": {...},
+    "events": [...]
+  },
+  "schema": {
+    "format": "json",
+    "encoding": "utf-8",
+    "compression": "none",
+    "fields": [...]
+  }
+}
+```
+
+## Metadata Section
+
+The `metadata` section contains information about the export:
+
+- `exportDate`: ISO 8601 timestamp when the data was exported
+- `exportedBy`: User who performed the export
+- `collectionStart`: ISO 8601 timestamp when data collection started
+- `collectionEnd`: ISO 8601 timestamp when data collection ended
+- `totalRecords`: Total number of job records in the collection
+- `dataSize`: Size of the data in bytes
+- `compressed`: Boolean indicating if data is compressed
+- `checksum`: Optional checksum for data integrity validation
+
+## Collection Section
+
+The `collection` section contains the actual collected data:
+
+### Jobs Array
+
+Each job entry contains:
+
+```json
+{
+  "id": "uuid",
+  "command": "echo",
+  "args": ["hello"],
+  "status": "completed",
+  "startTime": "2026-07-07T10:00:00.000Z",
+  "endTime": "2026-07-07T10:00:01.000Z",
+  "progress": 100,
+  "result": {...},
+  "error": null,
+  "duration": 1000,
+  "resourceUsage": {
+    "memoryMB": 128,
+    "cpuPercent": 25.5
+  }
+}
+```
+
+- `id`: Unique job identifier (UUID)
+- `command`: Command that was executed
+- `args`: Command arguments
+- `status`: Job status (`pending`, `running`, `completed`, `failed`, `cancelled`)
+- `startTime`: ISO 8601 timestamp when job started
+- `endTime`: ISO 8601 timestamp when job ended
+- `progress`: Progress percentage (0-100)
+- `result`: Job result data (if successful)
+- `error`: Error message (if failed)
+- `duration`: Job duration in milliseconds
+- `resourceUsage`: Resource usage metrics (optional)
+
+### Metrics Object
+
+```json
+{
+  "totalJobs": 10,
+  "completedJobs": 8,
+  "failedJobs": 1,
+  "cancelledJobs": 1,
+  "averageDuration": 1500,
+  "totalDuration": 15000
+}
+```
+
+- `totalJobs`: Total number of jobs
+- `completedJobs`: Number of completed jobs
+- `failedJobs`: Number of failed jobs
+- `cancelledJobs`: Number of cancelled jobs
+- `averageDuration`: Average job duration in milliseconds
+- `totalDuration`: Total duration of all jobs in milliseconds
+
+### Events Array
+
+Each event entry contains:
+
+```json
+{
+  "timestamp": "2026-07-07T10:00:00.000Z",
+  "type": "job_created",
+  "jobId": "uuid",
+  "details": {...}
+}
+```
+
+- `timestamp`: ISO 8601 timestamp when the event occurred
+- `type`: Event type (`job_created`, `job_started`, `job_completed`, `job_failed`, `job_cancelled`)
+- `jobId`: ID of the job associated with the event
+- `details`: Additional event details (optional)
+
+## Schema Section
+
+The `schema` section describes the data format:
+
+```json
+{
+  "format": "json",
+  "encoding": "utf-8",
+  "compression": "none",
+  "fields": [...]
+}
+```
+
+- `format`: Data format (`json`, `jsonl`, `csv`)
+- `encoding`: Character encoding (`utf-8`)
+- `compression`: Compression method (`gzip`, `bzip2`, `none`)
+- `fields`: Array of field definitions
+
+### Field Definitions
+
+Each field definition contains:
+
+```json
+{
+  "name": "id",
+  "type": "string",
+  "required": true,
+  "description": "Unique job identifier"
+}
+```
+
+- `name`: Field name
+- `type`: Data type (`string`, `number`, `boolean`, `object`, `array`, `timestamp`)
+- `required`: Whether the field is required
+- `description`: Field description
+
+## Usage
+
+### Exporting Data
+
+Export collected daemon data to a portable format:
+
+```bash
+{{ project_slug }} --export-data /path/to/export.json
+```
+
+This exports all jobs, metrics, and events from the daemon to the specified file.
+
+### Importing Data
+
+Import data for offline analysis:
+
+```bash
+{{ project_slug }} --import-data /path/to/export.json
+```
+
+This validates and imports the data, displaying summary information.
+
+### Analyzing Data
+
+Perform offline analysis on imported data:
+
+```bash
+# Summary analysis
+{{ project_slug }} --analyze summary --analyze-input /path/to/export.json
+
+# Performance analysis
+{{ project_slug }} --analyze performance --analyze-input /path/to/export.json
+
+# Error analysis
+{{ project_slug }} --analyze errors --analyze-input /path/to/export.json
+
+# Timeline analysis
+{{ project_slug }} --analyze timeline --analyze-input /path/to/export.json
+```
+
+## Validation
+
+The data format is validated on import with the following checks:
+
+1. **Version Check**: Ensures the data format version is supported
+2. **Metadata Check**: Verifies all required metadata fields are present
+3. **Collection Check**: Verifies jobs, metrics, and events are present
+4. **Schema Check**: Verifies schema information is present
+5. **Data Integrity**: Optional checksum validation
+
+In strict mode, validation errors will cause the import to fail. In non-strict mode, warnings are displayed but the import proceeds.
+
+## Compression
+
+For large datasets, compression can be enabled:
+
+```bash
+{{ project_slug }} --export-data /path/to/export.json.gz --compression gzip
+```
+
+The compression method is recorded in the schema section, and the import process automatically handles decompression.
+
+## Migration
+
+When the data format version changes, migration logic will be added to handle:
+
+- **Version Detection**: Automatic detection of data format version
+- **Migration Path**: Defined migration paths between versions
+- **Backward Compatibility**: Support for reading older formats
+- **Forward Compatibility**: Graceful handling of unknown fields
+
+## Security Considerations
+
+- **Sensitive Data**: Job results and errors may contain sensitive information
+- **Access Control**: Export files should be protected with appropriate file permissions
+- **Data Sanitization**: Consider sanitizing sensitive data before export
+- **Encryption**: For sensitive data, consider encrypting the export file
+
+## Performance
+
+- **Large Datasets**: For datasets larger than 100MB, consider using compression
+- **Streaming**: Future versions may support streaming for very large datasets
+- **Memory Usage**: Import and analysis operations load the entire dataset into memory
+- **Optimization**: Use JSONL format for line-by-line processing of large datasets
+
+## Troubleshooting
+
+### Import Fails with Validation Error
+
+Check the error message for specific validation failures:
+
+```bash
+{{ project_slug }} --import-data /path/to/export.json --strict false
+```
+
+Use `--strict false` to see warnings without failing.
+
+### Export Fails
+
+Ensure the daemon has collected data:
+
+```bash
+{{ project_slug }} --list-jobs
+```
+
+If no jobs exist, the export will succeed but contain empty data.
+
+### Analysis Shows No Results
+
+Verify the export file contains data:
+
+```bash
+cat /path/to/export.json | jq '.metadata.totalRecords'
+```
+
+If totalRecords is 0, no data was collected at the time of export.
+
+## Examples
+
+### Example Export File
+
+```json
+{
+  "version": "1.0.0",
+  "metadata": {
+    "exportDate": "2026-07-07T12:00:00.000Z",
+    "exportedBy": "user",
+    "collectionStart": "2026-07-07T10:00:00.000Z",
+    "collectionEnd": "2026-07-07T12:00:00.000Z",
+    "totalRecords": 2,
+    "dataSize": 1024,
+    "compressed": false
+  },
+  "collection": {
+    "jobs": [
+      {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "command": "echo",
+        "args": ["hello"],
+        "status": "completed",
+        "startTime": "2026-07-07T10:00:00.000Z",
+        "endTime": "2026-07-07T10:00:01.000Z",
+        "progress": 100,
+        "result": "hello",
+        "error": null,
+        "duration": 1000
+      },
+      {
+        "id": "123e4567-e89b-12d3-a456-426614174001",
+        "command": "false",
+        "args": [],
+        "status": "failed",
+        "startTime": "2026-07-07T10:00:02.000Z",
+        "endTime": "2026-07-07T10:00:03.000Z",
+        "progress": 0,
+        "result": null,
+        "error": "Command failed with exit code 1",
+        "duration": 1000
+      }
+    ],
+    "metrics": {
+      "totalJobs": 2,
+      "completedJobs": 1,
+      "failedJobs": 1,
+      "cancelledJobs": 0,
+      "averageDuration": 1000,
+      "totalDuration": 2000
+    },
+    "events": [
+      {
+        "timestamp": "2026-07-07T10:00:00.000Z",
+        "type": "job_created",
+        "jobId": "123e4567-e89b-12d3-a456-426614174000"
+      },
+      {
+        "timestamp": "2026-07-07T10:00:01.000Z",
+        "type": "job_completed",
+        "jobId": "123e4567-e89b-12d3-a456-426614174000"
+      }
+    ]
+  },
+  "schema": {
+    "format": "json",
+    "encoding": "utf-8",
+    "compression": "none",
+    "fields": [
+      {
+        "name": "id",
+        "type": "string",
+        "required": true,
+        "description": "Unique job identifier"
+      },
+      {
+        "name": "command",
+        "type": "string",
+        "required": true,
+        "description": "Command that was executed"
+      }
+    ]
+  }
+}
+```
+
+## Future Enhancements
+
+Planned improvements to the data format:
+
+- **Streaming Support**: For very large datasets
+- **Incremental Exports**: Export only new data since last export
+- **Deduplication**: Automatic deduplication of duplicate job records
+- **Data Retention**: Automatic pruning of old data on export
+- **Custom Schemas**: Support for user-defined data schemas
+- **Alternative Formats**: Support for Parquet, Avro, and other formats

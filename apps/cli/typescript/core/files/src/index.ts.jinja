@@ -84,6 +84,13 @@ import {
     type ResourceLimits,
     ResourceLimitError,
 } from './resources.js';
+import {
+    getProcessingManager,
+    type ExportOptions,
+    type ImportOptions,
+    type AnalysisOptions,
+    DataValidationError,
+} from './processing.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -172,6 +179,7 @@ program
   .addHelpText('after', '\nDaemon Mode:\n  --daemon              Pre-launch daemon in background for long-running operations\n  --no-daemon           Force synchronous operation (disable daemon)\n  --list-jobs           List background job status\n  --cancel-job <id>     Cancel a specific background job\n  Daemon auto-spawns on first async operation unless --no-daemon is set')
   .addHelpText('after', '\nConfig Reload:\n  Send SIGHUP signal to reload configuration without restart\n  Example: kill -HUP <pid>\n  New config is validated before applying\n  Validation errors keep old config active\n  Config changes are logged in verbose mode')
   .addHelpText('after', '\nResource Limits:\n  --max-memory <limit>  Set maximum memory usage (e.g., "512MB", "1GB")\n  --max-cpu <percent>   Set maximum CPU usage percentage (e.g., "50", "75%")\n  Limits are enforced during execution with clear error messages\n  Resource usage is logged in verbose mode')
+  .addHelpText('after', '\nCollection vs Processing Separation:\n  --export-data <path>     Export collected daemon data to portable format\n  --import-data <path>     Import data for offline analysis (no daemon required)\n  --analyze <type>         Analyze imported data: summary, performance, errors, timeline\n  --analyze-input <path>   Input file for analysis (use with --analyze)\n  Data export works with daemon; import/analysis work offline\n  Export format is JSON with versioning for compatibility')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--interactive, --tui', 'Launch interactive Terminal User Interface')
   .option('--daemon', 'Pre-launch daemon in background')
@@ -188,6 +196,10 @@ program
   .option('--no-pager', 'Disable pager for long output')
   .option('--max-memory <limit>', 'Set maximum memory usage (e.g., "512MB", "1GB")')
   .option('--max-cpu <percent>', 'Set maximum CPU usage percentage (e.g., "50", "75%")')
+  .option('--export-data <path>', 'Export collected daemon data to portable format')
+  .option('--import-data <path>', 'Import data for offline analysis')
+  .option('--analyze <type>', 'Analyze imported data: summary, performance, errors, timeline')
+  .option('--analyze-input <path>', 'Input file for analysis (use with --analyze)')
   .action(async (inputs: string[], options) => {
       try {
           // Suppress console output immediately for quiet and json modes
@@ -306,6 +318,115 @@ program
                   process.exit(EXIT_CODES.GENERIC_ERROR);
               }
               process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --export-data flag
+          if (options.exportData) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const daemon = getDaemonManager({}, { quiet: false, verbose: options.verbose, color: 'auto', module: 'daemon' });
+              const processing = getProcessingManager({ quiet: false, verbose: options.verbose, color: 'auto', module: 'processing' });
+
+              const jobs = daemon.listJobs();
+              const events = daemon.listEvents();
+              const metrics = {
+                  totalJobs: jobs.length,
+                  completedJobs: jobs.filter(j => j.status === 'completed').length,
+                  failedJobs: jobs.filter(j => j.status === 'failed').length,
+                  cancelledJobs: jobs.filter(j => j.status === 'cancelled').length,
+              };
+
+              const exportOptions: ExportOptions = {
+                  outputPath: options.exportData,
+                  format: 'json',
+                  compression: 'none',
+                  includeMetrics: true,
+                  includeEvents: true,
+                  validate: true,
+              };
+
+              try {
+                  processing.exportData(jobs, metrics, events, exportOptions);
+                  logger.info('Data export completed successfully');
+                  process.exit(EXIT_CODES.SUCCESS);
+              } catch (error) {
+                  if (error instanceof DataValidationError) {
+                      logger.error(`Data validation error: ${error.message}`);
+                  } else {
+                      logger.error(`Export failed: ${error}`);
+                  }
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
+          }
+
+          // Handle --import-data flag
+          if (options.importData) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const processing = getProcessingManager({ quiet: false, verbose: options.verbose, color: 'auto', module: 'processing' });
+
+              const importOptions: ImportOptions = {
+                  inputPath: options.importData,
+                  validate: true,
+                  strict: false,
+              };
+
+              try {
+                  const data = processing.importData(importOptions);
+                  logger.info(`Imported ${data.metadata.totalRecords} records`);
+                  logger.info(`Export date: ${data.metadata.exportDate}`);
+                  logger.info(`Collection period: ${data.metadata.collectionStart} to ${data.metadata.collectionEnd}`);
+                  process.exit(EXIT_CODES.SUCCESS);
+              } catch (error) {
+                  if (error instanceof DataValidationError) {
+                      logger.error(`Data validation error: ${error.message}`);
+                  } else {
+                      logger.error(`Import failed: ${error}`);
+                  }
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
+          }
+
+          // Handle --analyze flag
+          if (options.analyze) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const processing = getProcessingManager({ quiet: false, verbose: options.verbose, color: 'auto', module: 'processing' });
+
+              if (!options.analyzeInput) {
+                  logger.error('--analyze-input is required when using --analyze');
+                  process.exit(EXIT_CODES.USAGE_ERROR);
+              }
+
+              const importOptions: ImportOptions = {
+                  inputPath: options.analyzeInput,
+                  validate: true,
+                  strict: false,
+              };
+
+              try {
+                  const data = processing.importData(importOptions);
+                  const analysisOptions: AnalysisOptions = {
+                      inputPath: options.analyzeInput,
+                      analysisType: options.analyze as any,
+                      outputFormat: options.json ? 'json' : 'text',
+                  };
+
+                  const result = processing.analyzeData(data, analysisOptions);
+
+                  if (options.json) {
+                      console.log(JSON.stringify(result, null, 2));
+                  } else {
+                      logger.info(`Analysis type: ${result.analysisType}`);
+                      logger.info(`Timestamp: ${result.timestamp}`);
+                      console.log(JSON.stringify(result.data, null, 2));
+                  }
+                  process.exit(EXIT_CODES.SUCCESS);
+              } catch (error) {
+                  if (error instanceof DataValidationError) {
+                      logger.error(`Data validation error: ${error.message}`);
+                  } else {
+                      logger.error(`Analysis failed: ${error}`);
+                  }
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
           }
 
           // Handle --interactive / --tui flag

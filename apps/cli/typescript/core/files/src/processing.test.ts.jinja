@@ -1,0 +1,548 @@
+#!/usr/bin/env node
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { unlinkSync, existsSync, mkdirSync, rmdirSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import {
+  getProcessingManager,
+  resetProcessingManager,
+  DataValidationError,
+  type CollectedData,
+  type ExportOptions,
+  type ImportOptions,
+  type AnalysisOptions,
+} from './processing.js';
+
+describe('ProcessingManager', () => {
+  const testDataDir = join(tmpdir(), '{{ project_slug }}-processing-test');
+  let processingManager: ReturnType<typeof getProcessingManager>;
+
+  beforeEach(() => {
+    // Reset manager before each test
+    resetProcessingManager();
+    processingManager = getProcessingManager({ quiet: true, verbose: false, color: 'never', module: 'processing-test' });
+
+    // Ensure test directory exists
+    if (!existsSync(testDataDir)) {
+      mkdirSync(testDataDir, { recursive: true });
+    }
+  });
+
+  afterEach(() => {
+    // Clean up test files
+    resetProcessingManager();
+    try {
+      if (existsSync(testDataDir)) {
+        rmdirSync(testDataDir, { recursive: true });
+      }
+    } catch (error) {
+      // Ignore cleanup errors
+    }
+  });
+
+  describe('validateData', () => {
+    it('should validate correct data structure', () => {
+      const validData: CollectedData = {
+        version: '1.0.0',
+        metadata: {
+          exportDate: new Date().toISOString(),
+          exportedBy: 'test',
+          collectionStart: new Date().toISOString(),
+          collectionEnd: new Date().toISOString(),
+          totalRecords: 0,
+          dataSize: 0,
+          compressed: false,
+        },
+        collection: {
+          jobs: [],
+          metrics: {
+            totalJobs: 0,
+            completedJobs: 0,
+            failedJobs: 0,
+            cancelledJobs: 0,
+          },
+          events: [],
+        },
+        schema: {
+          format: 'json',
+          encoding: 'utf-8',
+          fields: [],
+        },
+      };
+
+      const result = processingManager.validateData(validData);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should reject data with missing version', () => {
+      const invalidData = {
+        metadata: {
+          exportDate: new Date().toISOString(),
+          exportedBy: 'test',
+          collectionStart: new Date().toISOString(),
+          collectionEnd: new Date().toISOString(),
+          totalRecords: 0,
+          dataSize: 0,
+          compressed: false,
+        },
+        collection: {
+          jobs: [],
+          metrics: {
+            totalJobs: 0,
+            completedJobs: 0,
+            failedJobs: 0,
+            cancelledJobs: 0,
+          },
+          events: [],
+        },
+        schema: {
+          format: 'json',
+          encoding: 'utf-8',
+          fields: [],
+        },
+      } as any;
+
+      const result = processingManager.validateData(invalidData);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Missing version field');
+    });
+
+    it('should reject data with unsupported version', () => {
+      const invalidData: CollectedData = {
+        version: '0.0.0',
+        metadata: {
+          exportDate: new Date().toISOString(),
+          exportedBy: 'test',
+          collectionStart: new Date().toISOString(),
+          collectionEnd: new Date().toISOString(),
+          totalRecords: 0,
+          dataSize: 0,
+          compressed: false,
+        },
+        collection: {
+          jobs: [],
+          metrics: {
+            totalJobs: 0,
+            completedJobs: 0,
+            failedJobs: 0,
+            cancelledJobs: 0,
+          },
+          events: [],
+        },
+        schema: {
+          format: 'json',
+          encoding: 'utf-8',
+          fields: [],
+        },
+      };
+
+      const result = processingManager.validateData(invalidData);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.includes('Unsupported version'))).toBe(true);
+    });
+
+    it('should reject data with missing metadata', () => {
+      const invalidData: CollectedData = {
+        version: '1.0.0',
+        metadata: {} as any,
+        collection: {
+          jobs: [],
+          metrics: {
+            totalJobs: 0,
+            completedJobs: 0,
+            failedJobs: 0,
+            cancelledJobs: 0,
+          },
+          events: [],
+        },
+        schema: {
+          format: 'json',
+          encoding: 'utf-8',
+          fields: [],
+        },
+      };
+
+      const result = processingManager.validateData(invalidData);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Missing metadata');
+    });
+
+    it('should reject data with missing collection', () => {
+      const invalidData: CollectedData = {
+        version: '1.0.0',
+        metadata: {
+          exportDate: new Date().toISOString(),
+          exportedBy: 'test',
+          collectionStart: new Date().toISOString(),
+          collectionEnd: new Date().toISOString(),
+          totalRecords: 0,
+          dataSize: 0,
+          compressed: false,
+        },
+        collection: {} as any,
+        schema: {
+          format: 'json',
+          encoding: 'utf-8',
+          fields: [],
+        },
+      };
+
+      const result = processingManager.validateData(invalidData);
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('Missing collection');
+    });
+  });
+
+  describe('exportData', () => {
+    it('should export data to file', () => {
+      const jobs: any[] = [
+        {
+          id: 'job-1',
+          command: 'echo',
+          args: ['hello'],
+          status: 'completed' as const,
+          startTime: new Date(),
+          endTime: new Date(),
+        },
+      ];
+
+      const metrics = {
+        totalJobs: 1,
+        completedJobs: 1,
+        failedJobs: 0,
+        cancelledJobs: 0,
+      };
+
+      const events: any[] = [
+        {
+          timestamp: new Date(),
+          type: 'job_created' as const,
+          jobId: 'job-1',
+        },
+      ];
+
+      const outputPath = join(testDataDir, 'export.json');
+      const exportOptions: ExportOptions = {
+        outputPath,
+        format: 'json',
+        compression: 'none',
+        includeMetrics: true,
+        includeEvents: true,
+        validate: true,
+      };
+
+      const result = processingManager.exportData(jobs, metrics, events, exportOptions);
+
+      expect(result.version).toBe('1.0.0');
+      expect(result.metadata.totalRecords).toBe(1);
+      expect(existsSync(outputPath)).toBe(true);
+
+      // Clean up
+      unlinkSync(outputPath);
+    });
+
+    it('should throw DataValidationError when validation fails', () => {
+      const jobs = [];
+      const metrics = {
+        totalJobs: 0,
+        completedJobs: 0,
+        failedJobs: 0,
+        cancelledJobs: 0,
+      };
+      const events = [];
+
+      const outputPath = join(testDataDir, 'export.json');
+      const exportOptions: ExportOptions = {
+        outputPath,
+        format: 'json',
+        compression: 'none',
+        includeMetrics: true,
+        includeEvents: true,
+        validate: true,
+      };
+
+      // Mock validateData to return invalid
+      const originalValidate = processingManager.validateData.bind(processingManager);
+      processingManager.validateData = () => ({ valid: false, errors: ['Test error'] });
+
+      expect(() => {
+        processingManager.exportData(jobs, metrics, events, exportOptions);
+      }).toThrow(DataValidationError);
+
+      // Restore
+      processingManager.validateData = originalValidate;
+    });
+
+    it('should skip validation when validate is false', () => {
+      const jobs: any[] = [];
+      const metrics = {
+        totalJobs: 0,
+        completedJobs: 0,
+        failedJobs: 0,
+        cancelledJobs: 0,
+      };
+      const events: any[] = [];
+
+      const outputPath = join(testDataDir, 'export.json');
+      const exportOptions: ExportOptions = {
+        outputPath,
+        format: 'json',
+        compression: 'none',
+        includeMetrics: true,
+        includeEvents: true,
+        validate: false,
+      };
+
+      const result = processingManager.exportData(jobs, metrics, events, exportOptions);
+
+      expect(result.version).toBe('1.0.0');
+      expect(existsSync(outputPath)).toBe(true);
+
+      // Clean up
+      unlinkSync(outputPath);
+    });
+  });
+
+  describe('importData', () => {
+    it('should import data from file', () => {
+      const jobs = [
+        {
+          id: 'job-1',
+          command: 'echo',
+          args: ['hello'],
+          status: 'completed' as const,
+          startTime: new Date(),
+          endTime: new Date(),
+        },
+      ];
+
+      const metrics = {
+        totalJobs: 1,
+        completedJobs: 1,
+        failedJobs: 0,
+        cancelledJobs: 0,
+      };
+
+      const events = [
+        {
+          timestamp: new Date(),
+          type: 'job_created' as const,
+          jobId: 'job-1',
+        },
+      ];
+
+      const outputPath = join(testDataDir, 'export.json');
+      const exportOptions: ExportOptions = {
+        outputPath,
+        format: 'json',
+        compression: 'none',
+        includeMetrics: true,
+        includeEvents: true,
+        validate: false,
+      };
+
+      processingManager.exportData(jobs, metrics, events, exportOptions);
+
+      const importOptions: ImportOptions = {
+        inputPath: outputPath,
+        validate: true,
+        strict: false,
+      };
+
+      const result = processingManager.importData(importOptions);
+
+      expect(result.version).toBe('1.0.0');
+      expect(result.metadata.totalRecords).toBe(1);
+
+      // Clean up
+      unlinkSync(outputPath);
+    });
+
+    it('should throw error when file does not exist', () => {
+      const importOptions: ImportOptions = {
+        inputPath: join(testDataDir, 'nonexistent.json'),
+        validate: true,
+        strict: false,
+      };
+
+      expect(() => {
+        processingManager.importData(importOptions);
+      }).toThrow('File not found');
+    });
+
+    it('should throw DataValidationError when validation fails in strict mode', () => {
+      const outputPath = join(testDataDir, 'invalid.json');
+      const invalidData = { invalid: 'data' };
+      const { writeFileSync } = require('fs');
+      writeFileSync(outputPath, JSON.stringify(invalidData));
+
+      const importOptions: ImportOptions = {
+        inputPath: outputPath,
+        validate: true,
+        strict: true,
+      };
+
+      expect(() => {
+        processingManager.importData(importOptions);
+      }).toThrow(DataValidationError);
+
+      // Clean up
+      unlinkSync(outputPath);
+    });
+
+    it('should warn but not throw when validation fails in non-strict mode', () => {
+      const outputPath = join(testDataDir, 'invalid.json');
+      const invalidData = { invalid: 'data' };
+      const { writeFileSync } = require('fs');
+      writeFileSync(outputPath, JSON.stringify(invalidData));
+
+      const importOptions: ImportOptions = {
+        inputPath: outputPath,
+        validate: true,
+        strict: false,
+      };
+
+      // Should not throw in non-strict mode
+      const result = processingManager.importData(importOptions);
+      expect(result).toBeDefined();
+
+      // Clean up
+      unlinkSync(outputPath);
+    });
+  });
+
+  describe('analyzeData', () => {
+    let testData: CollectedData;
+
+    beforeEach(() => {
+      const jobs = [
+        {
+          id: 'job-1',
+          command: 'echo',
+          args: ['hello'],
+          status: 'completed' as const,
+          startTime: new Date(Date.now() - 1000),
+          endTime: new Date(),
+        },
+        {
+          id: 'job-2',
+          command: 'false',
+          args: [],
+          status: 'failed' as const,
+          startTime: new Date(Date.now() - 500),
+          endTime: new Date(),
+          error: 'Command failed',
+        },
+      ];
+
+      const metrics = {
+        totalJobs: 2,
+        completedJobs: 1,
+        failedJobs: 1,
+        cancelledJobs: 0,
+      };
+
+      const events = [
+        {
+          timestamp: new Date(Date.now() - 1000),
+          type: 'job_created' as const,
+          jobId: 'job-1',
+        },
+        {
+          timestamp: new Date(Date.now() - 500),
+          type: 'job_created' as const,
+          jobId: 'job-2',
+        },
+      ];
+
+      const outputPath = join(testDataDir, 'test-data.json');
+      const exportOptions: ExportOptions = {
+        outputPath,
+        format: 'json',
+        compression: 'none',
+        includeMetrics: true,
+        includeEvents: true,
+        validate: false,
+      };
+
+      testData = processingManager.exportData(jobs, metrics, events, exportOptions);
+    });
+
+    afterEach(() => {
+      const outputPath = join(testDataDir, 'test-data.json');
+      if (existsSync(outputPath)) {
+        unlinkSync(outputPath);
+      }
+    });
+
+    it('should perform summary analysis', () => {
+      const analysisOptions: AnalysisOptions = {
+        inputPath: join(testDataDir, 'test-data.json'),
+        analysisType: 'summary',
+        outputFormat: 'text',
+      };
+
+      const result = processingManager.analyzeData(testData, analysisOptions);
+
+      expect(result.analysisType).toBe('summary');
+      expect(result.data.totalJobs).toBe(2);
+      expect(result.data.completedJobs).toBe(1);
+      expect(result.data.failedJobs).toBe(1);
+    });
+
+    it('should perform performance analysis', () => {
+      const analysisOptions: AnalysisOptions = {
+        inputPath: join(testDataDir, 'test-data.json'),
+        analysisType: 'performance',
+        outputFormat: 'text',
+      };
+
+      const result = processingManager.analyzeData(testData, analysisOptions);
+
+      expect(result.analysisType).toBe('performance');
+      expect(result.data.totalJobsWithDuration).toBeGreaterThan(0);
+    });
+
+    it('should perform errors analysis', () => {
+      const analysisOptions: AnalysisOptions = {
+        inputPath: join(testDataDir, 'test-data.json'),
+        analysisType: 'errors',
+        outputFormat: 'text',
+      };
+
+      const result = processingManager.analyzeData(testData, analysisOptions);
+
+      expect(result.analysisType).toBe('errors');
+      expect(result.data.totalErrors).toBe(1);
+      expect(result.data.errors).toHaveLength(1);
+    });
+
+    it('should perform timeline analysis', () => {
+      const analysisOptions: AnalysisOptions = {
+        inputPath: join(testDataDir, 'test-data.json'),
+        analysisType: 'timeline',
+        outputFormat: 'text',
+      };
+
+      const result = processingManager.analyzeData(testData, analysisOptions);
+
+      expect(result.analysisType).toBe('timeline');
+      expect(result.data.totalEvents).toBe(2);
+      expect(result.data.collectionStart).toBeDefined();
+      expect(result.data.collectionEnd).toBeDefined();
+    });
+
+    it('should throw error for unknown analysis type', () => {
+      const analysisOptions: AnalysisOptions = {
+        inputPath: join(testDataDir, 'test-data.json'),
+        analysisType: 'unknown' as any,
+        outputFormat: 'text',
+      };
+
+      expect(() => {
+        processingManager.analyzeData(testData, analysisOptions);
+      }).toThrow('Unknown analysis type');
+    });
+  });
+});
