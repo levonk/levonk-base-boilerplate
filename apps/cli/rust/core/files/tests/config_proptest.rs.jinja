@@ -1,0 +1,39 @@
+use proptest::prelude::*;
+use {{ project_slug }}::config::{Config, ConfigSource};
+
+proptest! {
+    #[test]
+    fn prop_config_log_level_valid(s in "[a-z]+") {
+        let mut config = Config::default();
+        config.log_level = s;
+        // Should only accept valid log levels
+        let valid_levels = ["trace", "debug", "info", "warn", "error"];
+        if valid_levels.contains(&s.as_str()) {
+            assert!(config.validate().is_ok());
+        } else {
+            assert!(config.validate().is_err());
+        }
+    }
+
+    #[test]
+    fn prop_config_max_concurrent_positive(n in 1..1000usize) {
+        let mut config = Config::default();
+        config.max_concurrent = n;
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn prop_config_timeout_positive(n in 1..3600usize) {
+        let mut config = Config::default();
+        config.timeout = n;
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn prop_config_serialization_roundtrip(config in any::<Config>()) {
+        let json = serde_json::to_string(&config).unwrap();
+        let deserialized: Config = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.version, deserialized.version);
+        assert_eq!(config.log_level, deserialized.log_level);
+    }
+}

@@ -1,0 +1,135 @@
+use {{ project_slug }}::privacy::{PrivacyManager, PrivacyConfig, PrivacyToggles, IdentifierStatus};
+
+#[test]
+fn test_privacy_config_default() {
+    let config = PrivacyConfig::default();
+    assert!(!config.enabled);
+    assert!(config.ignore_patterns.is_empty());
+}
+
+#[test]
+fn test_privacy_manager_creation() {
+    let config = PrivacyConfig::default();
+    let manager = PrivacyManager::new(config).unwrap();
+    assert!(!manager.is_enabled());
+}
+
+#[test]
+fn test_classify_identifier_known() {
+    let config = PrivacyConfig::default();
+    let manager = PrivacyManager::new(config).unwrap();
+    assert_eq!(
+        manager.classify_identifier("test-id"),
+        IdentifierStatus::Known
+    );
+}
+
+#[test]
+fn test_classify_identifier_anonymous() {
+    let config = PrivacyConfig {
+        enabled: true,
+        ignore_patterns: vec!["user-.*".to_string(), "session-.*".to_string()],
+        privacy_toggles: PrivacyToggles::default(),
+    };
+    let manager = PrivacyManager::new(config).unwrap();
+    assert_eq!(
+        manager.classify_identifier("user-123"),
+        IdentifierStatus::Anonymous
+    );
+}
+
+#[test]
+fn test_classify_identifier_unknown() {
+    let config = PrivacyConfig {
+        enabled: true,
+        ignore_patterns: vec!["user-.*".to_string()],
+        privacy_toggles: PrivacyToggles::default(),
+    };
+    let manager = PrivacyManager::new(config).unwrap();
+    assert_eq!(
+        manager.classify_identifier("session-123"),
+        IdentifierStatus::Unknown
+    );
+}
+
+#[test]
+fn test_privacy_toggles_analytics() {
+    let config = PrivacyConfig {
+        enabled: true,
+        ignore_patterns: vec![],
+        privacy_toggles: PrivacyToggles {
+            disable_analytics: true,
+            disable_usage_tracking: false,
+            disable_error_reporting: false,
+        },
+    };
+    let manager = PrivacyManager::new(config).unwrap();
+    assert!(!manager.should_log_analytics());
+    assert!(manager.should_track_usage());
+    assert!(manager.should_report_errors());
+}
+
+#[test]
+fn test_privacy_toggles_usage_tracking() {
+    let config = PrivacyConfig {
+        enabled: true,
+        ignore_patterns: vec![],
+        privacy_toggles: PrivacyToggles {
+            disable_analytics: false,
+            disable_usage_tracking: true,
+            disable_error_reporting: false,
+        },
+    };
+    let manager = PrivacyManager::new(config).unwrap();
+    assert!(manager.should_log_analytics());
+    assert!(!manager.should_track_usage());
+    assert!(manager.should_report_errors());
+}
+
+#[test]
+fn test_privacy_toggles_error_reporting() {
+    let config = PrivacyConfig {
+        enabled: true,
+        ignore_patterns: vec![],
+        privacy_toggles: PrivacyToggles {
+            disable_analytics: false,
+            disable_usage_tracking: false,
+            disable_error_reporting: true,
+        },
+    };
+    let manager = PrivacyManager::new(config).unwrap();
+    assert!(manager.should_log_analytics());
+    assert!(manager.should_track_usage());
+    assert!(!manager.should_report_errors());
+}
+
+#[test]
+fn test_ignore_list_multiple_patterns() {
+    let config = PrivacyConfig {
+        enabled: true,
+        ignore_patterns: vec![
+            "user-.*".to_string(),
+            "session-.*".to_string(),
+            "temp-.*".to_string(),
+        ],
+        privacy_toggles: PrivacyToggles::default(),
+    };
+    let manager = PrivacyManager::new(config).unwrap();
+    
+    assert_eq!(
+        manager.classify_identifier("user-123"),
+        IdentifierStatus::Anonymous
+    );
+    assert_eq!(
+        manager.classify_identifier("session-abc"),
+        IdentifierStatus::Anonymous
+    );
+    assert_eq!(
+        manager.classify_identifier("temp-xyz"),
+        IdentifierStatus::Anonymous
+    );
+    assert_eq!(
+        manager.classify_identifier("other-id"),
+        IdentifierStatus::Unknown
+    );
+}

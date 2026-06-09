@@ -1,0 +1,106 @@
+use {{ project_slug }}::audit::{AuditLogger, AuditConfig};
+use tempfile::TempDir;
+
+#[test]
+fn test_audit_config_default() {
+    let config = AuditConfig::default();
+    assert!(!config.enabled);
+    assert_eq!(config.retention_days, 90);
+}
+
+#[test]
+fn test_audit_logger_disabled() {
+    let config = AuditConfig::default();
+    let logger = AuditLogger::new(config).unwrap();
+    assert!(logger.conn.is_none());
+}
+
+#[test]
+fn test_audit_log_write() {
+    let temp_dir = TempDir::new().unwrap();
+    let log_path = temp_dir.path().join("test.db");
+    
+    let config = AuditConfig {
+        enabled: true,
+        retention_days: 90,
+        audit_log_path: log_path.clone(),
+    };
+    
+    let mut logger = AuditLogger::new(config).unwrap();
+    logger.log("INFO", "test_operation", Some("test_user"), "test_details").unwrap();
+    
+    let entries = logger.export().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].operation, "test_operation");
+}
+
+#[test]
+fn test_audit_log_pruning() {
+    let temp_dir = TempDir::new().unwrap();
+    let log_path = temp_dir.path().join("test.db");
+    
+    let config = AuditConfig {
+        enabled: true,
+        retention_days: 1,
+        audit_log_path: log_path.clone(),
+    };
+    
+    let mut logger = AuditLogger::new(config).unwrap();
+    
+    // Add an old entry
+    let old_timestamp = chrono::Utc::now() - chrono::Duration::days(2);
+    let conn = rusqlite::Connection::open(&log_path).unwrap();
+    conn.execute(
+        "INSERT INTO audit_log (timestamp, level, operation, user, details) VALUES (?1, ?2, ?3, ?4, ?5)",
+        rusqlite::params![old_timestamp.to_rfc3339(), "INFO", "old_op", None, "old_details"],
+    ).unwrap();
+    
+    // Add a recent entry
+    logger.log("INFO", "new_operation", Some("test_user"), "new_details").unwrap();
+    
+    // Prune
+    logger.prune_old_entries().unwrap();
+    
+    let entries = logger.export().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].operation, "new_operation");
+}
+
+#[test]
+fn test_audit_export_json() {
+    let temp_dir = TempDir::new().unwrap();
+    let log_path = temp_dir.path().join("test.db");
+    
+    let config = AuditConfig {
+        enabled: true,
+        retention_days: 90,
+        audit_log_path: log_path.clone(),
+    };
+    
+    let mut logger = AuditLogger::new(config).unwrap();
+    logger.log("INFO", "test_operation", Some("test_user"), "test_details").unwrap();
+    
+    let json = logger.export_to_json().unwrap();
+    assert!(json.contains("test_operation"));
+    assert!(json.contains("test_user"));
+}
+
+#[test]
+fn test_audit_export_csv() {
+    let temp_dir = TempDir::new().unwrap();
+    let log_path = temp_dir.path().join("test.db");
+    
+    let config = AuditConfig {
+        enabled: true,
+        retention_days: 90,
+        audit_log_path: log_path.clone(),
+    };
+    
+    let mut logger = AuditLogger::new(config).unwrap();
+    logger.log("INFO", "test_operation", Some("test_user"), "test_details").unwrap();
+    
+    let csv = logger.export_to_csv().unwrap();
+    assert!(csv.contains("test_operation"));
+    assert!(csv.contains("test_user"));
+    assert!(csv.contains("id,timestamp,level,operation,user,details"));
+}

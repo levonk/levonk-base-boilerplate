@@ -1,0 +1,235 @@
+use anyhow::Result;
+use chrono::{DateTime, Utc};
+use rusqlite::{params, Connection, params_from_iter};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditConfig {
+    pub enabled: bool,
+    pub retention_days: u32,
+    pub audit_log_path: PathBuf,
+}
+
+impl Default for AuditConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            retention_days: 90,
+            audit_log_path: PathBuf::from("audit.db"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditEntry {
+    pub id: i64,
+    pub timestamp: String,
+    pub level: String,
+    pub operation: String,
+    pub user: Option<String>,
+    pub details: String,
+}
+
+pub struct AuditLogger {
+    config: AuditConfig,
+    conn: Option<Connection>,
+}
+
+impl AuditLogger {
+    pub fn new(config: AuditConfig) -> Result<Self> {
+        let mut logger = Self {
+            config,
+            conn: None,
+        };
+        
+        if config.enabled {
+            logger.initialize()?;
+        }
+        
+        Ok(logger)
+    }
+    
+    fn initialize(&mut self) -> Result<()> {
+        let conn = Connection::open(&self.config.audit_log_path)?;
+        
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                level TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                user TEXT,
+                details TEXT NOT NULL
+            )",
+            [],
+        )?;
+        
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_timestamp ON audit_log(timestamp)",
+            [],
+        )?;
+        
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_operation ON audit_log(operation)",
+            [],
+        )?;
+        
+        self.conn = Some(conn);
+        self.prune_old_entries()?;
+        
+        Ok(())
+    }
+    
+    pub fn log(&mut self, level: &str, operation: &str, user: Option<&str>, details: &str) -> Result<()> {
+        if let Some(conn) = &self.conn {
+            let timestamp = Utc::now().to_rfc3339();
+            
+            conn.execute(
+                "INSERT INTO audit_log (timestamp, level, operation, user, details) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![timestamp, level, operation, user, details],
+            )?;
+        }
+        Ok(())
+    }
+    
+    pub fn prune_old_entries(&self) -> Result<()> {
+        if let Some(conn) = &self.conn {
+            let cutoff_date = Utc::now() - chrono::Duration::days(self.config.retention_days as i64);
+            let cutoff_timestamp = cutoff_date.to_rfc3339();
+            
+            conn.execute(
+                "DELETE FROM audit_log WHERE timestamp < ?1",
+                params![cutoff_timestamp],
+            )?;
+        }
+        Ok(())
+    }
+    
+    pub fn export(&self) -> Result<Vec<AuditEntry>> {
+        if let Some(conn) = &self.conn {
+            let mut stmt = conn.prepare(
+                "SELECT id, timestamp, level, operation, user, details FROM audit_log ORDER BY timestamp DESC"
+            )?;
+            
+            let entries = stmt.query_map(
+                [],
+                |row| {
+                    Ok(AuditEntry {
+                        id: row.get(0)?,
+                        timestamp: row.get(1)?,
+                        level: row.get(2)?,
+                        operation: row.get(3)?,
+                        user: row.get(4)?,
+                        details: row.get(5)?,
+                    })
+                },
+            )?;
+            
+            Ok(entries.collect())
+        } else {
+            Ok(vec![])
+        }
+    }
+    
+    pub fn export_to_json(&self) -> Result<String> {
+        let entries = self.export()?;
+        serde_json::to_string_pretty(&entries).map_err(|e| anyhow::anyhow!("Failed to serialize audit log: {}", e))
+    }
+    
+    pub fn export_to_csv(&self) -> Result<String> {
+        let entries = self.export()?;
+        let mut csv = String::new();
+        
+        csv.push_str("id,timestamp,level,operation,user,details\n");
+        
+        for entry in entries {
+            csv.push_str(&format!(
+                "{},{},{},{},{},{}\n",
+                entry.id,
+                entry.timestamp,
+                entry.level,
+                entry.operation,
+                entry.user.as_deref().unwrap_or(""),
+                entry.details.replace(',', "\\,")
+            ));
+        }
+        
+        Ok(csv)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+    
+    #[test]
+    fn test_audit_config_default() {
+        let config = AuditConfig::default();
+        assert!(!config.enabled);
+        assert_eq!(config.retention_days, 90);
+    }
+    
+    #[test]
+    fn test_audit_logger_disabled() {
+        let config = AuditConfig::default();
+        let logger = AuditLogger::new(config).unwrap();
+        assert!(logger.conn.is_none());
+    }
+    
+    #[test]
+    fn test_audit_log_write() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let log_path = temp_dir.path().join("test.db");
+        
+        let config = AuditConfig {
+            enabled: true,
+            retention_days: 90,
+            audit_log_path: log_path.clone(),
+        };
+        
+        let mut logger = AuditLogger::new(config)?;
+        logger.log("INFO", "test_operation", Some("test_user"), "test_details")?;
+        
+        let entries = logger.export()?;
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].operation, "test_operation");
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_audit_log_pruning() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let log_path = temp_dir.path().join("test.db");
+        
+        let config = AuditConfig {
+            enabled: true,
+            retention_days: 1,
+            audit_log_path: log_path.clone(),
+        };
+        
+        let mut logger = AuditLogger::new(config)?;
+        
+        // Add an old entry
+        let old_timestamp = Utc::now() - chrono::Duration::days(2);
+        let conn = Connection::open(&log_path)?;
+        conn.execute(
+            "INSERT INTO audit_log (timestamp, level, operation, user, details) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![old_timestamp.to_rfc3339(), "INFO", "old_op", None, "old_details"],
+        )?;
+        
+        // Add a recent entry
+        logger.log("INFO", "new_operation", Some("test_user"), "new_details")?;
+        
+        // Prune
+        logger.prune_old_entries()?;
+        
+        let entries = logger.export()?;
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].operation, "new_operation");
+        
+        Ok(())
+    }
+}

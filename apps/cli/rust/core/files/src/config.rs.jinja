@@ -81,6 +81,14 @@ pub struct Config {
     /// Data storage path for collection mode
     #[serde(default)]
     pub daemon_data_storage_path: Option<PathBuf>,
+    
+    /// Privacy mode configuration
+    #[serde(default)]
+    pub privacy: crate::privacy::PrivacyConfig,
+    
+    /// Audit logging configuration
+    #[serde(default)]
+    pub audit: crate::audit::AuditConfig,
 }
 
 fn default_log_level() -> String {

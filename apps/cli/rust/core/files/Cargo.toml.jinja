@@ -41,6 +41,7 @@ cursive = { version = "0.21", optional = true }
 {% if include_sqlite -%}
 rusqlite = { version = "0.31", features = ["bundled"] }
 {% endif %}
+regex = "1.10"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
@@ -60,3 +61,5 @@ clap_mangen = "0.2"
 assert_cmd = "2.0"
 predicates = "3.0"
 tempfile = "3.8"
+proptest = "1.0"
+criterion = "0.5"

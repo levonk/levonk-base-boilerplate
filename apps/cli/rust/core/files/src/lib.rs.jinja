@@ -1,5 +1,7 @@
 pub mod logging;
+pub mod structured_log;
 pub mod signals;
+pub mod config;
 pub mod daemon;
 pub mod health;
 pub mod terminal;
@@ -10,6 +12,10 @@ pub mod security;
 pub mod resource;
 pub mod export;
 pub mod processor;
+pub mod privacy;
+pub mod audit;
+pub mod deprecation;
+pub mod destructive;
 
 {% if enable_tui -%}
 pub mod tui;
@@ -34,6 +40,10 @@ pub use security::{SecurityUtils, SecureString};
 pub use resource::{ResourceLimits, ResourceMonitor, ResourceLimiter};
 pub use export::{DataExporter, DataImporter, ExportConfig, ImportConfig, ExportFormat, DataRecord, ExportManifest};
 pub use processor::{DataProcessor, ProcessingConfig, ProcessingOperation, AnalysisResult};
+pub use privacy::{PrivacyManager, PrivacyConfig, PrivacyMode};
+pub use audit::{AuditLogger, AuditConfig, AuditEntry, AuditOperation};
+pub use deprecation::{DeprecationManager, DeprecationConfig, DeprecationSeverity, DeprecationWarning};
+pub use destructive::{DestructiveDetector, DestructiveOperation, DestructiveConfig};
 
 {% if enable_tui -%}
 pub use tui::{TuiConfig, TuiHandler, TuiError, init_tui_mode, terminal_supports_tui};

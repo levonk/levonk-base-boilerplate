@@ -98,6 +98,10 @@ pub struct Cli {
     #[arg(long, help = "Force synchronous in-process operation (disable daemon)")]
     pub no_daemon: bool,
 
+    /// Privacy mode - enable privacy features with ignore lists
+    #[arg(long, help = "Enable privacy mode with identifier anonymization")]
+    pub privacy: bool,
+
     /// Display man page
     #[arg(long, help = "Display manual page")]
     pub man: bool,

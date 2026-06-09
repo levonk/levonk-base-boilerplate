@@ -1,5 +1,5 @@
 use clap::Command;
-use clap_complete::{generate, Bash, Elvish, Fish, PowerShell, Zsh};
+use clap_complete::{generate_to, shells::Bash, shells::Elvish, shells::Fish, shells::PowerShell, shells::Zsh};
 use std::io;
 
 /// Generate shell completion scripts
@@ -28,23 +28,23 @@ use std::io;
 pub fn generate_completion(cmd: &mut Command, shell: &str, buf: &mut dyn io::Write) -> anyhow::Result<()> {
     match shell.to_lowercase().as_str() {
         "bash" => {
-            generate(Bash, cmd, "{{ project_slug }}", buf);
+            generate_to(Bash, cmd, "{{ project_slug }}", buf)?;
             Ok(())
         }
         "zsh" => {
-            generate(Zsh, cmd, "{{ project_slug }}", buf);
+            generate_to(Zsh, cmd, "{{ project_slug }}", buf)?;
             Ok(())
         }
         "fish" => {
-            generate(Fish, cmd, "{{ project_slug }}", buf);
+            generate_to(Fish, cmd, "{{ project_slug }}", buf)?;
             Ok(())
         }
         "elvish" => {
-            generate(Elvish, cmd, "{{ project_slug }}", buf);
+            generate_to(Elvish, cmd, "{{ project_slug }}", buf)?;
             Ok(())
         }
         "powershell" | "pwsh" => {
-            generate(PowerShell, cmd, "{{ project_slug }}", buf);
+            generate_to(PowerShell, cmd, "{{ project_slug }}", buf)?;
             Ok(())
         }
         _ => Err(anyhow::anyhow!(

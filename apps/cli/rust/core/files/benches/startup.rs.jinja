@@ -1,0 +1,32 @@
+use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
+use {{ project_slug }}::cli::Cli;
+
+fn bench_startup(c: &mut Criterion) {
+    let mut group = c.benchmark_group("startup");
+    
+    group.bench_with_input(
+        BenchmarkId::new("help", "Startup with --help"),
+        |b| b.iter(|| {
+            let cli = Cli::new();
+            cli.run(&["--help"]);
+        }),
+    );
+    
+    group.bench_with_input(
+        BenchmarkId::new("version", "Startup with --version"),
+        |b| b.iter(|| {
+            let cli = Cli::new();
+            cli.run(&["--version"]);
+        }),
+    );
+    
+    group.bench_with_input(
+        BenchmarkId::new("no_args", "Startup with no args"),
+        |b| b.iter(|| {
+            let cli = Cli::new();
+            cli.run(&[]);
+        }),
+    );
+}
+
+criterion_group!(benches, startup, criterion_main, startup);

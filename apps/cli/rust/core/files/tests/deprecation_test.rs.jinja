@@ -1,0 +1,140 @@
+use {{ project_slug }}::deprecation::{DeprecationManager, DeprecationPolicy, DeprecationSeverity};
+use chrono::{Duration, Utc};
+
+#[test]
+fn test_deprecation_manager_creation() {
+    let manager = DeprecationManager::new();
+    assert!(manager.policies.is_empty());
+}
+
+#[test]
+fn test_add_policy_valid() {
+    let mut manager = DeprecationManager::new();
+    
+    let announced = Utc::now();
+    let eos = announced + Duration::days(180);
+    
+    let policy = DeprecationPolicy {
+        feature_name: "old-feature".to_string(),
+        announced_date: announced,
+        end_of_support_date: eos,
+        description: "This feature is being replaced".to_string(),
+        migration_guide: None,
+    };
+    
+    assert!(manager.add_policy(policy).is_ok());
+}
+
+#[test]
+fn test_add_policy_invalid() {
+    let mut manager = DeprecationManager::new();
+    
+    let announced = Utc::now();
+    let eos = announced + Duration::days(90); // Only 3 months - too short
+    
+    let policy = DeprecationPolicy {
+        feature_name: "old-feature".to_string(),
+        announced_date: announced,
+        end_of_support_date: eos,
+        description: "This feature is being replaced".to_string(),
+        migration_guide: None,
+    };
+    
+    assert!(manager.add_policy(policy).is_err());
+}
+
+#[test]
+fn test_check_feature_not_deprecated() {
+    let manager = DeprecationManager::new();
+    assert!(manager.check_feature("unknown-feature").is_none());
+}
+
+#[test]
+fn test_check_feature_deprecated() {
+    let mut manager = DeprecationManager::new();
+    
+    let announced = Utc::now();
+    let eos = announced + Duration::days(180);
+    
+    let policy = DeprecationPolicy {
+        feature_name: "old-feature".to_string(),
+        announced_date: announced,
+        end_of_support_date: eos,
+        description: "This feature is being replaced".to_string(),
+        migration_guide: None,
+    };
+    
+    manager.add_policy(policy).unwrap();
+    
+    let warning = manager.check_feature("old-feature").unwrap();
+    assert_eq!(warning.feature, "old-feature");
+    assert!(warning.days_until_eos >= 180);
+}
+
+#[test]
+fn test_is_feature_removed() {
+    let mut manager = DeprecationManager::new();
+    
+    let announced = Utc::now() - Duration::days(200);
+    let eos = announced + Duration::days(180);
+    
+    let policy = DeprecationPolicy {
+        feature_name: "old-feature".to_string(),
+        announced_date: announced,
+        end_of_support_date: eos,
+        description: "This feature is being replaced".to_string(),
+        migration_guide: None,
+    };
+    
+    manager.add_policy(policy).unwrap();
+    assert!(manager.is_feature_removed("old-feature"));
+}
+
+#[test]
+fn test_severity_levels() {
+    let mut manager = DeprecationManager::new();
+    
+    let announced = Utc::now();
+    
+    // Critical: < 30 days
+    let eos_critical = announced + Duration::days(20);
+    let policy_critical = DeprecationPolicy {
+        feature_name: "critical-feature".to_string(),
+        announced_date: announced,
+        end_of_support_date: eos_critical,
+        description: "Critical deprecation".to_string(),
+        migration_guide: None,
+    };
+    manager.add_policy(policy_critical).unwrap();
+    
+    let warning = manager.check_feature("critical-feature").unwrap();
+    assert_eq!(warning.severity, DeprecationSeverity::Critical);
+    
+    // Warning: < 90 days
+    let eos_warning = announced + Duration::days(60);
+    let policy_warning = DeprecationPolicy {
+        feature_name: "warning-feature".to_string(),
+        announced_date: announced,
+        end_of_support_date: eos_warning,
+        description: "Warning deprecation".to_string(),
+        migration_guide: None,
+    };
+    manager.add_policy(policy_warning).unwrap();
+    
+    let warning = manager.check_feature("warning-feature").unwrap();
+    assert_eq!(warning.severity, DeprecationSeverity::Warning);
+    
+    // Info: >= 90 days
+    let eos_info = announced + Duration::days(180);
+    let policy_info = DeprecationPolicy {
+        feature_name: "info-feature".to_string(),
+        announced_date: announced,
+        end_of_support_date: eos_info,
+        description: "Info deprecation".to_string(),
+        migration_guide: None,
+    };
+    manager.add_policy(policy_info).unwrap();
+    
+    let warning = manager.check_feature("info-feature").unwrap();
+    assert_eq!(warning.severity, DeprecationSeverity::Info);
+}
