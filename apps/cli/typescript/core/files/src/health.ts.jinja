@@ -51,14 +51,11 @@ export function unregisterDependencyCheck(name: string): void {
  * Check if a dependency is healthy
  * @param dependency - Dependency check configuration
  * @returns Promise resolving to true if healthy
+ * @throws Error if dependency check fails
  */
 async function checkDependency(dependency: DependencyCheck): Promise<boolean> {
-  try {
-    const result = await dependency.check();
-    return result === true;
-  } catch {
-    return false;
-  }
+  const result = await dependency.check();
+  return result === true;
 }
 
 /**
@@ -115,7 +112,7 @@ function checkLiveness(): boolean {
  */
 async function checkDependencies(): Promise<HealthCheck[]> {
   const checks: HealthCheck[] = [];
-  
+
   for (const [name, dependency] of dependencyChecks) {
     const start = Date.now();
     try {
@@ -134,7 +131,7 @@ async function checkDependencies(): Promise<HealthCheck[]> {
       });
     }
   }
-  
+
   return checks;
 }
 
@@ -149,18 +146,18 @@ export async function getHealthCheck(
 ): Promise<HealthCheckResult> {
   const timeout = options.timeout ?? DEFAULT_TIMEOUT;
   const startTime = Date.now();
-  
+
   // Enforce timeout
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error('Health check timeout')), timeout);
   });
-  
+
   try {
     const result = await Promise.race([
       performHealthChecks(options),
       timeoutPromise,
     ]);
-    
+
     return result;
   } catch (error) {
     // If timeout or error occurs, return unhealthy status
@@ -190,22 +187,22 @@ async function performHealthChecks(
   options: HealthCheckOptions
 ): Promise<HealthCheckResult> {
   const checks: HealthCheck[] = [];
-  
+
   // Check liveness
   checks.push(await performCheck('liveness', checkLiveness));
-  
+
   // Check readiness
   checks.push(await performCheck('readiness', checkReadiness));
-  
+
   // Check dependencies if requested
   if (options.includeDependencies && dependencyChecks.size > 0) {
     const depChecks = await checkDependencies();
     checks.push(...depChecks);
   }
-  
+
   // Determine overall status
   const allPassed = checks.every(check => check.status === 'pass');
-  
+
   return {
     status: allPassed ? 'healthy' : 'unhealthy',
     timestamp: new Date().toISOString(),
