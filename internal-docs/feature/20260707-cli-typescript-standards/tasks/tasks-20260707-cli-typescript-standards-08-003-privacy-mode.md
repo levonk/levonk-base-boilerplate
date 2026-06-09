@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 8
 parallel_id: 3
 branch: "feature/current/20260707-cli-typescript-standards/story-08-003-privacy-mode"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["02-001"]

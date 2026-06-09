@@ -86,26 +86,26 @@ class PrivacyManagerImpl implements PrivacyManager {
     let redacted = data;
 
     // Redact PII patterns
-    redacted = redacted.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[REDACTED_EMAIL]');
-    redacted = redacted.replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[REDACTED_PHONE]');
-    redacted = redacted.replace(/\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, '[REDACTED_SSN]');
+    redacted = redacted.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[REDACTED]');
+    redacted = redacted.replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[REDACTED]');
+    redacted = redacted.replace(/\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, '[REDACTED]');
 
     // Redact IP addresses
     if (!this.config.logIpAddresses) {
-      redacted = redacted.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[REDACTED_IP]');
-      redacted = redacted.replace(/\b([0-9a-fA-F]{0,4}:){7}[0-9a-fA-F]{0,4}\b/g, '[REDACTED_IPV6]');
+      redacted = redacted.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[REDACTED]');
+      redacted = redacted.replace(/\b([0-9a-fA-F]{0,4}:){7}[0-9a-fA-F]{0,4}\b/g, '[REDACTED]');
     }
 
     // Redact file paths
     if (!this.config.logFilePaths) {
-      redacted = redacted.replace(/\/[^\s]+/g, '[REDACTED_PATH]');
-      redacted = redacted.replace(/[A-Za-z]:\\(?:[^\\]+\\)*[^\\]+/g, '[REDACTED_PATH]');
+      redacted = redacted.replace(/\/[^\s]+/g, '[REDACTED]');
+      redacted = redacted.replace(/[A-Za-z]:\\(?:[^\\]+\\)*[^\\]+/g, '[REDACTED]');
     }
 
     // Redact user IDs
     if (!this.config.logUserIds) {
-      redacted = redacted.replace(/\buser[_-]?id[:\s]*[^\s,)]+/gi, '[REDACTED_USER_ID]');
-      redacted = redacted.replace(/\busername[:\s]*[^\s,)]+/gi, '[REDACTED_USERNAME]');
+      redacted = redacted.replace(/\buser[_-]?id[:\s]*[^\s,)]+/gi, '[REDACTED]');
+      redacted = redacted.replace(/\busername[:\s]*[^\s,)]+/gi, '[REDACTED]');
     }
 
     return redacted;
@@ -117,10 +117,16 @@ class PrivacyManagerImpl implements PrivacyManager {
     }
 
     const redacted: Record<string, unknown> = {};
+    const sensitiveKeys = /\b(password|secret|token|apikey|api_key|access_token|refresh_token|auth|credential)\b/i;
 
     for (const [key, value] of Object.entries(obj)) {
       if (typeof value === 'string') {
-        redacted[key] = this.redactSensitiveData(value);
+        // Redact sensitive field values
+        if (sensitiveKeys.test(key)) {
+          redacted[key] = '[REDACTED]';
+        } else {
+          redacted[key] = this.redactSensitiveData(value);
+        }
       } else if (typeof value === 'object' && value !== null) {
         redacted[key] = this.redactSensitiveObject(value as Record<string, unknown>);
       } else {
