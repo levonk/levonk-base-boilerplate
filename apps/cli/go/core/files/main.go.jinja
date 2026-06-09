@@ -129,6 +129,35 @@ Field Selection:
     - Allows agents to request specific fields when needed
     - Improves readability by excluding verbose fields
 
+Content Truncation:
+  The CLI automatically truncates large text fields to reduce token consumption:
+
+  Truncation Behavior:
+    - Description fields: truncated to 500 characters by default
+    - Body fields: truncated to 1000 characters by default
+    - Log fields: truncated to 1500 characters by default
+    - Smart truncation at word boundaries when possible
+    - Ellipsis (...) appended to truncated content
+
+  Truncation Options:
+    --full                      Disable truncation and show full content for all fields
+                                Overrides config file truncation settings
+
+  Configuration:
+    truncation:
+      disable: false            Disable truncation globally
+      limits:
+        description: 500        Truncation limit for description fields
+        body: 1000              Truncation limit for body fields
+        log: 1500               Truncation limit for log fields
+        generic: 1000           Truncation limit for generic text fields
+      min_threshold: 200        Minimum length before truncation is considered
+
+  Benefits:
+    - Reduces token consumption in agent mode
+    - Provides escape hatch via --full flag for complete content
+    - Configurable limits per field type
+
 Examples:
   {{ project_slug }} file.txt
   {{ project_slug }} "**/*.txt"

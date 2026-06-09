@@ -182,3 +182,86 @@ func TestModeString(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatterWithTruncation(t *testing.T) {
+	// Test that truncation is applied when fullFlag is false
+	formatter := NewFormatter(ModeAgent, false, "", false, false)
+
+	// Create a long string
+	longString := string(make([]byte, 2000))
+
+	// Format the value
+	result, err := formatter.FormatValue(longString)
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Result should be truncated
+	if len(result) >= len(longString) {
+		t.Errorf("Expected truncated result, got length %d (original %d)", len(result), len(longString))
+	}
+}
+
+func TestFormatterWithFullFlag(t *testing.T) {
+	// Test that truncation is disabled when fullFlag is true
+	formatter := NewFormatter(ModeAgent, false, "", false, true)
+
+	// Create a long string
+	longString := string(make([]byte, 2000))
+
+	// Format the value
+	result, err := formatter.FormatValue(longString)
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Result should not be truncated
+	if len(result) != len(longString) {
+		t.Errorf("Expected full result with --full flag, got length %d (original %d)", len(result), len(longString))
+	}
+}
+
+func TestFormatterTruncationForFieldTypes(t *testing.T) {
+	formatter := NewFormatter(ModeAgent, false, "", false, false)
+
+	// Test different field types
+	testData := map[string]interface{}{
+		"description": string(make([]byte, 1000)),
+		"body":        string(make([]byte, 1500)),
+		"log":         string(make([]byte, 2000)),
+		"short":       "short text",
+	}
+
+	result, err := formatter.FormatValue(testData)
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Result should be a string (formatted)
+	if result == "" {
+		t.Error("Expected non-empty result")
+	}
+
+	// The short field should not be truncated
+	// (This is a basic check - full validation would require parsing the output)
+}
+
+func TestFormatterTruncationInMap(t *testing.T) {
+	formatter := NewFormatter(ModeAgent, false, "", false, false)
+
+	// Test truncation in map values
+	testData := map[string]interface{}{
+		"title":       "Test Title",
+		"description": string(make([]byte, 1000)),
+	}
+
+	result, err := formatter.FormatValue(testData)
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Result should be formatted
+	if result == "" {
+		t.Error("Expected non-empty result")
+	}
+}

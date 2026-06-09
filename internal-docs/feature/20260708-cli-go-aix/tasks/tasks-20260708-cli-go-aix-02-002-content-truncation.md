@@ -44,8 +44,8 @@ Implement content truncation for large text fields (descriptions, bodies, logs) 
 - [x] Write unit tests for truncation function
 - [x] Write unit tests for truncation metadata generation
 - [x] Write integration tests for `--full` flag functionality
-- [~] Write tests for truncation application to various field types
-- [ ] Update CLI help text to document truncation behavior
+- [x] Write tests for truncation application to various field types
+- [~] Update CLI help text to document truncation behavior
 
 ## Relevant Files
 

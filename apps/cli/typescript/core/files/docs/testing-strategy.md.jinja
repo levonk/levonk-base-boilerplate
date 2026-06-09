@@ -1,0 +1,197 @@
+# Testing Strategy
+
+This document describes the comprehensive testing strategy for {{ project_name }}, ensuring quality standards and reliability across all CLI functionality.
+
+## Overview
+
+{{ project_name }} uses a multi-layered testing approach with Vitest as the primary testing framework. The strategy includes unit tests, integration tests, and coverage reporting to ensure >80% code coverage across all modules.
+
+## Testing Framework
+
+### Vitest Configuration
+
+The project uses Vitest with the following configuration:
+
+- **Framework**: Vitest with Node.js environment
+- **Coverage Provider**: v8
+- **Coverage Reporters**: text, json, html, lcov
+- **Coverage Thresholds**:
+  - Lines: 80%
+  - Functions: 80%
+  - Branches: 75%
+  - Statements: 80%
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run specific test file
+vitest run src/logger.test.ts
+```
+
+## Test Types
+
+### Unit Tests
+
+Unit tests verify individual functions and modules in isolation. Each module has a corresponding `*.test.ts.jinja` file.
+
+**Coverage**:
+- 26 test files covering all major modules
+- Tests for: logger, config, completions, man, dry-run, prompts, progress, pager, tui, daemon, processing, path, resources, health, audit, deprecation, error, file-ref, url, secrets, validation, migration, install, privacy, terminal
+
+**Examples**:
+- `logger.test.ts.jinja` - Tests logging modes, color control, output formatting
+- `config.test.ts.jinja` - Tests configuration loading, precedence chain, validation
+- `deprecation.test.ts.jinja` - Tests deprecation warnings, end-of-support enforcement
+
+### Integration Tests
+
+Integration tests verify CLI workflows and command interactions. The main integration test file is `index.test.ts.jinja`.
+
+**Coverage**:
+- CLI command execution
+- Help text generation
+- Flag handling
+- Subcommand organization
+- Error handling paths
+- Exit code verification
+
+**Examples**:
+- Help text contains all expected sections
+- Subcommands are properly registered
+- Flags are correctly parsed
+- Exit codes match expected values
+
+## Coverage Goals
+
+### Target Coverage
+
+The project aims for the following coverage thresholds:
+
+| Metric | Target | Rationale |
+|--------|--------|-----------|
+| Lines | 80% | Ensures most code paths are tested |
+| Functions | 80% | Ensures most functions are exercised |
+| Branches | 75% | Ensures most conditional logic is tested |
+| Statements | 80% | Ensures most statements are executed |
+
+### Exclusions
+
+The following are excluded from coverage calculations:
+- Test files (`*.test.ts.jinja`)
+- Configuration files (`*.config.ts.jinja`)
+- Type definition files (`types/`)
+- Distribution files (`dist/`)
+- Node modules (`node_modules/`)
+
+## CI/CD Integration
+
+### GitHub Actions
+
+The CI pipeline runs tests with coverage reporting on every push and pull request:
+
+```yaml
+- name: Run Tests
+  run: npm run test:coverage -- --coverageThreshold '{"global":{"branches":75,"functions":80,"lines":80,"statements":80}}'
+```
+
+### Coverage Reports
+
+Coverage reports are generated in multiple formats:
+- **Text**: Console output for quick review
+- **JSON**: Machine-readable for CI integration
+- **HTML**: Detailed browser-based report
+- **LCOV**: For coverage badge generation
+
+### Artifacts
+
+Test results and coverage reports are uploaded as artifacts with 30-day retention.
+
+## Testing Best Practices
+
+### Test Organization
+
+- **One test file per module**: Each source file has a corresponding test file
+- **Descriptive test names**: Test names clearly describe what is being tested
+- **Group related tests**: Use `describe` blocks to group related tests
+- **Arrange-Act-Assert**: Structure tests with clear setup, execution, and verification
+
+### Test Data
+
+- **Use fixtures**: Reusable test data in `test/fixtures/`
+- **Mock external dependencies**: Use Vitest mocks for external services
+- **Isolate tests**: Each test should be independent and not depend on other tests
+
+### Error Testing
+
+- **Test error paths**: Verify error handling and error messages
+- **Test edge cases**: Boundary conditions, empty inputs, null values
+- **Test cross-platform behavior**: Windows, Linux, macOS compatibility
+
+### Security Testing
+
+- **Secret redaction**: Verify secrets are redacted from logs
+- **Input validation**: Test for injection attacks
+- **Permission checks**: Verify authorization enforcement
+
+## Test Maintenance
+
+### Adding New Tests
+
+When adding new functionality:
+
+1. Create a corresponding test file if none exists
+2. Write unit tests for individual functions
+3. Add integration tests for CLI workflows
+4. Verify coverage meets thresholds
+5. Update this document if testing strategy changes
+
+### Updating Tests
+
+When modifying existing functionality:
+
+1. Update affected tests to reflect changes
+2. Ensure coverage is maintained or improved
+3. Add tests for new code paths
+4. Run full test suite before committing
+
+### Coverage Monitoring
+
+- Review coverage reports in CI
+- Address coverage regressions immediately
+- Document justified coverage exceptions
+- Periodically audit coverage for improvements
+
+## Continuous Improvement
+
+### Goals
+
+- Increase coverage thresholds as codebase matures
+- Add more integration tests for complex workflows
+- Implement performance benchmarks
+- Add security-specific tests for sensitive features
+
+### Metrics
+
+- Track test execution time
+- Monitor flaky test rate
+- Measure coverage trends over time
+- Track defect escape rate
+
+## Related Documentation
+
+- [Configuration Management](config-management.md)
+- [Error Handling](error-handling.md)
+- [Deprecation Policy](deprecation-policy.md)
+
+## Questions or Issues?
+
+If you have questions about the testing strategy or need help with test implementation, please open an issue on the project repository.
