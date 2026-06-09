@@ -1,0 +1,243 @@
+# vim: set ft=python :
+"""Contextual disclosure with next steps suggestions.
+
+This module provides contextual suggestions for next steps based on
+current output and state, formatted as a help[] array in TOON.
+"""
+
+from typing import List, Dict, Any, Optional
+from pathlib import Path
+
+
+class Suggestion:
+    """A single suggestion for next steps."""
+
+    def __init__(self, command: str, description: str, relevance: int = 1):
+        """
+        Initialize a suggestion.
+
+        Args:
+            command: Complete command to run
+            description: Description of what the command does
+            relevance: Relevance score (higher = more relevant)
+        """
+        self.command = command
+        self.description = description
+        self.relevance = relevance
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert suggestion to dictionary."""
+        return {
+            "command": self.command,
+            "description": self.description,
+        }
+
+
+def generate_suggestions_for_noargs(context: Dict[str, Any]) -> List[Suggestion]:
+    """Generate suggestions for no-args invocation.
+
+    Args:
+        context: Directory context from noargs module
+
+    Returns:
+        List of suggestions
+    """
+    suggestions = []
+
+    if not context.get("exists"):
+        return []
+
+    if context.get("is_git_repo"):
+        suggestions.append(Suggestion(
+            "{{ project_slug }} --git-status",
+            "Show git repository status",
+            relevance=3
+        ))
+
+    if context.get("has_package_json"):
+        suggestions.append(Suggestion(
+            "{{ project_slug }} package.json",
+            "Analyze Node.js project",
+            relevance=3
+        ))
+
+    if context.get("has_pyproject"):
+        suggestions.append(Suggestion(
+            "{{ project_slug }} pyproject.toml",
+            "Analyze Python project",
+            relevance=3
+        ))
+
+    if context.get("has_cargo_toml"):
+        suggestions.append(Suggestion(
+            "{{ project_slug }} Cargo.toml",
+            "Analyze Rust project",
+            relevance=3
+        ))
+
+    if context.get("has_files"):
+        suggestions.append(Suggestion(
+            "{{ project_slug }} .",
+            "Process current directory",
+            relevance=2
+        ))
+
+    # Always add help suggestion
+    suggestions.append(Suggestion(
+        "{{ project_slug }} --help",
+        "Show detailed help",
+        relevance=1
+    ))
+
+    return suggestions
+
+
+def generate_suggestions_for_process(output: Dict[str, Any]) -> List[Suggestion]:
+    """Generate suggestions after processing files.
+
+    Args:
+        output: Process output
+
+    Returns:
+        List of suggestions
+    """
+    suggestions = []
+
+    # If empty results, suggest creating
+    if not output.get("results") or len(output.get("results", [])) == 0:
+        suggestions.append(Suggestion(
+            "{{ project_slug }} --create",
+            "Create new item",
+            relevance=3
+        ))
+        suggestions.append(Suggestion(
+            "{{ project_slug }} --help",
+            "Show available commands",
+            relevance=2
+        ))
+    else:
+        # If results exist, suggest viewing
+        suggestions.append(Suggestion(
+            "{{ project_slug }} --view",
+            "View detailed results",
+            relevance=3
+        ))
+        suggestions.append(Suggestion(
+            "{{ project_slug }} --export",
+            "Export results",
+            relevance=2
+        ))
+
+    return suggestions
+
+
+def rank_suggestions(suggestions: List[Suggestion]) -> List[Suggestion]:
+    """Rank suggestions by relevance.
+
+    Args:
+        suggestions: List of suggestions
+
+    Returns:
+        Sorted list of suggestions
+    """
+    return sorted(suggestions, key=lambda s: s.relevance, reverse=True)
+
+
+def limit_suggestions(suggestions: List[Suggestion], max_count: int = 4) -> List[Suggestion]:
+    """Limit suggestions to maximum count.
+
+    Args:
+        suggestions: List of suggestions
+        max_count: Maximum number of suggestions
+
+    Returns:
+        Limited list of suggestions
+    """
+    return suggestions[:max_count]
+
+
+def format_suggestions_toon(suggestions: List[Suggestion]) -> str:
+    """Format suggestions as help[] array in TOON.
+
+    Args:
+        suggestions: List of suggestions
+
+    Returns:
+        TOON-formatted string
+    """
+    if not suggestions:
+        return ""
+
+    lines = ["help["]
+    for suggestion in suggestions:
+        lines.append("  {'command': '" + suggestion.command + "', 'description': '" + suggestion.description + "'}")
+    lines.append("]")
+
+    return "\n".join(lines)
+
+
+def get_contextual_suggestions(
+    command: str,
+    context: Optional[Dict[str, Any]] = None,
+    output: Optional[Dict[str, Any]] = None
+) -> List[Suggestion]:
+    """Get contextual suggestions based on command and state.
+
+    Args:
+        command: Current command
+        context: Optional context information
+        output: Optional output information
+
+    Returns:
+        List of suggestions
+    """
+    suggestions = []
+
+    if command == "noargs" and context:
+        suggestions = generate_suggestions_for_noargs(context)
+    elif command == "process" and output:
+        suggestions = generate_suggestions_for_process(output)
+    else:
+        # Generic suggestions
+        suggestions = [
+            Suggestion("{{ project_slug }} --help", "Show detailed help", relevance=1),
+        ]
+
+    # Rank and limit
+    suggestions = rank_suggestions(suggestions)
+    suggestions = limit_suggestions(suggestions, max_count=4)
+
+    return suggestions
+
+
+def format_suggestions(
+    command: str,
+    context: Optional[Dict[str, Any]] = None,
+    output: Optional[Dict[str, Any]] = None,
+    format_type: str = "toon"
+) -> str:
+    """Format suggestions for output.
+
+    Args:
+        command: Current command
+        context: Optional context information
+        output: Optional output information
+        format_type: Format type (toon or human)
+
+    Returns:
+        Formatted suggestions string
+    """
+    suggestions = get_contextual_suggestions(command, context, output)
+
+    if format_type == "toon":
+        return format_suggestions_toon(suggestions)
+    else:
+        # Human-readable format
+        if not suggestions:
+            return ""
+
+        lines = ["\nNext steps:"]
+        for suggestion in suggestions:
+            lines.append(f"  {suggestion.command} - {suggestion.description}")
+
+        return "\n".join(lines)
