@@ -88,6 +88,32 @@ use std::time::Duration;
 /// Aggregates are automatically included in output when available from the backend.
 /// This optimizes agent interactions by providing commonly-needed data upfront.
 ///
+/// # Structured Errors
+///
+/// All errors are formatted in a structured format that enables programmatic error handling:
+/// - Errors go to stdout in the same format as normal output (TOON/JSON/Human)
+/// - Diagnostics and debug information go to stderr
+/// - Error messages include actionable suggestions for resolution
+/// - Error codes enable programmatic error handling
+/// - Raw dependency output never leaks through
+///
+/// Error format includes:
+/// - error: Error code (e.g., CONFIG_ERROR, NETWORK_ERROR)
+/// - message: Human-readable error description
+/// - context: Additional context information (when available)
+/// - suggestions: Actionable suggestions for resolving the error
+/// - exit_code: Numeric exit code for the error
+///
+/// Example error in TOON format:
+///   error: CONFIG_ERROR
+///   message: Configuration file not found
+///   context:
+///     path: /path/to/config.toml
+///   suggestions:
+///   - text: Initialize configuration with default settings
+///     command: mytool --install
+///   exit_code: 3
+///
 /// # Empty States
 ///
 /// When commands return no results, the CLI provides definitive empty state messages:

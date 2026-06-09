@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 2
 parallel_id: 2
 branch: "feature/current/20260708-cli-rust-aix/story-02-002-content-truncation"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]

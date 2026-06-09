@@ -1,0 +1,50 @@
+//! Structured error formatting and handling
+//!
+//! This module provides structured error formatting with errors going to stdout
+//! in the same format as normal output, including actionable suggestions. Never lets
+//! raw dependency output leak through. This enables agents to parse and act on
+//! failures programmatically.
+//!
+//! ## Error Format Specification
+//!
+//! Structured errors follow this format:
+//!
+//! ```toon
+//! error: <error_code>
+//! message: <human_readable_message>
+//! context:
+//!   field: value
+//! suggestions:
+//!   - <actionable_suggestion_1>
+//!   - <actionable_suggestion_2>
+//! exit_code: <numeric_exit_code>
+//! ```
+//!
+//! ## Example
+//!
+//! ```rust
+//! use mytool::internal::errors::{StructuredError, ErrorFormatter, format_error};
+//!
+//! let error = StructuredError::new(
+//!     "CONFIG_NOT_FOUND",
+//!     "Configuration file not found",
+//!     exit_code::EXIT_CONFIG,
+//! )
+//! .with_context("path", "/path/to/config.toml")
+//! .with_suggestion("Run 'mytool --install' to create a default configuration");
+//!
+//! let formatted = format_error(&error, OutputFormat::Toon).unwrap();
+//! println!("{}", formatted);
+//! ```
+
+pub mod formatter;
+pub mod suggestions;
+pub mod validator;
+pub mod types;
+pub mod channels;
+
+pub use formatter::{ErrorFormatter, format_error, format_error_with_format};
+pub use suggestions::{SuggestionGenerator, generate_suggestions};
+pub use validator::{ErrorValidator, validate_before_call};
+pub use types::{StructuredError, ErrorCode, ErrorContext, Suggestion};
+pub use channels::{ErrorChannel, DiagnosticChannel, OutputChannels};

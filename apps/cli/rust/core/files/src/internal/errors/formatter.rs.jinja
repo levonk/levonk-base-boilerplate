@@ -1,0 +1,266 @@
+//! Error formatting for structured error output
+
+use crate::internal::errors::StructuredError;
+use crate::internal::toon::{ToonValue, to_string};
+use crate::internal::toon::OutputFormat;
+
+/// Error formatter for converting structured errors to output format
+pub struct ErrorFormatter {
+    format: OutputFormat,
+}
+
+impl ErrorFormatter {
+    /// Create a new error formatter
+    pub fn new(format: OutputFormat) -> Self {
+        Self { format }
+    }
+
+    /// Format a structured error to the configured output format
+    pub fn format_error(&self, error: &StructuredError) -> anyhow::Result<String> {
+        match self.format {
+            OutputFormat::Toon => self.format_toon(error),
+            OutputFormat::Json => self.format_json(error),
+            OutputFormat::Human => self.format_human(error),
+        }
+    }
+
+    /// Format error as TOON
+    fn format_toon(&self, error: &StructuredError) -> anyhow::Result<String> {
+        let mut map = std::collections::BTreeMap::new();
+        
+        map.insert("error".to_string(), ToonValue::string(error.code_str()));
+        map.insert("message".to_string(), ToonValue::string(&error.message));
+        
+        // Add context if present
+        if !error.context.is_empty() {
+            let mut context_map = std::collections::BTreeMap::new();
+            for (key, value) in &error.context {
+                context_map.insert(key.clone(), ToonValue::string(value));
+            }
+            map.insert("context".to_string(), ToonValue::object(context_map));
+        }
+        
+        // Add suggestions if present
+        if !error.suggestions.is_empty() {
+            let suggestions: Vec<ToonValue> = error.suggestions
+                .iter()
+                .map(|s| {
+                    let mut sugg_map = std::collections::BTreeMap::new();
+                    sugg_map.insert("text".to_string(), ToonValue::string(&s.text));
+                    if let Some(cmd) = &s.command {
+                        sugg_map.insert("command".to_string(), ToonValue::string(cmd));
+                    }
+                    ToonValue::object(sugg_map)
+                })
+                .collect();
+            map.insert("suggestions".to_string(), ToonValue::array(suggestions));
+        }
+        
+        map.insert("exit_code".to_string(), ToonValue::number(&error.exit_code.to_string()));
+        
+        let toon_value = ToonValue::object(map);
+        to_string(&toon_value).map_err(|e| anyhow::anyhow!("TOON encoding error: {}", e))
+    }
+
+    /// Format error as JSON
+    fn format_json(&self, error: &StructuredError) -> anyhow::Result<String> {
+        let mut json_map = serde_json::Map::new();
+        
+        json_map.insert("error".to_string(), serde_json::Value::String(error.code_str().to_string()));
+        json_map.insert("message".to_string(), serde_json::Value::String(error.message.clone()));
+        
+        // Add context if present
+        if !error.context.is_empty() {
+            let mut context_map = serde_json::Map::new();
+            for (key, value) in &error.context {
+                context_map.insert(key.clone(), serde_json::Value::String(value.clone()));
+            }
+            json_map.insert("context".to_string(), serde_json::Value::Object(context_map));
+        }
+        
+        // Add suggestions if present
+        if !error.suggestions.is_empty() {
+            let suggestions: Vec<serde_json::Value> = error.suggestions
+                .iter()
+                .map(|s| {
+                    let mut sugg_map = serde_json::Map::new();
+                    sugg_map.insert("text".to_string(), serde_json::Value::String(s.text.clone()));
+                    if let Some(cmd) = &s.command {
+                        sugg_map.insert("command".to_string(), serde_json::Value::String(cmd.clone()));
+                    }
+                    serde_json::Value::Object(sugg_map)
+                })
+                .collect();
+            json_map.insert("suggestions".to_string(), serde_json::Value::Array(suggestions));
+        }
+        
+        json_map.insert("exit_code".to_string(), serde_json::Value::Number(serde_json::Number::from(error.exit_code)));
+        
+        serde_json::to_string_pretty(&json_map)
+            .map_err(|e| anyhow::anyhow!("JSON encoding error: {}", e))
+    }
+
+    /// Format error as human-readable
+    fn format_human(&self, error: &StructuredError) -> anyhow::Result<String> {
+        let mut output = String::new();
+        
+        output.push_str(&format!("❌ Error: {}\n", error.code_str()));
+        output.push_str(&format!("   {}\n", error.message));
+        
+        // Add context if present
+        if !error.context.is_empty() {
+            output.push_str("\n   Context:\n");
+            for (key, value) in &error.context {
+                output.push_str(&format!("     {}: {}\n", key, value));
+            }
+        }
+        
+        // Add suggestions if present
+        if !error.suggestions.is_empty() {
+            output.push_str("\n   Suggestions:\n");
+            for (i, suggestion) in error.suggestions.iter().enumerate() {
+                output.push_str(&format!("     {}. {}\n", i + 1, suggestion.text));
+                if let Some(cmd) = &suggestion.command {
+                    output.push_str(&format!("        Command: {}\n", cmd));
+                }
+            }
+        }
+        
+        output.push_str(&format!("\n   Exit code: {}\n", error.exit_code));
+        
+        Ok(output)
+    }
+}
+
+/// Format a structured error to TOON format
+pub fn format_error(error: &StructuredError, format: OutputFormat) -> anyhow::Result<String> {
+    let formatter = ErrorFormatter::new(format);
+    formatter.format_error(error)
+}
+
+/// Format a structured error with explicit format override
+pub fn format_error_with_format(error: &StructuredError, format: OutputFormat) -> anyhow::Result<String> {
+    format_error(error, format)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::internal::errors::ErrorCode;
+
+    #[test]
+    fn test_error_formatter_toon() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        )
+        .with_context("path", "/path/to/config.toml")
+        .with_suggestion("Run 'mytool --install'");
+        
+        let formatter = ErrorFormatter::new(OutputFormat::Toon);
+        let result = formatter.format_error(&error).unwrap();
+        
+        assert!(result.contains("error: CONFIG_ERROR"));
+        assert!(result.contains("message: Configuration file not found"));
+        assert!(result.contains("exit_code: 3"));
+    }
+
+    #[test]
+    fn test_error_formatter_json() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        )
+        .with_context("path", "/path/to/config.toml")
+        .with_suggestion("Run 'mytool --install'");
+        
+        let formatter = ErrorFormatter::new(OutputFormat::Json);
+        let result = formatter.format_error(&error).unwrap();
+        
+        assert!(result.contains("\"error\": \"CONFIG_ERROR\""));
+        assert!(result.contains("\"message\": \"Configuration file not found\""));
+        assert!(result.contains("\"exit_code\": 3"));
+        
+        // Verify it's valid JSON
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(parsed["error"], "CONFIG_ERROR");
+    }
+
+    #[test]
+    fn test_error_formatter_human() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        )
+        .with_context("path", "/path/to/config.toml")
+        .with_suggestion("Run 'mytool --install'");
+        
+        let formatter = ErrorFormatter::new(OutputFormat::Human);
+        let result = formatter.format_error(&error).unwrap();
+        
+        assert!(result.contains("❌ Error: CONFIG_ERROR"));
+        assert!(result.contains("Configuration file not found"));
+        assert!(result.contains("Context:"));
+        assert!(result.contains("Suggestions:"));
+        assert!(result.contains("Exit code: 3"));
+    }
+
+    #[test]
+    fn test_format_error_toon() {
+        let error = StructuredError::new(
+            ErrorCode::Network,
+            "Connection failed",
+            4,
+        );
+        
+        let result = format_error(&error, OutputFormat::Toon).unwrap();
+        assert!(result.contains("error: NETWORK_ERROR"));
+    }
+
+    #[test]
+    fn test_format_error_json() {
+        let error = StructuredError::new(
+            ErrorCode::Network,
+            "Connection failed",
+            4,
+        );
+        
+        let result = format_error(&error, OutputFormat::Json).unwrap();
+        assert!(result.contains("\"error\": \"NETWORK_ERROR\""));
+    }
+
+    #[test]
+    fn test_error_formatter_with_command_suggestion() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        )
+        .with_suggestion_command("Create default config", "mytool --install");
+        
+        let formatter = ErrorFormatter::new(OutputFormat::Toon);
+        let result = formatter.format_error(&error).unwrap();
+        
+        assert!(result.contains("command: mytool --install"));
+    }
+
+    #[test]
+    fn test_error_formatter_minimal() {
+        let error = StructuredError::new(
+            ErrorCode::Generic,
+            "Something went wrong",
+            1,
+        );
+        
+        let formatter = ErrorFormatter::new(OutputFormat::Toon);
+        let result = formatter.format_error(&error).unwrap();
+        
+        // Should have basic fields even without context/suggestions
+        assert!(result.contains("error: GENERIC_ERROR"));
+        assert!(result.contains("message: Something went wrong"));
+        assert!(result.contains("exit_code: 1"));
+    }
+}

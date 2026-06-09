@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 2
 parallel_id: 1
 branch: "feature/current/20260708-cli-rust-aix/story-02-001-minimal-schemas"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]

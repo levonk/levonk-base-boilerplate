@@ -36,6 +36,7 @@ use crate::internal::schema::{OutputSchema, FieldSelector, apply_schema_transfor
 use crate::internal::truncation::{Truncator, TruncationMetadata};
 use crate::internal::aggregates::{AggregateInfo, CountFormatter};
 use crate::internal::emptystate::{EmptyStateFormatter, EmptyStateContext};
+use crate::internal::errors::{StructuredError, format_error_with_format};
 
 /// Output format options
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -258,6 +259,14 @@ impl OutputFormatter {
     /// Get the current output format
     pub fn format(&self) -> OutputFormat {
         self.format
+    }
+
+    /// Format a structured error to the configured output format
+    pub fn format_error(&self, error: &StructuredError) -> String {
+        format_error_with_format(error, self.format).unwrap_or_else(|e| {
+            // Fallback to simple error message if formatting fails
+            format!("{}: {}", error.code_str(), error.message)
+        })
     }
 
     /// Format an empty state message

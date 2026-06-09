@@ -1,0 +1,284 @@
+//! Suggestion generation for common error scenarios
+
+use crate::internal::errors::{StructuredError, ErrorCode};
+
+/// Suggestion generator for common error scenarios
+pub struct SuggestionGenerator {
+    tool_name: String,
+}
+
+impl SuggestionGenerator {
+    /// Create a new suggestion generator
+    pub fn new(tool_name: impl Into<String>) -> Self {
+        Self {
+            tool_name: tool_name.into(),
+        }
+    }
+
+    /// Generate suggestions for a structured error
+    pub fn generate(&self, error: &mut StructuredError) {
+        match error.code {
+            ErrorCode::Config => self.generate_config_suggestions(error),
+            ErrorCode::Network => self.generate_network_suggestions(error),
+            ErrorCode::Permission => self.generate_permission_suggestions(error),
+            ErrorCode::Timeout => self.generate_timeout_suggestions(error),
+            ErrorCode::Validation => self.generate_validation_suggestions(error),
+            ErrorCode::NotFound => self.generate_not_found_suggestions(error),
+            ErrorCode::Dependency => self.generate_dependency_suggestions(error),
+            ErrorCode::Generic => self.generate_generic_suggestions(error),
+        }
+    }
+
+    /// Generate suggestions for configuration errors
+    fn generate_config_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion_command(
+            "Initialize configuration with default settings",
+            format!("{} --install", self.tool_name),
+        );
+        
+        error.with_suggestion_command(
+            "Check configuration file path",
+            format!("{} --config <path>", self.tool_name),
+        );
+        
+        error.with_suggestion("Verify configuration file syntax and required fields");
+    }
+
+    /// Generate suggestions for network errors
+    fn generate_network_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion("Check your internet connection");
+        error.with_suggestion("Verify the remote server is accessible");
+        error.with_suggestion("Check firewall and proxy settings");
+        error.with_suggestion("Try again later - the service may be temporarily unavailable");
+    }
+
+    /// Generate suggestions for permission errors
+    fn generate_permission_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion("Check file and directory permissions");
+        error.with_suggestion("Run with appropriate privileges if needed");
+        error.with_suggestion("Verify the target path is writable");
+        
+        if cfg!(unix) {
+            error.with_suggestion_command(
+                "Check file permissions",
+                "ls -la <path>"
+            );
+        }
+    }
+
+    /// Generate suggestions for timeout errors
+    fn generate_timeout_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion("Increase timeout duration if the operation is expected to take longer");
+        error.with_suggestion("Check network connectivity and latency");
+        error.with_suggestion("Verify the remote service is not overloaded");
+        error.with_suggestion("Try reducing the workload or data size");
+    }
+
+    /// Generate suggestions for validation errors
+    fn generate_validation_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion("Review the input data for required fields");
+        error.with_suggestion("Check data types and formats match expected values");
+        error.with_suggestion_command(
+            "Display help for command usage",
+            format!("{} --help", self.tool_name),
+        );
+        error.with_suggestion("Verify all required arguments are provided");
+    }
+
+    /// Generate suggestions for not found errors
+    fn generate_not_found_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion("Verify the file or resource path is correct");
+        error.with_suggestion("Check if the file or resource exists");
+        error.with_suggestion("Ensure you have the correct working directory");
+        
+        if cfg!(unix) {
+            error.with_suggestion_command(
+                "Search for the file",
+                "find . -name <filename>"
+            );
+        }
+    }
+
+    /// Generate suggestions for dependency errors
+    fn generate_dependency_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion("Ensure all required dependencies are installed");
+        error.with_suggestion("Check dependency versions are compatible");
+        error.with_suggestion("Verify the dependency installation path");
+        error.with_suggestion("Try reinstalling the problematic dependency");
+    }
+
+    /// Generate suggestions for generic errors
+    fn generate_generic_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion_command(
+            "Enable verbose logging for more details",
+            format!("{} --verbose", self.tool_name),
+        );
+        error.with_suggestion_command(
+            "Enable debug logging for detailed diagnostics",
+            format!("{} --debug", self.tool_name),
+        );
+        error.with_suggestion("Check the logs for additional error details");
+        error.with_suggestion("Report this issue if it persists");
+    }
+}
+
+/// Generate suggestions for a structured error
+pub fn generate_suggestions(error: &mut StructuredError, tool_name: &str) {
+    let generator = SuggestionGenerator::new(tool_name);
+    generator.generate(error);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::internal::errors::ErrorCode;
+
+    #[test]
+    fn test_suggestion_generator_config() {
+        let mut error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        );
+        
+        let generator = SuggestionGenerator::new("mytool");
+        generator.generate(&mut error);
+        
+        assert!(!error.suggestions.is_empty());
+        assert!(error.suggestions.iter().any(|s| s.text.contains("Initialize configuration")));
+    }
+
+    #[test]
+    fn test_suggestion_generator_network() {
+        let mut error = StructuredError::new(
+            ErrorCode::Network,
+            "Connection failed",
+            4,
+        );
+        
+        let generator = SuggestionGenerator::new("mytool");
+        generator.generate(&mut error);
+        
+        assert!(!error.suggestions.is_empty());
+        assert!(error.suggestions.iter().any(|s| s.text.contains("internet connection")));
+    }
+
+    #[test]
+    fn test_suggestion_generator_permission() {
+        let mut error = StructuredError::new(
+            ErrorCode::Permission,
+            "Access denied",
+            5,
+        );
+        
+        let generator = SuggestionGenerator::new("mytool");
+        generator.generate(&mut error);
+        
+        assert!(!error.suggestions.is_empty());
+        assert!(error.suggestions.iter().any(|s| s.text.contains("permissions")));
+    }
+
+    #[test]
+    fn test_suggestion_generator_timeout() {
+        let mut error = StructuredError::new(
+            ErrorCode::Timeout,
+            "Operation timed out",
+            124,
+        );
+        
+        let generator = SuggestionGenerator::new("mytool");
+        generator.generate(&mut error);
+        
+        assert!(!error.suggestions.is_empty());
+        assert!(error.suggestions.iter().any(|s| s.text.contains("timeout")));
+    }
+
+    #[test]
+    fn test_suggestion_generator_validation() {
+        let mut error = StructuredError::new(
+            ErrorCode::Validation,
+            "Invalid input",
+            2,
+        );
+        
+        let generator = SuggestionGenerator::new("mytool");
+        generator.generate(&mut error);
+        
+        assert!(!error.suggestions.is_empty());
+        assert!(error.suggestions.iter().any(|s| s.text.contains("input data")));
+    }
+
+    #[test]
+    fn test_suggestion_generator_not_found() {
+        let mut error = StructuredError::new(
+            ErrorCode::NotFound,
+            "File not found",
+            1,
+        );
+        
+        let generator = SuggestionGenerator::new("mytool");
+        generator.generate(&mut error);
+        
+        assert!(!error.suggestions.is_empty());
+        assert!(error.suggestions.iter().any(|s| s.text.contains("path")));
+    }
+
+    #[test]
+    fn test_suggestion_generator_dependency() {
+        let mut error = StructuredError::new(
+            ErrorCode::Dependency,
+            "Dependency missing",
+            1,
+        );
+        
+        let generator = SuggestionGenerator::new("mytool");
+        generator.generate(&mut error);
+        
+        assert!(!error.suggestions.is_empty());
+        assert!(error.suggestions.iter().any(|s| s.text.contains("dependencies")));
+    }
+
+    #[test]
+    fn test_suggestion_generator_generic() {
+        let mut error = StructuredError::new(
+            ErrorCode::Generic,
+            "Something went wrong",
+            1,
+        );
+        
+        let generator = SuggestionGenerator::new("mytool");
+        generator.generate(&mut error);
+        
+        assert!(!error.suggestions.is_empty());
+        assert!(error.suggestions.iter().any(|s| s.text.contains("verbose logging")));
+    }
+
+    #[test]
+    fn test_generate_suggestions_function() {
+        let mut error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration error",
+            3,
+        );
+        
+        generate_suggestions(&mut error, "mytool");
+        
+        assert!(!error.suggestions.is_empty());
+    }
+
+    #[test]
+    fn test_suggestion_generator_tool_name() {
+        let mut error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration error",
+            3,
+        );
+        
+        let generator = SuggestionGenerator::new("customtool");
+        generator.generate(&mut error);
+        
+        assert!(error.suggestions.iter().any(|s| {
+            s.command.as_ref().map_or(false, |cmd| cmd.contains("customtool"))
+        }));
+    }
+}

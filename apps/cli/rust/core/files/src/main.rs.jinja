@@ -43,6 +43,7 @@ use processor::{DataProcessor, ProcessingConfig, ProcessingOperation};
 use internal::mode::{detect_mode, Mode};
 use internal::toon::{OutputFormatter, OutputFormat};
 use internal::schema::{create_default_schema_registry, FieldSelector, parse_fields_arg};
+use internal::errors::{StructuredError, ErrorCode, format_error_with_format, translate_error_with_context, OutputChannels};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -128,8 +129,12 @@ async fn main() -> Result<()> {
                 println!("Configuration initialized at: {:?}", config_path);
             }
             Err(e) => {
-                eprintln!("Failed to initialize configuration: {}", e);
-                std::process::exit(1);
+                let mode = detect_mode();
+                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let structured_error = translate_error_with_context(e, "Initializing configuration");
+                let formatted = format.format_error(&structured_error);
+                println!("{}", formatted);
+                std::process::exit(structured_error.exit_code);
             }
         }
 
@@ -154,8 +159,12 @@ async fn main() -> Result<()> {
                 println!("You may need to restart your shell or run: source ~/.bashrc (or equivalent)");
             }
             Err(e) => {
-                eprintln!("Failed to install completions: {}", e);
-                std::process::exit(1);
+                let mode = detect_mode();
+                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let structured_error = translate_error_with_context(e, "Installing completions");
+                let formatted = format.format_error(&structured_error);
+                println!("{}", formatted);
+                std::process::exit(structured_error.exit_code);
             }
         }
         std::process::exit(0);
@@ -183,13 +192,25 @@ async fn main() -> Result<()> {
                     println!("You may need to restart your shell or run: source ~/.bashrc (or equivalent)");
                 }
                 Err(e) => {
-                    eprintln!("Failed to remove completion script: {}", e);
-                    std::process::exit(1);
+                    let mode = detect_mode();
+                    let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                    let structured_error = translate_error_with_context(e, "Removing completion script");
+                    let formatted = format.format_error(&structured_error);
+                    println!("{}", formatted);
+                    std::process::exit(structured_error.exit_code);
                 }
             }
         } else {
-            eprintln!("Could not determine completion path for shell: {}", shell_name);
-            std::process::exit(1);
+            let mode = detect_mode();
+            let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+            let structured_error = StructuredError::new(
+                ErrorCode::NotFound,
+                format!("Could not determine completion path for shell: {}", shell_name),
+                1,
+            );
+            let formatted = format.format_error(&structured_error);
+            println!("{}", formatted);
+            std::process::exit(structured_error.exit_code);
         }
         std::process::exit(0);
     }
@@ -199,9 +220,13 @@ async fn main() -> Result<()> {
         match ManHandler::display_man_page() {
             Ok(_) => std::process::exit(0),
             Err(e) => {
-                eprintln!("Failed to display man page: {}", e);
-                eprintln!("Try generating man pages first: just generate-man-pages");
-                std::process::exit(1);
+                let mode = detect_mode();
+                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let structured_error = translate_error_with_context(e, "Displaying man page")
+                    .with_suggestion("Try generating man pages first: just generate-man-pages");
+                let formatted = format.format_error(&structured_error);
+                println!("{}", formatted);
+                std::process::exit(structured_error.exit_code);
             }
         }
     }

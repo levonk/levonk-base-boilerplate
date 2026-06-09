@@ -1,0 +1,434 @@
+//! Error types for structured error handling
+
+use std::collections::BTreeMap;
+
+/// Standard error codes for common error scenarios
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ErrorCode {
+    /// Configuration error (exit code 3)
+    Config,
+    /// Network error (exit code 4)
+    Network,
+    /// Permission error (exit code 5)
+    Permission,
+    /// Timeout error (exit code 124)
+    Timeout,
+    /// Input validation error (exit code 2)
+    Validation,
+    /// File not found error (exit code 1)
+    NotFound,
+    /// Generic error (exit code 1)
+    Generic,
+    /// Dependency error (exit code 1)
+    Dependency,
+}
+
+impl ErrorCode {
+    /// Get the error code as a string
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ErrorCode::Config => "CONFIG_ERROR",
+            ErrorCode::Network => "NETWORK_ERROR",
+            ErrorCode::Permission => "PERMISSION_ERROR",
+            ErrorCode::Timeout => "TIMEOUT_ERROR",
+            ErrorCode::Validation => "VALIDATION_ERROR",
+            ErrorCode::NotFound => "NOT_FOUND",
+            ErrorCode::Generic => "GENERIC_ERROR",
+            ErrorCode::Dependency => "DEPENDENCY_ERROR",
+        }
+    }
+
+    /// Get the exit code for this error type
+    pub fn exit_code(&self) -> i32 {
+        match self {
+            ErrorCode::Config => 3,
+            ErrorCode::Network => 4,
+            ErrorCode::Permission => 5,
+            ErrorCode::Timeout => 124,
+            ErrorCode::Validation => 2,
+            ErrorCode::NotFound => 1,
+            ErrorCode::Generic => 1,
+            ErrorCode::Dependency => 1,
+        }
+    }
+
+    /// Create error code from string
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_uppercase().as_str() {
+            "CONFIG_ERROR" => Some(ErrorCode::Config),
+            "NETWORK_ERROR" => Some(ErrorCode::Network),
+            "PERMISSION_ERROR" => Some(ErrorCode::Permission),
+            "TIMEOUT_ERROR" => Some(ErrorCode::Timeout),
+            "VALIDATION_ERROR" => Some(ErrorCode::Validation),
+            "NOT_FOUND" => Some(ErrorCode::NotFound),
+            "GENERIC_ERROR" => Some(ErrorCode::Generic),
+            "DEPENDENCY_ERROR" => Some(ErrorCode::Dependency),
+            _ => None,
+        }
+    }
+}
+
+/// Structured error with context and suggestions
+#[derive(Debug, Clone)]
+pub struct StructuredError {
+    /// Error code for programmatic handling
+    pub code: ErrorCode,
+    /// Human-readable error message
+    pub message: String,
+    /// Additional context information
+    pub context: BTreeMap<String, String>,
+    /// Actionable suggestions for resolving the error
+    pub suggestions: Vec<Suggestion>,
+    /// Exit code for this error
+    pub exit_code: i32,
+}
+
+impl StructuredError {
+    /// Create a new structured error
+    pub fn new(code: ErrorCode, message: impl Into<String>, exit_code: i32) -> Self {
+        Self {
+            code,
+            message: message.into(),
+            context: BTreeMap::new(),
+            suggestions: Vec::new(),
+            exit_code,
+        }
+    }
+
+    /// Add context information to the error
+    pub fn with_context(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.context.insert(key.into(), value.into());
+        self
+    }
+
+    /// Add a suggestion to the error
+    pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
+        self.suggestions.push(Suggestion {
+            text: suggestion.into(),
+            command: None,
+        });
+        self
+    }
+
+    /// Add a suggestion with a CLI command reference
+    pub fn with_suggestion_command(mut self, suggestion: impl Into<String>, command: impl Into<String>) -> Self {
+        self.suggestions.push(Suggestion {
+            text: suggestion.into(),
+            command: Some(command.into()),
+        });
+        self
+    }
+
+    /// Get the error code as a string
+    pub fn code_str(&self) -> &'static str {
+        self.code.as_str()
+    }
+}
+
+impl std::fmt::Display for StructuredError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code_str(), self.message)
+    }
+}
+
+impl std::error::Error for StructuredError {}
+
+/// Actionable suggestion for resolving an error
+#[derive(Debug, Clone)]
+pub struct Suggestion {
+    /// Suggestion text
+    pub text: String,
+    /// Optional CLI command reference
+    pub command: Option<String>,
+}
+
+/// Error context information
+pub type ErrorContext = BTreeMap<String, String>;
+
+/// Convert anyhow::Error to StructuredError
+pub fn from_anyhow(err: anyhow::Error, default_code: ErrorCode) -> StructuredError {
+    let message = err.to_string();
+    let exit_code = default_code.exit_code();
+    
+    StructuredError::new(default_code, message, exit_code)
+}
+
+/// Convert std::io::Error to StructuredError
+pub fn from_io_error(err: std::io::Error, context: &str) -> StructuredError {
+    let code = match err.kind() {
+        std::io::ErrorKind::NotFound => ErrorCode::NotFound,
+        std::io::ErrorKind::PermissionDenied => ErrorCode::Permission,
+        std::io::ErrorKind::TimedOut => ErrorCode::Timeout,
+        _ => ErrorCode::Generic,
+    };
+    
+    let message = format!("{}: {}", context, err);
+    let exit_code = code.exit_code();
+    
+    StructuredError::new(code, message, exit_code)
+        .with_context("io_error_kind", format!("{:?}", err.kind()))
+}
+
+/// Translate dependency errors to extract actionable meaning
+pub fn translate_dependency_error(error: anyhow::Error, operation: &str) -> StructuredError {
+    // Try to extract actionable information from the error chain
+    let error_str = error.to_string().to_lowercase();
+    
+    let (code, message) = if error_str.contains("timeout") || error_str.contains("timed out") {
+        (ErrorCode::Timeout, format!("{}: Operation timed out", operation))
+    } else if error_str.contains("permission") || error_str.contains("access denied") {
+        (ErrorCode::Permission, format!("{}: Permission denied", operation))
+    } else if error_str.contains("not found") || error_str.contains("no such file") {
+        (ErrorCode::NotFound, format!("{}: Resource not found", operation))
+    } else if error_str.contains("network") || error_str.contains("connection") {
+        (ErrorCode::Network, format!("{}: Network error", operation))
+    } else if error_str.contains("invalid") || error_str.contains("parse") {
+        (ErrorCode::Validation, format!("{}: Invalid input or data", operation))
+    } else {
+        (ErrorCode::Dependency, format!("{}: Dependency error", operation))
+    };
+    
+    let exit_code = code.exit_code();
+    
+    StructuredError::new(code, message, exit_code)
+        .with_context("operation", operation)
+        .with_context("original_error", error.to_string())
+}
+
+/// Translate generic errors with context preservation
+pub fn translate_error_with_context(error: anyhow::Error, context: &str) -> StructuredError {
+    let error_str = error.to_string().to_lowercase();
+    
+    let code = if error_str.contains("config") {
+        ErrorCode::Config
+    } else if error_str.contains("network") || error_str.contains("connection") {
+        ErrorCode::Network
+    } else if error_str.contains("permission") {
+        ErrorCode::Permission
+    } else if error_str.contains("timeout") {
+        ErrorCode::Timeout
+    } else {
+        ErrorCode::Generic
+    };
+    
+    let message = format!("{}: {}", context, error.to_string());
+    let exit_code = code.exit_code();
+    
+    StructuredError::new(code, message, exit_code)
+        .with_context("context", context)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_structured_error_creation() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        );
+        
+        assert_eq!(error.code, ErrorCode::Config);
+        assert_eq!(error.message, "Configuration file not found");
+        assert_eq!(error.exit_code, 3);
+        assert!(error.context.is_empty());
+        assert!(error.suggestions.is_empty());
+    }
+
+    #[test]
+    fn test_structured_error_with_context() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        )
+        .with_context("path", "/path/to/config.toml")
+        .with_context("attempted_paths", "/etc/config.toml,~/.config/config.toml");
+        
+        assert_eq!(error.context.len(), 2);
+        assert_eq!(error.context.get("path"), Some(&"/path/to/config.toml".to_string()));
+    }
+
+    #[test]
+    fn test_structured_error_with_suggestion() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        )
+        .with_suggestion("Run 'mytool --install' to create a default configuration");
+        
+        assert_eq!(error.suggestions.len(), 1);
+        assert_eq!(error.suggestions[0].text, "Run 'mytool --install' to create a default configuration");
+        assert!(error.suggestions[0].command.is_none());
+    }
+
+    #[test]
+    fn test_structured_error_with_suggestion_command() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        )
+        .with_suggestion_command(
+            "Create a default configuration",
+            "mytool --install"
+        );
+        
+        assert_eq!(error.suggestions.len(), 1);
+        assert_eq!(error.suggestions[0].text, "Create a default configuration");
+        assert_eq!(error.suggestions[0].command, Some("mytool --install".to_string()));
+    }
+
+    #[test]
+    fn test_from_anyhow() {
+        let anyhow_err = anyhow::anyhow!("Something went wrong");
+        let structured = from_anyhow(anyhow_err, ErrorCode::Generic);
+        
+        assert_eq!(structured.code, ErrorCode::Generic);
+        assert_eq!(structured.message, "Something went wrong");
+        assert_eq!(structured.exit_code, 1);
+    }
+
+    #[test]
+    fn test_from_io_error_not_found() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "File not found");
+        let structured = from_io_error(io_err, "Reading config");
+        
+        assert_eq!(structured.code, ErrorCode::NotFound);
+        assert!(structured.message.contains("Reading config"));
+        assert!(structured.message.contains("File not found"));
+    }
+
+    #[test]
+    fn test_from_io_error_permission_denied() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Access denied");
+        let structured = from_io_error(io_err, "Writing file");
+        
+        assert_eq!(structured.code, ErrorCode::Permission);
+        assert!(structured.message.contains("Writing file"));
+    }
+
+    #[test]
+    fn test_from_io_error_timeout() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::TimedOut, "Connection timeout");
+        let structured = from_io_error(io_err, "Network request");
+        
+        assert_eq!(structured.code, ErrorCode::Timeout);
+        assert!(structured.message.contains("Network request"));
+    }
+
+    #[test]
+    fn test_structured_error_display() {
+        let error = StructuredError::new(
+            ErrorCode::Config,
+            "Configuration file not found",
+            3,
+        );
+        
+        let display = format!("{}", error);
+        assert_eq!(display, "CONFIG_ERROR: Configuration file not found");
+    }
+
+    #[test]
+    fn test_translate_dependency_error_timeout() {
+        let anyhow_err = anyhow::anyhow!("Connection timeout after 30s");
+        let structured = translate_dependency_error(anyhow_err, "Network request");
+        
+        assert_eq!(structured.code, ErrorCode::Timeout);
+        assert!(structured.message.contains("Network request"));
+        assert!(structured.message.contains("timed out"));
+    }
+
+    #[test]
+    fn test_translate_dependency_error_permission() {
+        let anyhow_err = anyhow::anyhow!("Access denied to /etc/passwd");
+        let structured = translate_dependency_error(anyhow_err, "Reading file");
+        
+        assert_eq!(structured.code, ErrorCode::Permission);
+        assert!(structured.message.contains("Reading file"));
+        assert!(structured.message.contains("Permission denied"));
+    }
+
+    #[test]
+    fn test_translate_dependency_error_not_found() {
+        let anyhow_err = anyhow::anyhow!("File not found: /path/to/file");
+        let structured = translate_dependency_error(anyhow_err, "Loading config");
+        
+        assert_eq!(structured.code, ErrorCode::NotFound);
+        assert!(structured.message.contains("Loading config"));
+        assert!(structured.message.contains("not found"));
+    }
+
+    #[test]
+    fn test_translate_dependency_error_network() {
+        let anyhow_err = anyhow::anyhow!("Network connection failed");
+        let structured = translate_dependency_error(anyhow_err, "API call");
+        
+        assert_eq!(structured.code, ErrorCode::Network);
+        assert!(structured.message.contains("API call"));
+        assert!(structured.message.contains("Network error"));
+    }
+
+    #[test]
+    fn test_translate_dependency_error_validation() {
+        let anyhow_err = anyhow::anyhow!("Invalid JSON format");
+        let structured = translate_dependency_error(anyhow_err, "Parsing data");
+        
+        assert_eq!(structured.code, ErrorCode::Validation);
+        assert!(structured.message.contains("Parsing data"));
+        assert!(structured.message.contains("Invalid"));
+    }
+
+    #[test]
+    fn test_translate_dependency_error_generic() {
+        let anyhow_err = anyhow::anyhow!("Some unknown error occurred");
+        let structured = translate_dependency_error(anyhow_err, "Processing");
+        
+        assert_eq!(structured.code, ErrorCode::Dependency);
+        assert!(structured.message.contains("Processing"));
+        assert!(structured.message.contains("Dependency error"));
+    }
+
+    #[test]
+    fn test_translate_error_with_context_config() {
+        let anyhow_err = anyhow::anyhow!("Config file error");
+        let structured = translate_error_with_context(anyhow_err, "Loading configuration");
+        
+        assert_eq!(structured.code, ErrorCode::Config);
+        assert!(structured.message.contains("Loading configuration"));
+    }
+
+    #[test]
+    fn test_translate_error_with_context_network() {
+        let anyhow_err = anyhow::anyhow!("Connection failed");
+        let structured = translate_error_with_context(anyhow_err, "Making request");
+        
+        assert_eq!(structured.code, ErrorCode::Network);
+        assert!(structured.message.contains("Making request"));
+    }
+
+    #[test]
+    fn test_error_code_as_str() {
+        assert_eq!(ErrorCode::Config.as_str(), "CONFIG_ERROR");
+        assert_eq!(ErrorCode::Network.as_str(), "NETWORK_ERROR");
+        assert_eq!(ErrorCode::Permission.as_str(), "PERMISSION_ERROR");
+    }
+
+    #[test]
+    fn test_error_code_exit_code() {
+        assert_eq!(ErrorCode::Config.exit_code(), 3);
+        assert_eq!(ErrorCode::Network.exit_code(), 4);
+        assert_eq!(ErrorCode::Permission.exit_code(), 5);
+        assert_eq!(ErrorCode::Timeout.exit_code(), 124);
+    }
+
+    #[test]
+    fn test_error_code_from_str() {
+        assert_eq!(ErrorCode::from_str("CONFIG_ERROR"), Some(ErrorCode::Config));
+        assert_eq!(ErrorCode::from_str("network_error"), Some(ErrorCode::Network));
+        assert_eq!(ErrorCode::from_str("UNKNOWN"), None);
+    }
+}

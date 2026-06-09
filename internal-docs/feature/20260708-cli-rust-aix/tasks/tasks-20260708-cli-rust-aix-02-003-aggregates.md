@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 2
 parallel_id: 3
 branch: "feature/current/20260708-cli-rust-aix/story-02-003-aggregates"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,24 +27,24 @@ Implement pre-computed aggregates (total counts, derived status fields) to reduc
 
 ## Sub-Tasks
 
-- [ ] Design aggregate computation strategy for efficiency
-- [ ] Implement total count computation for list queries
-- [ ] Add count field to list output structures
-- [ ] Format count as "count: 30 of 847 total"
-- [ ] Identify commonly-needed derived status fields
-- [ ] Implement derived status field computation (e.g., "3/3 passed", "7 comments")
-- [ ] Add derived status fields to detail view structures
-- [ ] Optimize aggregate queries for performance
-- [ ] Integrate aggregate counts into TOON output
-- [ ] Integrate aggregate counts into JSON output
-- [ ] Integrate derived status fields into TOON output
-- [ ] Integrate derived status fields into JSON output
-- [ ] Ensure aggregates are only computed when backend can provide them cheaply
-- [ ] Write unit tests for aggregate computation
-- [ ] Write unit tests for derived status field computation
-- [ ] Write integration tests for aggregate output formatting
-- [ ] Write performance tests for aggregate queries
-- [ ] Update CLI help text to document aggregate fields
+- [x] Design aggregate computation strategy for efficiency
+- [x] Implement total count computation for list queries
+- [x] Add count field to list output structures
+- [x] Format count as "count: 30 of 847 total"
+- [x] Identify commonly-needed derived status fields
+- [x] Implement derived status field computation (e.g., "3/3 passed", "7 comments")
+- [x] Add derived status fields to detail view structures
+- [x] Optimize aggregate queries for performance
+- [x] Integrate aggregate counts into TOON output
+- [x] Integrate aggregate counts into JSON output
+- [x] Integrate derived status fields into TOON output
+- [x] Integrate derived status fields into JSON output
+- [x] Ensure aggregates are only computed when backend can provide them cheaply
+- [x] Write unit tests for aggregate computation
+- [x] Write unit tests for derived status field computation
+- [x] Write integration tests for aggregate output formatting
+- [x] Write performance tests for aggregate queries
+- [x] Update CLI help text to document aggregate fields
 
 ## Relevant Files
 
@@ -59,16 +59,16 @@ Implement pre-computed aggregates (total counts, derived status fields) to reduc
 
 ## Acceptance Criteria
 
-- [ ] Total count is computed efficiently for all list queries
-- [ ] Count output format matches specification ("count: 30 of 847 total")
-- [ ] Derived status fields are computed for relevant detail views
-- [ ] Derived status fields provide lightweight summaries only
-- [ ] Aggregates are integrated into TOON output correctly
-- [ ] Aggregates are integrated into JSON output correctly
-- [ ] Aggregate computation doesn't significantly impact query performance
-- [ ] Aggregates are only computed when backend can provide them cheaply
-- [ ] All aggregate functionality has test coverage
-- [ ] Help text documents aggregate fields
+- [x] Total count is computed efficiently for all list queries
+- [x] Count output format matches specification ("count: 30 of 847 total")
+- [x] Derived status fields are computed for relevant detail views
+- [x] Derived status fields provide lightweight summaries only
+- [x] Aggregates are integrated into TOON output correctly
+- [x] Aggregates are integrated into JSON output correctly
+- [x] Aggregate computation doesn't significantly impact query performance
+- [x] Aggregates are only computed when backend can provide them cheaply
+- [x] All aggregate functionality has test coverage
+- [x] Help text documents aggregate fields
 
 ## Test Plan
 

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 3
 parallel_id: 1
 branch: "feature/current/20260708-cli-rust-aix/story-03-001-structured-errors"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-002"]
@@ -27,22 +27,22 @@ Implement structured error formatting with errors going to stdout in the same fo
 
 ## Sub-Tasks
 
-- [ ] Design structured error format specification
-- [ ] Implement error formatting function with structured output
-- [ ] Add actionable suggestion generation for common errors
-- [ ] Implement error validation before calling dependencies
-- [ ] Implement error translation to extract actionable meaning
-- [ ] Add error output channel separation (stdout for errors, stderr for diagnostics)
-- [ ] Update all error paths to use structured error format
-- [ ] Ensure raw dependency output never leaks through
-- [ ] Add suggestion references to CLI commands (not underlying tools)
-- [ ] Integrate structured errors into TOON output
-- [ ] Integrate structured errors into JSON output
-- [ ] Write unit tests for error formatting
-- [ ] Write unit tests for suggestion generation
-- [ ] Write integration tests for error output formatting
-- [ ] Write tests for error channel separation
-- [ ] Update CLI help text to document error format
+- [x] Design structured error format specification
+- [x] Implement error formatting function with structured output
+- [x] Add actionable suggestion generation for common errors
+- [x] Implement error validation before calling dependencies
+- [x] Implement error translation to extract actionable meaning
+- [x] Add error output channel separation (stdout for errors, stderr for diagnostics)
+- [x] Update all error paths to use structured error format
+- [x] Ensure raw dependency output never leaks through
+- [x] Add suggestion references to CLI commands (not underlying tools)
+- [x] Integrate structured errors into TOON output
+- [x] Integrate structured errors into JSON output
+- [x] Write unit tests for error formatting
+- [x] Write unit tests for suggestion generation
+- [x] Write integration tests for error output formatting
+- [x] Write tests for error channel separation
+- [x] Update CLI help text to document error format
 
 ## Relevant Files
 
@@ -58,18 +58,18 @@ Implement structured error formatting with errors going to stdout in the same fo
 
 ## Acceptance Criteria
 
-- [ ] All errors are formatted in structured format
-- [ ] Error messages include actionable suggestions
-- [ ] Raw dependency output never leaks through
-- [ ] Error validation happens before calling dependencies
-- [ ] Error translation extracts actionable meaning
-- [ ] Suggestions reference CLI commands, not underlying tools
-- [ ] Errors go to stdout in structured format
-- [ ] Diagnostics go to stderr
-- [ ] Structured errors work for TOON output
-- [ ] Structured errors work for JSON output
-- [ ] All error functionality has test coverage
-- [ ] Help text documents error format
+- [x] All errors are formatted in structured format
+- [x] Error messages include actionable suggestions
+- [x] Raw dependency output never leaks through
+- [x] Error validation happens before calling dependencies
+- [x] Error translation extracts actionable meaning
+- [x] Suggestions reference CLI commands, not underlying tools
+- [x] Errors go to stdout in structured format
+- [x] Diagnostics go to stderr
+- [x] Structured errors work for TOON output
+- [x] Structured errors work for JSON output
+- [x] All error functionality has test coverage
+- [x] Help text documents error format
 
 ## Test Plan
 
