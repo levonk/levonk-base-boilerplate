@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 6
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-06-001-config-validation"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["02-002"]
