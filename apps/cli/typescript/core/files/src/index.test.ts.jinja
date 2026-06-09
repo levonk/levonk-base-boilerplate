@@ -1473,4 +1473,27 @@ describe('CLI', () => {
             expect(stdout).toBeDefined();
         });
     });
+
+    describe('Config Reload (SIGHUP)', () => {
+        it('should show config reload information in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Config Reload');
+            expect(stdout).toContain('SIGHUP');
+        });
+
+        it('should mention config reload without restart in help', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('reload configuration without restart');
+        });
+
+        it('should mention validation in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('validated before applying');
+        });
+
+        it('should mention error handling in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Validation errors keep old config active');
+        });
+    });
 });

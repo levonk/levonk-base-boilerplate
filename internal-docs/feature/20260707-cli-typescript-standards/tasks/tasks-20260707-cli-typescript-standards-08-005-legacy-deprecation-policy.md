@@ -38,27 +38,28 @@ Implement legacy deprecation policy with clear end-of-support dates (minimum 6 m
 - [x] Add unit tests for deprecation warnings
 - [x] Add unit tests for end-of-support enforcement
 - [x] Add integration tests for deprecation workflow
-- [~] Update help text to document deprecation policy
-- [ ] Add deprecation policy documentation
+- [x] Update help text to document deprecation policy
+- [x] Add deprecation policy documentation
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/deprecation.ts.jinja` - New deprecation module (to be created)
+- `apps/cli/typescript/core/files/src/deprecation.ts.jinja` - New deprecation module
 - `apps/cli/typescript/core/files/src/config.ts.jinja` - Config with deprecation settings
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with deprecation checks
-- `apps/cli/typescript/core/files/src/deprecation.test.ts.jinja` - Unit tests for deprecation (to be created)
+- `apps/cli/typescript/core/files/src/deprecation.test.ts.jinja` - Unit tests for deprecation
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for deprecation
+- `apps/cli/typescript/core/files/docs/deprecation-policy.md.jinja` - Deprecation policy documentation
 
 ## Acceptance Criteria
 
-- [ ] Deprecation warnings are logged to stderr
-- [ ] End-of-support dates are clearly specified
-- [ ] Minimum 6-month deprecation period is enforced
-- [ ] Legacy features are detected correctly
-- [ ] Deprecation status is reported
-- [ ] Legacy support is removed after specified date
-- [ ] Deprecation timeline is documented
-- [ ] Deprecation warnings are user-friendly
+- [x] Deprecation warnings are logged to stderr
+- [x] End-of-support dates are clearly specified
+- [x] Minimum 6-month deprecation period is enforced
+- [x] Legacy features are detected correctly
+- [x] Deprecation status is reported
+- [x] Legacy support is removed after specified date
+- [x] Deprecation timeline is documented
+- [x] Deprecation warnings are user-friendly
 
 ## Test Plan
 

@@ -35,6 +35,10 @@ export interface Config {
     audit_path?: string;
     /** Retention period for audit logs in days. Default: 90 */
     audit_retention_days?: number;
+    /** Enable deprecation warnings. Default: true */
+    deprecation_warnings_enabled?: boolean;
+    /** Suppress specific deprecation warnings by ID */
+    deprecation_suppressed_warnings?: string[];
     /** Custom configuration values */
     [key: string]: any;
 }
@@ -71,6 +75,8 @@ export const DEFAULT_CONFIG: Config = {
     privacy: false,
     audit: false,
     audit_retention_days: 90,
+    deprecation_warnings_enabled: true,
+    deprecation_suppressed_warnings: [],
 };
 
 export interface ConfigOptions {

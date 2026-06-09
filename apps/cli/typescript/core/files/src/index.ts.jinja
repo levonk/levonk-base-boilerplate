@@ -260,6 +260,13 @@ program
               process.exit(healthResult.statusCode === 200 ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERIC_ERROR);
           }
 
+          // Handle --deprecation-status flag
+          if (options.deprecationStatus) {
+              const report = generateDeprecationReport();
+              console.log(JSON.stringify(report, null, 2));
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
           // Handle --usage flag
           if (options.usage) {
               program.helpInformation();
