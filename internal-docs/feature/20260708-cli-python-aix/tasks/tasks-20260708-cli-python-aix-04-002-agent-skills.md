@@ -27,20 +27,20 @@ Implement installable agent skill support. Generate `SKILL.md` from same content
 
 ## Sub-Tasks
 
-- [ ] Implement `--generate-skill` command — `cli/skills.py`
-- [ ] Generate SKILL.md from CLI help and examples — `skills/generator.py`
-- [ ] Use template-based generation — `skills/template.py`
-- [ ] Strip live state from skill (static only) — `skills/generator.py`
-- [ ] Rewrite command examples to non-interactive form — `skills/generator.py`
-- [ ] Include trigger-shaped frontmatter (name, description) — `skills/template.py`
-- [ ] Implement `--check-skill` command for CI — `cli/skills.py`
-- [ ] Fail if committed skill is stale — `skills/checker.py`
+- [x] Implement `--generate-skill` command — `cli/skills.py`
+- [x] Generate SKILL.md from CLI help and examples — `skills/generator.py`
+- [x] Use template-based generation — `skills/template.py`
+- [x] Strip live state from skill (static only) — `skills/generator.py`
+- [x] Rewrite command examples to non-interactive form — `skills/generator.py`
+- [x] Include trigger-shaped frontmatter (name, description) — `skills/template.py`
+- [x] Implement `--check-skill` command for CI — `cli/skills.py`
+- [x] Fail if committed skill is stale — `skills/checker.py`
 - [ ] Add to CI/CD pipeline for automatic skill updates — `.github/workflows/ci.yml`
 - [ ] Support skill installation via agentskills.io — `skills/installer.py`
 - [ ] Document both hook and skill paths in README — `docs/README.md`
-- [ ] Test skill generation — `tests/test_skills.py`
-- [ ] Test skill checking in CI — `tests/test_skills.py`
-- [ ] Test skill template rendering — `tests/test_skills.py`
+- [x] Test skill generation — `tests/test_skills.py`
+- [x] Test skill checking in CI — `tests/test_skills.py`
+- [x] Test skill template rendering — `tests/test_skills.py`
 
 ## Relevant Files
 
@@ -55,16 +55,16 @@ Implement installable agent skill support. Generate `SKILL.md` from same content
 
 ## Acceptance Criteria
 
-- [ ] `--generate-skill` outputs SKILL.md content
-- [ ] SKILL.md generated from CLI help and examples
-- [ ] Live state stripped from skill
-- [ ] Command examples in non-interactive form
-- [ ] Trigger-shaped frontmatter included
-- [ ] `--check-skill` fails if skill is stale
+- [x] `--generate-skill` outputs SKILL.md content
+- [x] SKILL.md generated from CLI help and examples
+- [x] Live state stripped from skill
+- [x] Command examples in non-interactive form
+- [x] Trigger-shaped frontmatter included
+- [x] `--check-skill` fails if skill is stale
 - [ ] CI includes skill check step
 - [ ] Skill installation via agentskills.io supported
 - [ ] Both hook and skill paths documented
-- [ ] All tests pass
+- [x] All tests pass
 
 ## Test Plan
 

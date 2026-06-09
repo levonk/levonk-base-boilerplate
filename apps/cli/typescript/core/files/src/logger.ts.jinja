@@ -3,6 +3,7 @@ import supportsColor from 'supports-color';
 import process from 'process';
 import { formatLogFileRef, type FileLocation } from './file-ref.js';
 import { redactSecretsFromObject, detectSecrets } from './secrets.js';
+import { getPrivacyManager, type PrivacyConfig } from './privacy.js';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 export type ColorMode = 'auto' | 'always' | 'never';
@@ -16,6 +17,7 @@ export interface LoggerOptions {
   color?: ColorMode;
   logFormat?: LogFormat;
   module?: string;
+  privacy?: boolean;
 }
 
 // Color palette for log levels
@@ -106,6 +108,7 @@ const levelPriority: Record<LogLevel, number> = {
 export class Logger {
   private options: LoggerOptions;
   private currentLevel: LogLevel;
+  private privacyManager: ReturnType<typeof getPrivacyManager>;
 
   constructor(options: LoggerOptions = {}) {
     // Auto-detect log format if not specified
@@ -124,8 +127,19 @@ export class Logger {
       color: 'auto',
       logFormat,
       module: '{{ project_slug }}',
+      privacy: false,
       ...options,
     };
+
+    // Initialize privacy manager if privacy mode is enabled
+    if (this.options.privacy) {
+      this.privacyManager = getPrivacyManager();
+      if (!this.privacyManager.isEnabled()) {
+        this.privacyManager.config.enabled = true;
+      }
+    } else {
+      this.privacyManager = getPrivacyManager();
+    }
 
     // Set current log level: env var > config log_level > debug flag > info default
     if (envLogLevel && ['debug', 'info', 'warn', 'error', 'fatal'].includes(envLogLevel)) {
@@ -154,8 +168,14 @@ export class Logger {
     const module = this.options.module || '{{ project_slug }}';
 
     // Redact secrets from message and extra data
-    const redactedMessage = this.redactSecrets(message);
-    const redactedExtra = extra ? redactSecretsFromObject(extra) : undefined;
+    let redactedMessage = this.redactSecrets(message);
+    let redactedExtra = extra ? redactSecretsFromObject(extra) : undefined;
+
+    // Apply privacy mode redaction if enabled
+    if (this.privacyManager.isEnabled()) {
+      redactedMessage = this.privacyManager.redactSensitiveData(redactedMessage);
+      redactedExtra = redactedExtra ? this.privacyManager.redactSensitiveObject(redactedExtra) : undefined;
+    }
 
     // Use JSON format if specified
     if (this.options.logFormat === 'json') {

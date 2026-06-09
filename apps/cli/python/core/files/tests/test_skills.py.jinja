@@ -1,0 +1,113 @@
+# vim: set ft=python :
+"""Tests for skill generation functionality."""
+
+import pytest
+from {{project_slug}}.skills import (
+    strip_live_state,
+    rewrite_to_non_interactive,
+    generate_skill_frontmatter,
+    generate_skill_content,
+    generate_skill_from_cli,
+)
+
+
+def test_strip_live_state_user_paths():
+    """Test stripping user-specific paths."""
+    text = "Error at /Users/john/file.txt"
+    result = strip_live_state(text)
+    assert "/Users/john" not in result
+    assert "/home/user" in result
+
+
+def test_strip_live_state_timestamps():
+    """Test stripping timestamps."""
+    text = "Started at 2024-01-15T10:30:45"
+    result = strip_live_state(text)
+    assert "2024-01-15T10:30:45" not in result
+    assert "[timestamp]" in result
+
+
+def test_strip_live_state_dates():
+    """Test stripping dates."""
+    text = "Created on 2024-01-15"
+    result = strip_live_state(text)
+    assert "2024-01-15" not in result
+    assert "[date]" in result
+
+
+def test_strip_live_state_pids():
+    """Test stripping process IDs."""
+    text = "Process 12345 completed"
+    result = strip_live_state(text)
+    assert "12345" not in result
+    assert "[pid]" in result
+
+
+def test_rewrite_to_non_interactive_prompts():
+    """Test rewriting interactive prompts."""
+    text = "Continue? [y/N]"
+    result = rewrite_to_non_interactive(text)
+    assert "[y/N]" not in result
+    assert "--yes" in result
+
+
+def test_rewrite_to_non_interactive_force():
+    """Test rewriting to use --force flag."""
+    text = "prompted for input"
+    result = rewrite_to_non_interactive(text)
+    assert "prompted for input" not in result
+    assert "--force flag" in result
+
+
+def test_generate_skill_frontmatter():
+    """Test generating skill frontmatter."""
+    frontmatter = generate_skill_frontmatter("test-tool", "A test tool")
+    
+    assert "name: test-tool" in frontmatter
+    assert "description: A test tool" in frontmatter
+    assert "triggers:" in frontmatter
+    assert "examples:" in frontmatter
+
+
+def test_generate_skill_content():
+    """Test generating complete skill content."""
+    content = generate_skill_content(
+        name="test-tool",
+        description="A test tool",
+        help_text="Test help text",
+        examples=["test-tool file.txt"]
+    )
+    
+    assert "---" in content
+    assert "name: test-tool" in content
+    assert "# test-tool" in content
+    assert "A test tool" in content
+    assert "## Usage" in content
+    assert "## Examples" in content
+
+
+def test_generate_skill_from_cli():
+    """Test generating skill from CLI."""
+    content = generate_skill_from_cli(
+        name="test-tool",
+        description="A test tool"
+    )
+    
+    assert "---" in content
+    assert "name: test-tool" in content
+    assert "# test-tool" in content
+    assert "## Usage" in content
+    assert "## Examples" in content
+    assert "Options:" in content
+
+
+def test_generate_skill_strips_live_state():
+    """Test that generated skill has live state stripped."""
+    content = generate_skill_from_cli(
+        name="test-tool",
+        description="A test tool"
+    )
+    
+    # Should not have user paths or timestamps
+    assert "/Users/" not in content
+    assert "2024-" not in content

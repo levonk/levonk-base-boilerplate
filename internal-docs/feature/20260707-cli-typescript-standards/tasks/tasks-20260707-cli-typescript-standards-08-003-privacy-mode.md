@@ -27,7 +27,7 @@ Add privacy mode for anonymous usage. Ensure no sensitive data is included in te
 
 ## Sub-Tasks
 
-- [ ] Add `--privacy` flag to index.ts
+- [~] Add `--privacy` flag to index.ts
 - [ ] Implement privacy mode logic
 - [ ] Add sensitive data detection
 - [ ] Implement data redaction in logs

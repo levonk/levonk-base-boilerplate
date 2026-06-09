@@ -691,6 +691,69 @@ def install_agent_hooks(
 
 
 @app.command()
+def generate_skill(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path (defaults to SKILL.md)"),
+):
+    """
+    Generate SKILL.md for installable agent skill.
+
+    This command generates a SKILL.md file from CLI help and examples,
+    suitable for installation via agentskills.io.
+    """
+    from {{project_slug}}.skills import generate_skill_from_cli
+    from pathlib import Path
+
+    skill_content = generate_skill_from_cli(
+        name="{{ project_slug }}",
+        description="{{ description }}"
+    )
+
+    if output:
+        output_path = Path(output)
+    else:
+        output_path = Path("SKILL.md")
+
+    output_path.write_text(skill_content)
+    print(f"✓ Skill generated at {output_path}")
+
+
+@app.command()
+def check_skill(
+    skill_file: str = typer.Option("SKILL.md", "--skill-file", "-s", help="Path to SKILL.md file"),
+):
+    """
+    Check if SKILL.md is up to date with CLI help.
+
+    This command is intended for CI/CD pipelines to ensure the committed
+    SKILL.md file is not stale.
+    """
+    from {{project_slug}}.skills import generate_skill_from_cli
+    from pathlib import Path
+
+    skill_path = Path(skill_file)
+
+    if not skill_path.exists():
+        print(f"✗ Skill file not found: {skill_path}")
+        sys.exit(EXIT_ERROR)
+
+    # Generate current skill content
+    current_content = generate_skill_from_cli(
+        name="{{ project_slug }}",
+        description="{{ description }}"
+    )
+
+    # Read committed skill content
+    committed_content = skill_path.read_text()
+
+    # Compare (ignore frontmatter timestamps if any)
+    if current_content.strip() != committed_content.strip():
+        print(f"✗ Skill file is stale. Run: {{ project_slug }} generate-skill")
+        sys.exit(EXIT_ERROR)
+
+    print(f"✓ Skill file is up to date")
+
+
+@app.command()
 def reload_config_cmd():
     """
     Manually trigger configuration reload.

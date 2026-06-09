@@ -43,8 +43,8 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-python-aix/story-04-001-session-hooks | 03-003 | Parallel-safe: true | [hooks.py, session.py] | [~] In-Progress |
-| 04-002 | Installable Agent Skill | feature/current/20260708-cli-python-aix/story-04-002-agent-skills | 04-001 | Parallel-safe: true | [skills.py, skill_generator.py] |
+| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-python-aix/story-04-001-session-hooks | 03-003 | Parallel-safe: true | [hooks.py, session.py] | [x] Done |
+| 04-002 | Installable Agent Skill | feature/current/20260708-cli-python-aix/story-04-002-agent-skills | 04-001 | Parallel-safe: true | [skills.py, skill_generator.py] | [~] In-Progress |
 
 ### Phase 05: UX Enhancement (Week 2)
 

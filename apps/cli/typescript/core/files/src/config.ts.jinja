@@ -27,6 +27,8 @@ export interface Config {
     json?: boolean;
     /** File reference format: vscode, standard, auto. Default: "auto" */
     file_ref_format?: 'vscode' | 'standard' | 'auto';
+    /** Enable privacy mode for anonymous usage. Default: false */
+    privacy?: boolean;
     /** Custom configuration values */
     [key: string]: any;
 }
@@ -60,6 +62,7 @@ export const DEFAULT_CONFIG: Config = {
     log_format: 'text',
     json: false,
     file_ref_format: 'auto',
+    privacy: false,
 };
 
 export interface ConfigOptions {
@@ -315,13 +318,14 @@ export function loadEnvConfig(projectSlug: string): Config {
         [`${prefix}_COLOR`]: 'color',
         [`${prefix}_LOG_FORMAT`]: 'log_format',
         [`${prefix}_JSON`]: 'json',
+        [`${prefix}_PRIVACY`]: 'privacy',
     };
 
     for (const [envVar, configKey] of Object.entries(envMappings)) {
         const value = process.env[envVar];
         if (value !== undefined) {
             // Convert string values to appropriate types
-            if (configKey === 'quiet' || configKey === 'verbose' || configKey === 'debug' || configKey === 'json') {
+            if (configKey === 'quiet' || configKey === 'verbose' || configKey === 'debug' || configKey === 'json' || configKey === 'privacy') {
                 envConfig[configKey] = value === 'true' || value === '1';
             } else {
                 envConfig[configKey] = value;
