@@ -1,0 +1,323 @@
+//! Field selection logic for output schemas
+//!
+//! This module provides functionality for selecting and filtering fields
+//! from output data based on schema definitions and user-provided field lists.
+
+use super::definition::{OutputSchema, FieldDefinition};
+use serde_json::Value;
+use anyhow::{Result, Context};
+
+/// Field selector for filtering output data
+#[derive(Debug, Clone)]
+pub struct FieldSelector {
+    /// Selected field names
+    selected_fields: Vec<String>,
+    /// Whether to use default field set
+    use_defaults: bool,
+}
+
+impl FieldSelector {
+    /// Create a new field selector with explicit field selection
+    pub fn new(fields: Vec<String>) -> Self {
+        Self {
+            selected_fields: fields,
+            use_defaults: false,
+        }
+    }
+
+    /// Create a field selector using default field set from schema
+    pub fn with_defaults() -> Self {
+        Self {
+            selected_fields: Vec::new(),
+            use_defaults: true,
+        }
+    }
+
+    /// Apply field selection to a JSON object
+    pub fn apply_to_object(&self, schema: &OutputSchema, value: &mut Value) -> Result<()> {
+        if let Value::Object(obj) = value {
+            let fields_to_keep = if self.use_defaults {
+                schema.get_default_fields()
+            } else {
+                self.selected_fields.clone()
+            };
+
+            // Validate fields against schema
+            schema.validate_fields(&fields_to_keep)?;
+
+            // Filter object to keep only selected fields
+            let keys_to_remove: Vec<String> = obj.keys()
+                .filter(|k| !fields_to_keep.contains(k))
+                .cloned()
+                .collect();
+
+            for key in keys_to_remove {
+                obj.remove(&key);
+            }
+        }
+        Ok(())
+    }
+
+    /// Apply field selection to an array of objects
+    pub fn apply_to_array(&self, schema: &OutputSchema, value: &mut Value) -> Result<()> {
+        if let Value::Array(arr) = value {
+            for item in arr {
+                self.apply_to_object(schema, item)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Apply field selection to any JSON value
+    pub fn apply(&self, schema: &OutputSchema, value: &mut Value) -> Result<()> {
+        match value {
+            Value::Object(_) => self.apply_to_object(schema, value),
+            Value::Array(_) => self.apply_to_array(schema, value),
+            _ => Ok(()), // Primitive values don't need field selection
+        }
+    }
+
+    /// Get the selected field names
+    pub fn get_selected_fields(&self, schema: &OutputSchema) -> Vec<String> {
+        if self.use_defaults {
+            schema.get_default_fields()
+        } else {
+            self.selected_fields.clone()
+        }
+    }
+}
+
+/// Parse comma-separated field names from CLI argument
+pub fn parse_fields_arg(fields_arg: &str) -> Vec<String> {
+    fields_arg
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+/// Apply list limit to an array
+pub fn apply_list_limit(value: &mut Value, limit: usize) {
+    if let Value::Array(arr) = value {
+        if arr.len() > limit {
+            arr.truncate(limit);
+        }
+    }
+}
+
+/// Apply schema transformations to output data
+pub fn apply_schema_transforms(
+    schema: &OutputSchema,
+    value: &mut Value,
+    selector: Option<&FieldSelector>,
+    apply_limit: bool,
+) -> Result<()> {
+    // Apply field selection if provided
+    if let Some(selector) = selector {
+        selector.apply(schema, value)?;
+    }
+
+    // Apply list limit if requested and value is an array
+    if apply_limit {
+        apply_list_limit(value, schema.list_limit);
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn create_test_schema() -> OutputSchema {
+        OutputSchema::new("test")
+            .add_field(
+                FieldDefinition::new("id", "ID")
+                    .default()
+            )
+            .add_field(
+                FieldDefinition::new("name", "Name")
+                    .default()
+            )
+            .add_field(
+                FieldDefinition::new("description", "Description")
+                    .long_form()
+            )
+            .add_field(
+                FieldDefinition::new("status", "Status")
+                    .default()
+            )
+    }
+
+    #[test]
+    fn test_parse_fields_arg() {
+        let fields = parse_fields_arg("id,name,status");
+        assert_eq!(fields, vec!["id", "name", "status"]);
+
+        let fields = parse_fields_arg("id, name , status");
+        assert_eq!(fields, vec!["id", "name", "status"]);
+
+        let fields = parse_fields_arg("");
+        assert!(fields.is_empty());
+    }
+
+    #[test]
+    fn test_field_selector_explicit() {
+        let selector = FieldSelector::new(vec!["id".to_string(), "name".to_string()]);
+        let schema = create_test_schema();
+        
+        let mut value = json!({
+            "id": "123",
+            "name": "test",
+            "description": "long content",
+            "status": "active"
+        });
+
+        selector.apply(&schema, &mut value).unwrap();
+
+        assert_eq!(value.get("id"), Some(&json!("123")));
+        assert_eq!(value.get("name"), Some(&json!("test")));
+        assert!(value.get("description").is_none());
+        assert!(value.get("status").is_none());
+    }
+
+    #[test]
+    fn test_field_selector_defaults() {
+        let selector = FieldSelector::with_defaults();
+        let schema = create_test_schema();
+        
+        let mut value = json!({
+            "id": "123",
+            "name": "test",
+            "description": "long content",
+            "status": "active"
+        });
+
+        selector.apply(&schema, &mut value).unwrap();
+
+        assert_eq!(value.get("id"), Some(&json!("123")));
+        assert_eq!(value.get("name"), Some(&json!("test")));
+        assert!(value.get("status"), Some(&json!("active")));
+        assert!(value.get("description").is_none());
+    }
+
+    #[test]
+    fn test_field_selector_array() {
+        let selector = FieldSelector::new(vec!["id".to_string(), "name".to_string()]);
+        let schema = create_test_schema();
+        
+        let mut value = json!([
+            {"id": "1", "name": "test1", "description": "desc1", "status": "active"},
+            {"id": "2", "name": "test2", "description": "desc2", "status": "inactive"}
+        ]);
+
+        selector.apply(&schema, &mut value).unwrap();
+
+        if let Value::Array(arr) = &value {
+            assert_eq!(arr.len(), 2);
+            assert!(arr[0].get("description").is_none());
+            assert!(arr[1].get("description").is_none());
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_field_selector_invalid_field() {
+        let selector = FieldSelector::new(vec!["invalid".to_string()]);
+        let schema = create_test_schema();
+        
+        let mut value = json!({"id": "123", "name": "test"});
+
+        let result = selector.apply(&schema, &mut value);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_apply_list_limit() {
+        let mut value = json!([1, 2, 3, 4, 5]);
+        apply_list_limit(&mut value, 3);
+        
+        if let Value::Array(arr) = &value {
+            assert_eq!(arr.len(), 3);
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_apply_list_limit_under_limit() {
+        let mut value = json!([1, 2]);
+        apply_list_limit(&mut value, 5);
+        
+        if let Value::Array(arr) = &value {
+            assert_eq!(arr.len(), 2);
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_apply_schema_transforms() {
+        let schema = create_test_schema();
+        let selector = FieldSelector::new(vec!["id".to_string()]);
+        
+        let mut value = json!([
+            {"id": "1", "name": "test1", "description": "desc1", "status": "active"},
+            {"id": "2", "name": "test2", "description": "desc2", "status": "inactive"},
+            {"id": "3", "name": "test3", "description": "desc3", "status": "active"}
+        ]);
+
+        apply_schema_transforms(&schema, &mut value, Some(&selector), true).unwrap();
+
+        if let Value::Array(arr) = &value {
+            assert_eq!(arr.len(), 3); // No truncation (limit is 100)
+            assert!(arr[0].get("name").is_none());
+            assert!(arr[0].get("id").is_some());
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_apply_schema_transforms_with_limit() {
+        let schema = create_test_schema().with_list_limit(2);
+        let selector = FieldSelector::new(vec!["id".to_string()]);
+        
+        let mut value = json!([
+            {"id": "1", "name": "test1", "description": "desc1", "status": "active"},
+            {"id": "2", "name": "test2", "description": "desc2", "status": "inactive"},
+            {"id": "3", "name": "test3", "description": "desc3", "status": "active"}
+        ]);
+
+        apply_schema_transforms(&schema, &mut value, Some(&selector), true).unwrap();
+
+        if let Value::Array(arr) = &value {
+            assert_eq!(arr.len(), 2); // Truncated to limit
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_get_selected_fields() {
+        let schema = create_test_schema();
+        let selector = FieldSelector::new(vec!["id".to_string(), "name".to_string()]);
+        
+        let fields = selector.get_selected_fields(&schema);
+        assert_eq!(fields, vec!["id", "name"]);
+    }
+
+    #[test]
+    fn test_get_selected_fields_defaults() {
+        let schema = create_test_schema();
+        let selector = FieldSelector::with_defaults();
+        
+        let fields = selector.get_selected_fields(&schema);
+        assert_eq!(fields.len(), 3); // id, name, status
+        assert!(fields.contains(&"id".to_string()));
+        assert!(fields.contains(&"name".to_string()));
+        assert!(fields.contains(&"status".to_string()));
+    }
+}

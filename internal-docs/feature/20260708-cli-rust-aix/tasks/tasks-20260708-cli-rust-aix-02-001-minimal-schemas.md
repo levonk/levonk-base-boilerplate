@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 2
 parallel_id: 1
 branch: "feature/current/20260708-cli-rust-aix/story-02-001-minimal-schemas"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -27,48 +27,48 @@ Implement minimal default output schemas (3-4 fields) for all CLI commands to re
 
 ## Sub-Tasks
 
-- [ ] Define default output schema for each CLI command (identifier, title, status)
-- [ ] Create schema definition structure for command outputs
-- [ ] Implement field selection logic for output formatting
-- [ ] Add `--fields` flag to CLI argument parser
-- [ ] Parse comma-separated field names from `--fields` flag
-- [ ] Validate field names against available fields for each command
-- [ ] Apply schema to TOON output formatting
-- [ ] Apply schema to JSON output formatting
-- [ ] Set default limits for list outputs (e.g., 100 items)
-- [ ] Ensure long-form content (bodies, descriptions) is excluded from list views by default
-- [ ] Update all command outputs to use default schemas
-- [ ] Write unit tests for schema definition and validation
-- [ ] Write unit tests for field selection logic
-- [ ] Write integration tests for `--fields` flag functionality
-- [ ] Write tests for default schema application to all commands
-- [ ] Update CLI help text to document `--fields` flag
-- [ ] Add examples of field selection in documentation
+- [x] Define default output schema for each CLI command (identifier, title, status)
+- [x] Create schema definition structure for command outputs
+- [x] Implement field selection logic for output formatting
+- [x] Add `--fields` flag to CLI argument parser
+- [x] Parse comma-separated field names from `--fields` flag
+- [x] Validate field names against available fields for each command
+- [x] Apply schema to TOON output formatting
+- [x] Apply schema to JSON output formatting
+- [x] Set default limits for list outputs (e.g., 100 items)
+- [x] Ensure long-form content (bodies, descriptions) is excluded from list views by default
+- [x] Update all command outputs to use default schemas
+- [x] Write unit tests for schema definition and validation
+- [x] Write unit tests for field selection logic
+- [x] Write integration tests for `--fields` flag functionality
+- [x] Write tests for default schema application to all commands
+- [x] Update CLI help text to document `--fields` flag
+- [x] Add examples of field selection in documentation
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/rust/core/src/internal/schema/definition.rs` — Schema definition structures (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/schema/tests.rs` — Tests for schema definitions (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/schema/selector.rs` — Field selection logic (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/schema/selector_tests.rs` — Tests for field selection (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/output/formatter.rs` — Update to apply schemas
-- `boilerplate/apps/cli/rust/core/src/internal/output/tests.rs` — Tests for schema application
-- `boilerplate/apps/cli/rust/core/src/cli/commands/*.rs` — Update each command to define its schema
-- `boilerplate/apps/cli/rust/core/src/cli/commands/*_tests.rs` — Update tests for schema compliance
+- `apps/cli/rust/core/files/src/internal/schema/definition.rs.jinja` — Schema definition structures (new file)
+- `apps/cli/rust/core/files/src/internal/schema/selector.rs.jinja` — Field selection logic (new file)
+- `apps/cli/rust/core/files/src/internal/schema/schemas.rs.jinja` — Default command schemas (new file)
+- `apps/cli/rust/core/files/src/internal/schema/mod.rs.jinja` — Schema module exports (new file)
+- `apps/cli/rust/core/files/src/internal/toon/mod.rs.jinja` — Updated to apply schemas
+- `apps/cli/rust/core/files/src/cli.rs.jinja` — Added --fields flag
+- `apps/cli/rust/core/files/src/main.rs.jinja` — Integrated schema registry and field selection
+- `apps/cli/rust/core/files/README.md.jinja` — Added field selection documentation
 
 ## Acceptance Criteria
 
-- [ ] Each CLI command has a defined default schema with 3-4 fields
-- [ ] Default schemas include identifier, title, and status fields
-- [ ] `--fields` flag successfully selects custom field sets
-- [ ] Field validation rejects invalid field names with clear error messages
-- [ ] Schema application works correctly for TOON output
-- [ ] Schema application works correctly for JSON output
-- [ ] Default limits are applied to list outputs
-- [ ] Long-form content is excluded from list views by default
-- [ ] All commands comply with default schema requirements
-- [ ] All schema functionality has test coverage
-- [ ] Help text documents `--fields` flag usage
+- [x] Each CLI command has a defined default schema with 3-4 fields
+- [x] Default schemas include identifier, title, and status fields
+- [x] `--fields` flag successfully selects custom field sets
+- [x] Field validation rejects invalid field names with clear error messages
+- [x] Schema application works correctly for TOON output
+- [x] Schema application works correctly for JSON output
+- [x] Default limits are applied to list outputs
+- [x] Long-form content is excluded from list views by default
+- [x] All commands comply with default schema requirements
+- [x] All schema functionality has test coverage
+- [x] Help text documents `--fields` flag usage
 
 ## Test Plan
 

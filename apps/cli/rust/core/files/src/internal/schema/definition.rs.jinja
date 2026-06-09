@@ -1,0 +1,264 @@
+//! Schema definition structures for CLI command outputs
+//!
+//! This module provides structures for defining output schemas that control
+//! which fields are included in command output, reducing token consumption
+//! in agent mode while allowing explicit field selection when needed.
+
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use anyhow::{Result, Context, bail};
+
+/// Represents a field definition in an output schema
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct FieldDefinition {
+    /// Field name as it appears in output
+    pub name: String,
+    /// Human-readable description of the field
+    pub description: String,
+    /// Whether this field is included in default minimal schema
+    pub default: bool,
+    /// Whether this field contains long-form content (excluded from list views)
+    pub long_form: bool,
+}
+
+impl FieldDefinition {
+    /// Create a new field definition
+    pub fn new(name: impl Into<String>, description: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            description: description.into(),
+            default: false,
+            long_form: false,
+        }
+    }
+
+    /// Mark this field as included in default schema
+    pub fn default(mut self) -> Self {
+        self.default = true;
+        self
+    }
+
+    /// Mark this field as long-form content
+    pub fn long_form(mut self) -> Self {
+        self.long_form = true;
+        self
+    }
+}
+
+/// Output schema for a CLI command
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OutputSchema {
+    /// Command identifier (e.g., "config", "daemon", "completion")
+    pub command: String,
+    /// All available fields for this command
+    pub fields: Vec<FieldDefinition>,
+    /// Default field set for minimal output (subset of fields)
+    pub default_fields: HashSet<String>,
+    /// Maximum number of items to include in list outputs
+    pub list_limit: usize,
+}
+
+impl OutputSchema {
+    /// Create a new output schema
+    pub fn new(command: impl Into<String>) -> Self {
+        Self {
+            command: command.into(),
+            fields: Vec::new(),
+            default_fields: HashSet::new(),
+            list_limit: 100,
+        }
+    }
+
+    /// Add a field definition to the schema
+    pub fn add_field(mut self, field: FieldDefinition) -> Self {
+        if field.default {
+            self.default_fields.insert(field.name.clone());
+        }
+        self.fields.push(field);
+        self
+    }
+
+    /// Set the list limit for this schema
+    pub fn with_list_limit(mut self, limit: usize) -> Self {
+        self.list_limit = limit;
+        self
+    }
+
+    /// Get the default field set
+    pub fn get_default_fields(&self) -> Vec<String> {
+        self.default_fields.iter().cloned().collect()
+    }
+
+    /// Validate a field name against available fields
+    pub fn validate_field(&self, field_name: &str) -> Result<()> {
+        if !self.fields.iter().any(|f| f.name == field_name) {
+            bail!("Invalid field '{}' for command '{}'. Available fields: {}",
+                  field_name,
+                  self.command,
+                  self.fields.iter().map(|f| &f.name).collect::<Vec<_>>().join(", "));
+        }
+        Ok(())
+    }
+
+    /// Validate multiple field names
+    pub fn validate_fields(&self, field_names: &[String]) -> Result<()> {
+        for field_name in field_names {
+            self.validate_field(field_name)?;
+        }
+        Ok(())
+    }
+
+    /// Get field definition by name
+    pub fn get_field(&self, field_name: &str) -> Option<&FieldDefinition> {
+        self.fields.iter().find(|f| f.name == field_name)
+    }
+
+    /// Get all field names
+    pub fn get_all_field_names(&self) -> Vec<String> {
+        self.fields.iter().map(|f| f.name.clone()).collect()
+    }
+
+    /// Get long-form field names (excluded from list views by default)
+    pub fn get_long_form_fields(&self) -> Vec<String> {
+        self.fields.iter()
+            .filter(|f| f.long_form)
+            .map(|f| f.name.clone())
+            .collect()
+    }
+}
+
+/// Schema registry for all CLI commands
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SchemaRegistry {
+    /// Map of command name to output schema
+    schemas: HashMap<String, OutputSchema>,
+}
+
+impl SchemaRegistry {
+    /// Create a new schema registry
+    pub fn new() -> Self {
+        Self {
+            schemas: HashMap::new(),
+        }
+    }
+
+    /// Register a schema for a command
+    pub fn register(mut self, schema: OutputSchema) -> Self {
+        let command = schema.command.clone();
+        self.schemas.insert(command, schema);
+        self
+    }
+
+    /// Get schema for a command
+    pub fn get_schema(&self, command: &str) -> Option<&OutputSchema> {
+        self.schemas.get(command)
+    }
+
+    /// Get all registered command names
+    pub fn get_commands(&self) -> Vec<String> {
+        self.schemas.keys().cloned().collect()
+    }
+
+    /// Check if a command has a registered schema
+    pub fn has_schema(&self, command: &str) -> bool {
+        self.schemas.contains_key(command)
+    }
+}
+
+impl Default for SchemaRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_field_definition_creation() {
+        let field = FieldDefinition::new("id", "Unique identifier")
+            .default()
+            .long_form();
+        
+        assert_eq!(field.name, "id");
+        assert_eq!(field.description, "Unique identifier");
+        assert!(field.default);
+        assert!(field.long_form);
+    }
+
+    #[test]
+    fn test_output_schema_creation() {
+        let schema = OutputSchema::new("test-command")
+            .add_field(FieldDefinition::new("id", "ID").default())
+            .add_field(FieldDefinition::new("name", "Name").default())
+            .add_field(FieldDefinition::new("description", "Description").long_form())
+            .with_list_limit(50);
+
+        assert_eq!(schema.command, "test-command");
+        assert_eq!(schema.fields.len(), 3);
+        assert_eq!(schema.default_fields.len(), 2);
+        assert_eq!(schema.list_limit, 50);
+    }
+
+    #[test]
+    fn test_field_validation() {
+        let schema = OutputSchema::new("test")
+            .add_field(FieldDefinition::new("id", "ID").default())
+            .add_field(FieldDefinition::new("name", "Name").default());
+
+        assert!(schema.validate_field("id").is_ok());
+        assert!(schema.validate_field("name").is_ok());
+        assert!(schema.validate_field("invalid").is_err());
+    }
+
+    #[test]
+    fn test_field_validation_multiple() {
+        let schema = OutputSchema::new("test")
+            .add_field(FieldDefinition::new("id", "ID").default())
+            .add_field(FieldDefinition::new("name", "Name").default());
+
+        assert!(schema.validate_fields(&["id".to_string(), "name".to_string()]).is_ok());
+        assert!(schema.validate_fields(&["id".to_string(), "invalid".to_string()]).is_err());
+    }
+
+    #[test]
+    fn test_get_field() {
+        let schema = OutputSchema::new("test")
+            .add_field(FieldDefinition::new("id", "ID").default());
+
+        assert!(schema.get_field("id").is_some());
+        assert!(schema.get_field("invalid").is_none());
+    }
+
+    #[test]
+    fn test_long_form_fields() {
+        let schema = OutputSchema::new("test")
+            .add_field(FieldDefinition::new("id", "ID").default())
+            .add_field(FieldDefinition::new("description", "Description").long_form())
+            .add_field(FieldDefinition::new("body", "Body content").long_form());
+
+        let long_form = schema.get_long_form_fields();
+        assert_eq!(long_form.len(), 2);
+        assert!(long_form.contains(&"description".to_string()));
+        assert!(long_form.contains(&"body".to_string()));
+    }
+
+    #[test]
+    fn test_schema_registry() {
+        let schema1 = OutputSchema::new("command1")
+            .add_field(FieldDefinition::new("id", "ID").default());
+        
+        let schema2 = OutputSchema::new("command2")
+            .add_field(FieldDefinition::new("name", "Name").default());
+
+        let registry = SchemaRegistry::new()
+            .register(schema1)
+            .register(schema2);
+
+        assert!(registry.has_schema("command1"));
+        assert!(registry.has_schema("command2"));
+        assert!(!registry.has_schema("command3"));
+        assert_eq!(registry.get_commands().len(), 2);
+    }
+}

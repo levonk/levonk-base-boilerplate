@@ -69,6 +69,44 @@ Dry run mode automatically bypasses confirmation prompts since no changes are ma
 {{ project_slug }} --dry-run delete important_file.txt
 ```
 
+### Output Formats and Field Selection
+
+The CLI supports multiple output formats optimized for different use cases:
+
+#### Output Formats
+
+- **TOON** (Token-Oriented Object Notation): Token-efficient format for AI agents (~40% savings vs JSON)
+- **JSON**: Standard JSON format for machine processing
+- **Human**: Human-readable formatted output
+
+Format selection is automatic based on mode:
+- Agent mode defaults to TOON format
+- Human mode defaults to human-readable output
+
+```bash
+# Override format
+{{ project_slug }} --format toon input.txt
+{{ project_slug }} --format json input.txt
+{{ project_slug }} --format human input.txt
+
+# Quick TOON output
+{{ project_slug }} --toon input.txt
+```
+
+#### Field Selection
+
+In agent mode, the CLI uses minimal default schemas to reduce token consumption. You can select specific fields using the `--fields` flag:
+
+```bash
+# Select specific fields (comma-separated)
+{{ project_slug }} --fields id,name,status input.txt
+
+# Combine with format selection
+{{ project_slug }} --format toon --fields id,name input.txt
+```
+
+Default schemas include 3-4 essential fields (identifier, title, status) while excluding long-form content (descriptions, bodies) from list views. Use `--fields` to request additional fields when needed.
+
 ### Man Pages
 
 The CLI includes traditional Unix man pages for comprehensive documentation.

@@ -42,6 +42,7 @@ use export::{DataExporter, ExportConfig, ExportFormat, DataImporter, ImportConfi
 use processor::{DataProcessor, ProcessingConfig, ProcessingOperation};
 use internal::mode::{detect_mode, Mode};
 use internal::toon::{OutputFormatter, OutputFormat};
+use internal::schema::{create_default_schema_registry, FieldSelector, parse_fields_arg};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -269,6 +270,23 @@ async fn main() -> Result<()> {
         cli.format.as_deref(),
     )?;
     info!("Output format: {} (auto-detected based on mode and flags)", output_formatter.format().as_str());
+
+    // Initialize schema registry for field selection
+    let schema_registry = create_default_schema_registry();
+    info!("Schema registry initialized with {} command schemas", schema_registry.get_commands().len());
+
+    // Parse field selection from --fields flag if provided
+    let field_selector = if let Some(fields_arg) = &cli.fields {
+        let field_names = parse_fields_arg(fields_arg);
+        if !field_names.is_empty() {
+            info!("Field selection requested: {}", field_names.join(", "));
+            Some(FieldSelector::new(field_names))
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
     // Initialize logging
     let verbosity = Verbosity::from_count(cli.verbose, cli.quiet, cli.debug);

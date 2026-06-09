@@ -32,6 +32,8 @@ pub use types::{ToonValue, ToonEncodeOptions, ToonDecodeOptions, ToonEncodeError
 pub use encoder::{ToonEncoder, to_string, to_string_with_options};
 pub use decoder::{ToonDecoder, from_str, from_str_with_options};
 
+use crate::internal::schema::{OutputSchema, FieldSelector, apply_schema_transforms};
+
 /// Output format options
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputFormat {
@@ -103,18 +105,41 @@ impl OutputFormatter {
 
     /// Format a ToonValue to the configured output format
     pub fn format_value(&self, value: &ToonValue) -> anyhow::Result<String> {
+        self.format_value_with_schema(value, None, None, false)
+    }
+
+    /// Format a ToonValue with optional schema application
+    pub fn format_value_with_schema(
+        &self,
+        value: &ToonValue,
+        schema: Option<&OutputSchema>,
+        field_selector: Option<&FieldSelector>,
+        apply_limit: bool,
+    ) -> anyhow::Result<String> {
+        // Apply schema transformations if schema is provided
+        let mut json_value: serde_json::Value = serde_json::to_value(value)
+            .map_err(|e| anyhow::anyhow!("JSON conversion error: {}", e))?;
+
+        if let Some(schema) = schema {
+            apply_schema_transforms(schema, &mut json_value, field_selector, apply_limit)
+                .map_err(|e| anyhow::anyhow!("Schema application error: {}", e))?;
+        }
+
+        // Format the transformed value
         match self.format {
             OutputFormat::Toon => {
-                to_string(value).map_err(|e| anyhow::anyhow!("TOON encoding error: {}", e))
+                let toon_value: ToonValue = serde_json::from_value(json_value)
+                    .map_err(|e| anyhow::anyhow!("JSON to TOON conversion error: {}", e))?;
+                to_string(&toon_value).map_err(|e| anyhow::anyhow!("TOON encoding error: {}", e))
             }
             OutputFormat::Json => {
-                serde_json::to_string_pretty(value)
+                serde_json::to_string_pretty(&json_value)
                     .map_err(|e| anyhow::anyhow!("JSON encoding error: {}", e))
             }
             OutputFormat::Human => {
                 // For human format, use JSON pretty-printed for now
                 // TODO: Implement proper human-readable formatting
-                serde_json::to_string_pretty(value)
+                serde_json::to_string_pretty(&json_value)
                     .map_err(|e| anyhow::anyhow!("JSON encoding error: {}", e))
             }
         }

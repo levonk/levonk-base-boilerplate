@@ -87,6 +87,10 @@ pub struct Cli {
     #[arg(long, value_name = "FORMAT", help = "Output format: toon, json, or human (default: auto-detect based on mode)")]
     pub format: Option<String>,
 
+    /// Select specific fields for output (comma-separated, e.g., --fields id,name,status)
+    #[arg(long, value_name = "FIELDS", help = "Select specific output fields (comma-separated, e.g., id,name,status)")]
+    pub fields: Option<String>,
+
     /// Quiet mode - suppress all output except errors
     #[arg(long, short = 'q')]
     pub quiet: bool,
