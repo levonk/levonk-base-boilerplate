@@ -1,6 +1,6 @@
 /**
  * Privacy Mode Module
- * 
+ *
  * Provides privacy mode for anonymous usage with:
  * - Sensitive data detection and redaction
  * - Explicit ignore lists for identifiers
@@ -99,7 +99,7 @@ class PrivacyManagerImpl implements PrivacyManager {
     // Redact file paths
     if (!this.config.logFilePaths) {
       redacted = redacted.replace(/\/[^\s]+/g, '[REDACTED_PATH]');
-      redacted = redacted.replace(/[A-Za-z]:\\[^\\]+/g, '[REDACTED_PATH]');
+      redacted = redacted.replace(/[A-Za-z]:\\(?:[^\\]+\\)*[^\\]+/g, '[REDACTED_PATH]');
     }
 
     // Redact user IDs

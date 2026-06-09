@@ -1,0 +1,470 @@
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
+import Database from 'better-sqlite3';
+import crypto from 'crypto';
+
+/**
+ * Audit log entry structure
+ */
+export interface AuditEntry {
+  /** Unique ID for the audit entry */
+  id: string;
+  /** Timestamp of the event (ISO 8601) */
+  timestamp: string;
+  /** Type of operation performed */
+  operation: string;
+  /** User who performed the operation (if available) */
+  user?: string;
+  /** Additional context about the operation */
+  context?: Record<string, unknown>;
+  /** Result of the operation (success/failure) */
+  result: 'success' | 'failure';
+  /** Error message if operation failed */
+  error?: string;
+  /** Hash of the entry for tamper evidence */
+  hash: string;
+  /** Previous entry hash for chain integrity */
+  previous_hash: string | null;
+}
+
+/**
+ * Audit log configuration
+ */
+export interface AuditConfig {
+  /** Enable or disable audit logging */
+  enabled: boolean;
+  /** Path to audit log database */
+  auditPath?: string;
+  /** Retention period in days (default: 90) */
+  retentionDays?: number;
+  /** Maximum log file size in bytes before rotation (default: 100MB) */
+  maxLogSize?: number;
+  /** Number of rotated logs to keep (default: 5) */
+  maxRotatedLogs?: number;
+  /** Sensitive operations to audit */
+  sensitiveOperations: string[];
+}
+
+/**
+ * Default audit configuration
+ */
+export const DEFAULT_AUDIT_CONFIG: AuditConfig = {
+  enabled: false,
+  retentionDays: 90,
+  maxLogSize: 100 * 1024 * 1024, // 100MB
+  maxRotatedLogs: 5,
+  sensitiveOperations: [
+    'config_change',
+    'config_reload',
+    'file_write',
+    'file_delete',
+    'secret_access',
+    'secret_write',
+    'install',
+    'uninstall',
+    'daemon_start',
+    'daemon_stop',
+  ],
+};
+
+/**
+ * Audit log manager for tracking sensitive operations
+ */
+export class AuditLogger {
+  private config: AuditConfig;
+  private db: Database.Database | null = null;
+  private auditPath: string;
+  private projectSlug: string;
+
+  constructor(projectSlug: string, config: Partial<AuditConfig> = {}) {
+    this.projectSlug = projectSlug;
+    this.config = { ...DEFAULT_AUDIT_CONFIG, ...config };
+    
+    // Set default audit path if not provided
+    if (!this.config.auditPath) {
+      const xdgDataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
+      this.auditPath = path.join(xdgDataHome, projectSlug, 'audit.db');
+    } else {
+      this.auditPath = this.config.auditPath;
+    }
+
+    if (this.config.enabled) {
+      this.initialize();
+    }
+  }
+
+  /**
+   * Initialize audit log database
+   */
+  private async initialize(): Promise<void> {
+    try {
+      // Ensure directory exists
+      const auditDir = path.dirname(this.auditPath);
+      await fs.mkdir(auditDir, { recursive: true });
+
+      // Open database
+      this.db = new Database(this.auditPath);
+      
+      // Enable WAL mode for better concurrency
+      this.db.pragma('journal_mode = WAL');
+      
+      // Create audit table if it doesn't exist
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS audit (
+          id TEXT PRIMARY KEY,
+          timestamp TEXT NOT NULL,
+          operation TEXT NOT NULL,
+          user TEXT,
+          context TEXT,
+          result TEXT NOT NULL,
+          error TEXT,
+          hash TEXT NOT NULL,
+          previous_hash TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_timestamp ON audit(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_operation ON audit(operation);
+        CREATE INDEX IF NOT EXISTS idx_user ON audit(user);
+      `);
+
+      // Auto-prune old entries on startup
+      await this.pruneOldEntries();
+    } catch (error) {
+      console.error(`[audit] Failed to initialize audit log: ${error}`);
+      this.db = null;
+    }
+  }
+
+  /**
+   * Generate hash for tamper evidence
+   */
+  private generateHash(entry: Omit<AuditEntry, 'hash'>, previousHash: string | null): string {
+    const data = JSON.stringify({
+      timestamp: entry.timestamp,
+      operation: entry.operation,
+      user: entry.user,
+      context: entry.context,
+      result: entry.result,
+      error: entry.error,
+      previous_hash: previousHash,
+    });
+    return crypto.createHash('sha256').update(data).digest('hex');
+  }
+
+  /**
+   * Get the hash of the most recent entry
+   */
+  private getLastHash(): string | null {
+    if (!this.db) return null;
+    
+    const row = this.db.prepare('SELECT hash FROM audit ORDER BY timestamp DESC LIMIT 1').get() as { hash: string } | undefined;
+    return row?.hash || null;
+  }
+
+  /**
+   * Log an audit entry
+   */
+  async log(
+    operation: string,
+    result: 'success' | 'failure',
+    context?: Record<string, unknown>,
+    error?: string
+  ): Promise<void> {
+    if (!this.config.enabled || !this.db) {
+      return;
+    }
+
+    // Check if operation is sensitive
+    if (!this.config.sensitiveOperations.includes(operation)) {
+      return;
+    }
+
+    try {
+      const previousHash = this.getLastHash();
+      const id = crypto.randomUUID();
+      const timestamp = new Date().toISOString();
+      const user = process.env.USER || process.env.USERNAME || 'unknown';
+
+      const entry: Omit<AuditEntry, 'hash'> = {
+        id,
+        timestamp,
+        operation,
+        user,
+        context,
+        result,
+        error,
+        previous_hash: previousHash,
+      };
+
+      const hash = this.generateHash(entry, previousHash);
+
+      const stmt = this.db.prepare(`
+        INSERT INTO audit (id, timestamp, operation, user, context, result, error, hash, previous_hash)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      stmt.run(
+        id,
+        timestamp,
+        operation,
+        user,
+        context ? JSON.stringify(context) : null,
+        result,
+        error || null,
+        hash,
+        previousHash
+      );
+
+      // Check if rotation is needed
+      await this.checkRotation();
+    } catch (error) {
+      console.error(`[audit] Failed to log entry: ${error}`);
+    }
+  }
+
+  /**
+   * Query audit logs with optional filters
+   */
+  query(filters?: {
+    operation?: string;
+    user?: string;
+    result?: 'success' | 'failure';
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+  }): AuditEntry[] {
+    if (!this.db) return [];
+
+    try {
+      let query = 'SELECT * FROM audit WHERE 1=1';
+      const params: any[] = [];
+
+      if (filters?.operation) {
+        query += ' AND operation = ?';
+        params.push(filters.operation);
+      }
+
+      if (filters?.user) {
+        query += ' AND user = ?';
+        params.push(filters.user);
+      }
+
+      if (filters?.result) {
+        query += ' AND result = ?';
+        params.push(filters.result);
+      }
+
+      if (filters?.startDate) {
+        query += ' AND timestamp >= ?';
+        params.push(filters.startDate);
+      }
+
+      if (filters?.endDate) {
+        query += ' AND timestamp <= ?';
+        params.push(filters.endDate);
+      }
+
+      query += ' ORDER BY timestamp DESC';
+
+      if (filters?.limit) {
+        query += ' LIMIT ?';
+        params.push(filters.limit);
+      }
+
+      const rows = this.db.prepare(query).all(...params) as any[];
+
+      return rows.map(row => ({
+        id: row.id,
+        timestamp: row.timestamp,
+        operation: row.operation,
+        user: row.user,
+        context: row.context ? JSON.parse(row.context) : undefined,
+        result: row.result,
+        error: row.error,
+        hash: row.hash,
+        previous_hash: row.previous_hash,
+      }));
+    } catch (error) {
+      console.error(`[audit] Failed to query audit log: ${error}`);
+      return [];
+    }
+  }
+
+  /**
+   * Export audit logs to JSON file
+   */
+  async export(filePath: string, filters?: Parameters<typeof this.query>[0]): Promise<void> {
+    const entries = this.query(filters);
+    const exportData = {
+      exported_at: new Date().toISOString(),
+      project: this.projectSlug,
+      entries,
+    };
+
+    await fs.writeFile(filePath, JSON.stringify(exportData, null, 2), { mode: 0o600 });
+  }
+
+  /**
+   * Prune old entries based on retention policy
+   */
+  private async pruneOldEntries(): Promise<void> {
+    if (!this.db || !this.config.retentionDays) return;
+
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - this.config.retentionDays);
+      const cutoffISO = cutoffDate.toISOString();
+
+      const stmt = this.db.prepare('DELETE FROM audit WHERE timestamp < ?');
+      const result = stmt.run(cutoffISO);
+
+      if (result.changes > 0) {
+        console.error(`[audit] Pruned ${result.changes} old audit entries`);
+      }
+    } catch (error) {
+      console.error(`[audit] Failed to prune old entries: ${error}`);
+    }
+  }
+
+  /**
+   * Check if log rotation is needed
+   */
+  private async checkRotation(): Promise<void> {
+    if (!this.db || !this.config.maxLogSize) return;
+
+    try {
+      const stats = await fs.stat(this.auditPath);
+      if (stats.size < this.config.maxLogSize) {
+        return;
+      }
+
+      // Rotate log
+      await this.rotateLog();
+    } catch (error) {
+      console.error(`[audit] Failed to check rotation: ${error}`);
+    }
+  }
+
+  /**
+   * Rotate audit log database
+   */
+  private async rotateLog(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      // Close current database
+      this.db.close();
+      this.db = null;
+
+      // Create rotated filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const rotatedPath = `${this.auditPath}.${timestamp}`;
+
+      // Move current database to rotated name
+      await fs.rename(this.auditPath, rotatedPath);
+
+      // Clean up old rotated logs
+      await this.cleanupOldRotatedLogs();
+
+      // Reinitialize database
+      await this.initialize();
+
+      console.error(`[audit] Rotated audit log to ${rotatedPath}`);
+    } catch (error) {
+      console.error(`[audit] Failed to rotate log: ${error}`);
+      // Try to reinitialize even if rotation failed
+      await this.initialize();
+    }
+  }
+
+  /**
+   * Clean up old rotated logs
+   */
+  private async cleanupOldRotatedLogs(): Promise<void> {
+    try {
+      const auditDir = path.dirname(this.auditPath);
+      const files = await fs.readdir(auditDir);
+      const rotatedFiles = files
+        .filter(f => f.startsWith(path.basename(this.auditPath) + '.'))
+        .map(f => path.join(auditDir, f))
+        .sort();
+
+      // Keep only the most recent maxRotatedLogs
+      const toDelete = rotatedFiles.slice(0, -this.config.maxRotatedLogs!);
+
+      for (const file of toDelete) {
+        await fs.unlink(file);
+        console.error(`[audit] Deleted old rotated log: ${file}`);
+      }
+    } catch (error) {
+      console.error(`[audit] Failed to cleanup old rotated logs: ${error}`);
+    }
+  }
+
+  /**
+   * Verify audit log integrity (tamper evidence)
+   */
+  verifyIntegrity(): { valid: boolean; brokenAt?: string } {
+    if (!this.db) return { valid: false };
+
+    try {
+      const rows = this.db.prepare('SELECT * FROM audit ORDER BY timestamp ASC').all() as any[];
+
+      let previousHash: string | null = null;
+      for (const row of rows) {
+        const entry: Omit<AuditEntry, 'hash'> = {
+          id: row.id,
+          timestamp: row.timestamp,
+          operation: row.operation,
+          user: row.user,
+          context: row.context ? JSON.parse(row.context) : undefined,
+          result: row.result,
+          error: row.error,
+          previous_hash: row.previous_hash,
+        };
+
+        const expectedHash = this.generateHash(entry, previousHash);
+        if (expectedHash !== row.hash) {
+          return { valid: false, brokenAt: row.timestamp };
+        }
+
+        previousHash = row.hash;
+      }
+
+      return { valid: true };
+    } catch (error) {
+      console.error(`[audit] Failed to verify integrity: ${error}`);
+      return { valid: false };
+    }
+  }
+
+  /**
+   * Close the audit log database
+   */
+  close(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
+
+  /**
+   * Update configuration
+   */
+  updateConfig(config: Partial<AuditConfig>): void {
+    this.config = { ...this.config, ...config };
+    
+    if (this.config.enabled && !this.db) {
+      this.initialize();
+    } else if (!this.config.enabled && this.db) {
+      this.close();
+    }
+  }
+}
+
+/**
+ * Create an audit logger instance
+ */
+export function createAuditLogger(projectSlug: string, config?: Partial<AuditConfig>): AuditLogger {
+  return new AuditLogger(projectSlug, config);
+}

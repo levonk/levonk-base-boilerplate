@@ -1,0 +1,301 @@
+import chalk from 'chalk';
+import supportsColor from 'supports-color';
+import process from 'process';
+
+export type DeprecationStatus = 'active' | 'deprecated' | 'removed';
+
+export interface DeprecatedFeature {
+  /** Unique identifier for the deprecated feature */
+  id: string;
+  /** Human-readable name of the feature */
+  name: string;
+  /** Description of what is being deprecated */
+  description: string;
+  /** Date when deprecation was announced (ISO 8601 format) */
+  announcedDate: string;
+  /** Date when support will end (ISO 8601 format) */
+  endOfSupportDate: string;
+  /** Migration guide or alternative solution */
+  migrationPath?: string;
+  /** Additional context or notes */
+  notes?: string;
+}
+
+export interface DeprecationConfig {
+  /** Enable deprecation warnings. Default: true */
+  warnings_enabled?: boolean;
+  /** Suppress specific deprecation warnings by ID */
+  suppressed_warnings?: string[];
+  /** Custom minimum deprecation period in months. Default: 6 */
+  min_deprecation_months?: number;
+}
+
+export interface DeprecationReport {
+  /** Total number of deprecated features */
+  total: number;
+  /** Number of features still in deprecation period */
+  deprecated: number;
+  /** Number of features that have been removed */
+  removed: number;
+  /** List of all deprecated features with their status */
+  features: Array<{
+    id: string;
+    name: string;
+    status: DeprecationStatus;
+    endOfSupportDate: string;
+    daysRemaining?: number;
+  }>;
+}
+
+// Minimum deprecation period in months (6 months per ADR requirement #35)
+const MIN_DEPRECATION_MONTHS = 6;
+
+// Registry of deprecated features
+const deprecatedFeatures: Map<string, DeprecatedFeature> = new Map();
+
+/**
+ * Register a deprecated feature
+ * @param feature - The deprecated feature to register
+ * @throws Error if end-of-support date is less than minimum deprecation period
+ */
+export function registerDeprecatedFeature(feature: DeprecatedFeature): void {
+  const announced = new Date(feature.announcedDate);
+  const endOfSupport = new Date(feature.endOfSupportDate);
+  const now = new Date();
+
+  // Validate dates
+  if (isNaN(announced.getTime()) || isNaN(endOfSupport.getTime())) {
+    throw new Error(`Invalid date format for feature "${feature.id}". Use ISO 8601 format.`);
+  }
+
+  // Check minimum deprecation period
+  const minEndDate = new Date(announced);
+  minEndDate.setMonth(minEndDate.getMonth() + MIN_DEPRECATION_MONTHS);
+
+  if (endOfSupport < minEndDate) {
+    throw new Error(
+      `End-of-support date for "${feature.id}" is less than ${MIN_DEPRECATION_MONTHS} months from announcement. ` +
+      `Minimum end date: ${minEndDate.toISOString().split('T')[0]}, provided: ${feature.endOfSupportDate}`
+    );
+  }
+
+  // Check if end-of-support date is in the past
+  if (endOfSupport < now) {
+    throw new Error(
+      `End-of-support date for "${feature.id}" is in the past. Cannot register features that are already removed.`
+    );
+  }
+
+  deprecatedFeatures.set(feature.id, feature);
+}
+
+/**
+ * Get a deprecated feature by ID
+ * @param id - Feature ID
+ * @returns The deprecated feature or undefined if not found
+ */
+export function getDeprecatedFeature(id: string): DeprecatedFeature | undefined {
+  return deprecatedFeatures.get(id);
+}
+
+/**
+ * Get all deprecated features
+ * @returns Array of all deprecated features
+ */
+export function getAllDeprecatedFeatures(): DeprecatedFeature[] {
+  return Array.from(deprecatedFeatures.values());
+}
+
+/**
+ * Check if a feature is deprecated
+ * @param id - Feature ID
+ * @returns True if the feature is deprecated
+ */
+export function isDeprecated(id: string): boolean {
+  const feature = deprecatedFeatures.get(id);
+  if (!feature) return false;
+
+  const now = new Date();
+  const endOfSupport = new Date(feature.endOfSupportDate);
+  return now < endOfSupport;
+}
+
+/**
+ * Check if a feature has been removed (past end-of-support date)
+ * @param id - Feature ID
+ * @returns True if the feature has been removed
+ */
+export function isRemoved(id: string): boolean {
+  const feature = deprecatedFeatures.get(id);
+  if (!feature) return false;
+
+  const now = new Date();
+  const endOfSupport = new Date(feature.endOfSupportDate);
+  return now >= endOfSupport;
+}
+
+/**
+ * Get the status of a deprecated feature
+ * @param id - Feature ID
+ * @returns The deprecation status
+ */
+export function getDeprecationStatus(id: string): DeprecationStatus {
+  const feature = deprecatedFeatures.get(id);
+  if (!feature) return 'active';
+
+  if (isRemoved(id)) return 'removed';
+  if (isDeprecated(id)) return 'deprecated';
+  return 'active';
+}
+
+/**
+ * Calculate days remaining until end-of-support
+ * @param id - Feature ID
+ * @returns Number of days remaining, or 0 if removed
+ */
+export function getDaysRemaining(id: string): number {
+  const feature = deprecatedFeatures.get(id);
+  if (!feature) return 0;
+
+  const now = new Date();
+  const endOfSupport = new Date(feature.endOfSupportDate);
+  const diffTime = endOfSupport.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+}
+
+/**
+ * Log a deprecation warning to stderr
+ * @param id - Feature ID
+ * @param config - Deprecation configuration
+ */
+export function logDeprecationWarning(id: string, config: DeprecationConfig = {}): void {
+  const feature = deprecatedFeatures.get(id);
+  if (!feature) return;
+
+  // Check if warnings are enabled
+  if (config.warnings_enabled === false) return;
+
+  // Check if this warning is suppressed
+  if (config.suppressed_warnings?.includes(id)) return;
+
+  // Don't warn if feature is already removed
+  if (isRemoved(id)) return;
+
+  const daysRemaining = getDaysRemaining(id);
+  const useColor = shouldUseColor();
+
+  const warningColor = useColor ? chalk.yellow : (text: string) => text;
+  const boldColor = useColor ? chalk.bold : (text: string) => text;
+  const dimColor = useColor ? chalk.dim : (text: string) => text;
+
+  const warning = warningColor('⚠ DEPRECATION WARNING');
+  const featureName = boldColor(feature.name);
+  const daysText = daysRemaining === 1 ? 'day' : 'days';
+
+  let message = `${warning}: ${featureName} is deprecated and will be removed on ${feature.endOfSupportDate} `;
+  message += `(${daysRemaining} ${daysText} remaining).\n`;
+
+  if (feature.description) {
+    message += `  ${dimColor(feature.description)}\n`;
+  }
+
+  if (feature.migrationPath) {
+    message += `  ${dimColor('Migration:')} ${feature.migrationPath}\n`;
+  }
+
+  if (feature.notes) {
+    message += `  ${dimColor('Note:')} ${feature.notes}\n`;
+  }
+
+  // Always write to stderr
+  process.stderr.write(message + '\n');
+}
+
+/**
+ * Generate a deprecation report
+ * @returns Deprecation report with status of all features
+ */
+export function generateDeprecationReport(): DeprecationReport {
+  const features = getAllDeprecatedFeatures();
+  const now = new Date();
+
+  const report: DeprecationReport = {
+    total: features.length,
+    deprecated: 0,
+    removed: 0,
+    features: [],
+  };
+
+  for (const feature of features) {
+    const endOfSupport = new Date(feature.endOfSupportDate);
+    const status = getDeprecationStatus(feature.id);
+    const daysRemaining = getDaysRemaining(feature.id);
+
+    if (status === 'deprecated') {
+      report.deprecated++;
+    } else if (status === 'removed') {
+      report.removed++;
+    }
+
+    report.features.push({
+      id: feature.id,
+      name: feature.name,
+      status,
+      endOfSupportDate: feature.endOfSupportDate,
+      daysRemaining: status === 'deprecated' ? daysRemaining : undefined,
+    });
+  }
+
+  return report;
+}
+
+/**
+ * Check if legacy features are being used and log warnings
+ * @param usedFeatures - Array of feature IDs being used
+ * @param config - Deprecation configuration
+ */
+export function checkLegacyFeatures(usedFeatures: string[], config: DeprecationConfig = {}): void {
+  for (const id of usedFeatures) {
+    if (isDeprecated(id)) {
+      logDeprecationWarning(id, config);
+    } else if (isRemoved(id)) {
+      const feature = getDeprecatedFeature(id);
+      const useColor = shouldUseColor();
+      const errorColor = useColor ? chalk.red : (text: string) => text;
+      const boldColor = useColor ? chalk.bold : (text: string) => text;
+
+      const error = errorColor('✗ ERROR');
+      const featureName = boldColor(feature?.name || id);
+
+      const message = `${error}: ${featureName} was removed on ${feature?.endOfSupportDate}. ` +
+        'This feature is no longer available. Please update your code.\n';
+
+      process.stderr.write(message + '\n');
+    }
+  }
+}
+
+/**
+ * Remove a deprecated feature from the registry
+ * @param id - Feature ID
+ * @returns True if the feature was removed
+ */
+export function removeDeprecatedFeature(id: string): boolean {
+  return deprecatedFeatures.delete(id);
+}
+
+/**
+ * Clear all deprecated features (useful for testing)
+ */
+export function clearDeprecatedFeatures(): void {
+  deprecatedFeatures.clear();
+}
+
+function shouldUseColor(): boolean {
+  // NO_COLOR environment variable takes highest precedence
+  if (process.env.NO_COLOR) return false;
+
+  // Auto mode: use supports-color library for TTY detection
+  return supportsColor.stderr !== false;
+}

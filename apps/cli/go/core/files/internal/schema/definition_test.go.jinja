@@ -1,0 +1,324 @@
+package schema
+
+import (
+	"testing"
+)
+
+func TestNewSchema(t *testing.T) {
+	s := NewSchema("test-command")
+	
+	if s.CommandName != "test-command" {
+		t.Errorf("Expected command name 'test-command', got '%s'", s.CommandName)
+	}
+	
+	if len(s.Fields) != 0 {
+		t.Errorf("Expected empty fields, got %d fields", len(s.Fields))
+	}
+	
+	if s.MaxItems != 100 {
+		t.Errorf("Expected MaxItems 100, got %d", s.MaxItems)
+	}
+}
+
+func TestAddField(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "Unique identifier", true, nil)
+	
+	if len(s.Fields) != 1 {
+		t.Errorf("Expected 1 field, got %d", len(s.Fields))
+	}
+	
+	field := s.Fields[0]
+	if field.Name != "id" {
+		t.Errorf("Expected field name 'id', got '%s'", field.Name)
+	}
+	
+	if field.Type != FieldTypeString {
+		t.Errorf("Expected field type 'string', got '%s'", field.Type)
+	}
+	
+	if !field.Required {
+		t.Errorf("Expected field to be required")
+	}
+}
+
+func TestSetDefaultFields(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.AddField("description", FieldTypeString, "Description", false, nil)
+	
+	s.SetDefaultFields("id", "title", "status")
+	
+	if len(s.DefaultFields) != 3 {
+		t.Errorf("Expected 3 default fields, got %d", len(s.DefaultFields))
+	}
+	
+	expectedFields := []string{"id", "title", "status"}
+	for i, expected := range expectedFields {
+		if s.DefaultFields[i] != expected {
+			t.Errorf("Expected default field %d to be '%s', got '%s'", i, expected, s.DefaultFields[i])
+		}
+	}
+}
+
+func TestValidate(t *testing.T) {
+	t.Run("valid schema", func(t *testing.T) {
+		s := NewSchema("test-command")
+		s.AddField("id", FieldTypeString, "ID", true, nil)
+		s.AddField("title", FieldTypeString, "Title", true, nil)
+		s.AddField("status", FieldTypeString, "Status", true, nil)
+		s.SetDefaultFields("id", "title", "status")
+		
+		err := s.Validate()
+		if err != nil {
+			t.Errorf("Expected valid schema, got error: %v", err)
+		}
+	})
+	
+	t.Run("default field not in schema", func(t *testing.T) {
+		s := NewSchema("test-command")
+		s.AddField("id", FieldTypeString, "ID", true, nil)
+		s.AddField("title", FieldTypeString, "Title", true, nil)
+		s.SetDefaultFields("id", "title", "nonexistent")
+		
+		err := s.Validate()
+		if err == nil {
+			t.Error("Expected validation error for nonexistent default field")
+		}
+	})
+	
+	t.Run("too few default fields", func(t *testing.T) {
+		s := NewSchema("test-command")
+		s.AddField("id", FieldTypeString, "ID", true, nil)
+		s.AddField("title", FieldTypeString, "Title", true, nil)
+		s.SetDefaultFields("id", "title")
+		
+		err := s.Validate()
+		if err == nil {
+			t.Error("Expected validation error for too few default fields")
+		}
+	})
+	
+	t.Run("too many default fields", func(t *testing.T) {
+		s := NewSchema("test-command")
+		s.AddField("id", FieldTypeString, "ID", true, nil)
+		s.AddField("title", FieldTypeString, "Title", true, nil)
+		s.AddField("status", FieldTypeString, "Status", true, nil)
+		s.AddField("description", FieldTypeString, "Description", false, nil)
+		s.AddField("created", FieldTypeString, "Created", false, nil)
+		s.SetDefaultFields("id", "title", "status", "description", "created")
+		
+		err := s.Validate()
+		if err == nil {
+			t.Error("Expected validation error for too many default fields")
+		}
+	})
+}
+
+func TestGetField(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	
+	field, err := s.GetField("id")
+	if err != nil {
+		t.Errorf("Expected to find field 'id', got error: %v", err)
+	}
+	
+	if field.Name != "id" {
+		t.Errorf("Expected field name 'id', got '%s'", field.Name)
+	}
+	
+	_, err = s.GetField("nonexistent")
+	if err == nil {
+		t.Error("Expected error for nonexistent field")
+	}
+}
+
+func TestHasField(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	
+	if !s.HasField("id") {
+		t.Error("Expected field 'id' to exist")
+	}
+	
+	if s.HasField("nonexistent") {
+		t.Error("Expected field 'nonexistent' to not exist")
+	}
+}
+
+func TestGetFieldNames(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	
+	names := s.GetFieldNames()
+	if len(names) != 3 {
+		t.Errorf("Expected 3 field names, got %d", len(names))
+	}
+	
+	expectedNames := []string{"id", "title", "status"}
+	for i, expected := range expectedNames {
+		if names[i] != expected {
+			t.Errorf("Expected field name %d to be '%s', got '%s'", i, expected, names[i])
+		}
+	}
+}
+
+func TestApplyToMap(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.AddField("description", FieldTypeString, "Description", false, nil)
+	
+	data := map[string]interface{}{
+		"id":          "123",
+		"title":       "Test",
+		"status":      "active",
+		"description": "A test item",
+	}
+	
+	result, err := s.ApplyToMap(data, []string{"id", "title"})
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+	
+	if len(result) != 2 {
+		t.Errorf("Expected 2 fields in result, got %d", len(result))
+	}
+	
+	if result["id"] != "123" {
+		t.Errorf("Expected id '123', got '%v'", result["id"])
+	}
+	
+	if result["title"] != "Test" {
+		t.Errorf("Expected title 'Test', got '%v'", result["title"])
+	}
+	
+	if _, ok := result["status"]; ok {
+		t.Error("Expected status to not be in result")
+	}
+}
+
+func TestApplyToMapInvalidField(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	
+	data := map[string]interface{}{
+		"id": "123",
+	}
+	
+	_, err := s.ApplyToMap(data, []string{"id", "nonexistent"})
+	if err == nil {
+		t.Error("Expected error for invalid field")
+	}
+}
+
+func TestApplyDefaultToMap(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.AddField("description", FieldTypeString, "Description", false, nil)
+	s.SetDefaultFields("id", "title", "status")
+	
+	data := map[string]interface{}{
+		"id":          "123",
+		"title":       "Test",
+		"status":      "active",
+		"description": "A test item",
+	}
+	
+	result, err := s.ApplyDefaultToMap(data)
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+	
+	if len(result) != 3 {
+		t.Errorf("Expected 3 fields in result, got %d", len(result))
+	}
+	
+	if _, ok := result["description"]; ok {
+		t.Error("Expected description to not be in result")
+	}
+}
+
+func TestParseFieldNames(t *testing.T) {
+	t.Run("valid comma-separated", func(t *testing.T) {
+		fields := ParseFieldNames("id,title,status")
+		if len(fields) != 3 {
+			t.Errorf("Expected 3 fields, got %d", len(fields))
+		}
+		
+		expected := []string{"id", "title", "status"}
+		for i, exp := range expected {
+			if fields[i] != exp {
+				t.Errorf("Expected field %d to be '%s', got '%s'", i, exp, fields[i])
+			}
+		}
+	})
+	
+	t.Run("with spaces", func(t *testing.T) {
+		fields := ParseFieldNames("id, title, status")
+		if len(fields) != 3 {
+			t.Errorf("Expected 3 fields, got %d", len(fields))
+		}
+		
+		expected := []string{"id", "title", "status"}
+		for i, exp := range expected {
+			if fields[i] != exp {
+				t.Errorf("Expected field %d to be '%s', got '%s'", i, exp, fields[i])
+			}
+		}
+	})
+	
+	t.Run("empty string", func(t *testing.T) {
+		fields := ParseFieldNames("")
+		if fields != nil {
+			t.Error("Expected nil for empty string")
+		}
+	})
+	
+	t.Run("single field", func(t *testing.T) {
+		fields := ParseFieldNames("id")
+		if len(fields) != 1 {
+			t.Errorf("Expected 1 field, got %d", len(fields))
+		}
+		
+		if fields[0] != "id" {
+			t.Errorf("Expected field 'id', got '%s'", fields[0])
+		}
+	})
+}
+
+func TestValidateFieldNames(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	
+	t.Run("valid field names", func(t *testing.T) {
+		err := s.ValidateFieldNames([]string{"id", "title"})
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+	})
+	
+	t.Run("invalid field name", func(t *testing.T) {
+		err := s.ValidateFieldNames([]string{"id", "nonexistent"})
+		if err == nil {
+			t.Error("Expected error for invalid field name")
+		}
+	})
+	
+	t.Run("empty field names", func(t *testing.T) {
+		err := s.ValidateFieldNames([]string{})
+		if err != nil {
+			t.Errorf("Expected no error for empty field names, got: %v", err)
+		}
+	})
+}

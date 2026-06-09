@@ -51,7 +51,7 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
 | 05-001 | Content First No-Args | feature/current/20260708-cli-python-aix/story-05-001-content-first | 04-002 | Parallel-safe: false | [cli.py, output.py] | [x] Done |
-| 05-002 | Contextual Disclosure with Next Steps | feature/current/20260708-cli-python-aix/story-05-002-contextual-disclosure | 05-001 | Parallel-safe: false | [output.py, suggestions.py] | [~] In-Progress |
+| 05-002 | Contextual Disclosure with Next Steps | feature/current/20260708-cli-python-aix/story-05-002-contextual-disclosure | 05-001 | Parallel-safe: false | [output.py, suggestions.py] | [x] Done |
 
 ## Dependency Graph
 

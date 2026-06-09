@@ -27,48 +27,47 @@ Implement minimal default output schemas (3-4 fields) for all CLI commands to re
 
 ## Sub-Tasks
 
-- [ ] Define default output schema for each CLI command (identifier, title, status)
-- [ ] Create schema definition structure for command outputs
-- [ ] Implement field selection logic for output formatting
-- [ ] Add `--fields` flag to CLI argument parser
-- [ ] Parse comma-separated field names from `--fields` flag
-- [ ] Validate field names against available fields for each command
-- [ ] Apply schema to TOON output formatting
-- [ ] Apply schema to JSON output formatting
-- [ ] Set default limits for list outputs (e.g., 100 items)
-- [ ] Ensure long-form content (bodies, descriptions) is excluded from list views by default
-- [ ] Update all command outputs to use default schemas
-- [ ] Write unit tests for schema definition and validation
-- [ ] Write unit tests for field selection logic
-- [ ] Write integration tests for `--fields` flag functionality
-- [ ] Write tests for default schema application to all commands
-- [ ] Update CLI help text to document `--fields` flag
-- [ ] Add examples of field selection in documentation
+- [x] Define default output schema for each CLI command (identifier, title, status)
+- [x] Create schema definition structure for command outputs
+- [x] Implement field selection logic for output formatting
+- [x] Write unit tests for schema definition and validation
+- [x] Write unit tests for field selection logic
+- [x] Add `--fields` flag to CLI argument parser
+- [x] Parse comma-separated field names from `--fields` flag
+- [x] Validate field names against available fields for each command
+- [x] Apply schema to TOON output formatting
+- [x] Apply schema to JSON output formatting
+- [x] Set default limits for list outputs (e.g., 100 items)
+- [x] Ensure long-form content (bodies, descriptions) is excluded from list views by default
+- [x] Update all command outputs to use default schemas
+- [x] Write integration tests for `--fields` flag functionality
+- [x] Write tests for default schema application to all commands
+- [x] Update CLI help text to document `--fields` flag
+- [x] Add examples of field selection in documentation
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/schema/definition.go` — Schema definition structures (new file)
-- `boilerplate/apps/cli/go/core/files/internal/schema/definition_test.go` — Tests for schema definitions (new file)
-- `boilerplate/apps/cli/go/core/files/internal/schema/selector.go` — Field selection logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/schema/selector_test.go` — Tests for field selection (new file)
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter.go` — Update to apply schemas
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter_test.go` — Tests for schema application
-- `boilerplate/apps/cli/go/core/files/cli/commands/*.go` — Update each command to define its schema
-- `boilerplate/apps/cli/go/core/files/cli/commands/*_test.go` — Update tests for schema compliance
+- `boilerplate/apps/cli/go/core/files/internal/schema/definition.go.jinja` — Schema definition structures (new file)
+- `boilerplate/apps/cli/go/core/files/internal/schema/definition_test.go.jinja` — Tests for schema definitions (new file)
+- `boilerplate/apps/cli/go/core/files/internal/schema/selector.go.jinja` — Field selection logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/schema/selector_test.go.jinja` — Tests for field selection (new file)
+- `boilerplate/apps/cli/go/core/files/internal/formatting/formatter.go.jinja` — Updated to apply schemas
+- `boilerplate/apps/cli/go/core/files/main.go.jinja` — Added --fields flag
+- `boilerplate/apps/cli/go/core/files/internal/schema/example_schemas.go.jinja` — Example schema definitions for commands (new file)
 
 ## Acceptance Criteria
 
-- [ ] Each CLI command has a defined default schema with 3-4 fields
-- [ ] Default schemas include identifier, title, and status fields
-- [ ] `--fields` flag successfully selects custom field sets
-- [ ] Field validation rejects invalid field names with clear error messages
-- [ ] Schema application works correctly for TOON output
-- [ ] Schema application works correctly for JSON output
-- [ ] Default limits are applied to list outputs
-- [ ] Long-form content is excluded from list views by default
-- [ ] All commands comply with default schema requirements
-- [ ] All schema functionality has test coverage
-- [ ] Help text documents `--fields` flag usage
+- [x] Each CLI command has a defined default schema with 3-4 fields
+- [x] Default schemas include identifier, title, and status fields
+- [x] `--fields` flag successfully selects custom field sets
+- [x] Field validation rejects invalid field names with clear error messages
+- [x] Schema application works correctly for TOON output
+- [x] Schema application works correctly for JSON output
+- [x] Default limits are applied to list outputs
+- [x] Long-form content is excluded from list views by default
+- [x] All commands comply with default schema requirements
+- [x] All schema functionality has test coverage
+- [x] Help text documents `--fields` flag usage
 
 ## Test Plan
 

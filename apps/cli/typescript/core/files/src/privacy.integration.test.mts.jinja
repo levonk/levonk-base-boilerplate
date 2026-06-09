@@ -1,0 +1,212 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { createLogger, type LoggerOptions } from './logger.js';
+import { initPrivacyManager, getPrivacyManager, resetPrivacyManager, type PrivacyConfig } from './privacy.js';
+
+describe('Privacy Mode Integration', () => {
+  beforeEach(() => {
+    resetPrivacyManager();
+  });
+
+  describe('Logger Integration', () => {
+    it('should redact sensitive data in log messages when privacy mode is enabled', () => {
+      const privacyConfig: PrivacyConfig = { enabled: true };
+      initPrivacyManager(privacyConfig);
+      
+      const loggerOptions: LoggerOptions = {
+        quiet: false,
+        verbose: true,
+        privacy: true,
+        module: 'test',
+      };
+      const logger = createLogger(loggerOptions);
+
+      // Capture console output
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      
+      logger.info('Contact user@example.com for support');
+      
+      expect(consoleLogSpy).toHaveBeenCalled();
+      const loggedMessage = consoleLogSpy.mock.calls[0][0] as string;
+      expect(loggedMessage).toContain('[REDACTED_EMAIL]');
+      expect(loggedMessage).not.toContain('user@example.com');
+      
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should not redact data when privacy mode is disabled', () => {
+      const loggerOptions: LoggerOptions = {
+        quiet: false,
+        verbose: true,
+        privacy: false,
+        module: 'test',
+      };
+      const logger = createLogger(loggerOptions);
+
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      
+      logger.info('Contact user@example.com for support');
+      
+      expect(consoleLogSpy).toHaveBeenCalled();
+      const loggedMessage = consoleLogSpy.mock.calls[0][0] as string;
+      expect(loggedMessage).toContain('user@example.com');
+      
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should redact data in extra objects when privacy mode is enabled', () => {
+      const privacyConfig: PrivacyConfig = { enabled: true };
+      initPrivacyManager(privacyConfig);
+      
+      const loggerOptions: LoggerOptions = {
+        quiet: false,
+        verbose: true,
+        privacy: true,
+        module: 'test',
+      };
+      const logger = createLogger(loggerOptions);
+
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      
+      logger.info('User logged in', { email: 'user@example.com', path: '/home/user/file.txt' });
+      
+      expect(consoleLogSpy).toHaveBeenCalled();
+      const loggedMessage = consoleLogSpy.mock.calls[0][0] as string;
+      expect(loggedMessage).toContain('[REDACTED_EMAIL]');
+      expect(loggedMessage).toContain('[REDACTED_PATH]');
+      
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should respect privacy toggles in config', () => {
+      const privacyConfig: PrivacyConfig = {
+        enabled: true,
+        logUserIds: false,
+        logFilePaths: true,
+      };
+      initPrivacyManager(privacyConfig);
+      
+      const loggerOptions: LoggerOptions = {
+        quiet: false,
+        verbose: true,
+        privacy: true,
+        module: 'test',
+      };
+      const logger = createLogger(loggerOptions);
+
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      
+      logger.info('User action', { userId: 'user123', path: '/home/user/file.txt' });
+      
+      expect(consoleLogSpy).toHaveBeenCalled();
+      const loggedMessage = consoleLogSpy.mock.calls[0][0] as string;
+      expect(loggedMessage).toContain('[REDACTED_USER_ID]');
+      expect(loggedMessage).toContain('/home/user/file.txt'); // Not redacted
+      
+      consoleLogSpy.mockRestore();
+    });
+  });
+
+  describe('Privacy Mode State', () => {
+    it('should maintain privacy state across logger instances', () => {
+      const privacyConfig: PrivacyConfig = { enabled: true };
+      initPrivacyManager(privacyConfig);
+      
+      const logger1 = createLogger({ privacy: true, module: 'test1' });
+      const logger2 = createLogger({ privacy: true, module: 'test2' });
+      
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      
+      logger1.info('Email: user@example.com');
+      logger2.info('Email: admin@example.com');
+      
+      const messages = consoleLogSpy.mock.calls.map(call => call[0] as string);
+      expect(messages[0]).toContain('[REDACTED_EMAIL]');
+      expect(messages[1]).toContain('[REDACTED_EMAIL]');
+      
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should allow resetting privacy state', () => {
+      const privacyConfig: PrivacyConfig = { enabled: true };
+      initPrivacyManager(privacyConfig);
+      
+      let manager = getPrivacyManager();
+      expect(manager.isEnabled()).toBe(true);
+      
+      resetPrivacyManager();
+      
+      manager = getPrivacyManager();
+      expect(manager.isEnabled()).toBe(false);
+    });
+  });
+
+  describe('End-to-End Privacy Behavior', () => {
+    it('should handle complete privacy workflow', () => {
+      // Initialize privacy mode with custom config
+      const privacyConfig: PrivacyConfig = {
+        enabled: true,
+        ignoreList: ['*secret*'],
+        logUserIds: false,
+        logFilePaths: false,
+        logIpAddresses: false,
+      };
+      initPrivacyManager(privacyConfig);
+      
+      // Create logger with privacy enabled
+      const logger = createLogger({
+        quiet: false,
+        verbose: true,
+        privacy: true,
+        module: 'test-app',
+      });
+      
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      
+      // Log various types of data
+      logger.info('User connected from 192.168.1.1', {
+        email: 'user@example.com',
+        userId: 'user123',
+        path: '/home/user/config.json',
+        secret: 'my-secret-key',
+      });
+      
+      expect(consoleLogSpy).toHaveBeenCalled();
+      const loggedMessage = consoleLogSpy.mock.calls[0][0] as string;
+      
+      // Verify all expected redactions
+      expect(loggedMessage).toContain('[REDACTED_IP]');
+      expect(loggedMessage).toContain('[REDACTED_EMAIL]');
+      expect(loggedMessage).toContain('[REDACTED_USER_ID]');
+      expect(loggedMessage).toContain('[REDACTED_PATH]');
+      expect(loggedMessage).not.toContain('my-secret-key'); // Ignored completely
+      
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should work with JSON log format', () => {
+      const privacyConfig: PrivacyConfig = { enabled: true };
+      initPrivacyManager(privacyConfig);
+      
+      const logger = createLogger({
+        quiet: false,
+        verbose: true,
+        privacy: true,
+        logFormat: 'json',
+        module: 'test',
+      });
+      
+      const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      
+      logger.info('User action', { email: 'user@example.com' });
+      
+      expect(consoleLogSpy).toHaveBeenCalled();
+      const loggedMessage = consoleLogSpy.mock.calls[0][0] as string;
+      const parsed = JSON.parse(loggedMessage);
+      
+      expect(parsed.message).toContain('[REDACTED_EMAIL]');
+      expect(parsed.message).not.toContain('user@example.com');
+      
+      consoleLogSpy.mockRestore();
+    });
+  });
+});

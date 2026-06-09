@@ -1,0 +1,255 @@
+package schema
+
+import (
+	"testing"
+)
+
+func TestGetRootCommandSchema(t *testing.T) {
+	s := GetRootCommandSchema()
+	
+	if s.CommandName != "root" {
+		t.Errorf("Expected command name 'root', got '%s'", s.CommandName)
+	}
+	
+	if len(s.DefaultFields) != 3 {
+		t.Errorf("Expected 3 default fields, got %d", len(s.DefaultFields))
+	}
+	
+	// Verify default fields don't include long-form content
+	for _, field := range s.DefaultFields {
+		if field == "body" || field == "description" || field == "content" {
+			t.Errorf("Default fields should not include long-form content, got '%s'", field)
+		}
+	}
+	
+	// Validate schema
+	if err := s.Validate(); err != nil {
+		t.Errorf("Schema validation failed: %v", err)
+	}
+}
+
+func TestGetListCommandSchema(t *testing.T) {
+	s := GetListCommandSchema()
+	
+	if s.CommandName != "list" {
+		t.Errorf("Expected command name 'list', got '%s'", s.CommandName)
+	}
+	
+	if len(s.DefaultFields) != 3 {
+		t.Errorf("Expected 3 default fields, got %d", len(s.DefaultFields))
+	}
+	
+	// Verify default fields don't include long-form content
+	for _, field := range s.DefaultFields {
+		if field == "body" || field == "description" || field == "content" {
+			t.Errorf("Default fields should not include long-form content, got '%s'", field)
+		}
+	}
+	
+	// Verify that description and body fields exist but are not in defaults
+	if !s.HasField("description") {
+		t.Error("Expected schema to have 'description' field")
+	}
+	
+	if !s.HasField("body") {
+		t.Error("Expected schema to have 'body' field")
+	}
+	
+	// Validate schema
+	if err := s.Validate(); err != nil {
+		t.Errorf("Schema validation failed: %v", err)
+	}
+}
+
+func TestGetStatusCommandSchema(t *testing.T) {
+	s := GetStatusCommandSchema()
+	
+	if s.CommandName != "status" {
+		t.Errorf("Expected command name 'status', got '%s'", s.CommandName)
+	}
+	
+	if len(s.DefaultFields) != 3 {
+		t.Errorf("Expected 3 default fields, got %d", len(s.DefaultFields))
+	}
+	
+	// Validate schema
+	if err := s.Validate(); err != nil {
+		t.Errorf("Schema validation failed: %v", err)
+	}
+}
+
+func TestGetAuditCommandSchema(t *testing.T) {
+	s := GetAuditCommandSchema()
+	
+	if s.CommandName != "audit" {
+		t.Errorf("Expected command name 'audit', got '%s'", s.CommandName)
+	}
+	
+	if len(s.DefaultFields) != 3 {
+		t.Errorf("Expected 3 default fields, got %d", len(s.DefaultFields))
+	}
+	
+	// Verify that details field exists but is not in defaults
+	if !s.HasField("details") {
+		t.Error("Expected schema to have 'details' field")
+	}
+	
+	// Validate schema
+	if err := s.Validate(); err != nil {
+		t.Errorf("Schema validation failed: %v", err)
+	}
+}
+
+func TestSchemaRegistry(t *testing.T) {
+	registry := NewSchemaRegistry()
+	
+	t.Run("register and retrieve schema", func(t *testing.T) {
+		customSchema := NewSchema("custom")
+		customSchema.AddField("id", FieldTypeString, "ID", true, nil)
+		customSchema.SetDefaultFields("id")
+		
+		registry.Register("custom", customSchema)
+		
+		retrieved, err := registry.Get("custom")
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+		
+		if retrieved.CommandName != "custom" {
+			t.Errorf("Expected command name 'custom', got '%s'", retrieved.CommandName)
+		}
+	})
+	
+	t.Run("retrieve non-existent schema", func(t *testing.T) {
+		_, err := registry.Get("nonexistent")
+		if err == nil {
+			t.Error("Expected error for non-existent schema")
+		}
+	})
+	
+	t.Run("check if schema exists", func(t *testing.T) {
+		if !registry.Has("root") {
+			t.Error("Expected registry to have 'root' schema")
+		}
+		
+		if registry.Has("nonexistent") {
+			t.Error("Expected registry to not have 'nonexistent' schema")
+		}
+	})
+	
+	t.Run("default schemas are registered", func(t *testing.T) {
+		expectedSchemas := []string{"root", "list", "status", "audit"}
+		
+		for _, schemaName := range expectedSchemas {
+			if !registry.Has(schemaName) {
+				t.Errorf("Expected registry to have '%s' schema", schemaName)
+			}
+		}
+	})
+}
+
+func TestAllSchemasHaveValidDefaults(t *testing.T) {
+	registry := NewSchemaRegistry()
+	
+	schemaNames := []string{"root", "list", "status", "audit"}
+	
+	for _, schemaName := range schemaNames {
+		t.Run(schemaName, func(t *testing.T) {
+			s, err := registry.Get(schemaName)
+			if err != nil {
+				t.Fatalf("Failed to get schema '%s': %v", schemaName, err)
+			}
+			
+			// Check default fields count
+			if len(s.DefaultFields) < 3 || len(s.DefaultFields) > 4 {
+				t.Errorf("Schema '%s' should have 3-4 default fields, got %d", schemaName, len(s.DefaultFields))
+			}
+			
+			// Check that default fields don't include long-form content
+			longFormFields := []string{"body", "description", "content", "details"}
+			for _, field := range s.DefaultFields {
+				for _, longForm := range longFormFields {
+					if field == longForm {
+						t.Errorf("Schema '%s' default fields should not include long-form field '%s'", schemaName, field)
+					}
+				}
+			}
+			
+			// Validate schema
+			if err := s.Validate(); err != nil {
+				t.Errorf("Schema '%s' validation failed: %v", schemaName, err)
+			}
+		})
+	}
+}
+
+func TestSchemaFieldApplication(t *testing.T) {
+	t.Run("list schema excludes description by default", func(t *testing.T) {
+		s := GetListCommandSchema()
+		selector := NewSelector(s)
+		
+		data := map[string]interface{}{
+			"id":          "123",
+			"name":        "Test Item",
+			"status":      "active",
+			"created":     "2024-01-01",
+			"description": "This is a long description that should be excluded",
+			"body":        "This is a long body that should be excluded",
+		}
+		
+		result, err := selector.Apply(data)
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		
+		// Check that description and body are not in result
+		if _, ok := result["description"]; ok {
+			t.Error("Expected description to be excluded from result")
+		}
+		
+		if _, ok := result["body"]; ok {
+			t.Error("Expected body to be excluded from result")
+		}
+		
+		// Check that default fields are in result
+		if _, ok := result["id"]; !ok {
+			t.Error("Expected id to be in result")
+		}
+		
+		if _, ok := result["name"]; !ok {
+			t.Error("Expected name to be in result")
+		}
+		
+		if _, ok := result["status"]; !ok {
+			t.Error("Expected status to be in result")
+		}
+	})
+	
+	t.Run("list schema can include description with custom fields", func(t *testing.T) {
+		s := GetListCommandSchema()
+		selector := NewSelector(s)
+		selector.WithFields([]string{"id", "name", "description"})
+		
+		data := map[string]interface{}{
+			"id":          "123",
+			"name":        "Test Item",
+			"status":      "active",
+			"description": "This is a long description",
+		}
+		
+		result, err := selector.Apply(data)
+		if err != nil {
+			t.Fatalf("Expected no error, got: %v", err)
+		}
+		
+		// Check that description is in result
+		if _, ok := result["description"]; !ok {
+			t.Error("Expected description to be in result with custom fields")
+		}
+		
+		// Check that status is not in result
+		if _, ok := result["status"]; ok {
+			t.Error("Expected status to be excluded from result with custom fields")
+		}
+	})
+}

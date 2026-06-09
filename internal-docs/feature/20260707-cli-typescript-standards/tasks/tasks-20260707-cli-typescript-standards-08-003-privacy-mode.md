@@ -27,47 +27,49 @@ Add privacy mode for anonymous usage. Ensure no sensitive data is included in te
 
 ## Sub-Tasks
 
-- [~] Add `--privacy` flag to index.ts
-- [ ] Implement privacy mode logic
-- [ ] Add sensitive data detection
-- [ ] Implement data redaction in logs
-- [ ] Implement data redaction in telemetry
-- [ ] Add privacy mode config option
-- [ ] Add explicit ignore lists (identifiers to never log or process)
-- [ ] Distinguish between "unknown" (logged but not assigned) and "anonymous" (ignored entirely)
-- [ ] Add configurable privacy toggles to disable specific data collection
-- [ ] Update logging to respect privacy mode
-- [ ] Add privacy policy documentation
-- [ ] Add unit tests for privacy mode
-- [ ] Add unit tests for data redaction
-- [ ] Add unit tests for ignore lists
-- [ ] Add unit tests for unknown vs anonymous distinction
-- [ ] Add integration tests for privacy behavior
-- [ ] Update help text to document privacy mode
-- [ ] Add privacy mode logging
+- [x] Add `--privacy` flag to index.ts
+- [x] Implement privacy mode logic
+- [x] Add sensitive data detection
+- [x] Implement data redaction in logs
+- [x] Implement data redaction in telemetry
+- [x] Add privacy mode config option
+- [x] Add explicit ignore lists (identifiers to never log or process)
+- [x] Distinguish between "unknown" (logged but not assigned) and "anonymous" (ignored entirely)
+- [x] Add configurable privacy toggles to disable specific data collection
+- [x] Update logging to respect privacy mode
+- [x] Add privacy policy documentation
+- [x] Add unit tests for privacy mode
+- [x] Add unit tests for data redaction
+- [x] Add unit tests for ignore lists
+- [x] Add unit tests for unknown vs anonymous distinction
+- [x] Add integration tests for privacy behavior
+- [x] Update help text to document privacy mode
+- [x] Add privacy mode logging
 
 ## Relevant Files
 
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with privacy flag
 - `apps/cli/typescript/core/files/src/logger.ts.jinja` - Logger with privacy mode
 - `apps/cli/typescript/core/files/src/config.ts.jinja` - Config with privacy option
-- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for privacy
-- `apps/cli/typescript/core/files/PRIVACY.md.jinja` - Privacy policy documentation (to be created)
+- `apps/cli/typescript/core/files/src/privacy.ts.jinja` - Privacy mode implementation
+- `apps/cli/typescript/core/files/src/privacy.test.mts.jinja` - Unit tests for privacy mode
+- `apps/cli/typescript/core/files/src/privacy.integration.test.mts.jinja` - Integration tests for privacy behavior
+- `apps/cli/typescript/core/files/PRIVACY.md.jinja` - Privacy policy documentation
 
 ## Acceptance Criteria
 
-- [ ] `--privacy` flag enables privacy mode
-- [ ] Privacy mode can be set in config
-- [ ] Sensitive data is detected correctly
-- [ ] Sensitive data is redacted from logs
-- [ ] Sensitive data is redacted from telemetry
-- [ ] Privacy policy is documented
-- [ ] Data collection policies are clear
-- [ ] Privacy mode is logged in debug mode
-- [ ] Privacy mode works across all features
-- [ ] Ignore lists work correctly (identifiers never logged or processed)
-- [ ] Unknown vs anonymous distinction works correctly
-- [ ] Configurable privacy toggles disable specific data collection
+- [x] `--privacy` flag enables privacy mode
+- [x] Privacy mode can be set in config
+- [x] Sensitive data is detected correctly
+- [x] Sensitive data is redacted from logs
+- [x] Sensitive data is redacted from telemetry
+- [x] Privacy policy is documented
+- [x] Data collection policies are clear
+- [x] Privacy mode is logged in debug mode
+- [x] Privacy mode works across all features
+- [x] Ignore lists work correctly (identifiers never logged or processed)
+- [x] Unknown vs anonymous distinction works correctly
+- [x] Configurable privacy toggles disable specific data collection
 
 ## Test Plan
 

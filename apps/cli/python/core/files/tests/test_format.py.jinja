@@ -198,14 +198,18 @@ class TestFormatIntegration:
         assert "count" in output
 
     def test_empty_data(self):
-        """Test formatting empty data."""
+        """Test formatting empty data with aggregated empty state schema."""
         formatter = OutputFormatter(mode=Mode.AGENT)
 
         output = formatter.format_output([])
-        assert output.strip() == "[]"
+        # Empty data should have aggregated schema with count and context
+        assert "count:0" in output
+        assert "success:true" in output
 
         output = formatter.format_output({})
-        assert output.strip() == "{}"
+        # Empty dict should have aggregated schema
+        assert "count:0" in output
+        assert "success:true" in output
 
     def test_null_values(self):
         """Test formatting null values."""

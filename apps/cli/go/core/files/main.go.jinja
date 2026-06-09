@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/viper"
 
 	"{{ project_slug }}/internal/formatting"
+	"{{ project_slug }}/internal/schema"
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 	jsonOutput bool
 	toonFlag bool
 	formatFlag string
+	fieldsFlag string
 	quiet bool
 	verbose bool
 	debug bool
@@ -107,6 +109,24 @@ Output Format Selection:
     - Optimized for token efficiency in LLM prompts
     - Human-readable while being machine-parseable
     - See https://toonformat.dev for specification
+
+Field Selection:
+  The CLI supports field selection to control which fields are included in output:
+
+  Field Selection Options:
+    --fields=id,title,status  Comma-separated list of fields to include
+                              If not specified, uses schema defaults (3-4 fields)
+                              Long-form content (body, description) excluded by default
+
+  Field Selection Examples:
+    --fields=id,title,status      Include only id, title, and status fields
+    --fields=id,description      Include id and description (explicit long-form)
+    --fields=all                 Include all available fields (if supported)
+
+  Benefits:
+    - Reduces token consumption in agent mode
+    - Allows agents to request specific fields when needed
+    - Improves readability by excluding verbose fields
 
 Examples:
   {{ project_slug }} file.txt
@@ -543,6 +563,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
 	rootCmd.PersistentFlags().BoolVar(&toonFlag, "toon", false, "Output results in TOON format (token-efficient)")
 	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "", "Output format: toon, json, human (default: auto-detect based on mode)")
+	rootCmd.PersistentFlags().StringVar(&fieldsFlag, "fields", "", "Comma-separated list of fields to include in output (default: schema defaults)")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging with stack traces")

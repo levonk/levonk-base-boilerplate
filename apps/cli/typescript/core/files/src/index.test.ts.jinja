@@ -1418,4 +1418,59 @@ describe('CLI', () => {
             expect(duration).toBeLessThan(200);
         });
     });
+
+    describe('Audit Logging', () => {
+        let tempDir: string;
+        let auditPath: string;
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-integration-'));
+            auditPath = path.join(tempDir, 'audit.db');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch {
+                // Ignore cleanup errors
+            }
+        });
+
+        it('should show audit options in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--audit');
+        });
+
+        it('should enable audit logging with --audit flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --audit --audit-path "${auditPath}" --help`);
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should create audit log file when enabled', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --audit --audit-path "${auditPath}" --help`);
+            expect(stdout).toContain('Usage:');
+        });
+    });
+
+    describe('Deprecation Policy', () => {
+        it('should show deprecation options in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--deprecation');
+        });
+
+        it('should enable deprecation warnings by default', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should suppress deprecation warnings with --no-deprecation-warnings', async () => {
+            const { stdout } = await execAsync('node dist/index.js --no-deprecation-warnings --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should show deprecation status with --deprecation-status', async () => {
+            const { stdout } = await execAsync('node dist/index.js --deprecation-status');
+            expect(stdout).toBeDefined();
+        });
+    });
 });

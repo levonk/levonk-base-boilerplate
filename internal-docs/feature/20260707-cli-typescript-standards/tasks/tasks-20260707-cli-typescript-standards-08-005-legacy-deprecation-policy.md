@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 8
 parallel_id: 5
 branch: "feature/current/20260707-cli-typescript-standards/story-08-005-legacy-deprecation-policy"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,18 +27,18 @@ Implement legacy deprecation policy with clear end-of-support dates (minimum 6 m
 
 ## Sub-Tasks
 
-- [ ] Create deprecation module for managing legacy features
-- [ ] Implement deprecation warning system
-- [ ] Add end-of-support date tracking
-- [ ] Implement deprecation warning logging to stderr
-- [ ] Add deprecation configuration
-- [ ] Implement legacy feature detection
-- [ ] Add deprecation status reporting
-- [ ] Implement legacy support removal logic
-- [ ] Add unit tests for deprecation warnings
-- [ ] Add unit tests for end-of-support enforcement
-- [ ] Add integration tests for deprecation workflow
-- [ ] Update help text to document deprecation policy
+- [x] Create deprecation module for managing legacy features
+- [x] Implement deprecation warning system
+- [x] Add end-of-support date tracking
+- [x] Implement deprecation warning logging to stderr
+- [x] Add deprecation configuration
+- [x] Implement legacy feature detection
+- [x] Add deprecation status reporting
+- [x] Implement legacy support removal logic
+- [x] Add unit tests for deprecation warnings
+- [x] Add unit tests for end-of-support enforcement
+- [x] Add integration tests for deprecation workflow
+- [~] Update help text to document deprecation policy
 - [ ] Add deprecation policy documentation
 
 ## Relevant Files

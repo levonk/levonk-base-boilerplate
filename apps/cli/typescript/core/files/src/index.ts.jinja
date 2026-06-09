@@ -101,6 +101,14 @@ import {
     getPrivacyManager,
     type PrivacyConfig,
 } from './privacy.js';
+import {
+    createAuditLogger,
+    type AuditConfig,
+} from './audit.js';
+import {
+    generateDeprecationReport,
+    type DeprecationConfig,
+} from './deprecation.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
@@ -112,6 +120,7 @@ process.on('SIGINT', () => {
 let currentConfigOptions: ConfigOptions | null = null;
 let currentCliArgs: Partial<Config> | null = null;
 let currentLogger: any = null;
+let currentAuditLogger: any = null;
 
 /**
  * Handle SIGHUP signal for config reload
@@ -193,6 +202,8 @@ program
   .addHelpText('after', '\nCollection vs Processing Separation:\n  --export-data <path>     Export collected daemon data to portable format\n  --import-data <path>     Import data for offline analysis (no daemon required)\n  --analyze <type>         Analyze imported data: summary, performance, errors, timeline\n  --analyze-input <path>   Input file for analysis (use with --analyze)\n  Data export works with daemon; import/analysis work offline\n  Export format is JSON with versioning for compatibility')
   .addHelpText('after', '\nHealth Checks:\n  --health               Perform health check for container orchestration\n                        Returns JSON with service status, readiness, and dependency health\n                        Exit code 0 for healthy, 1 for unhealthy\n                        Supports Docker HEALTHCHECK and Kubernetes probes')
   .addHelpText('after', '\nPrivacy Mode:\n  --privacy             Enable privacy mode for anonymous usage\n                        Redacts sensitive data from logs and telemetry\n                        Uses explicit ignore lists for identifiers\n                        Distinguishes between "unknown" and "anonymous" data\n                        Configurable privacy toggles disable specific data collection\n                        Environment Variables:\n  PRIVACY_MODE           Set to "true" or "1" to enable privacy mode')
+  .addHelpText('after', '\nAudit Logging:\n  --audit               Enable audit logging for sensitive operations\n                        Logs configuration changes, file operations, and other sensitive actions\n                        Uses append-only SQLite database for tamper-evident storage\n                        Supports configurable retention policy and log rotation\n                        Audit logs can be exported for external analysis\n  --audit-path <path>   Custom path for audit log database\n                        Default: ~/.local/share/{{ project_slug }}/audit.db\n  --audit-retention <days>  Retention period in days (default: 90)\n  --audit-export <path> Export audit logs to JSON file\n  --audit-verify        Verify audit log integrity (tamper evidence)')
+  .addHelpText('after', '\nDeprecation Policy:\n  --deprecation-status  Show status of all deprecated features\n                        Lists deprecated features with end-of-support dates and remaining time\n  --no-deprecation-warnings  Suppress deprecation warnings\n                        Disables warnings for deprecated features still in use\n                        Minimum deprecation period: 6 months from announcement\n                        Features are removed only after end-of-support date\n                        Environment Variables:\n  DEPRECATION_WARNINGS  Set to "false" or "0" to suppress deprecation warnings')
   .option('--dry-run', 'Preview changes without executing them')
   .option('--interactive, --tui', 'Launch interactive Terminal User Interface')
   .option('--daemon', 'Pre-launch daemon in background')
@@ -217,6 +228,13 @@ program
   .option('--health-timeout <ms>', 'Health check timeout in milliseconds (default: 100)', '100')
   .option('--health-include-deps', 'Include dependency checks in health check')
   .option('--privacy', 'Enable privacy mode for anonymous usage')
+  .option('--audit', 'Enable audit logging for sensitive operations')
+  .option('--audit-path <path>', 'Custom path for audit log database')
+  .option('--audit-retention <days>', 'Retention period in days (default: 90)', '90')
+  .option('--audit-export <path>', 'Export audit logs to JSON file')
+  .option('--audit-verify', 'Verify audit log integrity')
+  .option('--deprecation-status', 'Show status of all deprecated features')
+  .option('--no-deprecation-warnings', 'Suppress deprecation warnings')
   .action(async (inputs: string[], options) => {
       try {
           // Suppress console output immediately for quiet and json modes
@@ -576,6 +594,75 @@ program
 
           // Store logger globally for SIGHUP config reload
           currentLogger = logger;
+
+          // Initialize audit logger if enabled
+          let auditLogger: ReturnType<typeof createAuditLogger> | null = null;
+          if (options.audit) {
+              const auditConfig: AuditConfig = {
+                  enabled: true,
+                  auditPath: options.auditPath,
+                  retentionDays: parseInt(options.auditRetention as string, 10) || 90,
+                  sensitiveOperations: [
+                      'config_change',
+                      'config_reload',
+                      'file_write',
+                      'file_delete',
+                      'secret_access',
+                      'secret_write',
+                      'install',
+                      'uninstall',
+                      'daemon_start',
+                      'daemon_stop',
+                  ],
+              };
+              auditLogger = createAuditLogger('{{ project_slug }}', auditConfig);
+              currentAuditLogger = auditLogger;
+              logger.debug('Audit logging enabled');
+          }
+
+          // Handle --audit-verify flag
+          if (options.auditVerify) {
+              if (!auditLogger) {
+                  // Initialize audit logger temporarily for verification
+                  const auditConfig: AuditConfig = {
+                      enabled: true,
+                      auditPath: options.auditPath,
+                      retentionDays: parseInt(options.auditRetention as string, 10) || 90,
+                      sensitiveOperations: [],
+                  };
+                  auditLogger = createAuditLogger('{{ project_slug }}', auditConfig);
+              }
+              const integrity = auditLogger.verifyIntegrity();
+              if (integrity.valid) {
+                  logger.info('Audit log integrity verified: OK');
+                  process.exit(EXIT_CODES.SUCCESS);
+              } else {
+                  logger.error(`Audit log integrity check FAILED at ${integrity.brokenAt}`);
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
+          }
+
+          // Handle --audit-export flag
+          if (options.auditExport) {
+              if (!auditLogger) {
+                  // Initialize audit logger temporarily for export
+                  const auditConfig: AuditConfig = {
+                      enabled: true,
+                      auditPath: options.auditPath,
+                      retentionDays: parseInt(options.auditRetention as string, 10) || 90,
+                      sensitiveOperations: [],
+                  };
+                  auditLogger = createAuditLogger('{{ project_slug }}', auditConfig);
+              }
+              try {
+                  await auditLogger.export(options.auditExport);
+                  logger.info(`Audit logs exported to ${options.auditExport}`);
+                  process.exit(EXIT_CODES.SUCCESS);
+              } catch (error) {
+                  logger.error(`Failed to export audit logs: ${error}`);
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
+          }
 
           // Handle resource limits
           const resourceLimits: ResourceLimits = {};

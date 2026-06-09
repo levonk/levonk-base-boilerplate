@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"{{ project_slug }}/internal/schema"
 	"{{ project_slug }}/internal/toon"
 )
 
@@ -25,6 +26,8 @@ type Formatter struct {
 	toonFlag      bool
 	formatFlag    string
 	jsonOutput    bool
+	schema        *schema.Schema
+	fieldSelector *schema.Selector
 }
 
 // Mode represents the CLI operation mode
@@ -45,6 +48,21 @@ func NewFormatter(mode Mode, toonFlag bool, formatFlag string, jsonOutput bool) 
 		formatFlag: formatFlag,
 		jsonOutput: jsonOutput,
 	}
+}
+
+// WithSchema sets the schema for field selection
+func (f *Formatter) WithSchema(s *schema.Schema) *Formatter {
+	f.schema = s
+	f.fieldSelector = schema.NewSelector(s)
+	return f
+}
+
+// WithFields sets custom field selection
+func (f *Formatter) WithFields(fieldNames []string) *Formatter {
+	if f.fieldSelector != nil {
+		f.fieldSelector.WithFields(fieldNames)
+	}
+	return f
 }
 
 // DetermineFormat determines the output format based on mode and flags
@@ -103,6 +121,33 @@ func (f *Formatter) FormatValue(v interface{}) (string, error) {
 
 // formatTOON formats a value as TOON
 func (f *Formatter) formatTOON(v interface{}) (string, error) {
+	// Apply schema field selection and limits if configured
+	if f.fieldSelector != nil {
+		switch val := v.(type) {
+		case map[string]interface{}:
+			filtered, err := f.fieldSelector.Apply(val)
+			if err != nil {
+				return "", err
+			}
+			v = filtered
+		case []map[string]interface{}:
+			// Apply limit if schema is configured
+			if f.schema != nil {
+				filtered, err := f.fieldSelector.ApplyWithLimit(val, f.schema.MaxItems)
+				if err != nil {
+					return "", err
+				}
+				v = filtered
+			} else {
+				filtered, err := f.fieldSelector.ApplyToSlice(val)
+				if err != nil {
+					return "", err
+				}
+				v = filtered
+			}
+		}
+	}
+
 	// Convert the value to a TOON Value
 	toonValue, err := f.convertToTOON(v)
 	if err != nil {
@@ -116,6 +161,24 @@ func (f *Formatter) formatTOON(v interface{}) (string, error) {
 
 // formatJSON formats a value as JSON
 func (f *Formatter) formatJSON(v interface{}) (string, error) {
+	// Apply schema field selection if configured
+	if f.fieldSelector != nil {
+		switch val := v.(type) {
+		case map[string]interface{}:
+			filtered, err := f.fieldSelector.Apply(val)
+			if err != nil {
+				return "", err
+			}
+			v = filtered
+		case []map[string]interface{}:
+			filtered, err := f.fieldSelector.ApplyToSlice(val)
+			if err != nil {
+				return "", err
+			}
+			v = filtered
+		}
+	}
+
 	// Use standard JSON encoding
 	// This is a placeholder - actual implementation would use encoding/json
 	return fmt.Sprintf("%#v", v), nil
@@ -144,6 +207,33 @@ func (f *Formatter) convertToTOON(v interface{}) (toon.Value, error) {
 		return toon.BoolValue(val), nil
 	case nil:
 		return toon.NullValue{}, nil
+	case map[string]interface{}:
+		// Convert map to TOON Object
+		fields := make(map[string]toon.Value)
+		for key, value := range val {
+			toonValue, err := f.convertToTOON(value)
+			if err != nil {
+				return nil, err
+			}
+			fields[key] = toonValue
+		}
+		return toon.Object{Fields: fields}, nil
+	case []map[string]interface{}:
+		// Convert slice of maps to TOON Array
+		items := make([]toon.Value, len(val))
+		for i, item := range val {
+			toonValue, err := f.convertToTOON(item)
+			if err != nil {
+				return nil, err
+			}
+			items[i] = toonValue
+		}
+		return toon.Array{
+			Length:    len(val),
+			Delimiter: toon.DelimiterComma,
+			Items:     items,
+			IsTabular: false,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported type for TOON conversion: %T", v)
 	}
