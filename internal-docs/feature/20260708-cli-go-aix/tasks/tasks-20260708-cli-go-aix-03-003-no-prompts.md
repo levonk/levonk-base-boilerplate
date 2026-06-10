@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-go-aix/prd.md"
 phase: 3
 parallel_id: 3
 branch: "feature/current/20260708-cli-go-aix/story-03-003-no-prompts"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,28 +27,29 @@ Implement suppression of interactive prompts in agent mode. Every operation must
 
 ## Sub-Tasks
 
-- [ ] Identify all interactive prompts in CLI commands
-- [ ] Identify all wrapped tool invocations that may prompt
-- [ ] Implement prompt suppression based on mode detection
-- [ ] Add flag-based alternatives for all prompted operations
-- [ ] Implement immediate failure with clear error for missing required values
-- [ ] Add `--force` flag to bypass prompts in human mode
-- [ ] Suppress prompts from wrapped tools in agent mode
-- [ ] Update all commands with interactive prompts to support flag-based completion
-- [ ] Ensure prompts work normally in human mode
-- [ ] Ensure prompts are suppressed in agent mode
-- [ ] Write unit tests for prompt suppression logic
-- [ ] Write integration tests for flag-based completion
-- [ ] Write tests for prompt behavior in different modes
-- [ ] Update CLI help text to document prompt behavior
+- [x] Identify all interactive prompts in CLI commands
+- [x] Identify all wrapped tool invocations that may prompt
+- [x] Implement prompt suppression based on mode detection
+- [x] Add flag-based alternatives for all prompted operations
+- [x] Implement immediate failure with clear error for missing required values
+- [x] Add `--force` flag to bypass prompts in human mode
+- [x] Suppress prompts from wrapped tools in agent mode
+- [x] Update all commands with interactive prompts to support flag-based completion
+- [x] Ensure prompts work normally in human mode
+- [x] Ensure prompts are suppressed in agent mode
+- [x] Write unit tests for prompt suppression logic
+- [x] Write integration tests for flag-based completion
+- [x] Write tests for prompt behavior in different modes
+- [x] Update CLI help text to document prompt behavior
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/prompts/suppressor.go` — Prompt suppression logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/prompts/suppressor_test.go` — Tests for prompt suppression (new file)
-- `boilerplate/apps/cli/go/core/files/cli/commands/*.go` — Update commands with prompts
-- `boilerplate/apps/cli/go/core/files/cli/commands/*_test.go` — Update tests for prompt behavior
-- `boilerplate/apps/cli/go/core/files/cli/root.go` — Add `--force` flag
+- `boilerplate/apps/cli/go/core/files/prompt.go.jinja` — Existing prompt functions (PromptForConfirmation, PromptForDelete, PromptForOverwrite, PromptForDestructive)
+- `boilerplate/apps/cli/go/core/files/secrets.go.jinja` — PromptForEncryptionKey function (uses term.ReadPassword)
+- `boilerplate/apps/cli/go/core/files/config.go.jinja` — Mode detection functions (DetectMode, DetermineMode, IsAgentSession)
+- `boilerplate/apps/cli/go/core/files/main.go.jinja` — Root command with --force flag (already exists)
+- `boilerplate/apps/cli/go/core/files/internal/prompts/suppressor.go.jinja` — Prompt suppression logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/prompts/suppressor_test.go.jinja` — Tests for prompt suppression (new file)
 
 ## Acceptance Criteria
 

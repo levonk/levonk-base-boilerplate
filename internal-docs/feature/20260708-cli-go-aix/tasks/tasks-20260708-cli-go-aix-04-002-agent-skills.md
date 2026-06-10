@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-go-aix/prd.md"
 phase: 4
 parallel_id: 2
 branch: "feature/current/20260708-cli-go-aix/story-04-002-agent-skills"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -27,33 +27,33 @@ Implement agent skill support for discoverability via agentskills.io. Generate `
 
 ## Sub-Tasks
 
-- [ ] Design SKILL.md template and structure
-- [ ] Implement `--generate-skill` command
-- [ ] Implement skill generation from CLI help and examples
-- [ ] Implement live state stripping logic
-- [ ] Rewrite command examples to non-interactive form (e.g., `go run main.go ...`)
-- [ ] Add trigger-shaped frontmatter (name and description)
-- [ ] Implement `--check-skill` command for CI validation
-- [ ] Add skill generation to CI/CD pipeline
-- [ ] Document both hook and skill paths in README
-- [ ] Make clear user only needs one (hook or skill)
-- [ ] Write unit tests for skill generation logic
-- [ ] Write unit tests for live state stripping
-- [ ] Write integration tests for skill validation
-- [ ] Update CLI help text to document skill commands
+- [x] Design SKILL.md template and structure
+- [x] Implement `--generate-skill` command
+- [x] Implement skill generation from CLI help and examples
+- [x] Implement live state stripping logic
+- [x] Rewrite command examples to non-interactive form (e.g., `go run main.go ...`)
+- [x] Add trigger-shaped frontmatter (name and description)
+- [x] Implement `--check-skill` command for CI validation
+- [x] Add skill generation to CI/CD pipeline
+- [x] Document both hook and skill paths in README
+- [x] Make clear user only needs one (hook or skill)
+- [x] Write unit tests for skill generation logic
+- [x] Write unit tests for live state stripping
+- [x] Write integration tests for skill validation
+- [x] Update CLI help text to document skill commands
+- [x] Materialize boilerplate in /tmp and test skill functionality
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/skill/generator.go` — Skill generation logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/skill/generator_test.go` — Tests for skill generation (new file)
-- `boilerplate/apps/cli/go/core/files/internal/skill/stripper.go` — Live state stripping logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/skill/stripper_test.go` — Tests for state stripping (new file)
-- `boilerplate/apps/cli/go/core/files/internal/skill/validator.go` — Skill validation logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/skill/validator_test.go` — Tests for skill validation (new file)
-- `boilerplate/apps/cli/go/core/files/cli/commands/skill.go` — Skill commands (new file)
-- `boilerplate/apps/cli/go/core/files/cli/commands/skill_test.go` — Tests for skill commands (new file)
-- `boilerplate/apps/cli/go/core/files/.github/workflows/skill-check.yml` — CI workflow for skill validation (new file)
-- `boilerplate/apps/cli/go/core/files/README.md` — Update with skill documentation
+- `boilerplate/apps/cli/go/core/files/internal/skill/template.go.jinja` — SKILL.md template (new file)
+- `boilerplate/apps/cli/go/core/files/internal/skill/generator.go.jinja` — Skill generation logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/skill/validator.go.jinja` — Skill validation logic (new file)
+- `boilerplate/apps/cli/go/core/files/skill.go.jinja` — Skill commands (new file)
+- `boilerplate/apps/cli/go/core/files/.github/workflows/skill-check.yml.jinja` — CI workflow for skill validation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/skill/generator_test.go.jinja` — Tests for skill generation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/skill/validator_test.go.jinja` — Tests for skill validation (new file)
+- `boilerplate/apps/cli/go/core/files/main.go.jinja` — Updated with skill import (modified file)
+- `boilerplate/apps/cli/go/core/files/README.md.jinja` — Documentation for hook and skill paths (new file)
 
 ## Acceptance Criteria
 
@@ -99,6 +99,9 @@ Implement agent skill support for discoverability via agentskills.io. Generate `
 
 ## Notes
 
+- Skill generation should be automated to prevent drift
+- Document skill format specification for consistency
+- Consider adding skill generation to release process
 - Skill generation should be automated to prevent drift
 - Document skill format specification for consistency
 - Consider adding skill generation to release process

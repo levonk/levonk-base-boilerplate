@@ -27,33 +27,31 @@ Implement definitive empty state formatting to explicitly communicate when queri
 
 ## Sub-Tasks
 
-- [ ] Design empty state message format with context
-- [ ] Implement empty state detection for all command outputs
-- [ ] Create empty state formatting function
-- [ ] Include context in empty state messages (filter criteria, scope)
-- [ ] Ensure empty state messages indicate successful command execution
-- [ ] Apply empty state formatting to list commands
-- [ ] Apply empty state formatting to detail commands
-- [ ] Apply empty state formatting to search commands
-- [ ] Integrate empty state formatting into TOON output
-- [ ] Integrate empty state formatting into JSON output
-- [ ] Ensure exit code 0 for successful empty queries
-- [ ] Write unit tests for empty state detection
-- [ ] Write unit tests for empty state formatting
-- [ ] Write integration tests for empty state output
-- [ ] Write tests for exit code behavior with empty results
-- [ ] Update CLI help text to document empty state behavior
+- [x] Design empty state message format with context
+- [x] Implement empty state detection for all command outputs
+- [x] Create empty state formatting function
+- [x] Include context in empty state messages (filter criteria, scope)
+- [x] Ensure empty state messages indicate successful command execution
+- [x] Apply empty state formatting to list commands
+- [x] Apply empty state formatting to detail commands
+- [x] Apply empty state formatting to search commands
+- [x] Integrate empty state formatting into TOON output
+- [x] Integrate empty state formatting into JSON output
+- [x] Ensure exit code 0 for successful empty queries
+- [x] Write unit tests for empty state detection
+- [x] Write unit tests for empty state formatting
+- [x] Write integration tests for empty state output
+- [x] Write tests for exit code behavior with empty results
+- [x] Update CLI help text to document empty state behavior
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/emptystate/detector.go` — Empty state detection logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/emptystate/detector_test.go` — Tests for empty state detection (new file)
-- `boilerplate/apps/cli/go/core/files/internal/emptystate/formatter.go` — Empty state formatting logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/emptystate/formatter_test.go` — Tests for empty state formatting (new file)
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter.go` — Integrate empty state formatting
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter_test.go` — Tests for empty state integration
-- `boilerplate/apps/cli/go/core/files/cli/commands/*.go` — Update each command to handle empty states
-- `boilerplate/apps/cli/go/core/files/cli/commands/*_test.go` — Update tests for empty state handling
+- `boilerplate/apps/cli/go/core/files/internal/emptystate/detector.go.jinja` — Empty state detection logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/emptystate/detector_test.go.jinja` — Tests for empty state detection (new file)
+- `boilerplate/apps/cli/go/core/files/internal/emptystate/formatter.go.jinja` — Empty state formatting logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/emptystate/formatter_test.go.jinja` — Tests for empty state formatting (new file)
+- `boilerplate/apps/cli/go/core/files/internal/formatting/formatter.go.jinja` — Integrate empty state formatting
+- `boilerplate/apps/cli/go/core/files/internal/formatting/formatter_test.go.jinja` — Tests for empty state integration
 
 ## Acceptance Criteria
 

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-go-aix/prd.md"
 phase: 4
 parallel_id: 1
 branch: "feature/current/20260708-cli-go-aix/story-04-001-session-hooks"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-002"]
@@ -27,51 +27,51 @@ Implement session hook infrastructure for ambient context injection. Add `--sess
 
 ## Sub-Tasks
 
-- [ ] Design session context output format (compact TOON)
-- [ ] Implement `--session-context` command
-- [ ] Implement compact state generation for session context
-- [ ] Ensure session context is token-budget-aware
-- [ ] Make session context directory-scoped (current working directory)
-- [ ] Design hook registration system
-- [ ] Implement `--install-agent-hooks` command
-- [ ] Implement hook installation for Claude Code (settings.json)
-- [ ] Implement hook installation for Codex (hooks.json)
-- [ ] Implement existing hook checking and path update
-- [ ] Make hook installation idempotent (silent no-ops for same path)
-- [ ] Implement portable command resolution (PATH-verified vs absolute path)
-- [ ] Add session-end hook registration
-- [ ] Implement session metadata capture and storage
-- [ ] Write unit tests for session context generation
-- [ ] Write unit tests for hook registration logic
-- [ ] Write integration tests for hook installation
-- [ ] Write tests for idempotent hook installation
-- [ ] Update CLI help text to document session commands
+- [x] Design session context output format (compact TOON)
+- [x] Implement `--session-context` command
+- [x] Implement compact state generation for session context
+- [x] Ensure session context is token-budget-aware
+- [x] Make session context directory-scoped (current working directory)
+- [x] Design hook registration system
+- [x] Implement `--install-agent-hooks` command
+- [x] Implement hook installation for Claude Code (settings.json)
+- [x] Implement hook installation for Codex (hooks.json)
+- [x] Implement existing hook checking and path update
+- [x] Make hook installation idempotent (silent no-ops for same path)
+- [x] Implement portable command resolution (PATH-verified vs absolute path)
+- [x] Add session-end hook registration
+- [x] Implement session metadata capture and storage
+- [x] Write unit tests for session context generation
+- [x] Write unit tests for hook registration logic
+- [x] Write integration tests for hook installation
+- [x] Write tests for idempotent hook installation
+- [x] Update CLI help text to document session commands
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/session/context.go` — Session context generation (new file)
-- `boilerplate/apps/cli/go/core/files/internal/session/context_test.go` — Tests for session context (new file)
-- `boilerplate/apps/cli/go/core/files/internal/session/hooks.go` — Hook registration logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/session/hooks_test.go` — Tests for hook registration (new file)
-- `boilerplate/apps/cli/go/core/files/internal/session/metadata.go` — Session metadata capture (new file)
-- `boilerplate/apps/cli/go/core/files/cli/commands/session.go` — Session commands (new file)
-- `boilerplate/apps/cli/go/core/files/cli/commands/session_test.go` — Tests for session commands (new file)
+- `boilerplate/apps/cli/go/core/files/internal/session/context.go.jinja` — Session context generation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/session/context_test.go.jinja` — Tests for session context (new file)
+- `boilerplate/apps/cli/go/core/files/internal/session/hooks.go.jinja` — Hook registration logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/session/hooks_test.go.jinja` — Tests for hook registration (new file)
+- `boilerplate/apps/cli/go/core/files/internal/session/metadata.go.jinja` — Session metadata capture (new file)
+- `boilerplate/apps/cli/go/core/files/session.go.jinja` — Session commands (new file)
+- `boilerplate/apps/cli/go/core/files/session_test.go.jinja` — Tests for session commands (new file)
 
 ## Acceptance Criteria
 
-- [ ] `--session-context` command outputs compact TOON state
-- [ ] Session context is token-budget-aware
-- [ ] Session context is directory-scoped
-- [ ] `--install-agent-hooks` command successfully registers hooks
-- [ ] Hook installation works for Claude Code
-- [ ] Hook installation works for Codex
-- [ ] Hook installation checks existing hooks and updates paths
-- [ ] Hook installation is idempotent
-- [ ] Portable command resolution works correctly
-- [ ] Session-end hooks are registered correctly
-- [ ] Session metadata is captured and stored
-- [ ] All session functionality has test coverage
-- [ ] Help text documents session commands
+- [x] `--session-context` command outputs compact TOON state
+- [x] Session context is token-budget-aware
+- [x] Session context is directory-scoped
+- [x] `--install-agent-hooks` command successfully registers hooks
+- [x] Hook installation works for Claude Code
+- [x] Hook installation works for Codex
+- [x] Hook installation checks existing hooks and updates paths
+- [x] Hook installation is idempotent
+- [x] Portable command resolution works correctly
+- [x] Session-end hooks are registered correctly
+- [x] Session metadata is captured and stored
+- [x] All session functionality has test coverage
+- [x] Help text documents session commands
 
 ## Test Plan
 

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-go-aix/prd.md"
 phase: 2
 parallel_id: 2
 branch: "feature/current/20260708-cli-go-aix/story-02-002-content-truncation"
-status: "in_progress"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -45,32 +45,33 @@ Implement content truncation for large text fields (descriptions, bodies, logs) 
 - [x] Write unit tests for truncation metadata generation
 - [x] Write integration tests for `--full` flag functionality
 - [x] Write tests for truncation application to various field types
-- [~] Update CLI help text to document truncation behavior
+- [x] Update CLI help text to document truncation behavior
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/truncation/truncator.go` — Truncation logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/truncation/truncator_test.go` — Tests for truncation (new file)
-- `boilerplate/apps/cli/go/core/files/internal/truncation/metadata.go` — Truncation metadata generation (new file)
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter.go` — Integrate truncation into output formatting
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter_test.go` — Tests for truncation integration
-- `boilerplate/apps/cli/go/core/files/cli/root.go` — Add `--full` flag
-- `boilerplate/apps/cli/go/core/files/config/config.go` — Add truncation_limit config field
+- `apps/cli/go/core/files/internal/truncation/types.go.jinja` — Truncation types and config (new file)
+- `apps/cli/go/core/files/internal/truncation/truncator.go.jinja` — Truncation logic (new file)
+- `apps/cli/go/core/files/internal/truncation/truncator_test.go.jinja` — Tests for truncation (new file)
+- `apps/cli/go/core/files/internal/truncation/metadata.go.jinja` — Truncation metadata generation (new file)
+- `apps/cli/go/core/files/internal/formatting/formatter.go.jinja` — Integrate truncation into output formatting
+- `apps/cli/go/core/files/internal/formatting/formatter_test.go.jinja` — Tests for truncation integration
+- `apps/cli/go/core/files/main.go.jinja` — Add `--full` flag and help text
+- `apps/cli/go/core/files/config.default.yaml.jinja` — Add truncation config
 
 ## Acceptance Criteria
 
-- [ ] Truncation function correctly truncates text to specified limit
-- [ ] Truncation metadata includes total size and truncation indicator
-- [ ] Help suggestions are generated only when content is actually truncated
-- [ ] `--full` flag successfully disables truncation
-- [ ] Truncation is applied to all large text fields
-- [ ] Truncation works correctly for TOON output
-- [ ] Truncation works correctly for JSON output
-- [ ] Truncation is not applied when content is under limit
-- [ ] Truncation works in both agent and human modes
-- [ ] Configurable truncation limit is respected
-- [ ] All truncation functionality has test coverage
-- [ ] Help text documents truncation behavior and `--full` flag
+- [x] Truncation function correctly truncates text to specified limit
+- [x] Truncation metadata includes total size and truncation indicator
+- [x] Help suggestions are generated only when content is actually truncated
+- [x] `--full` flag successfully disables truncation
+- [x] Truncation is applied to all large text fields
+- [x] Truncation works correctly for TOON output
+- [x] Truncation works correctly for JSON output
+- [x] Truncation is not applied when content is under limit
+- [x] Truncation works in both agent and human modes
+- [x] Configurable truncation limit is respected
+- [x] All truncation functionality has test coverage
+- [x] Help text documents truncation behavior and `--full` flag
 
 ## Test Plan
 

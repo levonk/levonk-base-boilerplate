@@ -6,16 +6,16 @@
 | 01-002 | TOON Format Implementation | feature/current/20260708-cli-go-aix/story-01-002-toon-format | None | Parallel-safe: true | [output-formats] | [x] Done |
 | 01-003 | Configuration System Updates | feature/current/20260708-cli-go-aix/story-01-003-config-updates | None | Parallel-safe: true | [config] | [x] Done |
 | 02-001 | Minimal Default Schemas | feature/current/20260708-cli-go-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output-formats, cli-commands] | [x] Done |
-| 02-002 | Content Truncation | feature/current/20260708-cli-go-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] | [~] In-Progress |
-| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-go-aix/story-02-003-aggregates | 01-001 | Parallel-safe: true | [data-layer, output-formats] |
-| 02-004 | Definitive Empty States | feature/current/20260708-cli-go-aix/story-02-004-empty-states | 01-001 | Parallel-safe: true | [output-formats, cli-commands] |
-| 03-001 | Structured Errors & Exit Codes | feature/current/20260708-cli-go-aix/story-03-001-structured-errors | 01-001, 01-002 | Parallel-safe: true | [error-handling, output-formats] |
-| 03-002 | Idempotent Operations | feature/current/20260708-cli-go-aix/story-03-002-idempotent-ops | 01-001 | Parallel-safe: true | [cli-commands, business-logic] |
-| 03-003 | No Interactive Prompts in Agent Mode | feature/current/20260708-cli-go-aix/story-03-003-no-prompts | 01-001 | Parallel-safe: true | [cli-commands, user-interaction] |
-| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-go-aix/story-04-001-session-hooks | 01-001, 01-002 | Parallel-safe: true | [session-integration, cli-commands] |
-| 04-002 | Agent Skill Support | feature/current/20260708-cli-go-aix/story-04-002-agent-skills | 01-002 | Parallel-safe: true | [skill-generation, documentation] |
-| 05-001 | Content-First No-Args Behavior | feature/current/20260708-cli-go-aix/story-05-001-content-first | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, output-formats] |
-| 05-002 | Contextual Disclosure | feature/current/20260708-cli-go-aix/story-05-002-contextual-disclosure | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, suggestion-engine] |
+| 02-002 | Content Truncation | feature/current/20260708-cli-go-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output-formats] | [x] Done |
+| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-go-aix/story-02-003-aggregates | 01-001 | Parallel-safe: true | [data-layer, output-formats] | [x] Done |
+| 02-004 | Definitive Empty States | feature/current/20260708-cli-go-aix/story-02-004-empty-states | 01-001 | Parallel-safe: true | [output-formats, cli-commands] | [x] Done |
+| 03-001 | Structured Errors & Exit Codes | feature/current/20260708-cli-go-aix/story-03-001-structured-errors | 01-001, 01-002 | Parallel-safe: true | [error-handling, output-formats] | [x] Done |
+| 03-002 | Idempotent Operations | feature/current/20260708-cli-go-aix/story-03-002-idempotent-ops | 01-001 | Parallel-safe: true | [cli-commands, business-logic] | [x] Done |
+| 03-003 | No Interactive Prompts in Agent Mode | feature/current/20260708-cli-go-aix/story-03-003-no-prompts | 01-001 | Parallel-safe: true | [cli-commands, user-interaction] | [x] Done |
+| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-go-aix/story-04-001-session-hooks | 01-001, 01-002 | Parallel-safe: true | [session-integration, cli-commands] | [x] Done |
+| 04-002 | Agent Skill Support | feature/current/20260708-cli-go-aix/story-04-002-agent-skills | 01-002 | Parallel-safe: true | [skill-generation, documentation] | [x] Done |
+| 05-001 | Content-First No-Args Behavior | feature/current/20260708-cli-go-aix/story-05-001-content-first | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, output-formats] | [x] Done |
+| 05-002 | Contextual Disclosure | feature/current/20260708-cli-go-aix/story-05-002-contextual-disclosure | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, suggestion-engine] | [x] Done |
 
 ## Phase Summary
 

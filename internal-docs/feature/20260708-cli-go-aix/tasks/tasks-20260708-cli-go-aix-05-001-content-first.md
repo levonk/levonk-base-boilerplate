@@ -27,46 +27,45 @@ Implement content-first no-args behavior where running the CLI with no arguments
 
 ## Sub-Tasks
 
-- [ ] Design content-first output strategy for no-args invocation
-- [ ] Implement state summary generation for no-args
-- [ ] Identify most relevant live content for each CLI context
-- [ ] Implement context-aware content selection (directory-based)
-- [ ] Update root command to show state summary instead of help
-- [ ] Keep detailed help available via `--help` flag (unchanged)
-- [ ] Integrate pre-computed aggregates into no-args output
-- [ ] Integrate contextual help suggestions into no-args output
-- [ ] Apply content-first behavior to both agent and human modes
-- [ ] Ensure no-args output uses TOON format in agent mode
-- [ ] Ensure no-args output uses human-readable format in human mode
-- [ ] Write unit tests for content selection logic
-- [ ] Write unit tests for state summary generation
-- [ ] Write integration tests for no-args behavior
-- [ ] Write tests for context-aware content selection
-- [ ] Update CLI help text to document no-args behavior
+- [x] Design content-first output strategy for no-args invocation
+- [x] Implement state summary generation for no-args
+- [x] Identify most relevant live content for each CLI context
+- [x] Implement context-aware content selection (directory-based)
+- [x] Update root command to show state summary instead of help
+- [x] Keep detailed help available via `--help` flag (unchanged)
+- [x] Integrate pre-computed aggregates into no-args output
+- [x] Integrate contextual help suggestions into no-args output
+- [x] Apply content-first behavior to both agent and human modes
+- [x] Ensure no-args output uses TOON format in agent mode
+- [x] Ensure no-args output uses human-readable format in human mode
+- [x] Write unit tests for content selection logic
+- [x] Write unit tests for state summary generation
+- [x] Write integration tests for no-args behavior
+- [x] Write tests for context-aware content selection
+- [x] Update CLI help text to document no-args behavior
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/content/selector.go` — Content selection logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/content/selector_test.go` — Tests for content selection (new file)
-- `boilerplate/apps/cli/go/core/files/internal/content/summary.go` — State summary generation (new file)
-- `boilerplate/apps/cli/go/core/files/internal/content/summary_test.go` — Tests for state summary (new file)
-- `boilerplate/apps/cli/go/core/files/cli/root.go` — Update no-args behavior
-- `boilerplate/apps/cli/go/core/files/cli/root_test.go` — Tests for no-args behavior
+- `boilerplate/apps/cli/go/core/files/internal/content/selector.go.jinja` — Content selection logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/content/selector_test.go.jinja` — Tests for content selection (new file)
+- `boilerplate/apps/cli/go/core/files/internal/content/summary.go.jinja` — State summary generation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/content/summary_test.go.jinja` — Tests for state summary (new file)
+- `boilerplate/apps/cli/go/core/files/main.go.jinja` — Updated no-args behavior with runContentFirst function
 
 ## Acceptance Criteria
 
-- [ ] No-args invocation shows relevant live content
-- [ ] No-args invocation does not show usage manual
-- [ ] State summary includes most relevant information
-- [ ] Content selection is context-aware (directory-based)
-- [ ] Detailed help remains available via `--help` flag
-- [ ] Pre-computed aggregates are included in no-args output
-- [ ] Contextual help suggestions are included in no-args output
-- [ ] Content-first behavior works in agent mode
-- [ ] Content-first behavior works in human mode
-- [ ] No-args output uses correct format for each mode
-- [ ] All content-first functionality has test coverage
-- [ ] Help text documents no-args behavior
+- [x] No-args invocation shows relevant live content
+- [x] No-args invocation does not show usage manual
+- [x] State summary includes most relevant information
+- [x] Content selection is context-aware (directory-based)
+- [x] Detailed help remains available via `--help` flag
+- [x] Pre-computed aggregates are included in no-args output
+- [x] Contextual help suggestions are included in no-args output
+- [x] Content-first behavior works in agent mode
+- [x] Content-first behavior works in human mode
+- [x] No-args output uses correct format for each mode
+- [x] All content-first functionality has test coverage
+- [x] Help text documents no-args behavior
 
 ## Test Plan
 
