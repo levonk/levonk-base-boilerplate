@@ -1,5 +1,3 @@
-{% include "partials.bak/.envrc.jinja" %}
-
 # Git repository specific implementations
 bootstrap-internal:
     #!/usr/bin/env bash
@@ -31,19 +29,24 @@ bootstrap-internal:
     echo "[bootstrap] Project bootstrap complete!"
 
 build-internal:
-    echo "TODO: implement build target for {{ project_type }}"
+    @echo "ℹ️  No build target configured for generic git repository"
+    @echo "   Add language-specific build commands to your justfile if needed"
 
 test-internal:
-    echo "TODO: implement test target for {{ project_type }}"
+    @echo "ℹ️  No test target configured for generic git repository"
+    @echo "   Add language-specific test commands to your justfile if needed"
 
 lint-internal:
-    echo "TODO: implement lint target for {{ project_type }}"
+    @echo "ℹ️  No lint target configured for generic git repository"
+    @echo "   Add language-specific lint commands to your justfile if needed"
 
 typecheck-internal:
-    echo "TODO: implement typecheck target for {{ project_type }}"
+    @echo "ℹ️  No typecheck target configured for generic git repository"
+    @echo "   Add language-specific typecheck commands to your justfile if needed"
 
 dev-internal:
-    echo "TODO: implement dev target for {{ project_type }}"
+    @echo "ℹ️  No dev target configured for generic git repository"
+    @echo "   Add language-specific dev commands to your justfile if needed"
 
 doctor-internal:
     #!/usr/bin/env bash
@@ -87,36 +90,43 @@ init-repo:
 
 setup-remote:
     @echo "🔧 Setting up remote repository..."
-    @echo "TODO: Add remote setup logic for {{ project_name }}"
-    
+    @if [ -z "$(git remote get-url origin 2>/dev/null)" ]; then \
+        echo "ℹ️  No remote configured. Add one with:"; \
+        echo "   git remote add origin <your-repo-url>"; \
+        echo "   git remote -v"; \
+    else \
+        echo "✅ Remote already configured:"; \
+        git remote -v; \
+    fi
+
 create-gh-pages:
     @echo "📄 Creating gh-pages branch..."
-    @if ! git rev-parse --verify gh-pages >/dev/null 2>&1; then
-        @git checkout --orphan gh-pages
-        @git rm -rf . 2>/dev/null || true
-        @echo "# {{ project_name }} Documentation" > README.md
-        @git add README.md
-        @git commit -m "Initial gh-pages commit"
-        @git checkout main 2>/dev/null || git checkout -b main
-        @echo "✅ gh-pages branch created"
-    else
-        @echo "ℹ️  gh-pages branch already exists"
+    @if ! git rev-parse --verify gh-pages >/dev/null 2>&1; then \
+        git checkout --orphan gh-pages; \
+        git rm -rf . 2>/dev/null || true; \
+        echo "# {{ project_name }} Documentation" > README.md; \
+        git add README.md; \
+        git commit -m "Initial gh-pages commit"; \
+        git checkout main 2>/dev/null || git checkout -b main; \
+        echo "✅ gh-pages branch created"; \
+    else \
+        echo "ℹ️  gh-pages branch already exists"; \
     fi
 
 check-git-hooks:
     @echo "🔍 Checking git hooks..."
-    @if [ -d .git/hooks ]; then
-        @find .git/hooks -name "*" -type f -exec echo "  - {}" \;
-        @echo "✅ Git hooks found"
-    else
-        @echo "⚠️  No git hooks found"
+    @if [ -d .git/hooks ]; then \
+        find .git/hooks -name "*" -type f -exec echo "  - {}" \;; \
+        echo "✅ Git hooks found"; \
+    else \
+        echo "⚠️  No git hooks found"; \
     fi
 
 check-gitignore:
     @echo "🔍 Checking .gitignore..."
-    @if [ -f .gitignore ]; then
-        @echo "✅ .gitignore found"
-        @wc -l .gitignore
-    else
-        @echo "⚠️  No .gitignore found"
+    @if [ -f .gitignore ]; then \
+        echo "✅ .gitignore found"; \
+        wc -l .gitignore; \
+    else \
+        echo "⚠️  No .gitignore found"; \
     fi
