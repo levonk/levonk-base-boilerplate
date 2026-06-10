@@ -11,3 +11,7 @@ pub mod aggregates;
 pub mod emptystate;
 pub mod errors;
 pub mod idempotency;
+pub mod prompts;
+
+// Re-export commonly used types
+pub use mode::{Mode, ModeDetection, ModeSource, detect_mode};

@@ -1,0 +1,9 @@
+//! Prompt suppression for agent mode
+//!
+//! This module handles suppression of interactive prompts when running in agent mode.
+//! All operations must be completable with flags alone in agent mode.
+
+pub mod suppressor;
+pub mod tests;
+
+pub use suppressor::{PromptSuppressor, PromptDecision, PromptContext};

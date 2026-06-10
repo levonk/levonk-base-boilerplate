@@ -10,14 +10,14 @@ pub enum IdentifierStatus {
     Known,       // Tracked normally
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrivacyConfig {
     pub enabled: bool,
     pub ignore_patterns: Vec<String>,
     pub privacy_toggles: PrivacyToggles,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct PrivacyToggles {
     pub disable_analytics: bool,
     pub disable_usage_tracking: bool,

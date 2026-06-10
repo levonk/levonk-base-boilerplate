@@ -38,7 +38,9 @@ impl ToonDecoder {
 
     /// Parse a value
     fn parse_value(&mut self) -> Result<ToonValue, ToonDecodeError> {
-        let c = self.peek_char()?;
+        let c = self.peek_char().ok_or_else(|| {
+            ToonDecodeError::InvalidSyntax("Unexpected end of input".to_string())
+        })?;
         
         match c {
             'n' => self.parse_null(),
@@ -75,7 +77,8 @@ impl ToonDecoder {
         self.consume("\"")?;
         let mut result = String::new();
         
-        while let Some(c) = self.next_char()? {
+        loop {
+            let c = self.next_char()?;
             match c {
                 '"' => break,
                 '\\' => {

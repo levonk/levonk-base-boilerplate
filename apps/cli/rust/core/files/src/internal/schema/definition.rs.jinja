@@ -92,10 +92,11 @@ impl OutputSchema {
     /// Validate a field name against available fields
     pub fn validate_field(&self, field_name: &str) -> Result<()> {
         if !self.fields.iter().any(|f| f.name == field_name) {
+            let available_fields: Vec<String> = self.fields.iter().map(|f| f.name.clone()).collect();
             bail!("Invalid field '{}' for command '{}'. Available fields: {}",
                   field_name,
                   self.command,
-                  self.fields.iter().map(|f| &f.name).collect::<Vec<_>>().join(", "));
+                  available_fields.join(", "));
         }
         Ok(())
     }

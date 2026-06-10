@@ -45,6 +45,7 @@ use internal::toon::{OutputFormatter, OutputFormat};
 use internal::schema::{create_default_schema_registry, FieldSelector, parse_fields_arg};
 use internal::errors::{StructuredError, ErrorCode, format_error_with_format, translate_error_with_context, OutputChannels};
 use internal::idempotency::{check_idempotency, OperationType, IdempotentResult, acknowledge_noop};
+use internal::prompts::{PromptSuppressor, PromptType};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -53,20 +54,38 @@ use tui::{init_tui_mode, terminal_supports_tui};
 const MODULE_NAME: &str = "{{ project_slug }}";
 
 /// Prompt user for confirmation before destructive operation
-fn prompt_confirmation(operation: &DestructiveOperation) -> Result<bool> {
+/// Returns true if operation should proceed, false if cancelled
+/// In agent mode or with --force, this returns true without prompting
+fn prompt_confirmation(operation: &DestructiveOperation, suppressor: &PromptSuppressor) -> Result<bool> {
     use std::io::{self, Write};
     
-    print!("⚠️  {} [y/N]: ", operation.description());
-    io::stdout().flush()?;
+    // Check if prompt should be suppressed
+    let decision = suppressor.should_prompt(PromptType::DestructiveConfirmation);
     
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    
-    let response = input.trim().to_lowercase();
-    Ok(response == "y" || response == "yes")
+    match decision {
+        PromptDecision::Suppress => {
+            if let Some(reason) = suppressor.suppression_reason(PromptType::DestructiveConfirmation) {
+                debug!("Confirmation suppressed: {}", reason);
+            }
+            Ok(true) // Proceed without confirmation
+        }
+        PromptDecision::Fail => {
+            Err(anyhow::anyhow!("Cannot proceed: interactive confirmation required but suppressed"))
+        }
+        PromptDecision::Show => {
+            print!("⚠️  {} [y/N]: ", operation.description());
+            io::stdout().flush()?;
+            
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            
+            let response = input.trim().to_lowercase();
+            Ok(response == "y" || response == "yes")
+        }
+    }
 }
 
-fn process_content(source: &str, content: &str, dry_run: bool, force: bool) -> Result<()> {
+fn process_content(source: &str, content: &str, dry_run: bool, force: bool, mode: Mode) -> Result<()> {
     // Check for destructive operations
     let file_paths: Vec<&str> = if source == "stdin" {
         vec![]
@@ -74,13 +93,14 @@ fn process_content(source: &str, content: &str, dry_run: bool, force: bool) -> R
         vec![source]
     };
     
+    // Create prompt suppressor
+    let suppressor = PromptSuppressor::new(mode, force, dry_run);
+    
     if let Some(destructive_op) = detect_destructive_operation("process", &file_paths) {
-        if !force && !dry_run {
-            // Prompt for confirmation
-            if !prompt_confirmation(&destructive_op)? {
-                println!("Operation cancelled by user");
-                std::process::exit(0);
-            }
+        // Prompt for confirmation (will be suppressed in agent mode or with --force)
+        if !prompt_confirmation(&destructive_op, &suppressor)? {
+            println!("Operation cancelled by user");
+            std::process::exit(0);
         }
     }
     
@@ -249,8 +269,8 @@ async fn main() -> Result<()> {
             Err(e) => {
                 let mode = detect_mode();
                 let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
-                let structured_error = translate_error_with_context(e, "Displaying man page")
-                    .with_suggestion("Try generating man pages first: just generate-man-pages");
+                let mut structured_error = translate_error_with_context(e, "Displaying man page");
+                structured_error.with_suggestion("Try generating man pages first: just generate-man-pages");
                 let formatted = format.format_error(&structured_error);
                 println!("{}", formatted);
                 std::process::exit(structured_error.exit_code);
@@ -497,7 +517,7 @@ async fn main() -> Result<()> {
             None
         };
 
-        process_content(&source, content, cli.dry_run, cli.force)?;
+        process_content(&source, content, cli.dry_run, cli.force, mode_detection.mode)?;
 
         // Finish spinner
         if let Some(s) = spinner {

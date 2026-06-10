@@ -43,7 +43,7 @@ impl Truncator {
     /// 
     /// Returns a tuple of (truncated_text, metadata)
     /// If text is under the limit, returns the original text with metadata indicating no truncation
-    pub fn truncate(&self, text: &str) -> (Cow<str>, TruncationMetadata) {
+    pub fn truncate<'a>(&self, text: &'a str) -> (Cow<'a, str>, TruncationMetadata) {
         let original_len = text.chars().count();
         
         if original_len <= self.limit {

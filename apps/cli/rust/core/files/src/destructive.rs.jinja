@@ -84,7 +84,7 @@ pub fn check_paths_for_destructive(paths: &[impl AsRef<Path>]) -> Vec<Destructiv
         
         // Check for dangerous patterns in paths
         if path_str.contains("delete") || path_str.contains("remove") || path_str.contains("rm") {
-            operations.push(DestructiveOperation::DeleteFile(path_str));
+            operations.push(DestructiveOperation::DeleteFile(path_str.clone()));
         }
         
         // Check for system directories

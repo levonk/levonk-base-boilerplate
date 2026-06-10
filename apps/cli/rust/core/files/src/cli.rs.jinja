@@ -46,6 +46,18 @@ use std::time::Duration;
 /// Force agent mode via environment:
 ///   {{ project_slug | upper | replace('-', '_') }}_MODE=agent {{ project_slug }} file1.txt
 ///
+/// # Prompt Behavior
+///
+/// Interactive prompts are automatically suppressed in agent mode to enable non-interactive automation:
+/// - Agent mode: All prompts are suppressed, operations proceed with flags alone
+/// - Human mode: Prompts are shown by default for destructive operations
+/// - --force flag: Bypasses all confirmation prompts in any mode
+/// - --dry-run: Suppresses destructive confirmation prompts (preview only)
+///
+/// Force bypass of confirmation prompts:
+///   {{ project_slug }} --force file1.txt
+///   {{ project_slug }} --force --interactive file1.txt
+///
 /// # Output Format
 ///
 /// The CLI supports multiple output formats optimized for different use cases:

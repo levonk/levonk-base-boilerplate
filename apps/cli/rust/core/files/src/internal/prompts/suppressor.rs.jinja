@@ -1,0 +1,248 @@
+use anyhow::Result;
+use tracing::debug;
+use crate::internal::Mode;
+
+/// Decision on whether to show a prompt
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PromptDecision {
+    /// Show the prompt to the user
+    Show,
+    /// Suppress the prompt (skip it)
+    Suppress,
+    /// Fail immediately with an error
+    Fail,
+}
+
+/// Context for prompt suppression decision
+#[derive(Debug, Clone)]
+pub struct PromptContext {
+    /// Current execution mode
+    pub mode: Mode,
+    /// Whether force flag is set
+    pub force: bool,
+    /// Whether dry run mode is active
+    pub dry_run: bool,
+    /// Prompt type (for logging and decision logic)
+    pub prompt_type: PromptType,
+}
+
+/// Type of prompt being requested
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PromptType {
+    /// Confirmation for destructive operation
+    DestructiveConfirmation,
+    /// Input for missing required value
+    RequiredValue,
+    /// Interactive TUI mode
+    TuiInteraction,
+    /// Other interactive prompt
+    Other,
+}
+
+impl PromptType {
+    /// Get a human-readable description
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            PromptType::DestructiveConfirmation => "destructive confirmation",
+            PromptType::RequiredValue => "required value input",
+            PromptType::TuiInteraction => "TUI interaction",
+            PromptType::Other => "interactive prompt",
+        }
+    }
+}
+
+/// Prompt suppressor for agent mode
+pub struct PromptSuppressor {
+    mode: Mode,
+    force: bool,
+    dry_run: bool,
+}
+
+impl PromptSuppressor {
+    /// Create a new prompt suppressor
+    pub fn new(mode: Mode, force: bool, dry_run: bool) -> Self {
+        Self {
+            mode,
+            force,
+            dry_run,
+        }
+    }
+
+    /// Decide whether to show a prompt based on mode and context
+    pub fn should_prompt(&self, prompt_type: PromptType) -> PromptDecision {
+        let context = PromptContext {
+            mode: self.mode,
+            force: self.force,
+            dry_run: self.dry_run,
+            prompt_type,
+        };
+
+        self.decide(&context)
+    }
+
+    /// Internal decision logic
+    fn decide(&self, context: &PromptContext) -> PromptDecision {
+        // Force flag always suppresses prompts (in any mode)
+        if context.force {
+            debug!(
+                "Prompt suppressed due to --force flag (type: {})",
+                context.prompt_type.as_str()
+            );
+            return PromptDecision::Suppress;
+        }
+
+        // Dry run mode suppresses destructive confirmation prompts
+        if context.dry_run && matches!(context.prompt_type, PromptType::DestructiveConfirmation) {
+            debug!(
+                "Destructive confirmation suppressed in dry run mode"
+            );
+            return PromptDecision::Suppress;
+        }
+
+        // Agent mode: suppress all prompts
+        if context.mode == Mode::Agent {
+            debug!(
+                "Prompt suppressed in agent mode (type: {})",
+                context.prompt_type.as_str()
+            );
+            return PromptDecision::Suppress;
+        }
+
+        // Human mode: show prompts
+        debug!(
+            "Prompt allowed in human mode (type: {})",
+            context.prompt_type.as_str()
+        );
+        PromptDecision::Show
+    }
+
+    /// Check if prompts are currently suppressed
+    pub fn is_suppressed(&self) -> bool {
+        self.mode == Mode::Agent || self.force
+    }
+
+    /// Get a descriptive message for why a prompt was suppressed
+    pub fn suppression_reason(&self, prompt_type: PromptType) -> Option<String> {
+        if self.force {
+            Some(format!(
+                "Prompt suppressed due to --force flag (type: {})",
+                prompt_type.as_str()
+            ))
+        } else if self.mode == Mode::Agent {
+            Some(format!(
+                "Prompt suppressed in agent mode (type: {})",
+                prompt_type.as_str()
+            ))
+        } else if self.dry_run && matches!(prompt_type, PromptType::DestructiveConfirmation) {
+            Some("Destructive confirmation suppressed in dry run mode".to_string())
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_agent_mode_suppresses_all_prompts() {
+        let suppressor = PromptSuppressor::new(Mode::Agent, false, false);
+        
+        assert_eq!(
+            suppressor.should_prompt(PromptType::DestructiveConfirmation),
+            PromptDecision::Suppress
+        );
+        assert_eq!(
+            suppressor.should_prompt(PromptType::RequiredValue),
+            PromptDecision::Suppress
+        );
+        assert_eq!(
+            suppressor.should_prompt(PromptType::TuiInteraction),
+            PromptDecision::Suppress
+        );
+    }
+
+    #[test]
+    fn test_human_mode_shows_prompts() {
+        let suppressor = PromptSuppressor::new(Mode::Human, false, false);
+        
+        assert_eq!(
+            suppressor.should_prompt(PromptType::DestructiveConfirmation),
+            PromptDecision::Show
+        );
+        assert_eq!(
+            suppressor.should_prompt(PromptType::RequiredValue),
+            PromptDecision::Show
+        );
+    }
+
+    #[test]
+    fn test_force_flag_suppresses_in_human_mode() {
+        let suppressor = PromptSuppressor::new(Mode::Human, true, false);
+        
+        assert_eq!(
+            suppressor.should_prompt(PromptType::DestructiveConfirmation),
+            PromptDecision::Suppress
+        );
+        assert_eq!(
+            suppressor.should_prompt(PromptType::RequiredValue),
+            PromptDecision::Suppress
+        );
+    }
+
+    #[test]
+    fn test_force_flag_suppresses_in_agent_mode() {
+        let suppressor = PromptSuppressor::new(Mode::Agent, true, false);
+        
+        assert_eq!(
+            suppressor.should_prompt(PromptType::DestructiveConfirmation),
+            PromptDecision::Suppress
+        );
+    }
+
+    #[test]
+    fn test_dry_run_suppresses_destructive_prompts() {
+        let suppressor = PromptSuppressor::new(Mode::Human, false, true);
+        
+        assert_eq!(
+            suppressor.should_prompt(PromptType::DestructiveConfirmation),
+            PromptDecision::Suppress
+        );
+        
+        // Non-destructive prompts still show in dry run
+        assert_eq!(
+            suppressor.should_prompt(PromptType::RequiredValue),
+            PromptDecision::Show
+        );
+    }
+
+    #[test]
+    fn test_is_suppressed() {
+        let agent_suppressor = PromptSuppressor::new(Mode::Agent, false, false);
+        assert!(agent_suppressor.is_suppressed());
+
+        let human_suppressor = PromptSuppressor::new(Mode::Human, false, false);
+        assert!(!human_suppressor.is_suppressed());
+
+        let force_suppressor = PromptSuppressor::new(Mode::Human, true, false);
+        assert!(force_suppressor.is_suppressed());
+    }
+
+    #[test]
+    fn test_suppression_reason() {
+        let agent_suppressor = PromptSuppressor::new(Mode::Agent, false, false);
+        let reason = agent_suppressor.suppression_reason(PromptType::DestructiveConfirmation);
+        assert!(reason.is_some());
+        assert!(reason.unwrap().contains("agent mode"));
+
+        let force_suppressor = PromptSuppressor::new(Mode::Human, true, false);
+        let reason = force_suppressor.suppression_reason(PromptType::DestructiveConfirmation);
+        assert!(reason.is_some());
+        assert!(reason.unwrap().contains("--force"));
+
+        let human_suppressor = PromptSuppressor::new(Mode::Human, false, false);
+        let reason = human_suppressor.suppression_reason(PromptType::DestructiveConfirmation);
+        assert!(reason.is_none());
+    }
+}

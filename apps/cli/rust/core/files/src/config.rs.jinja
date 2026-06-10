@@ -179,6 +179,14 @@ fn default_daemon_mode() -> String {
     "execution".to_string()
 }
 
+fn default_audit() -> crate::audit::AuditConfig {
+    crate::audit::AuditConfig::default()
+}
+
+fn default_privacy() -> crate::privacy::PrivacyConfig {
+    crate::privacy::PrivacyConfig::default()
+}
+
 impl Default for Config {
     fn default() -> Self {
         Config {
@@ -204,6 +212,8 @@ impl Default for Config {
             daemon_max_cpu: None,
             daemon_mode: default_daemon_mode(),
             daemon_data_storage_path: None,
+            audit: default_audit(),
+            privacy: default_privacy(),
         }
     }
 }
@@ -421,10 +431,7 @@ impl ConfigManager {
             self.config.log_level = new_config.log_level;
         }
         if new_config.color != default_color() {
-            self.config.color = new_config.color;
-        }
-        if new_config.color != default_color() {
-            self.config.color = new_config.color;
+            self.config.color = new_config.color.clone();
         }
         if new_config.output_format != default_output_format() {
             self.config.output_format = new_config.output_format;
@@ -447,7 +454,7 @@ impl ConfigManager {
     }
     
     /// Migrate configuration to new version
-    fn migrate_config(&self, path: &Path, old_config: &Config) -> Result<()> {
+    fn migrate_config(&mut self, path: &Path, old_config: &Config) -> Result<()> {
         // Create backup
         let backup_path = path.with_extension("toml.bak");
         fs::copy(path, &backup_path)
@@ -457,7 +464,7 @@ impl ConfigManager {
         
         // Merge old config with new defaults
         let mut new_config = Config::default();
-        new_config.merge_config(old_config.clone(), ConfigSource::User);
+        self.merge_config(old_config.clone(), ConfigSource::User);
         
         // Write migrated config
         self.write_config_to_file(&new_config, path)?;
