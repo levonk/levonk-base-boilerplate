@@ -33,14 +33,10 @@
     "nixpkgs#just"
   ],
   "env": {
-    "TS_NODE_PROJECT": "{{ ts_node_project | default('./tsconfig.json') }}",
-    {% if include_development %}
+    "TS_NODE_PROJECT": "{{ ts_node_project | default('./tsconfig.json') }}"{% if include_development %},
     "LOG_LEVEL": "{{ log_level | default('info') }}",
-    "DEBUG": "{{ debug | default('app:*') }}",
-    {% endif %}
-    {% if include_config %}
-    "CONFIG_PATH": "{{ config_path | default('./config.json') }}",
-    {% endif %}
+    "DEBUG": "{{ debug | default('app:*') }}"{% endif %}{% if include_config %},
+    "CONFIG_PATH": "{{ config_path | default('./config.json') }}"{% endif %},
     "NODE_ENV": "{{ node_env | default('development') }}"
   }
 }
