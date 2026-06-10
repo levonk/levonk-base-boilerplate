@@ -49,8 +49,9 @@ describe('Terminal Size Awareness', () => {
   });
 
   it('should wrap text with indentation', () => {
-    const text = 'This is a long line of text that should be wrapped with indentation';
+    const text = 'This is a very long line of text that should definitely be wrapped with indentation when the terminal width is limited';
     const wrapped = terminal.wrapText(text, 4);
+    expect(wrapped).toContain('\n');
     expect(wrapped).toContain('    ');
   });
 
@@ -58,14 +59,13 @@ describe('Terminal Size Awareness', () => {
     const headers = ['Name', 'Age', 'Email'];
     const rows = [
       ['John Doe', '30', 'john@example.com'],
-      ['Jane Smith', '25', 'jane@example.com'],
     ];
     const table = terminal.formatTable(headers, rows);
     expect(table).toHaveLength(3); // header, separator, 1 row
   });
 
   it('should truncate text with ellipsis', () => {
-    const text = 'This is a very long text that should be truncated with an ellipsis at the end';
+    const text = 'This is a very long text that should be truncated with an ellipsis at the end when it exceeds the terminal width limit significantly';
     const truncated = terminal.truncateText(text, '...');
     expect(truncated).toContain('...');
     expect(truncated.length).toBeLessThanOrEqual(terminal.getWidth());

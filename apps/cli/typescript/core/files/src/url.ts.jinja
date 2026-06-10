@@ -102,10 +102,15 @@ export function formatURL(url: string, options: URLOptions = {}): string {
   if (encode) {
     try {
       const urlObj = new URL(formattedURL);
-      // Encode path and query parameters
-      const encodedPath = encodeURLComponent(urlObj.pathname);
-      const encodedSearch = urlObj.search ? encodeURLComponent(urlObj.search.substring(1)) : '';
-      formattedURL = `${urlObj.protocol}//${urlObj.host}${encodedPath}${encodedSearch ? '?' + encodedSearch : ''}`;
+      // Encode path and query parameters separately
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      const encodedPath = '/' + pathParts.map(p => encodeURLComponent(p)).join('/');
+      const encodedSearch = urlObj.search ? '?' + urlObj.search.substring(1).split('&').map(param => {
+        const [key, ...valueParts] = param.split('=');
+        const value = valueParts.join('=');
+        return `${encodeURLComponent(key)}${value ? '=' + encodeURLComponent(value) : ''}`;
+      }).join('&') : '';
+      formattedURL = `${urlObj.protocol}//${urlObj.host}${encodedPath}${encodedSearch}`;
     } catch (error) {
       // If encoding fails, use the normalized URL
     }

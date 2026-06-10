@@ -1,8 +1,16 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import Database from 'better-sqlite3';
 import crypto from 'crypto';
+
+// Dynamic import for better-sqlite3 (optional dependency)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+let Database: any = null;
+try {
+  Database = require('better-sqlite3');
+} catch {
+  // better-sqlite3 not available, audit logging will be disabled
+}
 
 /**
  * Audit log entry structure
@@ -73,14 +81,14 @@ export const DEFAULT_AUDIT_CONFIG: AuditConfig = {
  */
 export class AuditLogger {
   private config: AuditConfig;
-  private db: Database.Database | null = null;
+  private db: any = null;
   private auditPath: string;
   private projectSlug: string;
 
   constructor(projectSlug: string, config: Partial<AuditConfig> = {}) {
     this.projectSlug = projectSlug;
     this.config = { ...DEFAULT_AUDIT_CONFIG, ...config };
-    
+
     // Set default audit path if not provided
     if (!this.config.auditPath) {
       const xdgDataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), '.local', 'share');
@@ -105,10 +113,10 @@ export class AuditLogger {
 
       // Open database
       this.db = new Database(this.auditPath);
-      
+
       // Enable WAL mode for better concurrency
       this.db.pragma('journal_mode = WAL');
-      
+
       // Create audit table if it doesn't exist
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS audit (
@@ -156,7 +164,7 @@ export class AuditLogger {
    */
   private getLastHash(): string | null {
     if (!this.db) return null;
-    
+
     const row = this.db.prepare('SELECT hash FROM audit ORDER BY timestamp DESC LIMIT 1').get() as { hash: string } | undefined;
     return row?.hash || null;
   }
@@ -453,7 +461,7 @@ export class AuditLogger {
    */
   updateConfig(config: Partial<AuditConfig>): void {
     this.config = { ...this.config, ...config };
-    
+
     if (this.config.enabled && !this.db) {
       this.initialize();
     } else if (!this.config.enabled && this.db) {

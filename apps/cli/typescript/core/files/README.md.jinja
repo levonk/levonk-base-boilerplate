@@ -1,0 +1,204 @@
+# {{ project_name }}
+
+{{ project_description }}
+
+## Features
+
+This CLI tool implements comprehensive CLI standards including:
+
+- **Enhanced Color Control**: Smart TTY detection with `--color=auto|always|never` and NO_COLOR support
+- **Standard Exit Codes**: Consistent exit codes for different error conditions
+- **Configuration Management**: XDG config directory support with environment variable precedence
+- **Structured Logging**: Multiple log formats (text, JSON) with auto-detection
+- **Shell Completions**: Bash, Zsh, and Fish completion scripts
+- **Man Pages**: Comprehensive manual pages
+- **Dry-Run Mode**: Preview changes without execution
+- **Confirmation Prompts**: Safe operation with bypass options
+- **Progress Indicators**: Visual progress for batch operations
+- **Pager Integration**: Automatic paging for long output
+- **Terminal Size Awareness**: Responsive output based on terminal dimensions
+- **TUI Mode**: Interactive terminal user interface (falls back to CLI in non-TTY)
+- **Daemon Process Support**: Background processing mode
+- **File Reference Formatting**: Clear file references in error messages
+- **URL Formatting**: Clickable URLs in supported terminals
+- **Configuration Validation**: Schema validation with error reporting
+- **Config Auto-Migration**: Automatic config format upgrades
+- **Credential/Secret Handling**: Secure secret storage with keytar
+- **Signal-Based Config Reload**: SIGHUP support for config reload
+- **Cross-Platform Path Handling**: Windows, Linux, macOS compatibility
+- **Resource Limits**: Memory and CPU limit controls
+- **Collection vs Processing Separation**: Efficient daemon architecture
+- **Error Message Formatting**: Clear, actionable error messages
+- **Health Checks**: Container health check endpoints
+- **Privacy Mode**: Anonymous data collection with ignore lists
+- **Audit Logging**: Append-only audit trail with SQLite
+- **Legacy Deprecation Policy**: Clear end-of-support dates and warnings
+
+## Installation
+
+### From Source
+
+```bash
+# Clone the repository
+git clone {{ repository_url }}
+cd {{ project_slug }}
+
+# Install dependencies
+pnpm install
+
+# Build the project
+pnpm build
+
+# Install globally
+pnpm install -g .
+```
+
+### Using the Install Flag
+
+```bash
+{{ project_slug }} --install
+```
+
+This will:
+- Create configuration directory
+- Generate shell completion scripts
+- Install man pages
+- Set up default configuration
+
+## Usage
+
+### Basic Usage
+
+```bash
+# Show help
+{{ project_slug }} --help
+
+# Process files
+{{ project_slug }} file1.txt file2.txt
+
+# Use dry-run mode
+{{ project_slug }} --dry-run file.txt
+
+# Enable verbose output
+{{ project_slug }} --verbose file.txt
+```
+
+### Configuration
+
+Configuration is loaded from multiple sources in precedence order:
+
+1. CLI flags (highest priority)
+2. Environment variables (`{{ project_slug | upper | replace("-", "_") }}_*`)
+3. Config file (`~/.config/{{ project_slug }}/config.toml`)
+4. Defaults (lowest priority)
+
+### Environment Variables
+
+- `{{ project_slug | upper | replace("-", "_") }}_LOG_LEVEL`: Logging level (debug, info, warn, error)
+- `{{ project_slug | upper | replace("-", "_") }}_LOG_FORMAT`: Log format (text, json)
+- `{{ project_slug | upper | replace("-", "_") }}_CONFIG_PATH`: Custom config file path
+- `NO_COLOR`: Disable color output
+- `CONFIRM_BYPASS`: Bypass confirmation prompts
+- `SECRET_STORAGE_METHOD`: Secret storage method (keytar, env, file)
+
+### Shell Completions
+
+Generate shell completion scripts:
+
+```bash
+# Bash
+{{ project_slug }} --completion bash --output-dir ~/.local/share/bash-completion/completions
+
+# Zsh
+{{ project_slug }} --completion zsh --output-dir ~/.local/share/zsh/completions
+
+# Fish
+{{ project_slug }} --completion fish --output-dir ~/.local/share/fish/completions
+```
+
+Or install automatically:
+
+```bash
+{{ project_slug }} --completion-install bash
+```
+
+### Man Pages
+
+Generate and install man pages:
+
+```bash
+{{ project_slug }} --man --man-output-dir ~/.local/share/man/man1
+```
+
+Or install automatically:
+
+```bash
+{{ project_slug }} --man-install
+```
+
+## Development
+
+### Setup
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run in development mode
+pnpm dev
+
+# Build
+pnpm build
+
+# Run tests
+pnpm test
+
+# Run tests with coverage
+pnpm test-coverage
+
+# Lint
+pnpm lint
+
+# Type check
+pnpm type-check
+```
+
+### Using Devbox
+
+This project uses Devbox for reproducible development environments:
+
+```bash
+# Initialize devbox environment
+devbox shell
+
+# Run commands in devbox
+devbox run pnpm test
+devbox run pnpm build
+```
+
+## Documentation
+
+- [CLI Standards Compliance](docs/cli-standards-compliance.md) - ADR compliance matrix
+- [Command Organization](docs/command-organization.md) - Command structure
+- [Configuration Management](docs/config-management.md) - Config system details
+- [Error Handling](docs/error-handling.md) - Error handling strategy
+- [Health Checks](docs/health-checks.md) - Health check implementation
+- [Deprecation Policy](docs/deprecation-policy.md) - Legacy support policy
+- [Security Best Practices](docs/security-best-practices.md) - Security guidelines
+- [Testing Strategy](docs/testing-strategy.md) - Testing approach
+- [Data Format](docs/data-format.md) - Data format specifications
+- [Release Notes](docs/release-notes.md) - Version history
+
+## License
+
+{{ license }}
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting PRs.
+
+## Support
+
+For issues and questions:
+- GitHub Issues: {{ repository_url }}/issues
+- Documentation: See the `docs/` directory

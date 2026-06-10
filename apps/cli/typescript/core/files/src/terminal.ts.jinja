@@ -37,13 +37,13 @@ function getTerminalSize(): TerminalSize {
   try {
     const columns = process.stdout.columns || DEFAULT_TERMINAL_SIZE.columns;
     const rows = process.stdout.rows || DEFAULT_TERMINAL_SIZE.rows;
-    
+
     // Clamp values to reasonable ranges
     const clampedColumns = Math.max(
       MIN_TERMINAL_WIDTH,
       Math.min(MAX_TERMINAL_WIDTH, columns)
     );
-    
+
     return {
       columns: clampedColumns,
       rows: Math.max(10, rows),
@@ -73,7 +73,12 @@ export class Terminal {
     };
 
     this.currentSize = getTerminalSize();
-    
+
+    // Use defaultWidth if provided and not a TTY
+    if (!this.options.isTTY && this.options.defaultWidth) {
+      this.currentSize.columns = this.options.defaultWidth;
+    }
+
     // Set up resize event listener if in TTY
     if (this.options.isTTY && process.stdout.isTTY) {
       this.setupResizeHandler();
@@ -211,7 +216,7 @@ export class Terminal {
     padding: number = 2
   ): string[] {
     const width = this.getWidth();
-    
+
     // Calculate column widths based on content
     const columnCount = headers.length;
     const columnWidths: number[] = headers.map((h, i) => {
@@ -224,7 +229,7 @@ export class Terminal {
 
     // Check if table fits in terminal
     const totalWidth = columnWidths.reduce((sum, w) => sum + w, 0);
-    
+
     if (totalWidth > width) {
       // Table doesn't fit, wrap each cell
       return this.formatWrappedTable(headers, rows, columnWidths, width);
@@ -235,7 +240,7 @@ export class Terminal {
       .map((h, i) => h.padEnd(columnWidths[i]))
       .join('');
     const separator = columnWidths.map((w) => '-'.repeat(w)).join('');
-    
+
     const rowLines = rows.map((row) =>
       row
         .map((cell, i) => (cell || '').padEnd(columnWidths[i]))
@@ -255,13 +260,13 @@ export class Terminal {
     maxWidth: number
   ): string[] {
     const lines: string[] = [];
-    
+
     // Wrap header
     const wrappedHeaders = headers.map((h, i) =>
       this.wrapText(h, 0).split('\n')
     );
     const maxHeaderLines = Math.max(...wrappedHeaders.map((h) => h.length));
-    
+
     for (let i = 0; i < maxHeaderLines; i++) {
       const line = wrappedHeaders
         .map((h, idx) => (h[i] || '').padEnd(columnWidths[idx]))
@@ -278,7 +283,7 @@ export class Terminal {
         this.wrapText(cell || '', 0).split('\n')
       );
       const maxCellLines = Math.max(...wrappedCells.map((c) => c.length));
-      
+
       for (let i = 0; i < maxCellLines; i++) {
         const line = wrappedCells
           .map((c, idx) => (c[i] || '').padEnd(columnWidths[idx]))
@@ -296,10 +301,10 @@ export class Terminal {
   truncateText(text: string, suffix: string = '...'): string {
     const width = this.getWidth();
     if (text.length <= width) return text;
-    
+
     const availableWidth = width - suffix.length;
     if (availableWidth <= 0) return suffix;
-    
+
     return text.substring(0, availableWidth) + suffix;
   }
 }

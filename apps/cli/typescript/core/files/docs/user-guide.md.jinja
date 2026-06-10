@@ -1,0 +1,257 @@
+# {{ project_name }} - User Guide
+
+This guide helps users get started with {{ project_name }} and covers common use cases.
+
+## Getting Started
+
+### First-Time Setup
+
+1. **Install {{ project_name }}**
+   ```bash
+   {{ project_slug }} --install
+   ```
+
+2. **Verify Installation**
+   ```bash
+   {{ project_slug }} --help
+   ```
+
+3. **Process Your First File**
+   ```bash
+   {{ project_slug }} /path/to/file.txt
+   ```
+
+## Common Workflows
+
+### Processing Multiple Files
+
+```bash
+# Process multiple files
+{{ project_slug }} file1.txt file2.txt file3.txt
+
+# Process all files in a directory
+{{ project_slug }} /path/to/directory/*.txt
+
+# Use glob patterns
+{{ project_slug }} **/*.log
+```
+
+### Using Dry-Run Mode
+
+Preview changes before executing:
+
+```bash
+{{ project_slug }} --dry-run file.txt
+```
+
+Dry-run mode shows what would happen without making changes.
+
+### Verbose and Debug Modes
+
+Get more detailed output:
+
+```bash
+# Verbose mode
+{{ project_slug }} --verbose file.txt
+
+# Debug mode (most detailed)
+{{ project_slug }} --debug file.txt
+
+# Quiet mode (minimal output)
+{{ project_slug }} --quiet file.txt
+```
+
+### Configuration
+
+#### Using Config File
+
+Edit your config file at `~/.config/{{ project_slug }}/config.toml`:
+
+```toml
+# Logging configuration
+log_level = "info"
+log_format = "text"
+
+# Color output
+color = "auto"
+
+# Resource limits
+max_memory = "1GB"
+max_cpu = 75
+```
+
+#### Using Environment Variables
+
+```bash
+export {{ project_slug | upper | replace("-", "_") }}_LOG_LEVEL=debug
+export {{ project_slug | upper | replace("-", "_") }}_LOG_FORMAT=json
+{{ project_slug }} file.txt
+```
+
+#### Using CLI Flags
+
+```bash
+{{ project_slug }} --log-level=debug --log-format=json file.txt
+```
+
+### Color Control
+
+Control color output:
+
+```bash
+# Auto-detect (default)
+{{ project_slug }} --color=auto file.txt
+
+# Always enable color
+{{ project_slug }} --color=always file.txt
+
+# Never use color
+{{ project_slug }} --color=never file.txt
+
+# Use NO_COLOR environment variable
+NO_COLOR=1 {{ project_slug }} file.txt
+```
+
+### Shell Completions
+
+Enable tab completion for your shell:
+
+**Bash:**
+```bash
+{{ project_slug }} --completion-install bash
+source ~/.bashrc
+```
+
+**Zsh:**
+```bash
+{{ project_slug }} --completion-install zsh
+source ~/.zshrc
+```
+
+**Fish:**
+```bash
+{{ project_slug }} --completion-install fish
+```
+
+### Man Pages
+
+Access manual pages:
+
+```bash
+# Install man pages
+{{ project_slug }} --man-install
+
+# View man page
+man {{ project_slug }}
+```
+
+## Advanced Usage
+
+### Resource Limits
+
+Control memory and CPU usage:
+
+```bash
+{{ project_slug }} --max-memory 512MB --max-cpu 50 file.txt
+```
+
+### Privacy Mode
+
+Enable privacy mode to anonymize data:
+
+```bash
+{{ project_slug }} --privacy file.txt
+```
+
+Configure ignore lists in your config file:
+
+```toml
+[privacy]
+enabled = true
+ignore_fields = ["email", "phone", "ip_address"]
+```
+
+### Daemon Mode
+
+Run as a background daemon:
+
+```bash
+{{ project_slug }} --daemon start
+{{ project_slug }} --daemon status
+{{ project_slug }} --daemon stop
+```
+
+### TUI Mode
+
+Launch the interactive terminal user interface:
+
+```bash
+{{ project_slug }} --interactive
+# or
+{{ project_slug }} --tui
+```
+
+Note: TUI mode requires a TTY terminal. Falls back to CLI mode in non-TTY environments.
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue: Command not found**
+```bash
+# Solution: Add to PATH or install globally
+export PATH="$PATH:$(pnpm bin)"
+```
+
+**Issue: Permission denied**
+```bash
+# Solution: Check file permissions
+chmod 644 file.txt
+```
+
+**Issue: Config file not loading**
+```bash
+# Solution: Check config file location
+ls -la ~/.config/{{ project_slug }}/
+```
+
+**Issue: Colors not displaying**
+```bash
+# Solution: Force color mode
+{{ project_slug }} --color=always file.txt
+```
+
+### Getting Help
+
+- Use `--help` flag: `{{ project_slug }} --help`
+- Use `--verbose` for detailed output
+- Check logs in `~/.local/state/{{ project_slug }}/`
+- Report issues at: {{ repository_url }}/issues
+
+## Best Practices
+
+1. **Use dry-run mode** before making destructive changes
+2. **Enable verbose mode** when troubleshooting
+3. **Use configuration files** for repeated operations
+4. **Set up shell completions** for faster workflow
+5. **Review help text** for new features
+6. **Keep your config file** under version control
+7. **Use resource limits** on resource-constrained systems
+8. **Enable privacy mode** when processing sensitive data
+
+## Performance Tips
+
+- Process files in batches for better performance
+- Use `--no-pager` for scripts and automation
+- Adjust resource limits based on your system
+- Use JSON log format for machine-readable output
+- Enable quiet mode to reduce I/O overhead
+
+## Security Considerations
+
+- Never hardcode secrets in config files
+- Use keytar for secure credential storage
+- Enable audit logging for compliance
+- Review privacy mode settings for sensitive data
+- Keep your installation updated
+- Verify file permissions on config directories
