@@ -96,27 +96,24 @@ impl StructuredError {
     }
 
     /// Add context information to the error
-    pub fn with_context(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn with_context(&mut self, key: impl Into<String>, value: impl Into<String>) {
         self.context.insert(key.into(), value.into());
-        self
     }
 
     /// Add a suggestion to the error
-    pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
+    pub fn with_suggestion(&mut self, suggestion: impl Into<String>) {
         self.suggestions.push(Suggestion {
             text: suggestion.into(),
             command: None,
         });
-        self
     }
 
     /// Add a suggestion with a CLI command reference
-    pub fn with_suggestion_command(mut self, suggestion: impl Into<String>, command: impl Into<String>) -> Self {
+    pub fn with_suggestion_command(&mut self, suggestion: impl Into<String>, command: impl Into<String>) {
         self.suggestions.push(Suggestion {
             text: suggestion.into(),
             command: Some(command.into()),
         });
-        self
     }
 
     /// Get the error code as a string
@@ -165,8 +162,9 @@ pub fn from_io_error(err: std::io::Error, context: &str) -> StructuredError {
     let message = format!("{}: {}", context, err);
     let exit_code = code.exit_code();
     
-    StructuredError::new(code, message, exit_code)
-        .with_context("io_error_kind", format!("{:?}", err.kind()))
+    let mut error = StructuredError::new(code, message, exit_code);
+    error.with_context("io_error_kind", format!("{:?}", err.kind()));
+    error
 }
 
 /// Translate dependency errors to extract actionable meaning
@@ -190,9 +188,10 @@ pub fn translate_dependency_error(error: anyhow::Error, operation: &str) -> Stru
     
     let exit_code = code.exit_code();
     
-    StructuredError::new(code, message, exit_code)
-        .with_context("operation", operation)
-        .with_context("original_error", error.to_string())
+    let mut error = StructuredError::new(code, message, exit_code);
+    error.with_context("operation", operation);
+    error.with_context("original_error", error.to_string());
+    error
 }
 
 /// Translate generic errors with context preservation
@@ -214,8 +213,9 @@ pub fn translate_error_with_context(error: anyhow::Error, context: &str) -> Stru
     let message = format!("{}: {}", context, error.to_string());
     let exit_code = code.exit_code();
     
-    StructuredError::new(code, message, exit_code)
-        .with_context("context", context)
+    let mut error = StructuredError::new(code, message, exit_code);
+    error.with_context("context", context);
+    error
 }
 
 #[cfg(test)]
@@ -239,13 +239,13 @@ mod tests {
 
     #[test]
     fn test_structured_error_with_context() {
-        let error = StructuredError::new(
+        let mut error = StructuredError::new(
             ErrorCode::Config,
             "Configuration file not found",
             3,
-        )
-        .with_context("path", "/path/to/config.toml")
-        .with_context("attempted_paths", "/etc/config.toml,~/.config/config.toml");
+        );
+        error.with_context("path", "/path/to/config.toml");
+        error.with_context("attempted_paths", "/etc/config.toml,~/.config/config.toml");
         
         assert_eq!(error.context.len(), 2);
         assert_eq!(error.context.get("path"), Some(&"/path/to/config.toml".to_string()));

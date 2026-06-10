@@ -150,13 +150,13 @@ mod tests {
 
     #[test]
     fn test_error_formatter_toon() {
-        let error = StructuredError::new(
+        let mut error = StructuredError::new(
             ErrorCode::Config,
             "Configuration file not found",
             3,
-        )
-        .with_context("path", "/path/to/config.toml")
-        .with_suggestion("Run 'mytool --install'");
+        );
+        error.with_context("path", "/path/to/config.toml");
+        error.with_suggestion("Run 'mytool --install'");
         
         let formatter = ErrorFormatter::new(OutputFormat::Toon);
         let result = formatter.format_error(&error).unwrap();
@@ -168,13 +168,13 @@ mod tests {
 
     #[test]
     fn test_error_formatter_json() {
-        let error = StructuredError::new(
+        let mut error = StructuredError::new(
             ErrorCode::Config,
             "Configuration file not found",
             3,
-        )
-        .with_context("path", "/path/to/config.toml")
-        .with_suggestion("Run 'mytool --install'");
+        );
+        error.with_context("path", "/path/to/config.toml");
+        error.with_suggestion("Run 'mytool --install'");
         
         let formatter = ErrorFormatter::new(OutputFormat::Json);
         let result = formatter.format_error(&error).unwrap();
@@ -190,13 +190,13 @@ mod tests {
 
     #[test]
     fn test_error_formatter_human() {
-        let error = StructuredError::new(
+        let mut error = StructuredError::new(
             ErrorCode::Config,
             "Configuration file not found",
             3,
-        )
-        .with_context("path", "/path/to/config.toml")
-        .with_suggestion("Run 'mytool --install'");
+        );
+        error.with_context("path", "/path/to/config.toml");
+        error.with_suggestion("Run 'mytool --install'");
         
         let formatter = ErrorFormatter::new(OutputFormat::Human);
         let result = formatter.format_error(&error).unwrap();

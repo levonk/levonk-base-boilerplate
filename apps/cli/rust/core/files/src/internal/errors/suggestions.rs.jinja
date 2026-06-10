@@ -31,11 +31,13 @@ impl SuggestionGenerator {
 
     /// Generate suggestions for configuration errors
     fn generate_config_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion("Initialize configuration with default settings");
         error.with_suggestion_command(
             "Initialize configuration with default settings",
             format!("{} --install", self.tool_name),
         );
         
+        error.with_suggestion("Check configuration file path");
         error.with_suggestion_command(
             "Check configuration file path",
             format!("{} --config <path>", self.tool_name),
@@ -78,6 +80,7 @@ impl SuggestionGenerator {
     fn generate_validation_suggestions(&self, error: &mut StructuredError) {
         error.with_suggestion("Review the input data for required fields");
         error.with_suggestion("Check data types and formats match expected values");
+        error.with_suggestion("Display help for command usage");
         error.with_suggestion_command(
             "Display help for command usage",
             format!("{} --help", self.tool_name),
@@ -109,16 +112,18 @@ impl SuggestionGenerator {
 
     /// Generate suggestions for generic errors
     fn generate_generic_suggestions(&self, error: &mut StructuredError) {
+        error.with_suggestion("Enable verbose logging for more details");
         error.with_suggestion_command(
             "Enable verbose logging for more details",
             format!("{} --verbose", self.tool_name),
         );
+        error.with_suggestion("Enable debug logging for detailed diagnostics");
         error.with_suggestion_command(
             "Enable debug logging for detailed diagnostics",
             format!("{} --debug", self.tool_name),
         );
         error.with_suggestion("Check the logs for additional error details");
-        error.with_suggestion("Report this issue if it persists");
+        error.with_suggestion("Report this issue if persists");
     }
 }
 

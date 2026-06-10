@@ -18,32 +18,38 @@ impl ErrorValidator {
     /// Validate file path before calling file operations
     pub fn validate_file_path(&self, path: &str) -> Result<(), StructuredError> {
         if path.is_empty() {
-            return Err(StructuredError::new(
+            let mut error = StructuredError::new(
                 ErrorCode::Validation,
                 "File path cannot be empty",
                 2,
-            ).with_suggestion("Provide a valid file path"));
+            );
+            error.with_suggestion("Provide a valid file path");
+            return Err(error);
         }
 
         // Check for potentially dangerous paths
         if path.contains("..") {
-            return Err(StructuredError::new(
+            let mut error = StructuredError::new(
                 ErrorCode::Validation,
                 "File path contains parent directory references (..)",
                 2,
-            ).with_context("path", path)
-             .with_suggestion("Use absolute paths or paths relative to the current directory"));
+            );
+            error.with_context("path", path);
+            error.with_suggestion("Use absolute paths or paths relative to the current directory");
+            return Err(error);
         }
 
         // Check for path length limits
         if path.len() > 4096 {
-            return Err(StructuredError::new(
+            let mut error = StructuredError::new(
                 ErrorCode::Validation,
                 "File path exceeds maximum length",
                 2,
-            ).with_context("path_length", path.len().to_string())
-             .with_context("max_length", "4096")
-             .with_suggestion("Use a shorter file path"));
+            );
+            error.with_context("path_length", path.len().to_string());
+            error.with_context("max_length", "4096");
+            error.with_suggestion("Use a shorter file path");
+            return Err(error);
         }
 
         Ok(())
@@ -52,21 +58,25 @@ impl ErrorValidator {
     /// Validate URL before making network requests
     pub fn validate_url(&self, url: &str) -> Result<(), StructuredError> {
         if url.is_empty() {
-            return Err(StructuredError::new(
+            let mut error = StructuredError::new(
                 ErrorCode::Validation,
                 "URL cannot be empty",
                 2,
-            ).with_suggestion("Provide a valid URL"));
+            );
+            error.with_suggestion("Provide a valid URL");
+            return Err(error);
         }
 
         // Basic URL validation
         if !url.starts_with("http://") && !url.starts_with("https://") {
-            return Err(StructuredError::new(
+            let mut error = StructuredError::new(
                 ErrorCode::Validation,
                 "URL must start with http:// or https://",
                 2,
-            ).with_context("url", url)
-             .with_suggestion("Include the protocol (http:// or https://) in the URL"));
+            );
+            error.with_context("url", url);
+            error.with_suggestion("Include the protocol (http:// or https://) in the URL");
+            return Err(error);
         }
 
         Ok(())
@@ -78,15 +88,17 @@ impl ErrorValidator {
 
         // Check if file exists
         if !std::path::Path::new(config_path).exists() {
-            return Err(StructuredError::new(
+            let mut error = StructuredError::new(
                 ErrorCode::NotFound,
                 "Configuration file not found",
                 1,
-            ).with_context("path", config_path)
-             .with_suggestion_command(
+            );
+            error.with_context("path", config_path);
+            error.with_suggestion_command(
                 "Initialize configuration with default settings",
                 format!("{} --install", self.tool_name),
-            ));
+            );
+            return Err(error);
         }
 
         Ok(())
@@ -97,12 +109,14 @@ impl ErrorValidator {
         // Check for suspicious argument patterns
         for arg in args {
             if arg.contains(";") || arg.contains("|") || arg.contains("&") {
-                return Err(StructuredError::new(
+                let mut error = StructuredError::new(
                     ErrorCode::Validation,
                     "Argument contains shell metacharacters",
                     2,
-                ).with_context("argument", arg)
-                 .with_suggestion("Remove shell metacharacters from arguments"));
+                );
+                error.with_context("argument", arg);
+                error.with_suggestion("Remove shell metacharacters from arguments");
+                return Err(error);
             }
         }
 
@@ -113,39 +127,47 @@ impl ErrorValidator {
     pub fn validate_resource_limits(&self, memory_mb: Option<u64>, cpu_cores: Option<u64>) -> Result<(), StructuredError> {
         if let Some(memory) = memory_mb {
             if memory == 0 {
-                return Err(StructuredError::new(
+                let mut error = StructuredError::new(
                     ErrorCode::Validation,
                     "Memory limit cannot be zero",
                     2,
-                ).with_suggestion("Set a positive memory limit"));
+                );
+                error.with_suggestion("Set a positive memory limit");
+                return Err(error);
             }
             if memory > 1_000_000 {
-                return Err(StructuredError::new(
+                let mut error = StructuredError::new(
                     ErrorCode::Validation,
                     "Memory limit exceeds maximum allowed value",
                     2,
-                ).with_context("requested_memory_mb", memory.to_string())
-                 .with_context("max_memory_mb", "1000000")
-                 .with_suggestion("Reduce the memory limit to a reasonable value"));
+                );
+                error.with_context("requested_memory_mb", memory.to_string());
+                error.with_context("max_memory_mb", "1000000");
+                error.with_suggestion("Reduce the memory limit to a reasonable value");
+                return Err(error);
             }
         }
 
         if let Some(cpu) = cpu_cores {
             if cpu == 0 {
-                return Err(StructuredError::new(
+                let mut error = StructuredError::new(
                     ErrorCode::Validation,
                     "CPU limit cannot be zero",
                     2,
-                ).with_suggestion("Set a positive CPU limit"));
+                );
+                error.with_suggestion("Set a positive CPU limit");
+                return Err(error);
             }
             if cpu > 128 {
-                return Err(StructuredError::new(
+                let mut error = StructuredError::new(
                     ErrorCode::Validation,
                     "CPU limit exceeds maximum allowed value",
                     2,
-                ).with_context("requested_cpu_cores", cpu.to_string())
-                 .with_context("max_cpu_cores", "128")
-                 .with_suggestion("Reduce the CPU limit to a reasonable value"));
+                );
+                error.with_context("requested_cpu_cores", cpu.to_string());
+                error.with_context("max_cpu_cores", "128");
+                error.with_suggestion("Reduce the CPU limit to a reasonable value");
+                return Err(error);
             }
         }
 
