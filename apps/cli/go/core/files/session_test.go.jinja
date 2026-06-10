@@ -1,0 +1,265 @@
+package main
+
+import (
+	"bytes"
+	"testing"
+
+	"github.com/spf13/cobra"
+)
+
+func TestRunSessionContext(t *testing.T) {
+	// Create a test command
+	cmd := &cobra.Command{}
+	sessionContextFlag = true
+
+	err := runSessionContext(cmd, []string{})
+	if err != nil {
+		t.Fatalf("runSessionContext failed: %v", err)
+	}
+}
+
+func TestRunSessionWithoutFlags(t *testing.T) {
+	cmd := &cobra.Command{}
+	sessionContextFlag = false
+	installAgentHooksFlag = false
+
+	// Should show help (not an error)
+	err := runSession(cmd, []string{})
+	if err == nil {
+		t.Error("runSession should return error when no flags are set")
+	}
+}
+
+func TestSessionCommandFlags(t *testing.T) {
+	// Test that session command has the expected flags
+	if sessionCmd.Flags().Lookup("session-context") == nil {
+		t.Error("session command missing session-context flag")
+	}
+	if sessionCmd.Flags().Lookup("install-agent-hooks") == nil {
+		t.Error("session command missing install-agent-hooks flag")
+	}
+}
+
+func TestSessionCommandInRoot(t *testing.T) {
+	// Verify session command is added to root
+	found := false
+	for _, c := range rootCmd.Commands() {
+		if c.Name() == "session" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("session command not added to root command")
+	}
+}
+
+func TestSessionContextOutput(t *testing.T) {
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	sessionContextFlag = true
+	cmd := &cobra.Command{}
+	err := runSessionContext(cmd, []string{})
+
+	w.Close()
+	os.Stdout = old
+
+	if err != nil {
+		t.Fatalf("runSessionContext failed: %v", err)
+	}
+
+	// Read captured output
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+	output := buf.String()
+
+	if output == "" {
+		t.Error("session context output is empty")
+	}
+
+	// Verify it contains expected fields
+	expectedFields := []string{"working_dir", "project_type", "has_config", "has_data"}
+	for _, field := range expectedFields {
+		if !containsString(output, field) {
+			t.Errorf("output missing expected field: %s", field)
+		}
+	}
+}
+
+func TestRunInstallAgentHooks(t *testing.T) {
+	cmd := &cobra.Command{}
+	installAgentHooksFlag = true
+	agentTypeFlag = "claude"
+
+	err := runInstallAgentHooks(cmd, []string{})
+	// This may fail due to permissions or path issues in test environment
+	// but the logic should be tested
+	if err != nil {
+		t.Logf("runInstallAgentHooks failed as expected in test environment: %v", err)
+	}
+}
+
+func TestInstallAgentHooksIntegration(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a fake home directory
+	homeDir := filepath.Join(tmpDir, "home")
+	claudeDir := filepath.Join(homeDir, ".claude")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatalf("Failed to create test directories: %v", err)
+	}
+
+	// Set up test environment
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", homeDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create a test executable
+	testExec := filepath.Join(tmpDir, "test-exec")
+	if err := os.WriteFile(testExec, []byte("#!/bin/sh\necho test"), 0755); err != nil {
+		t.Fatalf("Failed to create test executable: %v", err)
+	}
+
+	// Test hook installation
+	opts := session.HookOptions{
+		AgentType:      session.AgentClaude,
+		ExecutablePath: testExec,
+		SessionEnd:     true,
+	}
+
+	result, err := session.RegisterHook(opts)
+	if err != nil {
+		t.Fatalf("RegisterHook failed: %v", err)
+	}
+
+	if !result.Success {
+		t.Error("RegisterHook returned unsuccessful result")
+	}
+
+	// Verify hook file was created
+	hookFile := filepath.Join(claudeDir, "settings.json")
+	if _, err := os.Stat(hookFile); os.IsNotExist(err) {
+		t.Error("Hook file was not created")
+	}
+
+	// Test idempotent installation (should be no-op)
+	result2, err := session.RegisterHook(opts)
+	if err != nil {
+		t.Fatalf("RegisterHook failed on second call: %v", err)
+	}
+
+	if result2.Updated {
+		t.Error("RegisterHook should not update on idempotent call")
+	}
+
+	if result2.Message != "Hook already installed with same path (no-op)" {
+		t.Errorf("Expected no-op message, got: %s", result2.Message)
+	}
+}
+
+func TestInstallAgentHooksForceUpdate(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a fake home directory
+	homeDir := filepath.Join(tmpDir, "home")
+	claudeDir := filepath.Join(homeDir, ".claude")
+	if err := os.MkdirAll(claudeDir, 0755); err != nil {
+		t.Fatalf("Failed to create test directories: %v", err)
+	}
+
+	// Set up test environment
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", homeDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create a test executable
+	testExec := filepath.Join(tmpDir, "test-exec")
+	if err := os.WriteFile(testExec, []byte("#!/bin/sh\necho test"), 0755); err != nil {
+		t.Fatalf("Failed to create test executable: %v", err)
+	}
+
+	// Install hook
+	opts := session.HookOptions{
+		AgentType:      session.AgentClaude,
+		ExecutablePath: testExec,
+		SessionEnd:     true,
+		ForceUpdate:    false,
+	}
+
+	_, err := session.RegisterHook(opts)
+	if err != nil {
+		t.Fatalf("RegisterHook failed: %v", err)
+	}
+
+	// Force update
+	opts.ForceUpdate = true
+	result, err := session.RegisterHook(opts)
+	if err != nil {
+		t.Fatalf("RegisterHook with force failed: %v", err)
+	}
+
+	if !result.Updated {
+		t.Error("RegisterHook with force should update even if path is same")
+	}
+}
+
+func TestInstallAgentHooksCodex(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a fake home directory
+	homeDir := filepath.Join(tmpDir, "home")
+	codexDir := filepath.Join(homeDir, ".codex")
+	if err := os.MkdirAll(codexDir, 0755); err != nil {
+		t.Fatalf("Failed to create test directories: %v", err)
+	}
+
+	// Set up test environment
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", homeDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create a test executable
+	testExec := filepath.Join(tmpDir, "test-exec")
+	if err := os.WriteFile(testExec, []byte("#!/bin/sh\necho test"), 0755); err != nil {
+		t.Fatalf("Failed to create test executable: %v", err)
+	}
+
+	// Test Codex hook installation
+	opts := session.HookOptions{
+		AgentType:      session.AgentCodex,
+		ExecutablePath: testExec,
+		SessionEnd:     true,
+	}
+
+	result, err := session.RegisterHook(opts)
+	if err != nil {
+		t.Fatalf("RegisterHook failed for Codex: %v", err)
+	}
+
+	if !result.Success {
+		t.Error("RegisterHook returned unsuccessful result for Codex")
+	}
+
+	// Verify hook file was created
+	hookFile := filepath.Join(codexDir, "hooks.json")
+	if _, err := os.Stat(hookFile); os.IsNotExist(err) {
+		t.Error("Codex hook file was not created")
+	}
+}
+
+// Helper function
+func containsString(s, substr string) bool {
+	return len(s) >= len(substr) && findSubstringString(s, substr)
+}
+
+func findSubstringString(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
+
+	"{{ project_slug }}/internal/errors"
 )
 
-// Exit codes
+// Exit codes (legacy - use internal/errors package for new code)
 const (
 	ExitSuccess     = 0  // Successful execution
 	ExitError       = 1  // General error
@@ -17,7 +18,7 @@ const (
 	ExitFileError   = 4  // File operation error
 )
 
-// ErrorType represents the category of error
+// ErrorType represents the category of error (legacy - use internal/errors.ErrorType for new code)
 type ErrorType int
 
 const (
@@ -38,7 +39,7 @@ type ErrorContext struct {
 	Module    string
 }
 
-// AppError represents a structured application error
+// AppError represents a structured application error (legacy - use internal/errors.StructuredError for new code)
 type AppError struct {
 	Type       ErrorType
 	Message    string
@@ -52,7 +53,7 @@ func (e *AppError) Error() string {
 	return formatError(e)
 }
 
-// NewAppError creates a new application error
+// NewAppError creates a new application error (legacy - use internal/errors.NewStructuredError for new code)
 func NewAppError(errorType ErrorType, message string, suggestion string) *AppError {
 	return &AppError{
 		Type:       errorType,
@@ -62,7 +63,7 @@ func NewAppError(errorType ErrorType, message string, suggestion string) *AppErr
 	}
 }
 
-// WrapError wraps an existing error with additional context
+// WrapError wraps an existing error with additional context (legacy - use internal/errors.WrapStructuredError for new code)
 func WrapError(err error, errorType ErrorType, message string, suggestion string) *AppError {
 	return &AppError{
 		Type:       errorType,
@@ -133,7 +134,7 @@ func formatError(err *AppError) string {
 	return builder.String()
 }
 
-// GetSuggestionForError returns a helpful suggestion for common error types
+// GetSuggestionForError returns a helpful suggestion for common error types (legacy - use internal/errors.SuggestionGenerator for new code)
 func GetSuggestionForError(errorType ErrorType, message string) string {
 	switch errorType {
 	case ErrorTypeConfig:
@@ -158,14 +159,11 @@ func GetSuggestionForError(errorType ErrorType, message string) string {
 }
 
 // ExitWithError logs an error and exits with the appropriate exit code
+// This function now uses the structured error system for better error handling
 func ExitWithError(err error) {
-	if appErr, ok := err.(*AppError); ok {
-		fmt.Fprintf(os.Stderr, "%s\n", appErr.Error())
-		os.Exit(getExitCodeForErrorType(appErr.Type))
-	} else {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(ExitError)
-	}
+	// Use the new structured error system
+	translator := errors.NewTranslator("{{ project_slug }}")
+	translator.WrapAndExit(err, errors.FormatTOON)
 }
 
 // getExitCodeForErrorType returns the appropriate exit code for an error type
@@ -180,7 +178,7 @@ func getExitCodeForErrorType(errorType ErrorType) int {
 	}
 }
 
-// Common error constructors for convenience
+// Common error constructors for convenience (legacy - use internal/errors package for new code)
 
 // NewConfigError creates a configuration error
 func NewConfigError(message string) *AppError {

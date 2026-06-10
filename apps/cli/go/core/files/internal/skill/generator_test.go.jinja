@@ -1,0 +1,149 @@
+package skill
+
+import (
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/spf13/cobra"
+)
+
+func TestGenerator_Generate(t *testing.T) {
+	rootCmd := &cobra.Command{
+		Use:   "testcli",
+		Short: "Test CLI",
+	}
+
+	generator := NewGenerator("Test CLI", "testcli", "A test CLI", "1.0.0", rootCmd)
+
+	content, err := generator.Generate()
+	if err != nil {
+		t.Fatalf("Generate() failed: %v", err)
+	}
+
+	// Check that content is not empty
+	if len(content) == 0 {
+		t.Errorf("Generated content is empty")
+	}
+
+	// Check that content contains markdown structure
+	// Note: After copier materialization, Jinja2 variables are already replaced
+	// So we check for the structural elements that should always be present
+	if !strings.Contains(content, "## Mode Selection") {
+		t.Errorf("Generated content missing Mode Selection section")
+	}
+}
+
+func TestGenerator_GenerateToFile(t *testing.T) {
+	rootCmd := &cobra.Command{
+		Use:   "testcli",
+		Short: "Test CLI",
+	}
+
+	generator := NewGenerator("Test CLI", "testcli", "A test CLI", "1.0.0", rootCmd)
+
+	tmpDir := t.TempDir()
+	filePath := tmpDir + "/SKILL.md"
+
+	err := generator.GenerateToFile(filePath)
+	if err != nil {
+		t.Fatalf("GenerateToFile() failed: %v", err)
+	}
+
+	// Check file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		t.Errorf("File was not created: %s", filePath)
+	}
+
+	// Check file content
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+
+	// Check that file has content
+	if len(content) == 0 {
+		t.Errorf("File content is empty")
+	}
+}
+
+func TestStripLiveState(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "home path replacement",
+			input:    "Config file at /home/user/config.yaml",
+			expected: "Config file at ~/user/config.yaml",
+		},
+		{
+			name:     "users path replacement",
+			input:    "Config file at /Users/user/config.yaml",
+			expected: "Config file at ~/user/config.yaml",
+		},
+		{
+			name:     "env home replacement",
+			input:    "Config file at " + os.Getenv("HOME") + "/config.yaml",
+			expected: "Config file at ~/config.yaml",
+		},
+		{
+			name:     "no replacement needed",
+			input:    "Config file at /etc/config.yaml",
+			expected: "Config file at /etc/config.yaml",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := stripLiveState(tt.input)
+			if result != tt.expected {
+				t.Errorf("stripLiveState() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestRewriteExamples(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name: "basic command rewrite",
+			input: `mytool file.txt`,
+			expected: `  go run main.go file.txt`,
+		},
+		{
+			name: "command with flags",
+			input: `mytool file.txt --toon`,
+			expected: `  go run main.go file.txt --toon`,
+		},
+		{
+			name: "already has go run",
+			input: `go run main.go file.txt`,
+			expected: `go run main.go file.txt`,
+		},
+		{
+			name: "comment line",
+			input: `# This is a comment`,
+			expected: `# This is a comment`,
+		},
+		{
+			name: "empty line",
+			input: ``,
+			expected: ``,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := rewriteExamples(tt.input, "mytool")
+			if result != tt.expected {
+				t.Errorf("rewriteExamples() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}

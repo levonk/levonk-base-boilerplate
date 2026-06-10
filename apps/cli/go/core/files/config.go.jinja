@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"{{ project_slug }}/internal/idempotency"
 )
 
 // Mode represents the CLI operation mode
@@ -136,13 +139,31 @@ func CreateDefaultConfig(configPath string) error {
 	return nil
 }
 
-// InitConfigIfNeeded initializes the config file if it doesn't exist
+// InitConfigIfNeeded initializes the config file if it doesn't exist (idempotent)
 // This should be called during application initialization
 func InitConfigIfNeeded(configPath string) error {
-	if IsFirstRun(configPath) {
-		if err := CreateDefaultConfig(configPath); err != nil {
-			return fmt.Errorf("failed to initialize config file: %w", err)
-		}
+	handler := idempotency.NewHandler(logger)
+	ctx := context.Background()
+
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(configPath) },
+		idempotency.IsFileExists,
+		func() error {
+			return CreateDefaultConfig(configPath)
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Config file already exists at %s", configPath)
+		},
+		func() string {
+			return fmt.Sprintf("Config file initialized at %s", configPath)
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if result.ActionPerformed {
+		logger.Info("Config file initialized")
 	}
 	return nil
 }

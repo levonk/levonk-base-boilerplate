@@ -1,0 +1,126 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"{{ project_slug }}/internal/session"
+)
+
+var (
+	sessionContextFlag bool
+	installAgentHooksFlag bool
+	agentTypeFlag string
+	forceUpdateFlag bool
+)
+
+// sessionCmd represents the session command
+var sessionCmd = &cobra.Command{
+	Use:   "session",
+	Short: "Session integration for agent context injection",
+	Long: `Session integration commands for ambient context injection in AI agent environments.
+
+These commands enable the CLI to integrate with AI agent sessions by providing
+compact context and registering hooks for automatic context capture.
+
+Session Context:
+  The --session-context flag outputs compact state in TOON format, optimized
+  for token efficiency in LLM contexts. This includes working directory, project
+  type, configuration status, and contextual help messages.
+
+Hook Installation:
+  The --install-agent-hooks flag registers session hooks for AI agents like
+  Claude Code and Codex. Hooks enable automatic context capture at session
+  start and end, providing ambient context without explicit commands.
+
+Examples:
+  {{ project_slug }} session --session-context
+  {{ project_slug }} session --install-agent-hooks --agent-type claude
+  {{ project_slug }} session --install-agent-hooks --agent-type codex --force
+
+Supported Agents:
+  - claude: Claude Code (uses ~/.claude/settings.json or .claude/settings.json)
+  - codex: Codex (uses ~/.codex/hooks.json or .codex/hooks.json)
+
+Hook Features:
+  - Idempotent installation (silent no-ops for same path)
+  - Portable command resolution (PATH-verified or absolute path)
+  - Automatic path updates when executable changes
+  - Session-end hook registration for lifecycle capture`,
+	RunE: runSession,
+}
+
+// runSession executes the session command
+func runSession(cmd *cobra.Command, args []string) error {
+	if sessionContextFlag {
+		return runSessionContext(cmd, args)
+	}
+	if installAgentHooksFlag {
+		return runInstallAgentHooks(cmd, args)
+	}
+	return cmd.Help()
+}
+
+// runSessionContext outputs compact session context in TOON format
+func runSessionContext(cmd *cobra.Command, args []string) error {
+	output, err := session.FormatCompactContext()
+	if err != nil {
+		return fmt.Errorf("failed to generate session context: %w", err)
+	}
+
+	fmt.Println(output)
+	return nil
+}
+
+// runInstallAgentHooks registers session hooks for AI agents
+func runInstallAgentHooks(cmd *cobra.Command, args []string) error {
+	// Determine agent type
+	agentType := session.AgentType(agentTypeFlag)
+	if agentType == "" {
+		// Default to Claude if not specified
+		agentType = session.AgentClaude
+	}
+
+	opts := session.HookOptions{
+		AgentType:   agentType,
+		SessionEnd:  true,
+		ForceUpdate: forceUpdateFlag,
+	}
+
+	// Register hook
+	result, err := session.RegisterHook(opts)
+	if err != nil {
+		return fmt.Errorf("failed to register hook: %w", err)
+	}
+
+	// Output result
+	if jsonOutput || toonFlag {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(result)
+	}
+
+	fmt.Printf("Hook installed successfully\n")
+	fmt.Printf("Agent Type: %s\n", result.AgentType)
+	fmt.Printf("Hook File: %s\n", result.HookFile)
+	fmt.Printf("Executable: %s\n", result.Executable)
+	if result.Updated {
+		fmt.Printf("Status: Updated existing hook\n")
+	} else {
+		fmt.Printf("Status: %s\n", result.Message)
+	}
+
+	return nil
+}
+
+func init() {
+	sessionCmd.Flags().BoolVar(&sessionContextFlag, "session-context", false, "Output compact session context in TOON format")
+	sessionCmd.Flags().BoolVar(&installAgentHooksFlag, "install-agent-hooks", false, "Install session hooks for AI agent integration")
+	sessionCmd.Flags().StringVar(&agentTypeFlag, "agent-type", "", "Agent type: claude, codex (default: claude)")
+	sessionCmd.Flags().BoolVar(&forceUpdateFlag, "force", false, "Force update existing hooks")
+
+	rootCmd.AddCommand(sessionCmd)
+}

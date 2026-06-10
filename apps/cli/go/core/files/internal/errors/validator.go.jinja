@@ -1,0 +1,318 @@
+package errors
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// Validator performs validation before calling dependencies
+type Validator struct {
+	projectSlug string
+}
+
+// NewValidator creates a new validator
+func NewValidator(projectSlug string) *Validator {
+	return &Validator{
+		projectSlug: projectSlug,
+	}
+}
+
+// ValidationResult represents the result of a validation
+type ValidationResult struct {
+	Valid    bool
+	Error    *StructuredError
+	Warnings []string
+}
+
+// ValidateFile validates a file path before operations
+func (v *Validator) ValidateFile(path string, operation string) ValidationResult {
+	if path == "" {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				"File path cannot be empty",
+				"Provide a valid file path",
+			),
+		}
+	}
+
+	// Check if file exists (for read operations)
+	if operation == "read" || operation == "stat" {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return ValidationResult{
+				Valid: false,
+				Error: NewStructuredError(
+					ErrorTypeFile,
+					fmt.Sprintf("File not found: %s", path),
+					"Verify the file path and ensure the file exists",
+				),
+			}
+		}
+	}
+
+	// Check parent directory exists (for write operations)
+	if operation == "write" || operation == "create" {
+		parentDir := filepath.Dir(path)
+		if _, err := os.Stat(parentDir); os.IsNotExist(err) {
+			return ValidationResult{
+				Valid: false,
+				Error: NewStructuredError(
+					ErrorTypeFile,
+					fmt.Sprintf("Parent directory does not exist: %s", parentDir),
+					fmt.Sprintf("Create the directory first: mkdir -p %s", parentDir),
+				),
+			}
+		}
+	}
+
+	// Check file permissions
+	if operation == "write" || operation == "create" {
+		// Check if we can write to the parent directory
+		parentDir := filepath.Dir(path)
+		if _, err := os.OpenFile(parentDir, os.O_WRONLY, 0); err != nil {
+			return ValidationResult{
+				Valid: false,
+				Error: NewStructuredError(
+					ErrorTypePermission,
+					fmt.Sprintf("Cannot write to directory: %s", parentDir),
+					"Check directory permissions and ensure you have write access",
+				),
+			}
+		}
+	}
+
+	return ValidationResult{Valid: true}
+}
+
+// ValidateConfig validates configuration before use
+func (v *Validator) ValidateConfig(configPath string) ValidationResult {
+	if configPath == "" {
+		// Use default config path
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return ValidationResult{
+				Valid: false,
+				Error: NewStructuredError(
+					ErrorTypeConfig,
+					"Cannot determine home directory",
+					"Set HOME environment variable or use --config flag",
+				),
+			}
+		}
+		configPath = filepath.Join(homeDir, ".config", v.projectSlug, "config.yaml")
+	}
+
+	// Check if config file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeConfig,
+				fmt.Sprintf("Configuration file not found: %s", configPath),
+				v.formatCommand("config init", "to create a configuration file"),
+			),
+		}
+	}
+
+	// Check if config file is readable
+	file, err := os.Open(configPath)
+	if err != nil {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypePermission,
+				fmt.Sprintf("Cannot read configuration file: %s", configPath),
+				"Check file permissions and ensure you have read access",
+			),
+		}
+	}
+	file.Close()
+
+	return ValidationResult{Valid: true}
+}
+
+// ValidateURL validates a URL before network operations
+func (v *Validator) ValidateURL(url string) ValidationResult {
+	if url == "" {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				"URL cannot be empty",
+				"Provide a valid URL",
+			),
+		}
+	}
+
+	// Basic URL validation
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				fmt.Sprintf("Invalid URL scheme: %s", url),
+				"URL must start with http:// or https://",
+			),
+		}
+	}
+
+	// Check for common URL errors
+	if strings.Contains(url, " ") {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				"URL cannot contain spaces",
+				"Remove spaces from the URL or encode them properly",
+			),
+		}
+	}
+
+	return ValidationResult{Valid: true}
+}
+
+// ValidateInput validates user input before processing
+func (v *Validator) ValidateInput(input string, inputType string) ValidationResult {
+	if input == "" {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				fmt.Sprintf("%s cannot be empty", inputType),
+				fmt.Sprintf("Provide a valid %s", inputType),
+			),
+		}
+	}
+
+	// Type-specific validation
+	switch inputType {
+	case "email":
+		if !strings.Contains(input, "@") || !strings.Contains(input, ".") {
+			return ValidationResult{
+				Valid: false,
+				Error: NewStructuredError(
+					ErrorTypeValidation,
+					"Invalid email format",
+					"Provide a valid email address (e.g., user@example.com)",
+				),
+			}
+		}
+	case "path":
+		if filepath.IsAbs(input) {
+			// Check if absolute path exists
+			if _, err := os.Stat(input); os.IsNotExist(err) {
+				return ValidationResult{
+					Valid: false,
+					Error: NewStructuredError(
+						ErrorTypeFile,
+						fmt.Sprintf("Path does not exist: %s", input),
+						"Verify the path and ensure it exists",
+					),
+				}
+			}
+		}
+	}
+
+	return ValidationResult{Valid: true}
+}
+
+// ValidateCommand validates a command before execution
+func (v *Validator) ValidateCommand(command string) ValidationResult {
+	if command == "" {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				"Command cannot be empty",
+				"Provide a valid command to execute",
+			),
+		}
+	}
+
+	// Check for dangerous commands
+	dangerousCommands := []string{"rm -rf /", "mkfs", "dd if=", ":(){:|:&};:"}
+	for _, dangerous := range dangerousCommands {
+		if strings.Contains(command, dangerous) {
+			return ValidationResult{
+				Valid: false,
+				Error: NewStructuredError(
+					ErrorTypeValidation,
+					"Dangerous command detected",
+					"This command could cause data loss or system damage",
+				),
+			}
+		}
+	}
+
+	return ValidationResult{Valid: true}
+}
+
+// ValidateNetwork validates network connectivity before operations
+func (v *Validator) ValidateNetwork(host string) ValidationResult {
+	if host == "" {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				"Host cannot be empty",
+				"Provide a valid host address",
+			),
+		}
+	}
+
+	// Basic host validation
+	if strings.Contains(host, " ") {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				"Host cannot contain spaces",
+				"Provide a valid host address",
+			),
+		}
+	}
+
+	return ValidationResult{Valid: true}
+}
+
+// ValidatePlatform validates platform compatibility
+func (v *Validator) ValidatePlatform(requiredOS string, requiredArch string) ValidationResult {
+	// This is a simplified implementation
+	// In a real implementation, this would check runtime.GOOS and runtime.GOARCH
+	
+	// For now, just validate the inputs
+	if requiredOS == "" {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				"Required OS cannot be empty",
+				"Specify the required operating system",
+			),
+		}
+	}
+
+	if requiredArch == "" {
+		return ValidationResult{
+			Valid: false,
+			Error: NewStructuredError(
+				ErrorTypeValidation,
+				"Required architecture cannot be empty",
+				"Specify the required system architecture",
+			),
+		}
+	}
+
+	return ValidationResult{Valid: true}
+}
+
+// formatCommand formats a CLI command suggestion
+func (v *Validator) formatCommand(command string, action string) string {
+	if v.projectSlug != "" {
+		return fmt.Sprintf("Run `%s %s` %s", v.projectSlug, command, action)
+	}
+	return fmt.Sprintf("Run `%s` %s", command, action)
+}

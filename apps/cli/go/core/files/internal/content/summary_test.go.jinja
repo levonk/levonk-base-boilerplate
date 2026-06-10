@@ -1,0 +1,334 @@
+package content
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func TestNewGenerator(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	if generator == nil {
+		t.Fatal("NewGenerator returned nil")
+	}
+
+	if generator.ctx != ctx {
+		t.Error("Generator context not set correctly")
+	}
+}
+
+func TestGenerateSummary(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	wd, _ := os.Getwd()
+	selectorCtx := &Context{
+		WorkingDir:  wd,
+		IsGitRepo:   false,
+		IsProjectDir: false,
+		Files:       []string{"test.txt"},
+	}
+
+	summary, err := generator.GenerateSummary(selectorCtx)
+	if err != nil {
+		t.Fatalf("GenerateSummary failed: %v", err)
+	}
+
+	if summary.WorkingDir != wd {
+		t.Errorf("Expected WorkingDir to be '%s', got '%s'", wd, summary.WorkingDir)
+	}
+
+	if summary.FileCount != 1 {
+		t.Errorf("Expected FileCount to be 1, got %d", summary.FileCount)
+	}
+
+	if summary.LastModified.IsZero() {
+		t.Error("Expected LastModified to be set")
+	}
+}
+
+func TestGenerateSummaryWithProject(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	wd, _ := os.Getwd()
+	selectorCtx := &Context{
+		WorkingDir:  wd,
+		IsGitRepo:   true,
+		IsProjectDir: true,
+		ProjectType:  "go",
+		Files:       []string{"go.mod", "main.go"},
+	}
+
+	summary, err := generator.GenerateSummary(selectorCtx)
+	if err != nil {
+		t.Fatalf("GenerateSummary failed: %v", err)
+	}
+
+	if !summary.IsGitRepo {
+		t.Error("Expected IsGitRepo to be true")
+	}
+
+	if summary.ProjectType != "go" {
+		t.Errorf("Expected ProjectType to be 'go', got '%s'", summary.ProjectType)
+	}
+
+	if len(summary.Suggestions) == 0 {
+		t.Error("Expected suggestions to be generated")
+	}
+}
+
+func TestGenerateSuggestions(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	tests := []struct {
+		name        string
+		context     *Context
+		expectSugg bool
+	}{
+		{
+			name: "go project",
+			context: &Context{
+				IsProjectDir: true,
+				ProjectType:  "go",
+			},
+			expectSugg: true,
+		},
+		{
+			name: "nodejs project",
+			context: &Context{
+				IsProjectDir: true,
+				ProjectType:  "nodejs",
+			},
+			expectSugg: true,
+		},
+		{
+			name: "git repo",
+			context: &Context{
+				IsGitRepo:   true,
+				IsProjectDir: false,
+			},
+			expectSugg: true,
+		},
+		{
+			name: "no context",
+			context: &Context{
+				IsGitRepo:   false,
+				IsProjectDir: false,
+			},
+			expectSugg: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestions := generator.generateSuggestions(tt.context)
+			if tt.expectSugg && len(suggestions) == 0 {
+				t.Error("Expected suggestions to be generated")
+			}
+		})
+	}
+}
+
+func TestGetAggregates(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	tests := []struct {
+		name     string
+		context  *Context
+		expectAgg bool
+	}{
+		{
+			name: "git repo",
+			context: &Context{
+				IsGitRepo:   true,
+				IsProjectDir: false,
+			},
+			expectAgg: true,
+		},
+		{
+			name: "project",
+			context: &Context{
+				IsGitRepo:   false,
+				IsProjectDir: true,
+				ProjectType:  "go",
+				Files:       []string{"go.mod"},
+			},
+			expectAgg: true,
+		},
+		{
+			name: "no context",
+			context: &Context{
+				IsGitRepo:   false,
+				IsProjectDir: false,
+			},
+			expectAgg: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			aggregates := generator.getAggregates(tt.context)
+			if tt.expectAgg && len(aggregates) == 0 {
+				t.Error("Expected aggregates to be generated")
+			}
+		})
+	}
+}
+
+func TestFormatSummary(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	summary := &Summary{
+		WorkingDir:  "/tmp",
+		IsGitRepo:   true,
+		ProjectType: "go",
+		FileCount:   5,
+		LastModified: time.Now(),
+		Suggestions: []string{"Run go test"},
+		Aggregates: map[string]interface{}{
+			"git_status": "repository detected",
+		},
+	}
+
+	tests := []struct {
+		format   string
+		validate func(string) error
+	}{
+		{
+			format: "toon",
+			validate: func(s string) error {
+				if s == "" {
+					return fmt.Errorf("empty TOON output")
+				}
+				return nil
+			},
+		},
+		{
+			format: "json",
+			validate: func(s string) error {
+				if s == "" {
+					return fmt.Errorf("empty JSON output")
+				}
+				return nil
+			},
+		},
+		{
+			format: "human",
+			validate: func(s string) error {
+				if s == "" {
+					return fmt.Errorf("empty human output")
+				}
+				if !contains(s, "State Summary") {
+					return fmt.Errorf("human output missing header")
+				}
+				return nil
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.format, func(t *testing.T) {
+			output, err := generator.FormatSummary(summary, tt.format)
+			if err != nil {
+				t.Fatalf("FormatSummary failed: %v", err)
+			}
+			if err := tt.validate(output); err != nil {
+				t.Errorf("Format validation failed: %v", err)
+			}
+		})
+	}
+}
+
+func TestGetLastModifiedTime(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	// Create a temporary directory with a file
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "test.txt")
+	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	lastMod, err := generator.getLastModifiedTime(tmpDir)
+	if err != nil {
+		t.Fatalf("getLastModifiedTime failed: %v", err)
+	}
+
+	if lastMod.IsZero() {
+		t.Error("Expected LastModified to be set")
+	}
+}
+
+func TestFormatTOON(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	summary := &Summary{
+		WorkingDir:  "/tmp",
+		IsGitRepo:   true,
+		ProjectType: "go",
+		FileCount:   5,
+		LastModified: time.Now(),
+	}
+
+	output := generator.formatTOON(summary)
+	if output == "" {
+		t.Error("formatTOON returned empty string")
+	}
+
+	if !contains(output, "summary[") {
+		t.Error("TOON output missing summary header")
+	}
+}
+
+func TestFormatHuman(t *testing.T) {
+	ctx := context.Background()
+	generator := NewGenerator(ctx)
+
+	summary := &Summary{
+		WorkingDir:  "/tmp",
+		IsGitRepo:   true,
+		ProjectType: "go",
+		FileCount:   5,
+		LastModified: time.Now(),
+	}
+
+	output := generator.formatHuman(summary)
+	if output == "" {
+		t.Error("formatHuman returned empty string")
+	}
+
+	if !contains(output, "State Summary") {
+		t.Error("Human output missing header")
+	}
+
+	if !contains(output, "Working Directory") {
+		t.Error("Human output missing working directory")
+	}
+}
+
+// Helper function
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && findSubstring(s, substr))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+{# vim: set ft=go: #}

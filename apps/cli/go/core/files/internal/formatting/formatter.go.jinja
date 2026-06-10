@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"{{ project_slug }}/internal/aggregates"
+	"{{ project_slug }}/internal/emptystate"
 	"{{ project_slug }}/internal/schema"
 	"{{ project_slug }}/internal/toon"
 	"{{ project_slug }}/internal/truncation"
@@ -31,6 +33,11 @@ type Formatter struct {
 	fieldSelector *schema.Selector
 	truncator     *truncation.Truncator
 	fullFlag      bool
+	counter       *aggregates.Counter
+	derivedStatus *aggregates.DerivedStatus
+	emptyDetector *emptystate.Detector
+	emptyFormatter *emptystate.Formatter
+	emptyContext  emptystate.Context
 }
 
 // Mode represents the CLI operation mode
@@ -50,12 +57,17 @@ func NewFormatter(mode Mode, toonFlag bool, formatFlag string, jsonOutput bool, 
 		config.DisableTruncation = true
 	}
 	return &Formatter{
-		mode:       mode,
-		toonFlag:   toonFlag,
-		formatFlag: formatFlag,
-		jsonOutput: jsonOutput,
-		truncator:  truncation.NewTruncator(config),
-		fullFlag:   fullFlag,
+		mode:           mode,
+		toonFlag:       toonFlag,
+		formatFlag:     formatFlag,
+		jsonOutput:     jsonOutput,
+		truncator:      truncation.NewTruncator(config),
+		fullFlag:       fullFlag,
+		counter:        aggregates.NewCounter(),
+		derivedStatus:  aggregates.NewDerivedStatus(),
+		emptyDetector:  emptystate.NewDetector(),
+		emptyFormatter: emptystate.NewFormatter(),
+		emptyContext:   emptystate.Context{},
 	}
 }
 
@@ -70,6 +82,30 @@ func (f *Formatter) WithSchema(s *schema.Schema) *Formatter {
 func (f *Formatter) WithFields(fieldNames []string) *Formatter {
 	if f.fieldSelector != nil {
 		f.fieldSelector.WithFields(fieldNames)
+	}
+	return f
+}
+
+// WithTotalCount sets the total count for list outputs
+func (f *Formatter) WithTotalCount(total int) *Formatter {
+	f.counter.SetTotal(total)
+	return f
+}
+
+// WithDerivedStatus computes derived status fields from data
+func (f *Formatter) WithDerivedStatus(data map[string]interface{}) *Formatter {
+	f.derivedStatus = aggregates.ComputeSummary(data)
+	return f
+}
+
+// WithEmptyContext sets the empty state context
+func (f *Formatter) WithEmptyContext(command string, resource string, filters map[string]string, scope string, totalCount int) *Formatter {
+	f.emptyContext = emptystate.Context{
+		Command:    command,
+		Resource:   resource,
+		Filters:    filters,
+		Scope:      scope,
+		TotalCount: totalCount,
 	}
 	return f
 }
@@ -114,6 +150,17 @@ func (f *Formatter) DetermineFormat() Format {
 
 // FormatValue formats a value according to the determined format
 func (f *Formatter) FormatValue(v interface{}) (string, error) {
+	// Check for empty state first
+	emptyState := f.emptyDetector.Detect(v, f.emptyContext)
+	if emptyState.IsEmpty {
+		format := f.DetermineFormat()
+		formatStr := string(format)
+		if formatStr == "" {
+			formatStr = "json" // Default to JSON for empty states
+		}
+		return f.emptyFormatter.Format(emptyState, formatStr)
+	}
+
 	format := f.DetermineFormat()
 
 	switch format {
@@ -130,15 +177,32 @@ func (f *Formatter) FormatValue(v interface{}) (string, error) {
 
 // formatTOON formats a value as TOON
 func (f *Formatter) formatTOON(v interface{}) (string, error) {
+	// Compute count for list outputs
+	switch val := v.(type) {
+	case []map[string]interface{}:
+		f.counter.CountFromSlice(val)
+	case []interface{}:
+		f.counter.CountFromSlice(val)
+	}
+
 	// Apply schema field selection and limits if configured
 	if f.fieldSelector != nil {
 		switch val := v.(type) {
 		case map[string]interface{}:
+			// Add derived status fields for detail views
 			filtered, err := f.fieldSelector.Apply(val)
 			if err != nil {
 				return "", err
 			}
-			v = filtered
+			// Add derived status fields to the filtered map
+			if len(f.derivedStatus.GetFields()) > 0 {
+				for _, field := range f.derivedStatus.GetFields() {
+					filtered[field.Name] = field.Value
+				}
+				v = filtered
+			} else {
+				v = filtered
+			}
 		case []map[string]interface{}:
 			// Apply limit if schema is configured
 			if f.schema != nil {
@@ -165,20 +229,47 @@ func (f *Formatter) formatTOON(v interface{}) (string, error) {
 
 	// Encode using TOON encoder
 	encoder := toon.NewEncoder(toon.DefaultEncoderOptions())
-	return encoder.EncodeValue(toonValue)
+	result, err := encoder.EncodeValue(toonValue)
+	if err != nil {
+		return "", err
+	}
+
+	// Append count information for list outputs
+	if f.counter.HasTotalCount() {
+		result = result + "\n" + f.counter.FormatCount()
+	}
+
+	return result, nil
 }
 
 // formatJSON formats a value as JSON
 func (f *Formatter) formatJSON(v interface{}) (string, error) {
+	// Compute count for list outputs
+	switch val := v.(type) {
+	case []map[string]interface{}:
+		f.counter.CountFromSlice(val)
+	case []interface{}:
+		f.counter.CountFromSlice(val)
+	}
+
 	// Apply schema field selection if configured
 	if f.fieldSelector != nil {
 		switch val := v.(type) {
 		case map[string]interface{}:
+			// Add derived status fields for detail views
 			filtered, err := f.fieldSelector.Apply(val)
 			if err != nil {
 				return "", err
 			}
-			v = filtered
+			// Add derived status fields to the filtered map
+			if len(f.derivedStatus.GetFields()) > 0 {
+				for _, field := range f.derivedStatus.GetFields() {
+					filtered[field.Name] = field.Value
+				}
+				v = filtered
+			} else {
+				v = filtered
+			}
 		case []map[string]interface{}:
 			filtered, err := f.fieldSelector.ApplyToSlice(val)
 			if err != nil {
@@ -193,7 +284,14 @@ func (f *Formatter) formatJSON(v interface{}) (string, error) {
 
 	// Use standard JSON encoding
 	// This is a placeholder - actual implementation would use encoding/json
-	return fmt.Sprintf("%#v", v), nil
+	result := fmt.Sprintf("%#v", v)
+
+	// Append count information for list outputs
+	if f.counter.HasTotalCount() {
+		result = result + "\n" + f.counter.FormatCount()
+	}
+
+	return result, nil
 }
 
 // applyTruncation recursively applies truncation to string values in a data structure

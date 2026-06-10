@@ -1,0 +1,111 @@
+package emptystate
+
+import (
+	"fmt"
+	"reflect"
+)
+
+// Detector determines if a result represents an empty state
+type Detector struct{}
+
+// NewDetector creates a new empty state detector
+func NewDetector() *Detector {
+	return &Detector{}
+}
+
+// IsEmpty checks if a value represents an empty state
+// Returns true for:
+// - nil
+// - empty slices
+// - empty maps
+// - empty strings
+// - zero-length arrays
+func (d *Detector) IsEmpty(v interface{}) bool {
+	if v == nil {
+		return true
+	}
+
+	val := reflect.ValueOf(v)
+	switch val.Kind() {
+	case reflect.Slice, reflect.Array:
+		return val.Len() == 0
+	case reflect.Map:
+		return val.Len() == 0
+	case reflect.String:
+		return val.Len() == 0
+	case reflect.Ptr:
+		if val.IsNil() {
+			return true
+		}
+		// Dereference and check the underlying value
+		return d.IsEmpty(val.Elem().Interface())
+	default:
+		return false
+	}
+}
+
+// Context represents the context of an empty state
+type Context struct {
+	Command     string            // Command that produced the empty state
+	Filters     map[string]string // Applied filters
+	Scope       string            // Scope of the query (e.g., "all", "active")
+	Resource    string            // Resource type being queried
+	TotalCount  int               // Total count if known
+}
+
+// EmptyState represents an empty state with context
+type EmptyState struct {
+	IsEmpty  bool     // Whether the result is empty
+	Context  Context  // Context information
+	Message  string   // Formatted message
+	ExitCode int      // Exit code (should be 0 for successful empty queries)
+}
+
+// Detect detects an empty state with context
+func (d *Detector) Detect(v interface{}, ctx Context) *EmptyState {
+	isEmpty := d.IsEmpty(v)
+	
+	if !isEmpty {
+		return &EmptyState{
+			IsEmpty:  false,
+			ExitCode: 0,
+		}
+	}
+
+	message := d.formatMessage(ctx)
+	
+	return &EmptyState{
+		IsEmpty:  true,
+		Context:  ctx,
+		Message:  message,
+		ExitCode: 0, // Successful empty query
+	}
+}
+
+// formatMessage formats an empty state message with context
+func (d *Detector) formatMessage(ctx Context) string {
+	parts := []string{"No results found"}
+	
+	if ctx.Resource != "" {
+		parts = append(parts, fmt.Sprintf("for %s", ctx.Resource))
+	}
+	
+	if len(ctx.Filters) > 0 {
+		filterParts := []string{}
+		for key, value := range ctx.Filters {
+			filterParts = append(filterParts, fmt.Sprintf("%s=%s", key, value))
+		}
+		parts = append(parts, fmt.Sprintf("with filters: %s", filterParts))
+	}
+	
+	if ctx.Scope != "" {
+		parts = append(parts, fmt.Sprintf("in scope: %s", ctx.Scope))
+	}
+	
+	if ctx.TotalCount > 0 {
+		parts = append(parts, fmt.Sprintf("(total: %d)", ctx.TotalCount))
+	}
+	
+	message := fmt.Sprintf("%s. Command executed successfully.", fmt.Sprintf("%s", parts))
+	return message
+}

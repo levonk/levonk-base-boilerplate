@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+
+	"{{ project_slug }}/internal/idempotency"
 )
 
 // RunInstall handles the --install flag
@@ -24,17 +26,20 @@ func RunInstall(cmd *cobra.Command) error {
 
 	fmt.Println("Installing {{ project_slug }}...")
 
-	// Generate and install shell completions
-	if err := installCompletions(ctx, cmd); err != nil {
+	// Initialize idempotency handler
+	idempotencyHandler := idempotency.NewHandler(logger)
+
+	// Generate and install shell completions (idempotent)
+	if err := installCompletions(ctx, cmd, idempotencyHandler); err != nil {
 		return fmt.Errorf("failed to install completions: %w", err)
 	}
 
-	// Generate and install man page
-	if err := installManPage(ctx, cmd); err != nil {
+	// Generate and install man page (idempotent)
+	if err := installManPage(ctx, cmd, idempotencyHandler); err != nil {
 		return fmt.Errorf("failed to install man page: %w", err)
 	}
 
-	// Initialize config file
+	// Initialize config file (idempotent)
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return fmt.Errorf("failed to get config directory: %w", err)
@@ -65,32 +70,53 @@ func RunUninstall(cmd *cobra.Command) error {
 
 	fmt.Println("Uninstalling {{ project_slug }}...")
 
-	// Remove shell completions
-	if err := uninstallCompletions(ctx); err != nil {
+	// Initialize idempotency handler
+	idempotencyHandler := idempotency.NewHandler(logger)
+
+	// Remove shell completions (idempotent)
+	if err := uninstallCompletions(ctx, idempotencyHandler); err != nil {
 		return fmt.Errorf("failed to uninstall completions: %w", err)
 	}
 
-	// Remove man page
-	if err := uninstallManPage(ctx); err != nil {
+	// Remove man page (idempotent)
+	if err := uninstallManPage(ctx, idempotencyHandler); err != nil {
 		return fmt.Errorf("failed to uninstall man page: %w", err)
 	}
 
-	// Remove config file
+	// Remove config file (idempotent)
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		return fmt.Errorf("failed to get config directory: %w", err)
 	}
 	configPath := filepath.Join(configDir, "{{ project_slug }}", "config.yaml")
-	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
+	result, err := idempotencyHandler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(configPath) },
+		func(state idempotency.State) bool { return !state.Exists },
+		func() error {
+			DryRunFileOp(ctx, "remove", configPath)
+			return os.Remove(configPath)
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Config file not found at %s, nothing to remove", configPath)
+		},
+		func() string {
+			return fmt.Sprintf("Config file removed from %s", configPath)
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("failed to remove config file: %w", err)
+	}
+	if result.ActionPerformed {
+		fmt.Printf("Removed config file from %s\n", configPath)
 	}
 
 	fmt.Println("Uninstall complete.")
 	return nil
 }
 
-// installCompletions generates and installs shell completion scripts
-func installCompletions(ctx context.Context, cmd *cobra.Command) error {
+// installCompletions generates and installs shell completion scripts (idempotent)
+func installCompletions(ctx context.Context, cmd *cobra.Command, handler *idempotency.Handler) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -98,48 +124,96 @@ func installCompletions(ctx context.Context, cmd *cobra.Command) error {
 
 	// Bash completion
 	bashCompletionDir := filepath.Join(homeDir, ".local", "share", "bash-completion", "completions")
-	DryRunFileOp(ctx, "create directory", bashCompletionDir)
-	if err := os.MkdirAll(bashCompletionDir, 0755); err != nil {
+	result, err := handler.EnsureDirectory(ctx, bashCompletionDir)
+	if err != nil {
 		return err
 	}
+	if result.ActionPerformed {
+		fmt.Printf("Created directory: %s\n", bashCompletionDir)
+	}
+
 	bashFile := filepath.Join(bashCompletionDir, "{{ project_slug }}")
-	DryRunFileOp(ctx, "write", bashFile)
-	if err := cmd.GenBashCompletionFile(bashFile); err != nil {
+	result, err = handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(bashFile) },
+		idempotency.IsFileExists,
+		func() error {
+			DryRunFileOp(ctx, "write", bashFile)
+			return cmd.GenBashCompletionFile(bashFile)
+		},
+		idempotency.SkipMessageFileExists,
+		idempotency.SuccessMessageFileCreated(bashFile),
+	)
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Installed bash completion to %s\n", bashFile)
+	if result.ActionPerformed {
+		fmt.Printf("Installed bash completion to %s\n", bashFile)
+	}
 
 	// Zsh completion
 	zshCompletionDir := filepath.Join(homeDir, ".local", "share", "zsh", "site-functions")
-	DryRunFileOp(ctx, "create directory", zshCompletionDir)
-	if err := os.MkdirAll(zshCompletionDir, 0755); err != nil {
+	result, err = handler.EnsureDirectory(ctx, zshCompletionDir)
+	if err != nil {
 		return err
 	}
+	if result.ActionPerformed {
+		fmt.Printf("Created directory: %s\n", zshCompletionDir)
+	}
+
 	zshFile := filepath.Join(zshCompletionDir, "_{{ project_slug }}")
-	DryRunFileOp(ctx, "write", zshFile)
-	if err := cmd.GenZshCompletionFile(zshFile); err != nil {
+	result, err = handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(zshFile) },
+		idempotency.IsFileExists,
+		func() error {
+			DryRunFileOp(ctx, "write", zshFile)
+			return cmd.GenZshCompletionFile(zshFile)
+		},
+		idempotency.SkipMessageFileExists,
+		idempotency.SuccessMessageFileCreated(zshFile),
+	)
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Installed zsh completion to %s\n", zshFile)
+	if result.ActionPerformed {
+		fmt.Printf("Installed zsh completion to %s\n", zshFile)
+	}
 
 	// Fish completion
 	fishCompletionDir := filepath.Join(homeDir, ".local", "share", "fish", "completions")
-	DryRunFileOp(ctx, "create directory", fishCompletionDir)
-	if err := os.MkdirAll(fishCompletionDir, 0755); err != nil {
+	result, err = handler.EnsureDirectory(ctx, fishCompletionDir)
+	if err != nil {
 		return err
 	}
+	if result.ActionPerformed {
+		fmt.Printf("Created directory: %s\n", fishCompletionDir)
+	}
+
 	fishFile := filepath.Join(fishCompletionDir, "{{ project_slug }}.fish")
-	DryRunFileOp(ctx, "write", fishFile)
-	if err := cmd.GenFishCompletionFile(fishFile, true); err != nil {
+	result, err = handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(fishFile) },
+		idempotency.IsFileExists,
+		func() error {
+			DryRunFileOp(ctx, "write", fishFile)
+			return cmd.GenFishCompletionFile(fishFile, true)
+		},
+		idempotency.SkipMessageFileExists,
+		idempotency.SuccessMessageFileCreated(fishFile),
+	)
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Installed fish completion to %s\n", fishFile)
+	if result.ActionPerformed {
+		fmt.Printf("Installed fish completion to %s\n", fishFile)
+	}
 
 	return nil
 }
 
-// uninstallCompletions removes shell completion scripts
-func uninstallCompletions(ctx context.Context) error {
+// uninstallCompletions removes shell completion scripts (idempotent)
+func uninstallCompletions(ctx context.Context, handler *idempotency.Handler) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -147,33 +221,81 @@ func uninstallCompletions(ctx context.Context) error {
 
 	// Remove bash completion
 	bashFile := filepath.Join(homeDir, ".local", "share", "bash-completion", "completions", "{{ project_slug }}")
-	DryRunFileOp(ctx, "remove", bashFile)
-	if err := os.Remove(bashFile); err != nil && !os.IsNotExist(err) {
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(bashFile) },
+		func(state idempotency.State) bool { return !state.Exists },
+		func() error {
+			DryRunFileOp(ctx, "remove", bashFile)
+			return os.Remove(bashFile)
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Bash completion not found at %s, nothing to remove", bashFile)
+		},
+		func() string {
+			return fmt.Sprintf("Removed bash completion from %s", bashFile)
+		},
+	)
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Removed bash completion from %s\n", bashFile)
+	if result.ActionPerformed {
+		fmt.Printf("Removed bash completion from %s\n", bashFile)
+	}
 
 	// Remove zsh completion
 	zshFile := filepath.Join(homeDir, ".local", "share", "zsh", "site-functions", "_{{ project_slug }}")
-	DryRunFileOp(ctx, "remove", zshFile)
-	if err := os.Remove(zshFile); err != nil && !os.IsNotExist(err) {
+	result, err = handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(zshFile) },
+		func(state idempotency.State) bool { return !state.Exists },
+		func() error {
+			DryRunFileOp(ctx, "remove", zshFile)
+			return os.Remove(zshFile)
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Zsh completion not found at %s, nothing to remove", zshFile)
+		},
+		func() string {
+			return fmt.Sprintf("Removed zsh completion from %s", zshFile)
+		},
+	)
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Removed zsh completion from %s\n", zshFile)
+	if result.ActionPerformed {
+		fmt.Printf("Removed zsh completion from %s\n", zshFile)
+	}
 
 	// Remove fish completion
 	fishFile := filepath.Join(homeDir, ".local", "share", "fish", "completions", "{{ project_slug }}.fish")
-	DryRunFileOp(ctx, "remove", fishFile)
-	if err := os.Remove(fishFile); err != nil && !os.IsNotExist(err) {
+	result, err = handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(fishFile) },
+		func(state idempotency.State) bool { return !state.Exists },
+		func() error {
+			DryRunFileOp(ctx, "remove", fishFile)
+			return os.Remove(fishFile)
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Fish completion not found at %s, nothing to remove", fishFile)
+		},
+		func() string {
+			return fmt.Sprintf("Removed fish completion from %s", fishFile)
+		},
+	)
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Removed fish completion from %s\n", fishFile)
+	if result.ActionPerformed {
+		fmt.Printf("Removed fish completion from %s\n", fishFile)
+	}
 
 	return nil
 }
 
-// installManPage generates and installs the man page
-func installManPage(ctx context.Context, cmd *cobra.Command) error {
+// installManPage generates and installs the man page (idempotent)
+func installManPage(ctx context.Context, cmd *cobra.Command, handler *idempotency.Handler) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
@@ -181,34 +303,66 @@ func installManPage(ctx context.Context, cmd *cobra.Command) error {
 
 	// Standard man page directory
 	manDir := filepath.Join(homeDir, ".local", "share", "man", "man1")
-	DryRunFileOp(ctx, "create directory", manDir)
-	if err := os.MkdirAll(manDir, 0755); err != nil {
+	result, err := handler.EnsureDirectory(ctx, manDir)
+	if err != nil {
 		return err
+	}
+	if result.ActionPerformed {
+		fmt.Printf("Created directory: %s\n", manDir)
 	}
 
 	// Generate man page file
-	if err := GenManToFile(cmd, manDir); err != nil {
+	manFile := filepath.Join(manDir, "{{ project_slug }}.1")
+	result, err = handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(manFile) },
+		idempotency.IsFileExists,
+		func() error {
+			DryRunFileOp(ctx, "write", manFile)
+			return GenManToFile(cmd, manDir)
+		},
+		idempotency.SkipMessageFileExists,
+		idempotency.SuccessMessageFileCreated(manFile),
+	)
+	if err != nil {
 		return err
 	}
+	if result.ActionPerformed {
+		fmt.Printf("Installed man page to %s\n", manFile)
+	}
 
-	manFile := filepath.Join(manDir, "{{ project_slug }}.1")
-	fmt.Printf("Installed man page to %s\n", manFile)
 	return nil
 }
 
-// uninstallManPage removes the man page
-func uninstallManPage(ctx context.Context) error {
+// uninstallManPage removes the man page (idempotent)
+func uninstallManPage(ctx context.Context, handler *idempotency.Handler) error {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return err
 	}
 
 	manFile := filepath.Join(homeDir, ".local", "share", "man", "man1", "{{ project_slug }}.1")
-	DryRunFileOp(ctx, "remove", manFile)
-	if err := os.Remove(manFile); err != nil && !os.IsNotExist(err) {
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(manFile) },
+		func(state idempotency.State) bool { return !state.Exists },
+		func() error {
+			DryRunFileOp(ctx, "remove", manFile)
+			return os.Remove(manFile)
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Man page not found at %s, nothing to remove", manFile)
+		},
+		func() string {
+			return fmt.Sprintf("Removed man page from %s", manFile)
+		},
+	)
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Removed man page from %s\n", manFile)
+	if result.ActionPerformed {
+		fmt.Printf("Removed man page from %s\n", manFile)
+	}
 
 	return nil
 }

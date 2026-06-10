@@ -1,0 +1,151 @@
+package suggestions
+
+import (
+	"fmt"
+)
+
+// DefaultRule implements default suggestion rules
+type DefaultRule struct {
+	priority int
+}
+
+// NewDefaultRule creates a new default suggestion rule
+func NewDefaultRule(priority int) *DefaultRule {
+	return &DefaultRule{priority: priority}
+}
+
+// Generate generates suggestions based on context
+func (r *DefaultRule) Generate(ctx *Context) []Suggestion {
+	var suggestions []Suggestion
+
+	// Rule: Empty list - suggest creating items
+	if ctx.OutputState == "empty" {
+		suggestions = append(suggestions, Suggestion{
+			Command:     "{{ project_slug }} create",
+			Description: "Create a new item",
+			Relevance:   90,
+		})
+	}
+
+	// Rule: Open items - suggest closing
+	if ctx.OutputState == "open" {
+		suggestions = append(suggestions, Suggestion{
+			Command:     "{{ project_slug }} close --all",
+			Description: "Close all open items",
+			Relevance:   85,
+		})
+	}
+
+	// Rule: List view - suggest viewing details
+	if ctx.Command == "list" {
+		suggestions = append(suggestions, Suggestion{
+			Command:     "{{ project_slug }} view <id>",
+			Description: "View details of an item",
+			Relevance:   80,
+		})
+	}
+
+	// Rule: Git repository - suggest git operations
+	if ctx.IsGitRepo {
+		suggestions = append(suggestions, Suggestion{
+			Command:     "{{ project_slug }} git status",
+			Description: "Check git repository status",
+			Relevance:   70,
+		})
+	}
+
+	// Rule: Project directory - suggest project-specific commands
+	if ctx.IsProjectDir {
+		switch ctx.ProjectType {
+		case "go":
+			suggestions = append(suggestions, Suggestion{
+				Command:     "{{ project_slug }} go test",
+				Description: "Run Go tests",
+				Relevance:   75,
+			})
+		case "nodejs":
+			suggestions = append(suggestions, Suggestion{
+				Command:     "{{ project_slug }} npm test",
+				Description: "Run npm tests",
+				Relevance:   75,
+			})
+		case "python":
+			suggestions = append(suggestions, Suggestion{
+				Command:     "{{ project_slug }} pytest",
+				Description: "Run Python tests",
+				Relevance:   75,
+			})
+		}
+	}
+
+	// Rule: Always suggest help
+	suggestions = append(suggestions, Suggestion{
+		Command:     "{{ project_slug }} --help",
+		Description: "Show detailed help information",
+		Relevance:   50,
+	})
+
+	return suggestions
+}
+
+// Priority returns the rule priority
+func (r *DefaultRule) Priority() int {
+	return r.priority
+}
+
+// ContextualRule implements context-aware suggestion rules
+type ContextualRule struct {
+	priority int
+}
+
+// NewContextualRule creates a new contextual suggestion rule
+func NewContextualRule(priority int) *ContextualRule {
+	return &ContextualRule{priority: priority}
+}
+
+// Generate generates context-aware suggestions
+func (r *ContextualRule) Generate(ctx *Context) []Suggestion {
+	var suggestions []Suggestion
+
+	// Carry forward flags from current command
+	flagArgs := ""
+	for k, v := range ctx.Flags {
+		flagArgs += fmt.Sprintf(" --%s=%s", k, v)
+	}
+
+	// Rule: If viewing, suggest editing
+	if ctx.Command == "view" {
+		suggestions = append(suggestions, Suggestion{
+			Command:     fmt.Sprintf("{{ project_slug }} edit <id>%s", flagArgs),
+			Description: "Edit the viewed item",
+			Relevance:   85,
+		})
+	}
+
+	// Rule: If editing, suggest saving
+	if ctx.Command == "edit" {
+		suggestions = append(suggestions, Suggestion{
+			Command:     fmt.Sprintf("{{ project_slug }} save%s", flagArgs),
+			Description: "Save changes",
+			Relevance:   90,
+		})
+	}
+
+	// Rule: If in project, suggest build
+	if ctx.IsProjectDir && ctx.ProjectType != "" {
+		suggestions = append(suggestions, Suggestion{
+			Command:     fmt.Sprintf("{{ project_slug }} build --type=%s", ctx.ProjectType),
+			Description: fmt.Sprintf("Build %s project", ctx.ProjectType),
+			Relevance:   70,
+		})
+	}
+
+	return suggestions
+}
+
+// Priority returns the rule priority
+func (r *ContextualRule) Priority() int {
+	return r.priority
+}
+
+{# vim: set ft=go: #}

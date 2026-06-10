@@ -1,0 +1,227 @@
+package emptystate
+
+import (
+	"testing"
+)
+
+func TestDetector_IsEmpty(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected bool
+	}{
+		{
+			name:     "nil value",
+			input:    nil,
+			expected: true,
+		},
+		{
+			name:     "empty slice",
+			input:    []int{},
+			expected: true,
+		},
+		{
+			name:     "empty map",
+			input:    map[string]interface{}{},
+			expected: true,
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: true,
+		},
+		{
+			name:     "non-empty slice",
+			input:    []int{1, 2, 3},
+			expected: false,
+		},
+		{
+			name:     "non-empty map",
+			input:    map[string]interface{}{"key": "value"},
+			expected: false,
+		},
+		{
+			name:     "non-empty string",
+			input:    "hello",
+			expected: false,
+		},
+		{
+			name:     "non-nil pointer to empty struct",
+			input:    &struct{}{},
+			expected: false,
+		},
+		{
+			name:     "nil pointer",
+			input:    (*struct{})(nil),
+			expected: true,
+		},
+		{
+			name:     "zero value int",
+			input:    0,
+			expected: false,
+		},
+		{
+			name:     "false boolean",
+			input:    false,
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.IsEmpty(tt.input)
+			if result != tt.expected {
+				t.Errorf("IsEmpty(%v) = %v, expected %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDetector_Detect(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name     string
+		input    interface{}
+		ctx      Context
+		expected bool
+	}{
+		{
+			name:     "empty slice with context",
+			input:    []int{},
+			ctx:      Context{Command: "list", Resource: "items"},
+			expected: true,
+		},
+		{
+			name:     "non-empty slice",
+			input:    []int{1, 2, 3},
+			ctx:      Context{Command: "list", Resource: "items"},
+			expected: false,
+		},
+		{
+			name:     "nil with context",
+			input:    nil,
+			ctx:      Context{Command: "get", Resource: "item"},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := detector.Detect(tt.input, tt.ctx)
+			if result.IsEmpty != tt.expected {
+				t.Errorf("Detect() IsEmpty = %v, expected %v", result.IsEmpty, tt.expected)
+			}
+			if tt.expected && result.ExitCode != 0 {
+				t.Errorf("Detect() ExitCode should be 0 for successful empty query, got %d", result.ExitCode)
+			}
+		})
+	}
+}
+
+func TestDetector_formatMessage(t *testing.T) {
+	detector := NewDetector()
+
+	tests := []struct {
+		name     string
+		ctx      Context
+		contains []string // substrings that should be in the message
+	}{
+		{
+			name: "minimal context",
+			ctx:  Context{Command: "list"},
+			contains: []string{
+				"No results found",
+				"Command executed successfully",
+			},
+		},
+		{
+			name: "with resource",
+			ctx:  Context{Command: "list", Resource: "items"},
+			contains: []string{
+				"No results found",
+				"items",
+			},
+		},
+		{
+			name: "with filters",
+			ctx: Context{
+				Command: "list",
+				Resource: "items",
+				Filters: map[string]string{"status": "active"},
+			},
+			contains: []string{
+				"filters",
+				"status=active",
+			},
+		},
+		{
+			name: "with scope",
+			ctx: Context{
+				Command: "list",
+				Resource: "items",
+				Scope: "all",
+			},
+			contains: []string{
+				"scope",
+				"all",
+			},
+		},
+		{
+			name: "with total count",
+			ctx: Context{
+				Command: "list",
+				Resource: "items",
+				TotalCount: 100,
+			},
+			contains: []string{
+				"total",
+				"100",
+			},
+		},
+		{
+			name: "full context",
+			ctx: Context{
+				Command:    "list",
+				Resource:   "items",
+				Filters:    map[string]string{"status": "active", "type": "foo"},
+				Scope:      "all",
+				TotalCount: 100,
+			},
+			contains: []string{
+				"No results found",
+				"items",
+				"filters",
+				"scope",
+				"total",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			message := detector.formatMessage(tt.ctx)
+			for _, substr := range tt.contains {
+				if !contains(message, substr) {
+					t.Errorf("formatMessage() should contain %q, got: %s", substr, message)
+				}
+			}
+		})
+	}
+}
+
+// Helper function to check if a string contains a substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && findSubstring(s, substr))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

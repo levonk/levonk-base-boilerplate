@@ -1,0 +1,189 @@
+package suggestions
+
+import (
+	"context"
+	"testing"
+)
+
+func TestNewEngine(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 4)
+
+	if engine == nil {
+		t.Fatal("NewEngine returned nil")
+	}
+
+	if engine.maxSuggestions != 4 {
+		t.Errorf("Expected maxSuggestions to be 4, got %d", engine.maxSuggestions)
+	}
+}
+
+func TestAddRule(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 4)
+
+	rule := NewDefaultRule(10)
+	engine.AddRule(rule)
+
+	if len(engine.rules) != 1 {
+		t.Errorf("Expected 1 rule, got %d", len(engine.rules))
+	}
+}
+
+func TestGenerate(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 4)
+
+	// Add a test rule
+	rule := NewDefaultRule(10)
+	engine.AddRule(rule)
+
+	// Test with empty context
+	suggestions := engine.Generate(&Context{})
+	if len(suggestions) == 0 {
+		t.Error("Expected at least one suggestion from default rule")
+	}
+
+	// Test with context
+	suggestions = engine.Generate(&Context{
+		Command:     "list",
+		OutputState: "empty",
+		IsGitRepo:   true,
+	})
+
+	if len(suggestions) == 0 {
+		t.Error("Expected suggestions with context")
+	}
+}
+
+func TestGenerateWithMaxSuggestions(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 2)
+
+	// Add a rule that generates many suggestions
+	rule := NewDefaultRule(10)
+	engine.AddRule(rule)
+
+	suggestions := engine.Generate(&Context{
+		OutputState: "empty",
+		IsGitRepo:   true,
+		IsProjectDir: true,
+		ProjectType:  "go",
+	})
+
+	if len(suggestions) > 2 {
+		t.Errorf("Expected max 2 suggestions, got %d", len(suggestions))
+	}
+}
+
+func TestFormatSuggestionsTOON(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 4)
+
+	suggestions := []Suggestion{
+		{Command: "test", Description: "Run tests", Relevance: 90},
+	}
+
+	output, err := engine.FormatSuggestions(suggestions, "toon")
+	if err != nil {
+		t.Fatalf("FormatSuggestions failed: %v", err)
+	}
+
+	if output == "" {
+		t.Error("Expected non-empty output")
+	}
+
+	// Check for TOON format markers
+	if output[0:4] != "help" {
+		t.Errorf("Expected TOON format to start with 'help', got '%s'", output[:4])
+	}
+}
+
+func TestFormatSuggestionsJSON(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 4)
+
+	suggestions := []Suggestion{
+		{Command: "test", Description: "Run tests", Relevance: 90},
+	}
+
+	output, err := engine.FormatSuggestions(suggestions, "json")
+	if err != nil {
+		t.Fatalf("FormatSuggestions failed: %v", err)
+	}
+
+	if output == "" {
+		t.Error("Expected non-empty output")
+	}
+}
+
+func TestFormatSuggestionsHuman(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 4)
+
+	suggestions := []Suggestion{
+		{Command: "test", Description: "Run tests", Relevance: 90},
+	}
+
+	output, err := engine.FormatSuggestions(suggestions, "human")
+	if err != nil {
+		t.Fatalf("FormatSuggestions failed: %v", err)
+	}
+
+	if output == "" {
+		t.Error("Expected non-empty output")
+	}
+
+	// Check for human format markers
+	if output[0:11] != "Suggestions" {
+		t.Errorf("Expected human format to start with 'Suggestions', got '%s'", output[:11])
+	}
+}
+
+func TestFormatSuggestionsEmpty(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 4)
+
+	suggestions := []Suggestion{}
+
+	// Test TOON format
+	output, err := engine.FormatSuggestions(suggestions, "toon")
+	if err != nil {
+		t.Fatalf("FormatSuggestions failed: %v", err)
+	}
+	if output != "help[]" {
+		t.Errorf("Expected 'help[]' for empty suggestions, got '%s'", output)
+	}
+
+	// Test human format
+	output, err = engine.FormatSuggestions(suggestions, "human")
+	if err != nil {
+		t.Fatalf("FormatSuggestions failed: %v", err)
+	}
+	if output != "" {
+		t.Errorf("Expected empty string for human format with no suggestions, got '%s'", output)
+	}
+}
+
+func TestSuggestionRelevanceSorting(t *testing.T) {
+	ctx := context.Background()
+	engine := NewEngine(ctx, 10)
+
+	rule := NewDefaultRule(10)
+	engine.AddRule(rule)
+
+	suggestions := engine.Generate(&Context{
+		OutputState: "empty",
+		IsGitRepo:   true,
+	})
+
+	// Check that suggestions are sorted by relevance (highest first)
+	for i := 0; i < len(suggestions)-1; i++ {
+		if suggestions[i].Relevance < suggestions[i+1].Relevance {
+			t.Errorf("Suggestions not sorted by relevance: %d < %d at index %d",
+				suggestions[i].Relevance, suggestions[i+1].Relevance, i)
+		}
+	}
+}
+
+{# vim: set ft=go: #}

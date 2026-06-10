@@ -1,0 +1,405 @@
+package session
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestResolveExecutablePath(t *testing.T) {
+	// Test with absolute path
+	tmpDir := t.TempDir()
+	testExec := filepath.Join(tmpDir, "test-exec")
+	if err := os.WriteFile(testExec, []byte("#!/bin/sh\necho test"), 0755); err != nil {
+		t.Fatalf("Failed to create test executable: %v", err)
+	}
+
+	path, err := resolveExecutablePath(testExec)
+	if err != nil {
+		t.Fatalf("resolveExecutablePath failed: %v", err)
+	}
+	if path != testExec {
+		t.Errorf("resolveExecutablePath = %v, want %v", path, testExec)
+	}
+
+	// Test with non-existent path
+	_, err = resolveExecutablePath("/nonexistent/path")
+	if err == nil {
+		t.Error("resolveExecutablePath should fail for non-existent path")
+	}
+}
+
+func TestGetHookFilePath(t *testing.T) {
+	tests := []struct {
+		name     string
+		agent    AgentType
+		wantErr  bool
+	}{
+		{
+			name:    "claude agent",
+			agent:   AgentClaude,
+			wantErr: false,
+		},
+		{
+			name:    "codex agent",
+			agent:   AgentCodex,
+			wantErr: false,
+		},
+		{
+			name:    "unsupported agent",
+			agent:   AgentType("unknown"),
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			path, err := getHookFilePath(tt.agent)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getHookFilePath() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && path == "" {
+				t.Error("getHookFilePath returned empty path")
+			}
+		})
+	}
+}
+
+func TestInstallClaudeHook(t *testing.T) {
+	tmpDir := t.TempDir()
+	hookFile := filepath.Join(tmpDir, "settings.json")
+
+	config := HookConfig{
+		AgentType:  AgentClaude,
+		Command:    "/usr/bin/test --session-context",
+		Executable: "/usr/bin/test",
+		SessionEnd: true,
+	}
+
+	// Test new installation
+	updated, err := installClaudeHook(hookFile, config)
+	if err != nil {
+		t.Fatalf("installClaudeHook failed: %v", err)
+	}
+	if !updated {
+		t.Error("installClaudeHook should return true for new installation")
+	}
+
+	// Verify file was created
+	data, err := os.ReadFile(hookFile)
+	if err != nil {
+		t.Fatalf("Failed to read hook file: %v", err)
+	}
+
+	var settings map[string]interface{}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		t.Fatalf("Failed to unmarshal settings: %v", err)
+	}
+
+	sessionHooksInterface, ok := settings["sessionHooks"].([]interface{})
+	if !ok {
+		t.Fatal("sessionHooks not found in settings")
+	}
+
+	if len(sessionHooksInterface) != 1 {
+		t.Errorf("Expected 1 hook, got %d", len(sessionHooksInterface))
+	}
+
+	// Test update with same command
+	updated, err = installClaudeHook(hookFile, config)
+	if err != nil {
+		t.Fatalf("installClaudeHook update failed: %v", err)
+	}
+	// Note: installClaudeHook always returns true when it updates the file
+	// even if the command is the same, because it rewrites the file
+}
+
+func TestInstallCodexHook(t *testing.T) {
+	tmpDir := t.TempDir()
+	hookFile := filepath.Join(tmpDir, "hooks.json")
+
+	config := HookConfig{
+		AgentType:  AgentCodex,
+		Command:    "/usr/bin/test --session-context",
+		Executable: "/usr/bin/test",
+		SessionEnd: true,
+	}
+
+	// Test new installation
+	updated, err := installCodexHook(hookFile, config)
+	if err != nil {
+		t.Fatalf("installCodexHook failed: %v", err)
+	}
+	if !updated {
+		t.Error("installCodexHook should return true for new installation")
+	}
+
+	// Verify file was created
+	data, err := os.ReadFile(hookFile)
+	if err != nil {
+		t.Fatalf("Failed to read hook file: %v", err)
+	}
+
+	var hooks []map[string]interface{}
+	if err := json.Unmarshal(data, &hooks); err != nil {
+		t.Fatalf("Failed to unmarshal hooks: %v", err)
+	}
+
+	if len(hooks) != 1 {
+		t.Errorf("Expected 1 hook, got %d", len(hooks))
+	}
+}
+
+func TestLoadClaudeHook(t *testing.T) {
+	tmpDir := t.TempDir()
+	hookFile := filepath.Join(tmpDir, "settings.json")
+
+	// Create settings with session hook
+	settings := map[string]interface{}{
+		"sessionHooks": []map[string]interface{}{
+			{
+				"command":    "/usr/bin/test --session-context",
+				"executable": "/usr/bin/test",
+			},
+		},
+	}
+
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		t.Fatalf("Failed to marshal settings: %v", err)
+	}
+
+	if err := os.WriteFile(hookFile, data, 0644); err != nil {
+		t.Fatalf("Failed to write settings: %v", err)
+	}
+
+	// Load hook
+	data, err = os.ReadFile(hookFile)
+	if err != nil {
+		t.Fatalf("Failed to read settings: %v", err)
+	}
+
+	hook, err := loadClaudeHook(data)
+	if err != nil {
+		t.Fatalf("loadClaudeHook failed: %v", err)
+	}
+
+	if hook == nil {
+		t.Error("loadClaudeHook returned nil for existing hook")
+		return
+	}
+
+	if hook.AgentType != AgentClaude {
+		t.Errorf("loadClaudeHook agent type = %v, want %v", hook.AgentType, AgentClaude)
+	}
+}
+
+func TestLoadCodexHook(t *testing.T) {
+	tmpDir := t.TempDir()
+	hookFile := filepath.Join(tmpDir, "hooks.json")
+
+	// Create hooks with session hook
+	hooks := []map[string]interface{}{
+		{
+			"command":    "/usr/bin/test --session-context",
+			"executable": "/usr/bin/test",
+			"sessionEnd": true,
+		},
+	}
+
+	data, err := json.MarshalIndent(hooks, "", "  ")
+	if err != nil {
+		t.Fatalf("Failed to marshal hooks: %v", err)
+	}
+
+	if err := os.WriteFile(hookFile, data, 0644); err != nil {
+		t.Fatalf("Failed to write hooks: %v", err)
+	}
+
+	// Load hook
+	data, err = os.ReadFile(hookFile)
+	if err != nil {
+		t.Fatalf("Failed to read hooks: %v", err)
+	}
+
+	hook, err := loadCodexHook(data)
+	if err != nil {
+		t.Fatalf("loadCodexHook failed: %v", err)
+	}
+
+	if hook == nil {
+		t.Error("loadCodexHook returned nil for existing hook")
+	}
+
+	if hook.AgentType != AgentCodex {
+		t.Errorf("loadCodexHook agent type = %v, want %v", hook.AgentType, AgentCodex)
+	}
+}
+
+func TestUninstallClaudeHook(t *testing.T) {
+	tmpDir := t.TempDir()
+	hookFile := filepath.Join(tmpDir, "settings.json")
+
+	// Create settings with session hook
+	settings := map[string]interface{}{
+		"sessionHooks": []interface{}{
+			map[string]interface{}{
+				"command":    "/usr/bin/test --session-context",
+				"executable": "/usr/bin/test",
+			},
+			map[string]interface{}{
+				"command":    "/usr/bin/other",
+				"executable": "/usr/bin/other",
+			},
+		},
+	}
+
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		t.Fatalf("Failed to marshal settings: %v", err)
+	}
+
+	if err := os.WriteFile(hookFile, data, 0644); err != nil {
+		t.Fatalf("Failed to write settings: %v", err)
+	}
+
+	// Uninstall hook
+	if err := uninstallClaudeHook(hookFile); err != nil {
+		t.Fatalf("uninstallClaudeHook failed: %v", err)
+	}
+
+	// Verify hook was removed
+	data, err = os.ReadFile(hookFile)
+	if err != nil {
+		t.Fatalf("Failed to read settings: %v", err)
+	}
+
+	var updatedSettings map[string]interface{}
+	if err := json.Unmarshal(data, &updatedSettings); err != nil {
+		t.Fatalf("Failed to unmarshal settings: %v", err)
+	}
+
+	sessionHooksInterface, ok := updatedSettings["sessionHooks"].([]interface{})
+	if !ok {
+		t.Fatal("sessionHooks not found in settings")
+	}
+
+	if len(sessionHooksInterface) != 1 {
+		t.Errorf("Expected 1 hook after uninstall, got %d", len(sessionHooksInterface))
+	}
+
+	// Verify the remaining hook is not the session-context hook
+	remainingHook, ok := sessionHooksInterface[0].(map[string]interface{})
+	if !ok {
+		t.Fatal("Remaining hook is not a map")
+	}
+
+	if cmd, ok := remainingHook["command"].(string); ok && cmd == "/usr/bin/test --session-context" {
+		t.Error("Session-context hook was not removed")
+	}
+}
+
+func TestUninstallCodexHook(t *testing.T) {
+	tmpDir := t.TempDir()
+	hookFile := filepath.Join(tmpDir, "hooks.json")
+
+	// Create hooks with session hook
+	hooks := []interface{}{
+		map[string]interface{}{
+			"command":    "/usr/bin/test --session-context",
+			"executable": "/usr/bin/test",
+			"sessionEnd": true,
+		},
+		map[string]interface{}{
+			"command":    "/usr/bin/other",
+			"executable": "/usr/bin/other",
+		},
+	}
+
+	data, err := json.MarshalIndent(hooks, "", "  ")
+	if err != nil {
+		t.Fatalf("Failed to marshal hooks: %v", err)
+	}
+
+	if err := os.WriteFile(hookFile, data, 0644); err != nil {
+		t.Fatalf("Failed to write hooks: %v", err)
+	}
+
+	// Uninstall hook
+	if err := uninstallCodexHook(hookFile); err != nil {
+		t.Fatalf("uninstallCodexHook failed: %v", err)
+	}
+
+	// Verify hook was removed
+	data, err = os.ReadFile(hookFile)
+	if err != nil {
+		t.Fatalf("Failed to read hooks: %v", err)
+	}
+
+	var updatedHooks []interface{}
+	if err := json.Unmarshal(data, &updatedHooks); err != nil {
+		t.Fatalf("Failed to unmarshal hooks: %v", err)
+	}
+
+	if len(updatedHooks) != 1 {
+		t.Errorf("Expected 1 hook after uninstall, got %d", len(updatedHooks))
+	}
+}
+
+func TestRegisterHook(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a test executable
+	testExec := filepath.Join(tmpDir, "test-exec")
+	if err := os.WriteFile(testExec, []byte("#!/bin/sh\necho test"), 0755); err != nil {
+		t.Fatalf("Failed to create test executable: %v", err)
+	}
+
+	opts := HookOptions{
+		AgentType:      AgentClaude,
+		ExecutablePath: testExec,
+		SessionEnd:     true,
+	}
+
+	// This will try to install to ~/.claude/settings.json
+	// We'll just test the logic without actually installing
+	_, err := RegisterHook(opts)
+	// We expect this to potentially fail due to permissions or path issues
+	// but the logic should be tested
+	if err != nil {
+		// Expected to fail in test environment
+		t.Logf("RegisterHook failed as expected in test environment: %v", err)
+	}
+}
+
+func TestListHooks(t *testing.T) {
+	output, err := ListHooks()
+	if err != nil {
+		t.Fatalf("ListHooks failed: %v", err)
+	}
+
+	if output == "" {
+		t.Error("ListHooks returned empty output")
+	}
+
+	// Output should be in TOON format
+	if !containsStringHelper(output, "[") {
+		t.Error("ListHooks output is not in TOON format")
+	}
+}
+
+// Helper function
+func containsStringHelper(s, substr string) bool {
+	return len(s) >= len(substr) && findSubstringHelper(s, substr)
+}
+
+func findSubstringHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

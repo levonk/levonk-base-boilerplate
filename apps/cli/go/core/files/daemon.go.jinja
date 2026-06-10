@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/kardianos/service"
 	"github.com/spf13/viper"
+
+	"{{ project_slug }}/internal/idempotency"
 )
 
 // DaemonManager manages daemon process lifecycle and job queue
@@ -87,67 +89,95 @@ func (dm *DaemonManager) IsPlatformSupported() bool {
 	}
 }
 
-// StartDaemon starts the daemon process
+// StartDaemon starts the daemon process (idempotent)
 func (dm *DaemonManager) StartDaemon() error {
 	if !dm.IsPlatformSupported() {
 		return fmt.Errorf("daemon mode is not supported on %s", runtime.GOOS)
 	}
 
+	handler := idempotency.NewHandler(dm.logger)
+	ctx := context.Background()
+
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
-	if dm.running {
-		if dm.config.NoisyBehavior {
-			dm.logger.Info("Daemon is already running")
-		}
-		return nil
-	}
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) {
+			return idempotency.State{Exists: dm.running, Value: "daemon"}, nil
+		},
+		func(state idempotency.State) bool { return state.Exists },
+		func() error {
+			// Configure service
+			svcConfig := &service.Config{
+				Name:        "{{ project_name }}",
+				DisplayName: "{{ project_name }} Daemon",
+				Description: "{{ description }}",
+			}
 
-	// Configure service
-	svcConfig := &service.Config{
-		Name:        "{{ project_name }}",
-		DisplayName: "{{ project_name }} Daemon",
-		Description: "{{ description }}",
-	}
+			var err error
+			dm.service, err = service.New(dm, svcConfig)
+			if err != nil {
+				return fmt.Errorf("failed to create service: %w", err)
+			}
 
-	var err error
-	dm.service, err = service.New(dm, svcConfig)
+			// Start service
+			err = dm.service.Run()
+			if err != nil {
+				return fmt.Errorf("failed to start service: %w", err)
+			}
+
+			dm.running = true
+			return nil
+		},
+		func(state idempotency.State) string {
+			return "Daemon is already running"
+		},
+		func() string {
+			return "Daemon started successfully"
+		},
+	)
 	if err != nil {
-		return fmt.Errorf("failed to create service: %w", err)
+		return err
 	}
-
-	// Start service
-	err = dm.service.Run()
-	if err != nil {
-		return fmt.Errorf("failed to start service: %w", err)
-	}
-
-	dm.running = true
-	dm.logger.Info("Daemon started successfully")
 	return nil
 }
 
-// StopDaemon stops the daemon process
+// StopDaemon stops the daemon process (idempotent)
 func (dm *DaemonManager) StopDaemon() error {
+	handler := idempotency.NewHandler(dm.logger)
+	ctx := context.Background()
+
 	dm.mu.Lock()
 	defer dm.mu.Unlock()
 
-	if !dm.running {
-		if dm.config.NoisyBehavior {
-			dm.logger.Info("Daemon is not running")
-		}
-		return nil
-	}
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) {
+			return idempotency.State{Exists: !dm.running, Value: "daemon"}, nil
+		},
+		func(state idempotency.State) bool { return state.Exists },
+		func() error {
+			if dm.service != nil {
+				err := dm.service.Stop()
+				if err != nil {
+					return fmt.Errorf("failed to stop service: %w", err)
+				}
+			}
 
-	if dm.service != nil {
-		err := dm.service.Stop()
-		if err != nil {
-			return fmt.Errorf("failed to stop service: %w", err)
-		}
+			dm.running = false
+			return nil
+		},
+		func(state idempotency.State) string {
+			return "Daemon is not running, nothing to stop"
+		},
+		func() string {
+			return "Daemon stopped successfully"
+		},
+	)
+	if err != nil {
+		return err
 	}
-
-	dm.running = false
-	dm.logger.Info("Daemon stopped successfully")
 	return nil
 }
 
@@ -240,25 +270,44 @@ func (dm *DaemonManager) ExecuteJob(ctx context.Context, jobID string) error {
 	return nil
 }
 
-// CancelJob cancels a running job
+// CancelJob cancels a running job (idempotent)
 func (dm *DaemonManager) CancelJob(jobID string) error {
+	handler := idempotency.NewHandler(dm.logger)
+	ctx := context.Background()
+
 	dm.jobQueue.mu.Lock()
 	defer dm.jobQueue.mu.Unlock()
 
 	job, exists := dm.jobQueue.jobs[jobID]
 	if !exists {
-		return fmt.Errorf("job %s not found", jobID)
+		// Job not found - this is a no-op, return success
+		dm.logger.Info("Job %s not found or already completed", jobID)
+		return nil
 	}
 
-	if job.Status != "running" && job.Status != "pending" {
-		return fmt.Errorf("job %s cannot be cancelled (status: %s)", jobID, job.Status)
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) {
+			isCancellable := job.Status == "running" || job.Status == "pending"
+			return idempotency.State{Exists: !isCancellable, Value: job.Status}, nil
+		},
+		func(state idempotency.State) bool { return state.Exists },
+		func() error {
+			job.Status = "cancelled"
+			completedAt := time.Now()
+			job.CompletedAt = &completedAt
+			return nil
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Job %s cannot be cancelled (status: %s)", jobID, state.Value)
+		},
+		func() string {
+			return fmt.Sprintf("Job %s cancelled successfully", jobID)
+		},
+	)
+	if err != nil {
+		return err
 	}
-
-	job.Status = "cancelled"
-	completedAt := time.Now()
-	job.CompletedAt = &completedAt
-
-	dm.logger.Info("Cancelled job %s", jobID)
 	return nil
 }
 

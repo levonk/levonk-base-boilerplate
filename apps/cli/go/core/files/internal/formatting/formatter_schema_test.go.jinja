@@ -15,7 +15,7 @@ func TestFormatterWithSchema(t *testing.T) {
 		s.AddField("description", schema.FieldTypeString, "Description", false, nil)
 		s.SetDefaultFields("id", "title", "status")
 
-		formatter := NewFormatter(ModeAgent, true, "", false)
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
 		formatter.WithSchema(s)
 
 		data := map[string]interface{}{
@@ -49,7 +49,7 @@ func TestFormatterWithSchema(t *testing.T) {
 		s.AddField("description", schema.FieldTypeString, "Description", false, nil)
 		s.SetDefaultFields("id", "title", "status")
 
-		formatter := NewFormatter(ModeAgent, true, "", false)
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
 		formatter.WithSchema(s)
 		formatter.WithFields([]string{"id", "description"})
 
@@ -83,7 +83,7 @@ func TestFormatterWithSchema(t *testing.T) {
 		s.AddField("description", schema.FieldTypeString, "Description", false, nil)
 		s.SetDefaultFields("id", "title", "status")
 
-		formatter := NewFormatter(ModeAgent, true, "", false)
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
 		formatter.WithSchema(s)
 
 		data := []map[string]interface{}{
@@ -119,7 +119,7 @@ func TestFormatterWithSchema(t *testing.T) {
 		s.SetDefaultFields("id", "title")
 		s.MaxItems = 2
 
-		formatter := NewFormatter(ModeAgent, true, "", false)
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
 		formatter.WithSchema(s)
 
 		data := []map[string]interface{}{
@@ -146,7 +146,7 @@ func TestFormatterWithSchema(t *testing.T) {
 	})
 
 	t.Run("without schema", func(t *testing.T) {
-		formatter := NewFormatter(ModeAgent, true, "", false)
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
 
 		data := map[string]interface{}{
 			"id":          "123",
@@ -168,7 +168,7 @@ func TestFormatterWithInvalidFields(t *testing.T) {
 	s.AddField("title", schema.FieldTypeString, "Title", true, nil)
 	s.SetDefaultFields("id", "title")
 
-	formatter := NewFormatter(ModeAgent, true, "", false)
+	formatter := NewFormatter(ModeAgent, true, "", false, false)
 	formatter.WithSchema(s)
 	formatter.WithFields([]string{"id", "nonexistent"})
 
@@ -191,7 +191,7 @@ func TestFormatterJSONWithSchema(t *testing.T) {
 	s.AddField("description", schema.FieldTypeString, "Description", false, nil)
 	s.SetDefaultFields("id", "title", "status")
 
-	formatter := NewFormatter(ModeAgent, false, "", true)
+	formatter := NewFormatter(ModeAgent, false, "", true, false)
 	formatter.WithSchema(s)
 
 	data := map[string]interface{}{

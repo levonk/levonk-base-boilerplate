@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"{{ project_slug }}/internal/prompts"
 )
 
 // TestPromptForConfirmation_Yes tests that "y" or "yes" returns true
@@ -208,7 +210,7 @@ func TestPromptForDelete(t *testing.T) {
 				}()
 			}
 
-			result := PromptForDelete(tt.target, tt.force, tt.quiet)
+			result := PromptForDelete(tt.target, tt.force, tt.quiet, ModeHuman, nil)
 
 			if bool(result) != tt.expected {
 				t.Errorf("PromptForDelete() = %v, want %v", result, tt.expected)
@@ -250,7 +252,7 @@ func TestPromptForOverwrite(t *testing.T) {
 				}()
 			}
 
-			result := PromptForOverwrite(tt.target, tt.force, tt.quiet)
+			result := PromptForOverwrite(tt.target, tt.force, tt.quiet, ModeHuman, nil)
 
 			if bool(result) != tt.expected {
 				t.Errorf("PromptForOverwrite() = %v, want %v", result, tt.expected)
@@ -293,7 +295,7 @@ func TestPromptForDestructive(t *testing.T) {
 				}()
 			}
 
-			result := PromptForDestructive(tt.operation, tt.target, tt.force, tt.quiet)
+			result := PromptForDestructive(tt.operation, tt.target, tt.force, tt.quiet, ModeHuman, nil)
 
 			if bool(result) != tt.expected {
 				t.Errorf("PromptForDestructive() = %v, want %v", result, tt.expected)
@@ -358,4 +360,244 @@ func TestPromptFormat(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPromptForConfirmation_WithSuppressor tests prompt suppression via suppressor
+func TestPromptForConfirmation_WithSuppressor(t *testing.T) {
+	logger := NewLogger(LoggerConfig{Quiet: true})
+
+	tests := []struct {
+		name     string
+		mode     Mode
+		force    bool
+		quiet    bool
+		expected bool
+	}{
+		{"agent mode suppresses with safe default (no)", ModeAgent, false, false, false},
+		{"force flag bypasses in agent mode", ModeAgent, true, false, true},
+		{"quiet flag suppresses in human mode", ModeHuman, false, true, false},
+		{"human mode allows prompt", ModeHuman, false, false, false}, // Would prompt, but we test suppressor logic
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suppressor := prompts.NewPromptSuppressor(tt.mode, tt.force, tt.quiet, logger)
+			cfg := PromptConfig{
+				Message:  "Test prompt",
+				Force:    false,
+				Quiet:    false,
+				DefaultYes: false,
+				Mode:     tt.mode,
+				Suppressor: suppressor,
+			}
+
+			result := PromptForConfirmation(cfg)
+			if result != tt.expected {
+				t.Errorf("PromptForConfirmation() with suppressor = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPromptForDelete_WithSuppressor tests delete prompt with suppressor
+func TestPromptForDelete_WithSuppressor(t *testing.T) {
+	logger := NewLogger(LoggerConfig{Quiet: true})
+
+	suppressor := prompts.NewPromptSuppressor(ModeAgent, false, false, logger)
+	result := PromptForDelete("file.txt", false, false, suppressor)
+
+	if result != false {
+		t.Errorf("PromptForDelete() in agent mode should return false (safe default), got %v", result)
+	}
+}
+
+// TestPromptForOverwrite_WithSuppressor tests overwrite prompt with suppressor
+func TestPromptForOverwrite_WithSuppressor(t *testing.T) {
+	logger := NewLogger(LoggerConfig{Quiet: true})
+
+	suppressor := prompts.NewPromptSuppressor(ModeAgent, false, false, logger)
+	result := PromptForOverwrite("file.txt", false, false, suppressor)
+
+	if result != false {
+		t.Errorf("PromptForOverwrite() in agent mode should return false (safe default), got %v", result)
+	}
+}
+
+// TestPromptForDestructive_WithSuppressor tests destructive prompt with suppressor
+func TestPromptForDestructive_WithSuppressor(t *testing.T) {
+	logger := NewLogger(LoggerConfig{Quiet: true})
+
+	suppressor := prompts.NewPromptSuppressor(ModeAgent, false, false, logger)
+	result := PromptForDestructive("delete", "file.txt", false, false, suppressor)
+
+	if result != false {
+		t.Errorf("PromptForDestructive() in agent mode should return false (safe default), got %v", result)
+	}
+}
+
+// TestPromptFlagBasedCompletion tests that all prompted operations can be completed via flags
+func TestPromptFlagBasedCompletion(t *testing.T) {
+	logger := NewLogger(LoggerConfig{Quiet: true})
+
+	tests := []struct {
+		name        string
+		mode        Mode
+		force       bool
+		quiet       bool
+		shouldPrompt bool
+		description string
+	}{
+		{"agent mode: no prompt needed", ModeAgent, false, false, false, "Agent mode suppresses prompts automatically"},
+		{"human mode with force: no prompt", ModeHuman, true, false, false, "Force flag bypasses prompts"},
+		{"human mode with quiet: no prompt", ModeHuman, false, true, false, "Quiet flag suppresses prompts with safe default"},
+		{"human mode: prompt allowed", ModeHuman, false, false, true, "Human mode allows prompts without flags"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suppressor := prompts.NewPromptSuppressor(tt.mode, tt.force, tt.quiet, logger)
+			shouldPrompt := suppressor.ShouldPrompt()
+
+			if shouldPrompt != tt.shouldPrompt {
+				t.Errorf("ShouldPrompt() = %v, want %v (%s)", shouldPrompt, tt.shouldPrompt, tt.description)
+			}
+		})
+	}
+}
+
+// TestPromptRequireValue tests that required values fail with clear error in agent mode
+func TestPromptRequireValue(t *testing.T) {
+	logger := NewLogger(LoggerConfig{Quiet: true})
+
+	suppressor := prompts.NewPromptSuppressor(ModeAgent, false, false, logger)
+
+	tests := []struct {
+		name      string
+		value     string
+		fieldName string
+		wantErr   bool
+	}{
+		{"valid value passes", "test-value", "api-key", false},
+		{"empty value fails", "", "api-key", true},
+		{"whitespace only fails", "   ", "api-key", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := suppressor.RequireValue(tt.value, tt.fieldName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RequireValue() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && tt.wantErr {
+				// Check that error message is clear and helpful
+				if !strings.Contains(err.Error(), "required value") {
+					t.Errorf("Error message should mention 'required value', got: %v", err)
+				}
+				if !strings.Contains(err.Error(), tt.fieldName) {
+					t.Errorf("Error message should mention field name '%s', got: %v", tt.fieldName, err)
+				}
+			}
+		})
+	}
+}
+
+// TestPromptGetPromptResult tests the result when prompts are suppressed
+func TestPromptGetPromptResult(t *testing.T) {
+	logger := NewLogger(LoggerConfig{Quiet: true})
+
+	tests := []struct {
+		name     string
+		mode     Mode
+		force    bool
+		quiet    bool
+		expected bool
+		reason   string
+	}{
+		{"force returns true", ModeAgent, true, false, true, "Force flag bypasses confirmation"},
+		{"agent mode returns false", ModeAgent, false, false, false, "Agent mode uses safe default (no)"},
+		{"quiet returns false", ModeHuman, false, true, false, "Quiet flag uses safe default (no)"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suppressor := prompts.NewPromptSuppressor(tt.mode, tt.force, tt.quiet, logger)
+			result := suppressor.GetPromptResult()
+
+			if result != tt.expected {
+				t.Errorf("GetPromptResult() = %v, want %v (%s)", result, tt.expected, tt.reason)
+			}
+		})
+	}
+}
+
+// TestPromptBehaviorInDifferentModes tests prompt behavior across agent and human modes
+func TestPromptBehaviorInDifferentModes(t *testing.T) {
+	logger := NewLogger(LoggerConfig{Quiet: true})
+
+	// Test agent mode behavior
+	t.Run("Agent Mode", func(t *testing.T) {
+		suppressor := prompts.NewPromptSuppressor(ModeAgent, false, false, logger)
+
+		// In agent mode, prompts should be suppressed
+		if suppressor.ShouldPrompt() {
+			t.Error("Agent mode should suppress prompts")
+		}
+
+		// Result should be safe default (no)
+		if suppressor.GetPromptResult() {
+			t.Error("Agent mode should return safe default (no)")
+		}
+
+		// Explanation should mention agent mode
+		explanation := suppressor.GetPromptExplanation()
+		if !strings.Contains(explanation, "agent mode") {
+			t.Errorf("Explanation should mention agent mode, got: %s", explanation)
+		}
+	})
+
+	// Test human mode behavior
+	t.Run("Human Mode", func(t *testing.T) {
+		suppressor := prompts.NewPromptSuppressor(ModeHuman, false, false, logger)
+
+		// In human mode, prompts should be allowed
+		if !suppressor.ShouldPrompt() {
+			t.Error("Human mode should allow prompts")
+		}
+
+		// Explanation should mention human mode
+		explanation := suppressor.GetPromptExplanation()
+		if !strings.Contains(explanation, "human mode") {
+			t.Errorf("Explanation should mention human mode, got: %s", explanation)
+		}
+	})
+
+	// Test force flag in human mode
+	t.Run("Human Mode with Force", func(t *testing.T) {
+		suppressor := prompts.NewPromptSuppressor(ModeHuman, true, false, logger)
+
+		// Force should suppress prompts
+		if suppressor.ShouldPrompt() {
+			t.Error("Force flag should suppress prompts in human mode")
+		}
+
+		// Result should be true (bypass confirmation)
+		if !suppressor.GetPromptResult() {
+			t.Error("Force flag should return true (bypass confirmation)")
+		}
+	})
+
+	// Test quiet flag in human mode
+	t.Run("Human Mode with Quiet", func(t *testing.T) {
+		suppressor := prompts.NewPromptSuppressor(ModeHuman, false, true, logger)
+
+		// Quiet should suppress prompts
+		if suppressor.ShouldPrompt() {
+			t.Error("Quiet flag should suppress prompts in human mode")
+		}
+
+		// Result should be false (safe default)
+		if suppressor.GetPromptResult() {
+			t.Error("Quiet flag should return false (safe default)")
+		}
+	})
 }

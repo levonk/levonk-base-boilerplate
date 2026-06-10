@@ -1,0 +1,110 @@
+package skill
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/spf13/cobra"
+)
+
+func TestValidator_CheckSkill(t *testing.T) {
+	rootCmd := &cobra.Command{
+		Use:   "testcli",
+		Short: "Test CLI",
+	}
+
+	validator := NewValidator("Test CLI", "testcli", "A test CLI", "1.0.0", rootCmd)
+
+	t.Run("file does not exist", func(t *testing.T) {
+		err := validator.CheckSkill("/nonexistent/SKILL.md")
+		if err == nil {
+			t.Error("CheckSkill() should return error for nonexistent file")
+		}
+		if !strings.Contains(err.Error(), "does not exist") {
+			t.Errorf("Error message should mention file does not exist: %v", err)
+		}
+	})
+
+	t.Run("file is up to date", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "SKILL.md")
+
+		// Generate initial skill file
+		generator := NewGenerator("Test CLI", "testcli", "A test CLI", "1.0.0", rootCmd)
+		if err := generator.GenerateToFile(filePath); err != nil {
+			t.Fatalf("Failed to generate skill file: %v", err)
+		}
+
+		// Check should pass
+		err := validator.CheckSkill(filePath)
+		if err != nil {
+			t.Errorf("CheckSkill() should pass for up-to-date file: %v", err)
+		}
+	})
+
+	t.Run("file is stale", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "SKILL.md")
+
+		// Write stale content
+		staleContent := "# Stale Skill\nThis is outdated."
+		if err := os.WriteFile(filePath, []byte(staleContent), 0644); err != nil {
+			t.Fatalf("Failed to write stale file: %v", err)
+		}
+
+		// Check should fail with StaleSkillError
+		err := validator.CheckSkill(filePath)
+		if err == nil {
+			t.Error("CheckSkill() should return error for stale file")
+		}
+		if !IsStaleSkill(err) {
+			t.Errorf("Error should be StaleSkillError: %v", err)
+		}
+	})
+}
+
+func TestIsStaleSkill(t *testing.T) {
+	t.Run("is stale skill error", func(t *testing.T) {
+		err := &StaleSkillError{
+			Filepath:     "SKILL.md",
+			ExistingHash: "abc123",
+			ExpectedHash: "def456",
+			Suggestion:   "Run --generate-skill",
+		}
+		if !IsStaleSkill(err) {
+			t.Error("IsStaleSkill() should return true for StaleSkillError")
+		}
+	})
+
+	t.Run("is not stale skill error", func(t *testing.T) {
+		err := os.ErrNotExist
+		if IsStaleSkill(err) {
+			t.Error("IsStaleSkill() should return false for other errors")
+		}
+	})
+}
+
+func TestStaleSkillError_Error(t *testing.T) {
+	err := &StaleSkillError{
+		Filepath:     "SKILL.md",
+		ExistingHash: "abc123",
+		ExpectedHash: "def456",
+		Suggestion:   "Run --generate-skill",
+	}
+
+	msg := err.Error()
+	if !strings.Contains(msg, "SKILL.md") {
+		t.Error("Error message should contain filepath")
+	}
+	if !strings.Contains(msg, "abc123") {
+		t.Error("Error message should contain existing hash")
+	}
+	if !strings.Contains(msg, "def456") {
+		t.Error("Error message should contain expected hash")
+	}
+	if !strings.Contains(msg, "Run --generate-skill") {
+		t.Error("Error message should contain suggestion")
+	}
+}

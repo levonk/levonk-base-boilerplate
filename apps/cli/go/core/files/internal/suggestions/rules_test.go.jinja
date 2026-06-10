@@ -1,0 +1,214 @@
+package suggestions
+
+import (
+	"testing"
+)
+
+func TestNewDefaultRule(t *testing.T) {
+	rule := NewDefaultRule(10)
+
+	if rule == nil {
+		t.Fatal("NewDefaultRule returned nil")
+	}
+
+	if rule.priority != 10 {
+		t.Errorf("Expected priority 10, got %d", rule.priority)
+	}
+}
+
+func TestDefaultRuleGenerate(t *testing.T) {
+	rule := NewDefaultRule(10)
+
+	// Test with empty context
+	suggestions := rule.Generate(&Context{})
+	if len(suggestions) == 0 {
+		t.Error("Expected at least one suggestion (help)")
+	}
+
+	// Test with empty output state
+	suggestions = rule.Generate(&Context{
+		OutputState: "empty",
+	})
+	if len(suggestions) == 0 {
+		t.Error("Expected suggestions for empty state")
+	}
+
+	// Check for create suggestion
+	found := false
+	for _, s := range suggestions {
+		if s.Command == "{{ project_slug }} create" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected create suggestion for empty state")
+	}
+
+	// Test with open output state
+	suggestions = rule.Generate(&Context{
+		OutputState: "open",
+	})
+	found = false
+	for _, s := range suggestions {
+		if s.Command == "{{ project_slug }} close --all" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected close suggestion for open state")
+	}
+
+	// Test with git repository
+	suggestions = rule.Generate(&Context{
+		IsGitRepo: true,
+	})
+	found = false
+	for _, s := range suggestions {
+		if s.Command == "{{ project_slug }} git status" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected git status suggestion for git repo")
+	}
+
+	// Test with project directory
+	suggestions = rule.Generate(&Context{
+		IsProjectDir: true,
+		ProjectType:  "go",
+	})
+	found = false
+	for _, s := range suggestions {
+		if s.Command == "{{ project_slug }} go test" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected go test suggestion for Go project")
+	}
+}
+
+func TestDefaultRulePriority(t *testing.T) {
+	rule := NewDefaultRule(10)
+	if rule.Priority() != 10 {
+		t.Errorf("Expected priority 10, got %d", rule.Priority())
+	}
+}
+
+func TestNewContextualRule(t *testing.T) {
+	rule := NewContextualRule(10)
+
+	if rule == nil {
+		t.Fatal("NewContextualRule returned nil")
+	}
+
+	if rule.priority != 10 {
+		t.Errorf("Expected priority 10, got %d", rule.priority)
+	}
+}
+
+func TestContextualRuleGenerate(t *testing.T) {
+	rule := NewContextualRule(10)
+
+	// Test with view command
+	suggestions := rule.Generate(&Context{
+		Command: "view",
+		Flags:   map[string]string{"format": "json"},
+	})
+	if len(suggestions) == 0 {
+		t.Error("Expected suggestions for view command")
+	}
+
+	// Check for edit suggestion with flags
+	found := false
+	for _, s := range suggestions {
+		if s.Command == "{{ project_slug }} edit <id> --format=json" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected edit suggestion with carried-forward flags")
+	}
+
+	// Test with edit command
+	suggestions = rule.Generate(&Context{
+		Command: "edit",
+		Flags:   map[string]string{"force": "true"},
+	})
+	found = false
+	for _, s := range suggestions {
+		if s.Command == "{{ project_slug }} save --force=true" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected save suggestion for edit command")
+	}
+
+	// Test with project directory
+	suggestions = rule.Generate(&Context{
+		IsProjectDir: true,
+		ProjectType:  "nodejs",
+	})
+	found = false
+	for _, s := range suggestions {
+		if s.Command == "{{ project_slug }} build --type=nodejs" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected build suggestion for project")
+	}
+}
+
+func TestContextualRulePriority(t *testing.T) {
+	rule := NewContextualRule(10)
+	if rule.Priority() != 10 {
+		t.Errorf("Expected priority 10, got %d", rule.Priority())
+	}
+}
+
+func TestSuggestionRelevance(t *testing.T) {
+	rule := NewDefaultRule(10)
+
+	suggestions := rule.Generate(&Context{
+		OutputState: "empty",
+	})
+
+	// Check that all suggestions have relevance scores
+	for _, s := range suggestions {
+		if s.Relevance <= 0 {
+			t.Errorf("Expected positive relevance, got %d", s.Relevance)
+		}
+		if s.Relevance > 100 {
+			t.Errorf("Expected relevance <= 100, got %d", s.Relevance)
+		}
+	}
+}
+
+func TestSuggestionFields(t *testing.T) {
+	rule := NewDefaultRule(10)
+
+	suggestions := rule.Generate(&Context{
+		OutputState: "empty",
+	})
+
+	// Check that all suggestions have required fields
+	for _, s := range suggestions {
+		if s.Command == "" {
+			t.Error("Expected non-empty command")
+		}
+		if s.Description == "" {
+			t.Error("Expected non-empty description")
+		}
+	}
+}
+
+{# vim: set ft=go: #}

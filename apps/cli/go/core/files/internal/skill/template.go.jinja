@@ -1,0 +1,267 @@
+package skill
+
+const skillTemplate = "---\n" +
+	"name: \"{{ project_name }}\"\n" +
+	"description: \"{{ description }}\"\n" +
+	"version: \"{{ version }}\"\n" +
+	"---\n" +
+	"\n" +
+	"# {{ project_name }}\n" +
+	"\n" +
+	"{{ description }}\n" +
+	"\n" +
+	"## Mode Selection\n" +
+	"\n" +
+	"The CLI operates in two modes: agent (default) and human (interactive).\n" +
+	"\n" +
+	"### Agent Mode\n" +
+	"- Default for non-interactive environments\n" +
+	"- Automatically detected when no TTY or agent session is present\n" +
+	"- Optimized for automation and AI agent integration\n" +
+	"- Can be forced with {{ project_slug | upper }}_MODE=agent environment variable\n" +
+	"- Default output format: TOON (token-efficient for LLM contexts)\n" +
+	"\n" +
+	"### Human Mode\n" +
+	"- Interactive mode for human users\n" +
+	"- Automatically detected when TTY is present and no agent session\n" +
+	"- Can be forced with --human or --interactive flags\n" +
+	"- Can be forced with {{ project_slug | upper }}_MODE=human environment variable\n" +
+	"- Can be set in config file with mode: human\n" +
+	"- Default output format: JSON (human-readable)\n" +
+	"\n" +
+	"### Mode Precedence (highest to lowest)\n" +
+	"1. CLI flags (--human, --interactive)\n" +
+	"2. Environment variables ({{ project_slug | upper }}_MODE)\n" +
+	"3. Config file setting\n" +
+	"4. Auto-detection based on environment\n" +
+	"\n" +
+	"## Output Format Selection\n" +
+	"\n" +
+	"The CLI supports multiple output formats for different use cases.\n" +
+	"\n" +
+	"### Format Options\n" +
+	"- --toon: Output in TOON format (Token-Oriented Object Notation)\n" +
+	"  - Token-efficient (~40% savings over JSON) for LLM contexts\n" +
+	"- --format=toon: Explicitly select TOON format\n" +
+	"- --format=json: Explicitly select JSON format\n" +
+	"- --format=human: Explicitly select human-readable format\n" +
+	"- --json: Alias for --format=json\n" +
+	"\n" +
+	"### Format Precedence (highest to lowest)\n" +
+	"1. --toon flag\n" +
+	"2. --format flag\n" +
+	"3. --json flag\n" +
+	"4. Mode-based default (TOON for agent, JSON for human)\n" +
+	"\n" +
+	"### TOON Format\n" +
+	"- Compact, indentation-based notation\n" +
+	"- Explicit array headers with length and fields\n" +
+	"- Optimized for token efficiency in LLM prompts\n" +
+	"- Human-readable while being machine-parseable\n" +
+	"- See https://toonformat.dev for specification\n" +
+	"\n" +
+	"## Field Selection\n" +
+	"\n" +
+	"The CLI supports field selection to control which fields are included in output.\n" +
+	"\n" +
+	"### Field Selection Options\n" +
+	"- --fields=id,title,status: Comma-separated list of fields to include\n" +
+	"  - If not specified, uses schema defaults (3-4 fields)\n" +
+	"  - Long-form content (body, description) excluded by default\n" +
+	"\n" +
+	"### Field Selection Examples\n" +
+	"- --fields=id,title,status: Include only id, title, and status fields\n" +
+	"- --fields=id,description: Include id and description (explicit long-form)\n" +
+	"- --fields=all: Include all available fields (if supported)\n" +
+	"\n" +
+	"### Benefits\n" +
+	"- Reduces token consumption in agent mode\n" +
+	"- Allows agents to request specific fields when needed\n" +
+	"- Improves readability by excluding verbose fields\n" +
+	"\n" +
+	"## Content Truncation\n" +
+	"\n" +
+	"The CLI automatically truncates large text fields to reduce token consumption.\n" +
+	"\n" +
+	"### Truncation Behavior\n" +
+	"- Description fields: truncated to 500 characters by default\n" +
+	"- Body fields: truncated to 1000 characters by default\n" +
+	"- Log fields: truncated to 1500 characters by default\n" +
+	"- Smart truncation at word boundaries when possible\n" +
+	"\n" +
+	"### Truncation Options\n" +
+	"- --full: Disable truncation and show full content for all fields\n" +
+	"  - Overrides config file truncation settings\n" +
+	"\n" +
+	"### Configuration\n" +
+	"```yaml\n" +
+	"truncation:\n" +
+	"  disable: false            # Disable truncation globally\n" +
+	"  limits:\n" +
+	"    description: 500        # Truncation limit for description fields\n" +
+	"    body: 1000              # Truncation limit for body fields\n" +
+	"    log: 1500               # Truncation limit for log fields\n" +
+	"    generic: 1000           # Truncation limit for generic text fields\n" +
+	"  min_threshold: 200        # Minimum length before truncation is considered\n" +
+	"```\n" +
+	"\n" +
+	"### Benefits\n" +
+	"- Reduces token consumption in agent mode\n" +
+	"- Provides escape hatch via --full flag for complete content\n" +
+	"- Configurable limits per field type\n" +
+	"\n" +
+	"## Error Format\n" +
+	"\n" +
+	"The CLI outputs errors in structured format (TOON or JSON) to stdout for programmatic parsing.\n" +
+	"\n" +
+	"### Error Output\n" +
+	"- Errors go to stdout in the same format as normal output (TOON or JSON)\n" +
+	"- Diagnostics (debug logs, progress) go to stderr\n" +
+	"- Enables agents to parse and act on failures programmatically\n" +
+	"\n" +
+	"### Error Structure (TOON)\n" +
+	"```\n" +
+	"error[type:config,message:Configuration file not found,suggestion:Run '{{ project_slug }} config init',exit_code:3]\n" +
+	"```\n" +
+	"\n" +
+	"### Error Structure (JSON)\n" +
+	"```json\n" +
+	"{\n" +
+	"  \"error\": {\n" +
+	"    \"type\": \"config\",\n" +
+	"    \"message\": \"Configuration file not found\",\n" +
+	"    \"suggestion\": \"Run '{{ project_slug }} config init'\",\n" +
+	"    \"exit_code\": 3\n" +
+	"  }\n" +
+	"}\n" +
+	"```\n" +
+	"\n" +
+	"### Error Types\n" +
+	"- general: General errors (exit code 1)\n" +
+	"- config: Configuration errors (exit code 3)\n" +
+	"- file: File operation errors (exit code 4)\n" +
+	"- network: Network errors (exit code 1)\n" +
+	"- permission: Permission errors (exit code 1)\n" +
+	"- validation: Validation errors (exit code 2)\n" +
+	"- execution: Execution errors (exit code 1)\n" +
+	"- platform: Platform errors (exit code 1)\n" +
+	"\n" +
+	"### Error Suggestions\n" +
+	"- Always reference CLI commands, not underlying tools\n" +
+	"- Provide actionable next steps\n" +
+	"- Context-aware based on error type and message\n" +
+	"- Ellipsis (...) appended to truncated content\n" +
+	"\n" +
+	"## Prompt Behavior\n" +
+	"\n" +
+	"The CLI automatically suppresses interactive prompts in non-interactive environments.\n" +
+	"\n" +
+	"### Prompt Suppression Rules\n" +
+	"- Agent mode: All prompts suppressed (uses safe default: no)\n" +
+	"- Human mode: Prompts allowed for interactive use\n" +
+	"- --force flag: Bypasses all confirmation prompts (returns yes)\n" +
+	"- --quiet flag: Suppresses prompts with safe default (no)\n" +
+	"\n" +
+	"### Flag-Based Alternatives\n" +
+	"All operations that would prompt in human mode can be completed via flags:\n" +
+	"- --force: Bypass confirmation prompts for destructive operations\n" +
+	"- --encryption-key: Provide encryption key directly (32 characters)\n" +
+	"- --quiet: Suppress all prompts with safe defaults\n" +
+	"\n" +
+	"### Error Handling\n" +
+	"- Missing required values in agent mode fail immediately with clear error\n" +
+	"- Error messages reference available flags for completion\n" +
+	"- No interactive prompts in agent mode (non-interactive environment)\n" +
+	"\n" +
+	"## Idempotent Operations\n" +
+	"\n" +
+	"The CLI supports idempotent operations for state-changing commands.\n" +
+	"\n" +
+	"### Idempotent Behavior\n" +
+	"- Install commands: Skip if already installed (exit code 0)\n" +
+	"- Uninstall commands: Skip if not installed (exit code 0)\n" +
+	"- Config initialization: Skip if config file exists (exit code 0)\n" +
+	"- Daemon start: Skip if already running (exit code 0)\n" +
+	"- Daemon stop: Skip if not running (exit code 0)\n" +
+	"- Job cancellation: Skip if job not found or already completed (exit code 0)\n" +
+	"\n" +
+	"### Exit Code Behavior\n" +
+	"- Idempotent no-ops always return exit code 0 (success)\n" +
+	"- Non-zero exit codes only for actual failures\n" +
+	"- Descriptive messages when operations are skipped\n" +
+	"\n" +
+	"### Benefits\n" +
+	"- Safe to repeat commands without causing errors\n" +
+	"- Ideal for automation and CI/CD pipelines\n" +
+	"- Clear feedback when operations are skipped\n" +
+	"\n" +
+	"## Examples\n" +
+	"\n" +
+	"### Basic Usage\n" +
+	"```bash\n" +
+	"go run main.go file.txt\n" +
+	"go run main.go \"**/*.txt\"\n" +
+	"cat file.txt | go run main.go -\n" +
+	"```\n" +
+	"\n" +
+	"### Agent Mode (Non-Interactive)\n" +
+	"```bash\n" +
+	"# Agent mode with TOON output (default)\n" +
+	"go run main.go file.txt --toon\n" +
+	"\n" +
+	"# Explicit agent mode\n" +
+	"{{ project_slug | upper }}_MODE=agent go run main.go file.txt\n" +
+	"```\n" +
+	"\n" +
+	"### Human Mode (Interactive)\n" +
+	"```bash\n" +
+	"# Human mode with JSON output\n" +
+	"go run main.go file.txt --human --json\n" +
+	"\n" +
+	"# Explicit human mode\n" +
+	"{{ project_slug | upper }}_MODE=human go run main.go file.txt\n" +
+	"```\n" +
+	"\n" +
+	"### Field Selection\n" +
+	"```bash\n" +
+	"# Select specific fields\n" +
+	"go run main.go file.txt --fields=id,title,status\n" +
+	"\n" +
+	"# Include all fields\n" +
+	"go run main.go file.txt --fields=all\n" +
+	"```\n" +
+	"\n" +
+	"### Disable Truncation\n" +
+	"```bash\n" +
+	"# Show full content without truncation\n" +
+	"go run main.go file.txt --full\n" +
+	"```\n" +
+	"\n" +
+	"### Idempotent Operations\n" +
+	"```bash\n" +
+	"# Install (safe to repeat)\n" +
+	"go run main.go --install\n" +
+	"\n" +
+	"# Uninstall (safe to repeat)\n" +
+	"go run main.go --uninstall\n" +
+	"```\n" +
+	"\n" +
+	"## Integration Options\n" +
+	"\n" +
+	"This CLI supports two integration methods for AI agents:\n" +
+	"\n" +
+	"### 1. Session Hooks (Recommended for Custom Integrations)\n" +
+	"- Use session hooks for custom agent integrations\n" +
+	"- Provides bidirectional communication with the CLI\n" +
+	"- Enables rich context sharing and state management\n" +
+	"- See session hook documentation for details\n" +
+	"\n" +
+	"### 2. Agent Skills (Recommended for Standard Discovery)\n" +
+	"- This SKILL.md file enables discovery via agentskills.io\n" +
+	"- Provides static documentation for agent understanding\n" +
+	"- No runtime integration required\n" +
+	"- Ideal for agents that support skill discovery\n" +
+	"\n" +
+	"**Note:** You only need one integration method. Choose based on your use case:\n" +
+	"- Use session hooks for custom, bidirectional integrations\n" +
+	"- Use agent skills for standard discovery and simple use cases\n"

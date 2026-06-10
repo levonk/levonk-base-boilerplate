@@ -1,0 +1,77 @@
+package aggregates
+
+import (
+	"fmt"
+)
+
+// Counter computes aggregate counts for data collections
+type Counter struct {
+	// ComputedCount holds the total count
+	ComputedCount int
+	// CurrentCount holds the count of items in the current result set
+	CurrentCount int
+	// HasTotal indicates whether a total count is available
+	HasTotal bool
+}
+
+// NewCounter creates a new Counter instance
+func NewCounter() *Counter {
+	return &Counter{
+		ComputedCount: 0,
+		CurrentCount:  0,
+		HasTotal:      false,
+	}
+}
+
+// CountFromSlice computes counts from a slice of data
+func (c *Counter) CountFromSlice(data interface{}) error {
+	switch val := data.(type) {
+	case []map[string]interface{}:
+		c.CurrentCount = len(val)
+		// Total count would be provided by backend or computed separately
+		// For now, we assume current count equals total unless backend provides total
+		if !c.HasTotal {
+			c.ComputedCount = len(val)
+			c.HasTotal = true
+		}
+	case []interface{}:
+		c.CurrentCount = len(val)
+		if !c.HasTotal {
+			c.ComputedCount = len(val)
+			c.HasTotal = true
+		}
+	default:
+		return fmt.Errorf("unsupported data type for counting: %T", data)
+	}
+	return nil
+}
+
+// SetTotal sets the total count (typically from backend metadata)
+func (c *Counter) SetTotal(total int) {
+	c.ComputedCount = total
+	c.HasTotal = true
+}
+
+// FormatCount formats the count as "count: X of Y total"
+// If total is not available, returns "count: X"
+func (c *Counter) FormatCount() string {
+	if c.HasTotal {
+		return fmt.Sprintf("count: %d of %d total", c.CurrentCount, c.ComputedCount)
+	}
+	return fmt.Sprintf("count: %d", c.CurrentCount)
+}
+
+// GetTotal returns the total count
+func (c *Counter) GetTotal() int {
+	return c.ComputedCount
+}
+
+// GetCurrent returns the current count
+func (c *Counter) GetCurrent() int {
+	return c.CurrentCount
+}
+
+// HasTotalCount returns whether a total count is available
+func (c *Counter) HasTotalCount() bool {
+	return c.HasTotal
+}

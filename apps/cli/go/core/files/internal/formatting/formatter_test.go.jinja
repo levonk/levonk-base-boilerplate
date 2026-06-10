@@ -265,3 +265,166 @@ func TestFormatterTruncationInMap(t *testing.T) {
 		t.Error("Expected non-empty result")
 	}
 }
+
+func TestFormatterEmptyStateDetection(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected bool
+	}{
+		{
+			name:     "empty slice",
+			input:    []interface{}{},
+			expected: true,
+		},
+		{
+			name:     "empty map",
+			input:    map[string]interface{}{},
+			expected: true,
+		},
+		{
+			name:     "nil",
+			input:    nil,
+			expected: true,
+		},
+		{
+			name:     "non-empty slice",
+			input:    []map[string]interface{}{map[string]interface{}{"key": "value"}},
+			expected: false,
+		},
+		{
+			name:     "non-empty map",
+			input:    map[string]interface{}{"key": "value"},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			formatter := NewFormatter(ModeAgent, false, "", false, false)
+			formatter.WithEmptyContext("list", "items", nil, "all", 0)
+
+			result, err := formatter.FormatValue(tt.input)
+			if err != nil {
+				t.Fatalf("FormatValue() error = %v", err)
+			}
+
+			if tt.expected {
+				// Should contain empty state message
+				if result == "" {
+					t.Error("Expected empty state message for empty input")
+				}
+			} else {
+				// Should not contain empty state message
+				if contains(result, "No results found") {
+					t.Error("Should not contain empty state message for non-empty input")
+				}
+			}
+		})
+	}
+}
+
+func TestFormatterEmptyStateWithTOON(t *testing.T) {
+	formatter := NewFormatter(ModeAgent, true, "", false, false)
+	formatter.WithEmptyContext("list", "items", map[string]string{"status": "active"}, "all", 100)
+
+	result, err := formatter.FormatValue([]interface{}{})
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Should contain TOON empty state format
+	if !contains(result, "# Empty State") {
+		t.Error("Expected TOON empty state format")
+	}
+	if !contains(result, "message:") {
+		t.Error("Expected message field in TOON format")
+	}
+	if !contains(result, "context:") {
+		t.Error("Expected context field in TOON format")
+	}
+}
+
+func TestFormatterEmptyStateWithJSON(t *testing.T) {
+	formatter := NewFormatter(ModeHuman, false, "", true, false)
+	formatter.WithEmptyContext("list", "items", map[string]string{"status": "active"}, "all", 100)
+
+	result, err := formatter.FormatValue([]interface{}{})
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Should contain JSON empty state format
+	if !contains(result, `"empty": true`) {
+		t.Error("Expected empty field in JSON format")
+	}
+	if !contains(result, `"message"`) {
+		t.Error("Expected message field in JSON format")
+	}
+	if !contains(result, `"exit_code": 0`) {
+		t.Error("Expected exit_code 0 in JSON format")
+	}
+}
+
+func TestFormatterEmptyStateWithHuman(t *testing.T) {
+	formatter := NewFormatter(ModeHuman, false, "human", false, false)
+	formatter.WithEmptyContext("list", "items", map[string]string{"status": "active"}, "all", 100)
+
+	result, err := formatter.FormatValue([]interface{}{})
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Should contain human-readable empty state format
+	if !contains(result, "No results found") {
+		t.Error("Expected human-readable empty state message")
+	}
+	if !contains(result, "Resource:") {
+		t.Error("Expected resource information in human format")
+	}
+	if !contains(result, "Filters:") {
+		t.Error("Expected filters information in human format")
+	}
+}
+
+func TestFormatterEmptyStateContext(t *testing.T) {
+	formatter := NewFormatter(ModeAgent, false, "", false, false)
+	formatter.WithEmptyContext("list", "items", map[string]string{"status": "active", "type": "foo"}, "all", 100)
+
+	result, err := formatter.FormatValue([]interface{}{})
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Should contain context information
+	if !contains(result, "items") {
+		t.Error("Expected resource in empty state context")
+	}
+	if !contains(result, "status") || !contains(result, "active") {
+		t.Error("Expected filter status=active in empty state context")
+	}
+	if !contains(result, "type") || !contains(result, "foo") {
+		t.Error("Expected filter type=foo in empty state context")
+	}
+	if !contains(result, "all") {
+		t.Error("Expected scope in empty state context")
+	}
+	if !contains(result, "100") {
+		t.Error("Expected total count in empty state context")
+	}
+}
+
+func TestFormatterEmptyStateExitCode(t *testing.T) {
+	formatter := NewFormatter(ModeAgent, false, "", false, false)
+	formatter.WithEmptyContext("list", "items", nil, "all", 0)
+
+	result, err := formatter.FormatValue([]interface{}{})
+	if err != nil {
+		t.Fatalf("FormatValue() error = %v", err)
+	}
+
+	// Empty state should indicate successful execution (exit code 0)
+	if !contains(result, "successfully") {
+		t.Error("Empty state should indicate successful execution")
+	}
+}

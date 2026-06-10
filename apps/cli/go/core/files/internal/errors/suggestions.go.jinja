@@ -1,0 +1,205 @@
+package errors
+
+import (
+	"fmt"
+	"strings"
+)
+
+// SuggestionGenerator generates actionable suggestions for errors
+type SuggestionGenerator struct {
+	projectSlug string
+}
+
+// NewSuggestionGenerator creates a new suggestion generator
+func NewSuggestionGenerator(projectSlug string) *SuggestionGenerator {
+	return &SuggestionGenerator{
+		projectSlug: projectSlug,
+	}
+}
+
+// GetSuggestion returns a CLI-specific suggestion for an error type and message
+func (g *SuggestionGenerator) GetSuggestion(errorType ErrorType, message string) string {
+	switch errorType {
+	case ErrorTypeConfig:
+		return g.getConfigSuggestion(message)
+	case ErrorTypeFile:
+		return g.getFileSuggestion(message)
+	case ErrorTypeNetwork:
+		return g.getNetworkSuggestion(message)
+	case ErrorTypePermission:
+		return g.getPermissionSuggestion(message)
+	case ErrorTypeValidation:
+		return g.getValidationSuggestion(message)
+	case ErrorTypeExecution:
+		return g.getExecutionSuggestion(message)
+	case ErrorTypePlatform:
+		return g.getPlatformSuggestion(message)
+	default:
+		return g.getGeneralSuggestion(message)
+	}
+}
+
+// getConfigSuggestion returns a suggestion for configuration errors
+func (g *SuggestionGenerator) getConfigSuggestion(message string) string {
+	lowerMsg := strings.ToLower(message)
+
+	if strings.Contains(lowerMsg, "not found") || strings.Contains(lowerMsg, "no such file") {
+		return g.formatCommand("config init", "to create a configuration file")
+	}
+	if strings.Contains(lowerMsg, "invalid") || strings.Contains(lowerMsg, "malformed") {
+		return g.formatCommand("config validate", "to check your configuration file")
+	}
+	if strings.Contains(lowerMsg, "permission") {
+		return g.formatCommand("config init", "with appropriate permissions")
+	}
+	if strings.Contains(lowerMsg, "missing") || strings.Contains(lowerMsg, "required") {
+		return g.formatCommand("config init", "to set up required configuration")
+	}
+
+	return g.formatCommand("config init", "to create or reset your configuration file")
+}
+
+// getFileSuggestion returns a suggestion for file operation errors
+func (g *SuggestionGenerator) getFileSuggestion(message string) string {
+	lowerMsg := strings.ToLower(message)
+
+	if strings.Contains(lowerMsg, "permission") || strings.Contains(lowerMsg, "denied") {
+		return "Check file permissions and ensure you have read/write access"
+	}
+	if strings.Contains(lowerMsg, "not found") || strings.Contains(lowerMsg, "no such file") {
+		return "Verify the file path and ensure the file exists"
+	}
+	if strings.Contains(lowerMsg, "directory") {
+		return "Check that the directory exists and is accessible"
+	}
+	if strings.Contains(lowerMsg, "lock") || strings.Contains(lowerMsg, "in use") {
+		return "The file is in use by another process. Wait and try again"
+	}
+
+	return "Check the file path and ensure it exists and is accessible"
+}
+
+// getNetworkSuggestion returns a suggestion for network errors
+func (g *SuggestionGenerator) getNetworkSuggestion(message string) string {
+	lowerMsg := strings.ToLower(message)
+
+	if strings.Contains(lowerMsg, "connection refused") || strings.Contains(lowerMsg, "connect") {
+		return "Check your network connection and ensure the service is running"
+	}
+	if strings.Contains(lowerMsg, "timeout") {
+		return "The request timed out. Check your network connection and try again"
+	}
+	if strings.Contains(lowerMsg, "dns") || strings.Contains(lowerMsg, "resolve") {
+		return "Check your DNS configuration and network connectivity"
+	}
+	if strings.Contains(lowerMsg, "ssl") || strings.Contains(lowerMsg, "tls") || strings.Contains(lowerMsg, "certificate") {
+		return "Check your SSL/TLS certificate configuration"
+	}
+	if strings.Contains(lowerMsg, "401") || strings.Contains(lowerMsg, "unauthorized") {
+		return g.formatCommand("auth login", "to authenticate")
+	}
+	if strings.Contains(lowerMsg, "403") || strings.Contains(lowerMsg, "forbidden") {
+		return "You don't have permission to access this resource"
+	}
+	if strings.Contains(lowerMsg, "404") || strings.Contains(lowerMsg, "not found") {
+		return "The requested resource was not found. Verify the URL"
+	}
+	if strings.Contains(lowerMsg, "500") || strings.Contains(lowerMsg, "502") || strings.Contains(lowerMsg, "503") {
+		return "The service is experiencing issues. Try again later"
+	}
+
+	return "Check your network connection and ensure the URL is correct"
+}
+
+// getPermissionSuggestion returns a suggestion for permission errors
+func (g *SuggestionGenerator) getPermissionSuggestion(message string) string {
+	lowerMsg := strings.ToLower(message)
+
+	if strings.Contains(lowerMsg, "sudo") || strings.Contains(lowerMsg, "root") {
+		return "This operation requires elevated permissions. Run with sudo if appropriate"
+	}
+	if strings.Contains(lowerMsg, "file") || strings.Contains(lowerMsg, "directory") {
+		return "Check file/directory ownership and permissions"
+	}
+	if strings.Contains(lowerMsg, "executable") {
+		return "Ensure the file has execute permissions"
+	}
+
+	return "Run with appropriate permissions or check file/directory ownership"
+}
+
+// getValidationSuggestion returns a suggestion for validation errors
+func (g *SuggestionGenerator) getValidationSuggestion(message string) string {
+	lowerMsg := strings.ToLower(message)
+
+	if strings.Contains(lowerMsg, "flag") || strings.Contains(lowerMsg, "option") {
+		return g.formatCommand("--help", "to see available options")
+	}
+	if strings.Contains(lowerMsg, "argument") || strings.Contains(lowerMsg, "parameter") {
+		return g.formatCommand("--help", "to see required arguments")
+	}
+	if strings.Contains(lowerMsg, "format") || strings.Contains(lowerMsg, "invalid") {
+		return "Review the input values and ensure they meet the required format"
+	}
+	if strings.Contains(lowerMsg, "required") {
+		return "Provide all required arguments and options"
+	}
+
+	return g.formatCommand("--help", "to see correct usage")
+}
+
+// getExecutionSuggestion returns a suggestion for execution errors
+func (g *SuggestionGenerator) getExecutionSuggestion(message string) string {
+	lowerMsg := strings.ToLower(message)
+
+	if strings.Contains(lowerMsg, "command not found") || strings.Contains(lowerMsg, "executable") {
+		return "Ensure the required command or tool is installed and in your PATH"
+	}
+	if strings.Contains(lowerMsg, "signal") || strings.Contains(lowerMsg, "killed") {
+		return "The process was terminated. Check system resources and try again"
+	}
+	if strings.Contains(lowerMsg, "memory") || strings.Contains(lowerMsg, "oom") {
+		return "The process ran out of memory. Try with a smaller dataset or increase available memory"
+	}
+	if strings.Contains(lowerMsg, "disk") || strings.Contains(lowerMsg, "space") {
+		return "Check available disk space and free up space if needed"
+	}
+
+	return "Check system resources and ensure dependencies are installed"
+}
+
+// getPlatformSuggestion returns a suggestion for platform errors
+func (g *SuggestionGenerator) getPlatformSuggestion(message string) string {
+	lowerMsg := strings.ToLower(message)
+
+	if strings.Contains(lowerMsg, "unsupported") || strings.Contains(lowerMsg, "not supported") {
+		return "This operation is not supported on your platform"
+	}
+	if strings.Contains(lowerMsg, "version") || strings.Contains(lowerMsg, "upgrade") {
+		return "Update to the required version of the tool or dependency"
+	}
+	if strings.Contains(lowerMsg, "architecture") || strings.Contains(lowerMsg, "arm") || strings.Contains(lowerMsg, "x86") {
+		return "This tool may not be available for your system architecture"
+	}
+
+	return "Check system requirements and platform compatibility"
+}
+
+// getGeneralSuggestion returns a generic suggestion
+func (g *SuggestionGenerator) getGeneralSuggestion(message string) string {
+	return "Review the error details and try again"
+}
+
+// formatCommand formats a CLI command suggestion
+func (g *SuggestionGenerator) formatCommand(command string, action string) string {
+	if g.projectSlug != "" {
+		return fmt.Sprintf("Run `%s %s` %s", g.projectSlug, command, action)
+	}
+	return fmt.Sprintf("Run `%s` %s", command, action)
+}
+
+// GetSuggestionForError is a convenience function that creates a suggestion generator and returns a suggestion
+func GetSuggestionForError(projectSlug string, errorType ErrorType, message string) string {
+	generator := NewSuggestionGenerator(projectSlug)
+	return generator.GetSuggestion(errorType, message)
+}

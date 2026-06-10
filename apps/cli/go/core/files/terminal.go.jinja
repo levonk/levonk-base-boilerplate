@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -161,12 +162,47 @@ func (t *Terminal) FormatForWidth(text string, margin ...int) string {
 		return text
 	}
 
-	// Simple truncation with ellipsis for now
-	// TODO: Implement proper word wrapping if needed
-	if m > 3 {
-		return text[:m-3] + "..."
+	// If margin is too small for wrapping, truncate
+	if m < 10 {
+		if m > 3 {
+			return text[:m-3] + "..."
+		}
+		return text[:m]
 	}
-	return text[:m]
+
+	// Word wrap the text
+	var result strings.Builder
+	words := strings.Fields(text)
+	currentLine := ""
+	currentLength := 0
+
+	for _, word := range words {
+		wordLen := len(word)
+		// If adding this word would exceed margin
+		if currentLength > 0 && currentLength+1+wordLen > m {
+			// Add current line to result
+			result.WriteString(currentLine)
+			result.WriteString("\n")
+			currentLine = word
+			currentLength = wordLen
+		} else {
+			// Add word to current line
+			if currentLength > 0 {
+				currentLine += " " + word
+				currentLength += 1 + wordLen
+			} else {
+				currentLine = word
+				currentLength = wordLen
+			}
+		}
+	}
+
+	// Add the last line
+	if currentLine != "" {
+		result.WriteString(currentLine)
+	}
+
+	return result.String()
 }
 
 {# vim: set ft=go: #}

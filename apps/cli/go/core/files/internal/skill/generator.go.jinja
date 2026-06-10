@@ -1,0 +1,127 @@
+package skill
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/spf13/cobra"
+)
+
+// Generator generates SKILL.md content from CLI metadata
+type Generator struct {
+	projectName string
+	projectSlug string
+	description string
+	version     string
+	rootCmd     *cobra.Command
+}
+
+// NewGenerator creates a new skill generator
+func NewGenerator(projectName, projectSlug, description, version string, rootCmd *cobra.Command) *Generator {
+	return &Generator{
+		projectName: projectName,
+		projectSlug: projectSlug,
+		description: description,
+		version:     version,
+		rootCmd:     rootCmd,
+	}
+}
+
+// Generate generates SKILL.md content
+func (g *Generator) Generate() (string, error) {
+	// The template has already been processed by copier during materialization
+	// Jinja2 variables like {{ project_name }} have been replaced with actual values
+	content := skillTemplate
+
+	// Strip live state from generated content
+	content = stripLiveState(content)
+	content = rewriteExamples(content, g.projectSlug)
+
+	return content, nil
+}
+
+// GenerateToFile generates SKILL.md and writes to file
+func (g *Generator) GenerateToFile(filepath string) error {
+	content, err := g.Generate()
+	if err != nil {
+		return err
+	}
+
+	// Ensure directory exists
+	dir := filepath[:strings.LastIndex(filepath, "/")]
+	if dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+
+	// Write file
+	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write skill file: %w", err)
+	}
+
+	return nil
+}
+
+// stripLiveState removes live state indicators from skill content
+func stripLiveState(content string) string {
+	// Remove references to current directory, user paths, etc.
+	// Order matters: replace full paths first, then patterns
+	result := content
+
+	// Replace HOME environment variable value first
+	homeDir := os.Getenv("HOME")
+	if homeDir != "" {
+		result = strings.ReplaceAll(result, homeDir, "~")
+	}
+
+	// Replace specific path patterns (these handle the /home/user and /Users/user cases)
+	// After HOME replacement, we might still have patterns like ~/username
+	// We want to collapse these to just ~
+	// This is a simple heuristic: replace ~/ followed by a username-like pattern with ~
+	// For now, we'll just handle the common cases
+	result = strings.ReplaceAll(result, "/home/", "~/")
+	result = strings.ReplaceAll(result, "/Users/", "~/")
+
+	return result
+}
+
+// rewriteExamples converts command examples to non-interactive form
+func rewriteExamples(content, projectSlug string) string {
+	// Replace bare command invocations with go run main.go
+	lines := strings.Split(content, "\n")
+	var result []string
+
+	for _, line := range lines {
+		// Check if line is a code block with command example
+		if strings.HasPrefix(line, "```bash") || strings.HasPrefix(line, "```sh") {
+			result = append(result, line)
+			continue
+		}
+
+		if strings.HasPrefix(line, "```") {
+			result = append(result, line)
+			continue
+		}
+
+		// Skip empty lines and comments in code blocks
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			result = append(result, line)
+			continue
+		}
+
+		// Rewrite command examples
+		// Replace: mytool file.txt -> go run main.go file.txt
+		// But don't replace if already has go run or is a comment
+		if strings.HasPrefix(trimmed, projectSlug+" ") && !strings.Contains(trimmed, "go run") {
+			rewritten := strings.Replace(trimmed, projectSlug+" ", "go run main.go ", 1)
+			result = append(result, "  "+rewritten)
+		} else {
+			result = append(result, line)
+		}
+	}
+
+	return strings.Join(result, "\n")
+}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"{{ project_slug }}/internal/prompts"
 	"github.com/mattn/go-isatty"
 )
 
@@ -33,13 +34,27 @@ type PromptConfig struct {
 	Force       bool
 	Quiet       bool
 	DefaultYes  bool
+	Suppressor  *prompts.PromptSuppressor
 }
 
 // PromptForConfirmation prompts the user for confirmation before a destructive operation
 // Returns true if the user confirms, false if they decline
 // If force is true, returns true without prompting
 // If quiet is true, returns false (safe default) without prompting
+// If suppressor indicates prompts should be suppressed, uses suppressor's result
 func PromptForConfirmation(cfg PromptConfig) PromptResult {
+	// Use suppressor if provided
+	if cfg.Suppressor != nil {
+		if cfg.Suppressor.ShouldSuppress() {
+			cfg.Suppressor.LogPromptSuppression(string(cfg.Type), cfg.Message)
+			result := cfg.Suppressor.GetPromptResult()
+			if result {
+				return PromptYes
+			}
+			return PromptNo
+		}
+	}
+
 	// If force flag is set, bypass the prompt
 	if cfg.Force {
 		return PromptYes
@@ -108,7 +123,7 @@ func PromptForConfirmation(cfg PromptConfig) PromptResult {
 }
 
 // PromptForDelete prompts the user before deleting files
-func PromptForDelete(target string, force, quiet bool) PromptResult {
+func PromptForDelete(target string, force, quiet bool, suppressor *prompts.PromptSuppressor) PromptResult {
 	message := fmt.Sprintf("Delete %s?", target)
 	cfg := PromptConfig{
 		Type:    PromptTypeDelete,
@@ -116,12 +131,13 @@ func PromptForDelete(target string, force, quiet bool) PromptResult {
 		Force:   force,
 		Quiet:   quiet,
 		DefaultYes: false, // Safe default: no
+		Suppressor: suppressor,
 	}
 	return PromptForConfirmation(cfg)
 }
 
 // PromptForOverwrite prompts the user before overwriting files
-func PromptForOverwrite(target string, force, quiet bool) PromptResult {
+func PromptForOverwrite(target string, force, quiet bool, suppressor *prompts.PromptSuppressor) PromptResult {
 	message := fmt.Sprintf("Overwrite %s?", target)
 	cfg := PromptConfig{
 		Type:    PromptTypeOverwrite,
@@ -129,12 +145,13 @@ func PromptForOverwrite(target string, force, quiet bool) PromptResult {
 		Force:   force,
 		Quiet:   quiet,
 		DefaultYes: false, // Safe default: no
+		Suppressor: suppressor,
 	}
 	return PromptForConfirmation(cfg)
 }
 
 // PromptForDestructive prompts the user before any destructive operation
-func PromptForDestructive(operation, target string, force, quiet bool) PromptResult {
+func PromptForDestructive(operation, target string, force, quiet bool, suppressor *prompts.PromptSuppressor) PromptResult {
 	message := fmt.Sprintf("%s %s?", operation, target)
 	cfg := PromptConfig{
 		Type:    PromptTypeDestructive,
@@ -142,6 +159,7 @@ func PromptForDestructive(operation, target string, force, quiet bool) PromptRes
 		Force:   force,
 		Quiet:   quiet,
 		DefaultYes: false, // Safe default: no
+		Suppressor: suppressor,
 	}
 	return PromptForConfirmation(cfg)
 }
