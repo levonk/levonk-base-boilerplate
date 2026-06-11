@@ -9,7 +9,7 @@ pub mod summary;
 #[cfg(test)]
 mod tests;
 
-pub use selector::{ContentSelector, ContentContext, select_content};
+pub use selector::{ContentSelector, ContentContext, select_content, ContentType};
 pub use summary::{StateSummary, generate_summary};
 
 use serde::{Deserialize, Serialize};
@@ -53,7 +53,7 @@ impl ContentFirstOutput {
         
         // Add suggestions if any
         if !self.suggestions.is_empty() {
-            output.push_str("\n");
+            output.push('\n');
             output.push_str("help[");
             output.push_str(&self.suggestions.len().to_string());
             output.push_str("]: ");

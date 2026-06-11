@@ -56,7 +56,7 @@ impl ErrorFormatter {
             map.insert("suggestions".to_string(), ToonValue::array(suggestions));
         }
         
-        map.insert("exit_code".to_string(), ToonValue::number(&error.exit_code.to_string()));
+        map.insert("exit_code".to_string(), ToonValue::number(error.exit_code.to_string()));
         
         let toon_value = ToonValue::object(map);
         to_string(&toon_value).map_err(|e| anyhow::anyhow!("TOON encoding error: {}", e))

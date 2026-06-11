@@ -47,7 +47,7 @@ impl DiagnosticChannel {
             stderr: io::stderr(),
         }
     }
-
+    
     /// Write a diagnostic message to stderr
     pub fn write_diagnostic(&mut self, message: &str) -> io::Result<()> {
         writeln!(self.stderr, "[DIAG] {}", message)?;
@@ -64,6 +64,12 @@ impl DiagnosticChannel {
     pub fn write_warning(&mut self, message: &str) -> io::Result<()> {
         writeln!(self.stderr, "[WARN] {}", message)?;
         self.stderr.flush()
+    }
+}
+
+impl Default for DiagnosticChannel {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

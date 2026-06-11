@@ -331,7 +331,7 @@ async fn main() -> Result<()> {
 
     // Handle --install-agent-hooks flag
     if let Some(platform_str) = cli.install_agent_hooks {
-        let platform = match HookPlatform::from_str(&platform_str) {
+        let platform = match HookPlatform::parse(&platform_str) {
             Ok(p) => p,
             Err(e) => {
                 eprintln!("Invalid platform: {}", e);
@@ -874,7 +874,7 @@ async fn handle_subcommand(command: &Commands, cli: &Cli) -> Result<()> {
 
             if let Some(platform_str) = install_hooks {
                 // Install agent hooks for the specified platform
-                let platform = match HookPlatform::from_str(&platform_str) {
+                let platform = match HookPlatform::parse(&platform_str) {
                     Ok(p) => p,
                     Err(e) => {
                         eprintln!("Invalid platform: {}", e);

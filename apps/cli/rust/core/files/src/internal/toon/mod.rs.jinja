@@ -51,7 +51,7 @@ pub enum OutputFormat {
 
 impl OutputFormat {
     /// Parse format from string
-    pub fn from_str(s: &str) -> Result<Self, String> {
+    pub fn parse(s: &str) -> Result<Self, String> {
         match s.to_lowercase().as_str() {
             "toon" => Ok(OutputFormat::Toon),
             "json" => Ok(OutputFormat::Json),
@@ -139,7 +139,7 @@ impl OutputFormatter {
     ) -> anyhow::Result<Self> {
         // Priority: explicit format override > explicit flags > mode-based default
         if let Some(format_str) = format_override {
-            let format = OutputFormat::from_str(format_str)
+            let format = OutputFormat::parse(format_str)
                 .map_err(|e| anyhow::anyhow!("{}", e))?;
             return Ok(Self::new_with_truncation_config(format, truncation_limit, full_output));
         }
@@ -263,7 +263,7 @@ impl OutputFormatter {
 
     /// Format a structured error to the configured output format
     pub fn format_error(&self, error: &StructuredError) -> String {
-        format_error_with_format(error, self.format).unwrap_or_else(|e| {
+        format_error_with_format(error, self.format).unwrap_or_else(|_e| {
             // Fallback to simple error message if formatting fails
             format!("{}: {}", error.code_str(), error.message)
         })
@@ -296,7 +296,7 @@ impl OutputFormatter {
                     json_obj.insert("suggestion".to_string(), serde_json::Value::String(suggestion));
                 }
                 serde_json::to_string_pretty(&serde_json::Value::Object(json_obj))
-                    .unwrap_or_else(|_| message.message)
+                    .unwrap_or(message.message)
             }
             OutputFormat::Human => {
                 // Human format for empty state
@@ -450,7 +450,7 @@ mod tests {
         let formatter = OutputFormatter::with_aggregates(OutputFormat::Toon, aggregates);
         
         assert!(formatter.aggregates().is_some());
-        assert_eq!(formatter.aggregates().unwrap().count.unwrap().current, 30);
+        assert_eq!(formatter.aggregates().as_ref().unwrap().count.as_ref().unwrap().current, 30);
     }
 
     #[test]

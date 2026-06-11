@@ -21,7 +21,7 @@ impl Mode {
     }
     
     /// Parse mode from string
-    pub fn from_str(s: &str) -> Result<Self> {
+    pub fn parse(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
             "agent" => Ok(Mode::Agent),
             "human" => Ok(Mode::Human),
@@ -89,7 +89,7 @@ pub fn detect_mode(
     // 2. Check environment variable
     let env_var_name = format!("{}_MODE", "{{ project_slug }}".to_uppercase().replace("-", "_"));
     if let Ok(env_mode) = env::var(&env_var_name) {
-        let mode = Mode::from_str(&env_mode)
+        let mode = Mode::parse(&env_mode)
             .context(format!("Invalid mode in environment variable {}: {}", env_var_name, env_mode))?;
         debug!("Mode set to {} via environment variable {}", mode.as_str(), env_var_name);
         return Ok(ModeDetection {
@@ -100,7 +100,7 @@ pub fn detect_mode(
     
     // 3. Check config file
     if let Some(config_mode_str) = config_mode {
-        let mode = Mode::from_str(config_mode_str)
+        let mode = Mode::parse(config_mode_str)
             .context(format!("Invalid mode in config file: {}", config_mode_str))?;
         debug!("Mode set to {} via config file", mode.as_str());
         return Ok(ModeDetection {
@@ -176,7 +176,6 @@ fn is_agent_session() -> bool {
 fn is_tty() -> bool {
     #[cfg(unix)]
     {
-        use std::os::unix::io::AsRawFd;
         use is_terminal::IsTerminal;
         std::io::stdout().is_terminal()
     }
