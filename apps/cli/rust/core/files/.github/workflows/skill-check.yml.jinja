@@ -1,0 +1,33 @@
+name: Skill Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  skill-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      
+      - name: Cache cargo
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ubuntu-latest-cargo-registry
+      
+      - name: Build project
+        run: cargo build --release
+      
+      - name: Check skill freshness
+        run: |
+          cargo run --release -- skill check

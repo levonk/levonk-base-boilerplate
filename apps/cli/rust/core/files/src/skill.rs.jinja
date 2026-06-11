@@ -1,0 +1,83 @@
+//! Agent skill command implementation
+//!
+//! Provides commands for generating and validating SKILL.md files for agent
+//! discoverability via agentskills.io.
+
+use anyhow::Result;
+use clap::Parser;
+use std::path::PathBuf;
+
+use crate::cli::Commands;
+use crate::internal::skill::{SkillGenerator, SkillConfig, SkillValidator, StripConfig};
+
+/// Handle skill commands
+pub fn handle_skill_command(cmd: &Commands) -> Result<()> {
+    if let Commands::Skill {
+        generate,
+        check,
+        output,
+    } = cmd
+    {
+        if *generate {
+            handle_generate(output.as_ref())?;
+        } else if *check {
+            handle_check()?;
+        } else {
+            eprintln!("Error: Specify --generate or --check");
+            std::process::exit(1);
+        }
+    }
+    Ok(())
+}
+
+/// Handle skill generation
+fn handle_generate(output: Option<&PathBuf>) -> Result<()> {
+    let config = SkillConfig::new(
+        "{{ project_name }}".to_string(),
+        "{{ project_slug }}".to_string(),
+        "{{ description }}".to_string(),
+        vec![
+            "{{ project_slug }} file1.txt".to_string(),
+            "{{ project_slug }} --format toon file1.txt".to_string(),
+            "{{ project_slug }} --session-context".to_string(),
+        ],
+    );
+
+    let generator = SkillGenerator::new(config);
+    let strip_config = StripConfig::default();
+    let content = generator.generate_with_stripping(&strip_config)?;
+
+    let output_path = output.unwrap_or(&PathBuf::from("SKILL.md"));
+
+    std::fs::write(output_path, content)?;
+    println!("Skill generated to: {}", output_path.display());
+
+    Ok(())
+}
+
+/// Handle skill freshness check
+fn handle_check() -> Result<()> {
+    let skill_path = "SKILL.md";
+    let validator = SkillValidator::new(skill_path.to_string());
+
+    match validator.validate()? {
+        crate::internal::skill::ValidationResult::Fresh => {
+            println!("✓ Skill is fresh and up-to-date");
+            std::process::exit(0);
+        }
+        crate::internal::skill::ValidationResult::Stale { reason } => {
+            eprintln!("✗ Skill is stale: {}", reason);
+            eprintln!("Run: {} skill generate --output SKILL.md", "{{ project_slug }}");
+            std::process::exit(1);
+        }
+        crate::internal::skill::ValidationResult::NotFound => {
+            eprintln!("✗ Skill file not found: {}", skill_path);
+            eprintln!("Run: {} skill generate --output SKILL.md", "{{ project_slug }}");
+            std::process::exit(1);
+        }
+        crate::internal::skill::ValidationResult::Error(err) => {
+            eprintln!("✗ Validation error: {}", err);
+            std::process::exit(1);
+        }
+    }
+}

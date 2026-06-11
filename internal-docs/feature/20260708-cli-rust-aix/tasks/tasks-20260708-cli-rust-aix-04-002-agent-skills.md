@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 4
 parallel_id: 2
 branch: "feature/current/20260708-cli-rust-aix/story-04-002-agent-skills"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002"]
@@ -27,47 +27,45 @@ Implement agent skill support for discoverability via agentskills.io. Generate `
 
 ## Sub-Tasks
 
-- [ ] Design SKILL.md template and structure
-- [ ] Implement `--generate-skill` command
-- [ ] Implement skill generation from CLI help and examples
-- [ ] Implement live state stripping logic
-- [ ] Rewrite command examples to non-interactive form (e.g., `cargo run -- ...`)
-- [ ] Add trigger-shaped frontmatter (name and description)
-- [ ] Implement `--check-skill` command for CI validation
-- [ ] Add skill generation to CI/CD pipeline
-- [ ] Document both hook and skill paths in README
-- [ ] Make clear user only needs one (hook or skill)
-- [ ] Write unit tests for skill generation logic
-- [ ] Write unit tests for live state stripping
-- [ ] Write integration tests for skill validation
-- [ ] Update CLI help text to document skill commands
+- [x] Design SKILL.md template and structure
+- [x] Implement `--generate-skill` command
+- [x] Implement skill generation from CLI help and examples
+- [x] Implement live state stripping logic
+- [x] Rewrite command examples to non-interactive form (e.g., `cargo run -- ...`)
+- [x] Add trigger-shaped frontmatter (name and description)
+- [x] Implement `--check-skill` command for CI validation
+- [x] Add skill generation to CI/CD pipeline
+- [x] Document both hook and skill paths in README
+- [x] Make clear user only needs one (hook or skill)
+- [x] Write unit tests for skill generation logic
+- [x] Write unit tests for live state stripping
+- [x] Write integration tests for skill validation
+- [x] Update CLI help text to document skill commands
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/rust/core/src/internal/skill/generator.rs` — Skill generation logic (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/skill/tests.rs` — Tests for skill generation (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/skill/stripper.rs` — Live state stripping logic (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/skill/stripper_tests.rs` — Tests for state stripping (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/skill/validator.rs` — Skill validation logic (new file)
-- `boilerplate/apps/cli/rust/core/src/internal/skill/validator_tests.rs` — Tests for skill validation (new file)
-- `boilerplate/apps/cli/rust/core/src/cli/commands/skill.rs` — Skill commands (new file)
-- `boilerplate/apps/cli/rust/core/src/cli/commands/skill_tests.rs` — Tests for skill commands (new file)
-- `boilerplate/apps/cli/rust/core/.github/workflows/skill-check.yml` — CI workflow for skill validation (new file)
-- `boilerplate/apps/cli/rust/core/README.md` — Update with skill documentation
+- `boilerplate/apps/cli/rust/core/files/src/internal/skill/mod.rs.jinja` — Skill module (created)
+- `boilerplate/apps/cli/rust/core/files/src/internal/skill/generator.rs.jinja` — Skill generation logic (created)
+- `boilerplate/apps/cli/rust/core/files/src/internal/skill/stripper.rs.jinja` — Live state stripping logic (created)
+- `boilerplate/apps/cli/rust/core/files/src/internal/skill/validator.rs.jinja` — Skill validation logic (created)
+- `boilerplate/apps/cli/rust/core/files/src/cli/commands/skill.rs.jinja` — Skill commands (new file)
+- `boilerplate/apps/cli/rust/core/files/src/cli/commands/skill_tests.rs.jinja` — Tests for skill commands (new file)
+- `boilerplate/apps/cli/rust/core/files/.github/workflows/skill-check.yml.jinja` — CI workflow for skill validation (new file)
+- `boilerplate/apps/cli/rust/core/files/README.md.jinja` — Update with skill documentation
 
 ## Acceptance Criteria
 
-- [ ] `--generate-skill` command outputs valid SKILL.md content
-- [ ] SKILL.md is generated from no-args home view content
-- [ ] Live state is stripped from generated skill
-- [ ] Command examples are rewritten to non-interactive form
-- [ ] SKILL.md includes trigger-shaped frontmatter
-- [ ] `--check-skill` command validates skill freshness
-- [ ] CI workflow fails if committed skill is stale
-- [ ] README documents both hook and skill paths
-- [ ] README clarifies user only needs one integration method
-- [ ] All skill functionality has test coverage
-- [ ] Help text documents skill commands
+- [x] `--generate-skill` command outputs valid SKILL.md content
+- [x] SKILL.md is generated from no-args home view content
+- [x] Live state is stripped from generated skill
+- [x] Command examples are rewritten to non-interactive form
+- [x] SKILL.md includes trigger-shaped frontmatter
+- [x] `--check-skill` command validates skill freshness
+- [x] CI workflow fails if committed skill is stale
+- [x] README documents both hook and skill paths
+- [x] README clarifies user only needs one integration method
+- [x] All skill functionality has test coverage
+- [x] Help text documents skill commands
 
 ## Test Plan
 

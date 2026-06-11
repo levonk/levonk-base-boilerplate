@@ -160,6 +160,44 @@ The man page includes the following sections:
 - **BUGS**: Where to report bugs
 - **SEE ALSO**: Related documentation
 
+## Agent Integration
+
+The CLI provides two integration methods for AI agents:
+
+### Agent Hooks
+
+The CLI can register session hooks with agent platforms (Claude Code, Codex):
+- Hooks are registered in platform-specific config files
+- Installation is idempotent (re-running updates existing hooks)
+- Command paths are resolved to absolute paths when in PATH
+
+Install hooks for Claude Code:
+  {{ project_slug }} --install-agent-hooks claude
+  {{ project_slug }} session install-hooks claude
+
+Install hooks for Codex:
+  {{ project_slug }} --install-agent-hooks codex
+  {{ project_slug }} session install-hooks codex
+
+### Agent Skill
+
+The CLI provides an installable agent skill for discoverability via agentskills.io:
+- Skill is generated from CLI help and examples
+- Live state is stripped to ensure static content
+- Command examples are in non-interactive form
+- Skill includes trigger-shaped frontmatter for agent discovery
+
+Generate skill:
+  {{ project_slug }} skill generate --output SKILL.md
+
+Check skill freshness:
+  {{ project_slug }} skill check
+
+**Note**: You only need to use **one** integration method:
+- Use **agent hooks** for session context and lifecycle integration
+- Use **agent skill** for command discovery and documentation
+- Both methods are optional; choose based on your use case
+
 ## Development
 
 This project uses **devbox** for environment management and **just** for task running.

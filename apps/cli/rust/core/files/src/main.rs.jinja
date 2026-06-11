@@ -18,6 +18,7 @@ mod processor;
 mod privacy;
 mod audit;
 mod internal;
+mod skill;
 
 {% if enable_tui -%}
 mod tui;
@@ -52,6 +53,8 @@ use internal::schema::{create_default_schema_registry, FieldSelector, parse_fiel
 use internal::errors::{StructuredError, ErrorCode, format_error_with_format, translate_error_with_context, OutputChannels};
 use internal::prompts::{PromptSuppressor, PromptDecision, PromptType};
 use internal::idempotency::{check_idempotency, OperationType, IdempotentResult, acknowledge_noop};
+use internal::session::{generate_session_context, install_agent_hooks, register_session_hook, HookPlatform};
+use skill::handle_skill_command;
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -280,6 +283,47 @@ async fn main() -> Result<()> {
                 let formatted = format.format_error(&structured_error);
                 println!("{}", formatted);
                 std::process::exit(structured_error.exit_code);
+            }
+        }
+    }
+
+    // Handle --session-context flag
+    if cli.session_context {
+        match generate_session_context() {
+            Ok(session_ctx) => {
+                let toon_output = session_ctx.to_compact_toon();
+                println!("{}", toon_output);
+                std::process::exit(0);
+            }
+            Err(e) => {
+                eprintln!("Failed to generate session context: {}", e);
+                std::process::exit(1);
+            }
+        }
+    }
+
+    // Handle --install-agent-hooks flag
+    if let Some(platform_str) = cli.install_agent_hooks {
+        let platform = match HookPlatform::from_str(&platform_str) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("Invalid platform: {}", e);
+                std::process::exit(1);
+            }
+        };
+
+        let current_exe = std::env::current_exe()
+            .unwrap_or_else(|_| PathBuf::from("{{ project_slug }}"));
+        let command = current_exe.to_string_lossy().to_string();
+
+        match install_agent_hooks(platform, &command) {
+            Ok(_) => {
+                println!("Agent hooks installed successfully for platform: {}", platform_str);
+                std::process::exit(0);
+            }
+            Err(e) => {
+                eprintln!("Failed to install agent hooks: {}", e);
+                std::process::exit(1);
             }
         }
     }
@@ -774,6 +818,77 @@ async fn handle_subcommand(command: &Commands, cli: &Cli) -> Result<()> {
                 }
                 Err(e) => {
                     eprintln!("Processing failed: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+
+        Commands::Session { context, install_hooks, register_hook } => {
+            if *context {
+                // Output session context in compact TOON format
+                match generate_session_context() {
+                    Ok(session_ctx) => {
+                        let toon_output = session_ctx.to_compact_toon();
+                        println!("{}", toon_output);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to generate session context: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+
+            if let Some(platform_str) = install_hooks {
+                // Install agent hooks for the specified platform
+                let platform = match HookPlatform::from_str(&platform_str) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        eprintln!("Invalid platform: {}", e);
+                        std::process::exit(1);
+                    }
+                };
+
+                // Get the current executable path
+                let current_exe = std::env::current_exe()
+                    .unwrap_or_else(|_| PathBuf::from("{{ project_slug }}"));
+                let command = current_exe.to_string_lossy().to_string();
+
+                match install_agent_hooks(platform, &command) {
+                    Ok(_) => {
+                        println!("Agent hooks installed successfully for platform: {}", platform_str);
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to install agent hooks: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+
+            if *register_hook {
+                // Register session-end hook
+                let platform = HookPlatform::Claude; // Default to Claude for session-end hooks
+                
+                let current_exe = std::env::current_exe()
+                    .unwrap_or_else(|_| PathBuf::from("{{ project_slug }}"));
+                let command = current_exe.to_string_lossy().to_string();
+
+                match register_session_hook(platform, &command) {
+                    Ok(_) => {
+                        println!("Session-end hook registered successfully");
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to register session-end hook: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
+        }
+
+        Commands::Skill { .. } => {
+            match handle_skill_command(&cli.command) {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("Skill command failed: {}", e);
                     std::process::exit(1);
                 }
             }

@@ -100,6 +100,54 @@ use std::time::Duration;
 /// Aggregates are automatically included in output when available from the backend.
 /// This optimizes agent interactions by providing commonly-needed data upfront.
 ///
+/// # Session Context
+///
+/// The CLI provides session context for ambient context injection into agent sessions:
+/// - Directory: Current working directory
+/// - Git: Repository name, branch, commit, dirty status (if in git repo)
+/// - Config: Configuration file path and existence
+/// - Presence: Tool availability in PATH and version
+///
+/// Get session context:
+///   {{ project_slug }} --session-context
+///   {{ project_slug }} session context
+///
+/// Session context is output in compact TOON format for token efficiency.
+///
+/// # Agent Hooks
+///
+/// The CLI can register session hooks with agent platforms (Claude Code, Codex):
+/// - Hooks are registered in platform-specific config files
+/// - Installation is idempotent (re-running updates existing hooks)
+/// - Command paths are resolved to absolute paths when in PATH
+///
+/// Install hooks for Claude Code:
+///   {{ project_slug }} --install-agent-hooks claude
+///   {{ project_slug }} session install-hooks claude
+///
+/// Install hooks for Codex:
+///   {{ project_slug }} --install-agent-hooks codex
+///   {{ project_slug }} session install-hooks codex
+///
+/// # Agent Skill
+///
+/// The CLI provides an installable agent skill for discoverability via agentskills.io:
+/// - Skill is generated from CLI help and examples
+/// - Live state is stripped to ensure static content
+/// - Command examples are in non-interactive form
+/// - Skill includes trigger-shaped frontmatter for agent discovery
+///
+/// Generate skill:
+///   {{ project_slug }} skill generate --output SKILL.md
+///
+/// Check skill freshness:
+///   {{ project_slug }} skill check
+///
+/// **Note**: You only need to use **one** integration method:
+/// - Use **agent hooks** for session context and lifecycle integration
+/// - Use **agent skill** for command discovery and documentation
+/// - Both methods are optional; choose based on your use case
+///
 /// # Structured Errors
 ///
 /// All errors are formatted in a structured format that enables programmatic error handling:
@@ -195,8 +243,8 @@ pub struct Cli {
     #[arg(long, short = 'd')]
     pub debug: bool,
 
-    /// Human mode - force human-optimized interaction (alias: --interactive)
-    #[arg(long, alias = "interactive", help = "Force human-optimized interaction mode")]
+    /// Human mode - force human-optimized interaction
+    #[arg(long, help = "Force human-optimized interaction mode")]
     pub human: bool,
 
     /// Color mode: auto, always, never (default: auto)
@@ -247,6 +295,14 @@ pub struct Cli {
     /// Display man page
     #[arg(long, help = "Display manual page")]
     pub man: bool,
+
+    /// Output session context in compact TOON format
+    #[arg(long, help = "Output session context in compact TOON format for ambient context injection")]
+    pub session_context: bool,
+
+    /// Install agent hooks for platform
+    #[arg(long, value_name = "PLATFORM", help = "Install agent hooks (platform: claude, codex, generic)")]
+    pub install_agent_hooks: Option<String>,
 
     /// Maximum memory limit (e.g., 512M, 2G)
     #[arg(long, value_name = "LIMIT", help = "Set maximum memory limit for operations")]
@@ -397,6 +453,32 @@ pub enum Commands {
         compress: bool,
     },
 
+    /// Session context and hook management
+    ///
+    /// # Examples
+    ///
+    /// Get session context:
+    ///   {{ project_slug }} session context
+    ///
+    /// Install agent hooks:
+    ///   {{ project_slug }} session install-hooks claude
+    ///
+    /// Install hooks for specific platform:
+    ///   {{ project_slug }} session install-hooks codex
+    Session {
+        /// Get session context in compact TOON format
+        #[arg(long, help = "Output session context in compact TOON format")]
+        context: bool,
+
+        /// Install agent hooks for platform
+        #[arg(long, value_name = "PLATFORM", help = "Install agent hooks (platform: claude, codex, generic)")]
+        install_hooks: Option<String>,
+
+        /// Register session-end hook
+        #[arg(long, help = "Register session-end hook")]
+        register_hook: bool,
+    },
+
     /// Process exported data offline
     ///
     /// # Examples
@@ -422,6 +504,29 @@ pub enum Commands {
         /// Operation-specific configuration (JSON)
         #[arg(long, value_name = "JSON", help = "Operation-specific configuration as JSON")]
         operation_config: Option<String>,
+    },
+
+    /// Agent skill management (generate, check)
+    ///
+    /// # Examples
+    ///
+    /// Generate skill:
+    ///   {{ project_slug }} skill generate --output SKILL.md
+    ///
+    /// Check skill freshness:
+    ///   {{ project_slug }} skill check
+    Skill {
+        /// Generate SKILL.md content
+        #[arg(long, help = "Generate SKILL.md content")]
+        generate: bool,
+
+        /// Check if skill is stale
+        #[arg(long, help = "Check if committed SKILL.md is stale")]
+        check: bool,
+
+        /// Output file path for generated skill
+        #[arg(long, value_name = "PATH", help = "Output file path for generated skill")]
+        output: Option<PathBuf>,
     },
 }
 
