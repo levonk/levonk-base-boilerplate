@@ -1,0 +1,449 @@
+//! Suggestion rules for different CLI commands
+//! 
+//! This module defines context-aware suggestion rules that generate
+//! relevant next steps based on command output and state.
+
+use super::engine::{Suggestion, SuggestionContext, SuggestionRank};
+
+/// A rule that can generate suggestions based on context
+pub trait SuggestionRule: Send + Sync {
+    /// Apply the rule to generate suggestions for the given context
+    fn apply(&self, context: &SuggestionContext) -> Option<Vec<Suggestion>>;
+}
+
+/// Registry of suggestion rules organized by command
+pub struct RuleRegistry {
+    rules: Vec<(String, Box<dyn SuggestionRule>)>,
+}
+
+impl RuleRegistry {
+    /// Create a new rule registry with default rules
+    pub fn new() -> Self {
+        let mut registry = Self { rules: Vec::new() };
+        registry.register_default_rules();
+        registry
+    }
+
+    /// Register a rule for a specific command
+    pub fn register(&mut self, command: String, rule: Box<dyn SuggestionRule>) {
+        self.rules.push((command, rule));
+    }
+
+    /// Get all rules applicable to a command
+    pub fn get_rules_for_command(&self, command: &str) -> Vec<&dyn SuggestionRule> {
+        self.rules
+            .iter()
+            .filter(|(cmd, _)| cmd == command || cmd == "*")
+            .map(|(_, rule)| rule.as_ref())
+            .collect()
+    }
+
+    /// Register default rules for common commands
+    fn register_default_rules(&mut self) {
+        // Generic fallback rule for all commands
+        self.register("*".to_string(), Box::new(GenericRule));
+
+        // List command rules
+        self.register("list".to_string(), Box::new(ListRule));
+        self.register("ls".to_string(), Box::new(ListRule));
+
+        // Show/get command rules
+        self.register("show".to_string(), Box::new(ShowRule));
+        self.register("get".to_string(), Box::new(ShowRule));
+        self.register("view".to_string(), Box::new(ShowRule));
+
+        // Create command rules
+        self.register("create".to_string(), Box::new(CreateRule));
+        self.register("add".to_string(), Box::new(CreateRule));
+        self.register("new".to_string(), Box::new(CreateRule));
+
+        // Delete command rules
+        self.register("delete".to_string(), Box::new(DeleteRule));
+        self.register("remove".to_string(), Box::new(DeleteRule));
+        self.register("rm".to_string(), Box::new(DeleteRule));
+
+        // Update command rules
+        self.register("update".to_string(), Box::new(UpdateRule));
+        self.register("edit".to_string(), Box::new(UpdateRule));
+        self.register("modify".to_string(), Box::new(UpdateRule));
+
+        // Status command rules
+        self.register("status".to_string(), Box::new(StatusRule));
+        self.register("info".to_string(), Box::new(StatusRule));
+    }
+}
+
+impl Default for RuleRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Get the default rule registry
+pub fn get_default_rules() -> RuleRegistry {
+    RuleRegistry::new()
+}
+
+/// Generic fallback rule that provides basic help suggestions
+struct GenericRule;
+
+impl SuggestionRule for GenericRule {
+    fn apply(&self, context: &SuggestionContext) -> Option<Vec<Suggestion>> {
+        let mut suggestions = Vec::new();
+
+        // Always suggest help
+        suggestions.push(Suggestion {
+            command: "--help".to_string(),
+            description: "Show help information".to_string(),
+            rank: SuggestionRank::Low,
+        });
+
+        // Suggest version info
+        suggestions.push(Suggestion {
+            command: "--version".to_string(),
+            description: "Show version information".to_string(),
+            rank: SuggestionRank::Low,
+        });
+
+        Some(suggestions)
+    }
+}
+
+/// Rule for list commands (suggests viewing, creating, filtering)
+struct ListRule;
+
+impl SuggestionRule for ListRule {
+    fn apply(&self, context: &SuggestionContext) -> Option<Vec<Suggestion>> {
+        let mut suggestions = Vec::new();
+
+        if context.is_empty {
+            // Empty list - suggest creating items
+            suggestions.push(Suggestion {
+                command: "create".to_string(),
+                description: "Create a new item".to_string(),
+                rank: SuggestionRank::High,
+            });
+        } else {
+            // Non-empty list - suggest viewing details
+            suggestions.push(Suggestion {
+                command: "show <id>".to_string(),
+                description: "View details of a specific item".to_string(),
+                rank: SuggestionRank::High,
+            });
+
+            // Suggest filtering if aggregates show many items
+            if let Some(aggregates) = &context.aggregates {
+                if let Some(count) = aggregates.total_count {
+                    if count > 10 {
+                        suggestions.push(Suggestion {
+                            command: "list --filter <pattern>".to_string(),
+                            description: "Filter items by pattern".to_string(),
+                            rank: SuggestionRank::Medium,
+                        });
+                    }
+                }
+            }
+
+            // Suggest creating more items
+            suggestions.push(Suggestion {
+                command: "create".to_string(),
+                description: "Create a new item".to_string(),
+                rank: SuggestionRank::Medium,
+            });
+        }
+
+        Some(suggestions)
+    }
+}
+
+/// Rule for show/get/view commands (suggests editing, deleting, related actions)
+struct ShowRule;
+
+impl SuggestionRule for ShowRule {
+    fn apply(&self, context: &SuggestionContext) -> Option<Vec<Suggestion>> {
+        let mut suggestions = Vec::new();
+
+        // Suggest editing the item
+        suggestions.push(Suggestion {
+            command: "edit <id>".to_string(),
+            description: "Edit this item".to_string(),
+            rank: SuggestionRank::High,
+        });
+
+        // Suggest deleting the item
+        suggestions.push(Suggestion {
+            command: "delete <id>".to_string(),
+            description: "Delete this item".to_string(),
+            rank: SuggestionRank::Medium,
+        });
+
+        // Suggest listing all items
+        suggestions.push(Suggestion {
+            command: "list".to_string(),
+            description: "List all items".to_string(),
+            rank: SuggestionRank::Medium,
+        });
+
+        // Suggest related actions based on item state
+        if let Some(empty_state) = &context.empty_state {
+            if empty_state.is_empty {
+                suggestions.push(Suggestion {
+                    command: "create".to_string(),
+                    description: "Create a new item".to_string(),
+                    rank: SuggestionRank::High,
+                });
+            }
+        }
+
+        Some(suggestions)
+    }
+}
+
+/// Rule for create/add/new commands (suggests viewing, creating more)
+struct CreateRule;
+
+impl SuggestionRule for CreateRule {
+    fn apply(&self, context: &SuggestionContext) -> Option<Vec<Suggestion>> {
+        let mut suggestions = Vec::new();
+
+        // Suggest viewing the created item
+        suggestions.push(Suggestion {
+            command: "show <id>".to_string(),
+            description: "View the created item".to_string(),
+            rank: SuggestionRank::High,
+        });
+
+        // Suggest listing all items
+        suggestions.push(Suggestion {
+            command: "list".to_string(),
+            description: "List all items".to_string(),
+            rank: SuggestionRank::Medium,
+        });
+
+        // Suggest creating another item
+        suggestions.push(Suggestion {
+            command: "create".to_string(),
+            description: "Create another item".to_string(),
+            rank: SuggestionRank::Low,
+        });
+
+        Some(suggestions)
+    }
+}
+
+/// Rule for delete/remove/rm commands (suggests viewing remaining, undoing)
+struct DeleteRule;
+
+impl SuggestionRule for DeleteRule {
+    fn apply(&self, context: &SuggestionContext) -> Option<Vec<Suggestion>> {
+        let mut suggestions = Vec::new();
+
+        // Suggest listing remaining items
+        suggestions.push(Suggestion {
+            command: "list".to_string(),
+            description: "List remaining items".to_string(),
+            rank: SuggestionRank::High,
+        });
+
+        // If list is now empty, suggest creating
+        if context.is_empty {
+            suggestions.push(Suggestion {
+                command: "create".to_string(),
+                description: "Create a new item".to_string(),
+                rank: SuggestionRank::High,
+            });
+        }
+
+        // Suggest viewing status
+        suggestions.push(Suggestion {
+            command: "status".to_string(),
+            description: "Check system status".to_string(),
+            rank: SuggestionRank::Medium,
+        });
+
+        Some(suggestions)
+    }
+}
+
+/// Rule for update/edit/modify commands (suggests viewing, testing)
+struct UpdateRule;
+
+impl SuggestionRule for UpdateRule {
+    fn apply(&self, context: &SuggestionContext) -> Option<Vec<Suggestion>> {
+        let mut suggestions = Vec::new();
+
+        // Suggest viewing the updated item
+        suggestions.push(Suggestion {
+            command: "show <id>".to_string(),
+            description: "View the updated item".to_string(),
+            rank: SuggestionRank::High,
+        });
+
+        // Suggest listing all items
+        suggestions.push(Suggestion {
+            command: "list".to_string(),
+            description: "List all items".to_string(),
+            rank: SuggestionRank::Medium,
+        });
+
+        // Suggest testing the changes
+        suggestions.push(Suggestion {
+            command: "test <id>".to_string(),
+            description: "Test the updated item".to_string(),
+            rank: SuggestionRank::Medium,
+        });
+
+        Some(suggestions)
+    }
+}
+
+/// Rule for status/info commands (suggests actions based on state)
+struct StatusRule;
+
+impl SuggestionRule for StatusRule {
+    fn apply(&self, context: &SuggestionContext) -> Option<Vec<Suggestion>> {
+        let mut suggestions = Vec::new();
+
+        // Suggest listing items
+        suggestions.push(Suggestion {
+            command: "list".to_string(),
+            description: "List all items".to_string(),
+            rank: SuggestionRank::High,
+        });
+
+        // Suggest viewing detailed info
+        suggestions.push(Suggestion {
+            command: "info <id>".to_string(),
+            description: "View detailed information".to_string(),
+            rank: SuggestionRank::Medium,
+        });
+
+        // If there are issues, suggest fixing
+        if let Some(aggregates) = &context.aggregates {
+            if let Some(error_count) = aggregates.error_count {
+                if error_count > 0 {
+                    suggestions.push(Suggestion {
+                        command: "fix --all".to_string(),
+                        description: "Fix all errors".to_string(),
+                        rank: SuggestionRank::High,
+                    });
+                }
+            }
+        }
+
+        Some(suggestions)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::internal::aggregates::AggregateInfo;
+    use crate::internal::emptystate::EmptyStateContext;
+
+    #[test]
+    fn test_rule_registry_creation() {
+        let registry = RuleRegistry::new();
+        assert!(!registry.rules.is_empty());
+    }
+
+    #[test]
+    fn test_generic_rule() {
+        let rule = GenericRule;
+        let context = SuggestionContext::default();
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(!suggestions.is_empty());
+        assert!(suggestions.iter().any(|s| s.command == "--help"));
+    }
+
+    #[test]
+    fn test_list_rule_empty() {
+        let rule = ListRule;
+        let mut context = SuggestionContext::default();
+        context.is_empty = true;
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(suggestions.iter().any(|s| s.command == "create"));
+    }
+
+    #[test]
+    fn test_list_rule_non_empty() {
+        let rule = ListRule;
+        let mut context = SuggestionContext::default();
+        context.is_empty = false;
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(suggestions.iter().any(|s| s.command.contains("show")));
+    }
+
+    #[test]
+    fn test_list_rule_with_aggregates() {
+        let rule = ListRule;
+        let mut context = SuggestionContext::default();
+        context.is_empty = false;
+        context.aggregates = Some(AggregateInfo {
+            total_count: Some(15),
+            error_count: Some(0),
+            warning_count: Some(0),
+        });
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(suggestions.iter().any(|s| s.command.contains("filter")));
+    }
+
+    #[test]
+    fn test_show_rule() {
+        let rule = ShowRule;
+        let context = SuggestionContext::default();
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(suggestions.iter().any(|s| s.command.contains("edit")));
+        assert!(suggestions.iter().any(|s| s.command.contains("delete")));
+    }
+
+    #[test]
+    fn test_create_rule() {
+        let rule = CreateRule;
+        let context = SuggestionContext::default();
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(suggestions.iter().any(|s| s.command.contains("show")));
+        assert!(suggestions.iter().any(|s| s.command == "list"));
+    }
+
+    #[test]
+    fn test_delete_rule_empty() {
+        let rule = DeleteRule;
+        let mut context = SuggestionContext::default();
+        context.is_empty = true;
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(suggestions.iter().any(|s| s.command == "create"));
+    }
+
+    #[test]
+    fn test_update_rule() {
+        let rule = UpdateRule;
+        let context = SuggestionContext::default();
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(suggestions.iter().any(|s| s.command.contains("show")));
+        assert!(suggestions.iter().any(|s| s.command.contains("test")));
+    }
+
+    #[test]
+    fn test_status_rule_with_errors() {
+        let rule = StatusRule;
+        let mut context = SuggestionContext::default();
+        context.aggregates = Some(AggregateInfo {
+            total_count: Some(10),
+            error_count: Some(5),
+            warning_count: Some(2),
+        });
+        let suggestions = rule.apply(&context).unwrap();
+        assert!(suggestions.iter().any(|s| s.command.contains("fix")));
+    }
+
+    #[test]
+    fn test_rule_registry_get_rules() {
+        let registry = RuleRegistry::new();
+        let list_rules = registry.get_rules_for_command("list");
+        assert!(!list_rules.is_empty());
+
+        let generic_rules = registry.get_rules_for_command("unknown");
+        assert!(!generic_rules.is_empty()); // Should get generic rule
+    }
+}

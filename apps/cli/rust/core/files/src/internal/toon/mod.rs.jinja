@@ -37,6 +37,7 @@ use crate::internal::truncation::{Truncator, TruncationMetadata};
 use crate::internal::aggregates::{AggregateInfo, CountFormatter};
 use crate::internal::emptystate::{EmptyStateFormatter, EmptyStateContext};
 use crate::internal::errors::{StructuredError, format_error_with_format};
+use crate::internal::suggestions::{SuggestionEngine, SuggestionContext};
 
 /// Output format options
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -301,6 +302,53 @@ impl OutputFormatter {
             OutputFormat::Human => {
                 // Human format for empty state
                 formatter.format_as_string(context)
+            }
+        }
+    }
+
+    /// Format suggestions as a structured help array
+    pub fn format_suggestions(&self, context: &SuggestionContext) -> String {
+        let engine = SuggestionEngine::new();
+        let suggestions = engine.generate(context);
+        
+        match self.format {
+            OutputFormat::Toon => {
+                // TOON format for suggestions as help[] array
+                let help_array: Vec<ToonValue> = suggestions.iter().map(|s| {
+                    let mut help_obj = std::collections::BTreeMap::new();
+                    help_obj.insert("command".to_string(), ToonValue::string(&s.command));
+                    help_obj.insert("description".to_string(), ToonValue::string(&s.description));
+                    ToonValue::Object(help_obj)
+                }).collect();
+                
+                let mut toon_obj = std::collections::BTreeMap::new();
+                toon_obj.insert("help".to_string(), ToonValue::array(help_array));
+                to_string(&ToonValue::Object(toon_obj)).unwrap_or_default()
+            }
+            OutputFormat::Json => {
+                // JSON format for suggestions as help[] array
+                let help_array: Vec<serde_json::Value> = suggestions.iter().map(|s| {
+                    let mut help_obj = serde_json::Map::new();
+                    help_obj.insert("command".to_string(), serde_json::Value::String(s.command.clone()));
+                    help_obj.insert("description".to_string(), serde_json::Value::String(s.description.clone()));
+                    serde_json::Value::Object(help_obj)
+                }).collect();
+                
+                let mut json_obj = serde_json::Map::new();
+                json_obj.insert("help".to_string(), serde_json::Value::Array(help_array));
+                serde_json::to_string_pretty(&serde_json::Value::Object(json_obj)).unwrap_or_default()
+            }
+            OutputFormat::Human => {
+                // Human format for suggestions
+                if suggestions.is_empty() {
+                    String::new()
+                } else {
+                    let mut output = String::from("\nSuggested next steps:\n");
+                    for (i, suggestion) in suggestions.iter().enumerate() {
+                        output.push_str(&format!("  {}. {} - {}\n", i + 1, suggestion.command, suggestion.description));
+                    }
+                    output
+                }
             }
         }
     }

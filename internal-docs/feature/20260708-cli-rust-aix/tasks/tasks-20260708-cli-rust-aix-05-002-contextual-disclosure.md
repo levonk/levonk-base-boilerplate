@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 5
 parallel_id: 2
 branch: "feature/current/20260708-cli-rust-aix/story-05-002-contextual-disclosure"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-002", "02-003"]
@@ -27,24 +27,24 @@ Implement contextual disclosure with next steps suggestions that follow logicall
 
 ## Sub-Tasks
 
-- [ ] Design suggestion engine architecture
-- [ ] Implement suggestion generation logic for each command
-- [ ] Define suggestion rules based on current state and output
-- [ ] Implement relevant suggestion ranking (context-aware)
-- [ ] Generate suggestions for open items (suggest closing)
-- [ ] Generate suggestions for empty lists (suggest creating)
-- [ ] Generate suggestions for list views (suggest viewing)
-- [ ] Ensure suggestions are actionable (complete commands)
-- [ ] Ensure suggestions carry forward disambiguating flags
-- [ ] Limit suggestions to 2-4 maximum per output
-- [ ] Format suggestions as structured `help[]` array in TOON
-- [ ] Integrate suggestions into all command outputs
-- [ ] Make suggestions smart (context-aware, not generic)
-- [ ] Write unit tests for suggestion generation logic
-- [ ] Write unit tests for suggestion ranking
-- [ ] Write integration tests for suggestion output
-- [ ] Write tests for suggestion context awareness
-- [ ] Update CLI help text to document suggestion behavior
+- [x] Design suggestion engine architecture
+- [x] Implement suggestion generation logic for each command
+- [x] Define suggestion rules based on current state and output
+- [x] Implement relevant suggestion ranking (context-aware)
+- [x] Generate suggestions for open items (suggest closing)
+- [x] Generate suggestions for empty lists (suggest creating)
+- [x] Generate suggestions for list views (suggest viewing)
+- [x] Ensure suggestions are actionable (complete commands)
+- [x] Ensure suggestions carry forward disambiguating flags
+- [x] Limit suggestions to 2-4 maximum per output
+- [x] Format suggestions as structured `help[]` array in TOON
+- [x] Integrate suggestions into all command outputs
+- [x] Make suggestions smart (context-aware, not generic)
+- [x] Write unit tests for suggestion generation logic
+- [x] Write unit tests for suggestion ranking
+- [x] Write integration tests for suggestion output
+- [x] Write tests for suggestion context awareness
+- [x] Update CLI help text to document suggestion behavior
 
 ## Relevant Files
 
@@ -59,17 +59,17 @@ Implement contextual disclosure with next steps suggestions that follow logicall
 
 ## Acceptance Criteria
 
-- [ ] Suggestion engine generates relevant suggestions for each command
-- [ ] Suggestions are context-aware based on current state
-- [ ] Suggestions are actionable (complete commands)
-- [ ] Suggestions carry forward disambiguating flags
-- [ ] Suggestions are limited to 2-4 maximum per output
-- [ ] Suggestions are ranked by relevance
-- [ ] Suggestions are formatted as structured `help[]` array in TOON
-- [ ] Suggestions are integrated into all command outputs
-- [ ] Suggestions are smart (not generic)
-- [ ] All suggestion functionality has test coverage
-- [ ] Help text documents suggestion behavior
+- [x] Suggestion engine generates relevant suggestions for each command
+- [x] Suggestions are context-aware based on current state
+- [x] Suggestions are actionable (complete commands)
+- [x] Suggestions carry forward disambiguating flags
+- [x] Suggestions are limited to 2-4 maximum per output
+- [x] Suggestions are ranked by relevance
+- [x] Suggestions are formatted as structured `help[]` array in TOON
+- [x] Suggestions are integrated into all command outputs
+- [x] Suggestions are smart (not generic)
+- [x] All suggestion functionality has test coverage
+- [x] Help text documents suggestion behavior
 
 ## Test Plan
 

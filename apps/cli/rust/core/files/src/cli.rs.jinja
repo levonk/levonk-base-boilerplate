@@ -148,6 +148,17 @@ use std::time::Duration;
 /// Generate skill:
 ///   {{ project_slug }} skill generate --output SKILL.md
 ///
+/// # Contextual Suggestions
+///
+/// The CLI provides intelligent, context-aware suggestions that help discover capabilities organically:
+/// - 2-4 relevant suggestions per output based on current state
+/// - Suggestions are formatted as structured `help[]` array in TOON output
+/// - Suggestions are actionable (complete commands) and carry forward disambiguating flags
+/// - Suggestions are context-aware (e.g., empty lists suggest creating, non-empty suggest viewing)
+///
+/// Suggestions are automatically included in TOON/JSON output for agent mode.
+/// This enables agents to discover CLI capabilities without additional documentation calls.
+///
 /// Check skill freshness:
 ///   {{ project_slug }} skill check
 ///
@@ -180,7 +191,7 @@ use std::time::Duration;
 ///   suggestions:
 ///   - text: Initialize configuration with default settings
 ///     command: mytool --install
-///   exit_code: 3
+///     exit_code: 3
 ///
 /// # Empty States
 ///
