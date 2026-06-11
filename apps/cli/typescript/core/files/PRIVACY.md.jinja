@@ -1,0 +1,141 @@
+# Privacy Policy for {{ project_name }}
+
+## Overview
+
+{{ project_name }} is designed with privacy by default. This document explains how the CLI handles your data, what data is collected, and how you can control data collection through privacy mode.
+
+## Data Collection
+
+### Default Behavior
+
+By default, {{ project_name }} may collect the following types of data:
+
+- **Log Output**: Standard application logs including timestamps, log levels, and module names
+- **File Paths**: Paths to files being processed (for error messages and debugging)
+- **User Identifiers**: User IDs and usernames when applicable
+- **IP Addresses**: Network addresses in log output (when applicable)
+- **Error Messages**: Detailed error information for troubleshooting
+
+### Privacy Mode
+
+When privacy mode is enabled (via `--privacy` flag or `privacy = true` in config), the following data redactions occur:
+
+- **Email Addresses**: Replaced with `[REDACTED_EMAIL]`
+- **Phone Numbers**: Replaced with `[REDACTED_PHONE]`
+- **Social Security Numbers**: Replaced with `[REDACTED_SSN]`
+- **IP Addresses**: Replaced with `[REDACTED_IP]` or `[REDACTED_IPV6]` (if `logIpAddresses` is disabled)
+- **File Paths**: Replaced with `[REDACTED_PATH]` (if `logFilePaths` is disabled)
+- **User IDs**: Replaced with `[REDACTED_USER_ID]` (if `logUserIds` is disabled)
+- **Usernames**: Replaced with `[REDACTED_USERNAME]` (if `logUserIds` is disabled)
+
+## Enabling Privacy Mode
+
+### Command Line Flag
+
+```bash
+{{ project_slug }} --privacy [other options]
+```
+
+### Configuration File
+
+Add to your config file (`~/.config/{{ project_slug }}/config.toml`):
+
+```toml
+privacy = true
+```
+
+### Environment Variable
+
+```bash
+export {{ PROJECT_SLUG }}_PRIVACY=true
+{{ project_slug }} [other options]
+```
+
+## Privacy Configuration Options
+
+Privacy mode supports granular control over what data is redacted:
+
+```toml
+[privacy]
+enabled = true
+ignoreList = ["*secret*", "*token*", "*password*"]
+logUserIds = false
+logFilePaths = false
+logIpAddresses = false
+logTimestamps = true
+```
+
+### Configuration Options
+
+- **enabled**: Enable or disable privacy mode (default: `false`)
+- **ignoreList**: List of glob patterns for identifiers to never log or process (default: `[]`)
+- **logUserIds**: Allow logging of user identifiers (default: `true`)
+- **logFilePaths**: Allow logging of file paths (default: `true`)
+- **logIpAddresses**: Allow logging of IP addresses (default: `true`)
+- **logTimestamps**: Allow logging of timestamps (default: `true`)
+
+## Ignore Lists
+
+You can specify explicit ignore lists to prevent certain identifiers from being logged or processed:
+
+```toml
+[privacy.ignoreList]
+"*secret*"
+"*token*"
+"*password*"
+"*api_key*"
+```
+
+Any identifier matching these patterns will be completely ignored (not logged or processed).
+
+## Unknown vs Anonymous Data
+
+{{ project_name }} distinguishes between two types of data privacy:
+
+### Unknown Data
+
+Data that is logged but not assigned to a specific user or context. This data is still visible in logs but may be redacted based on privacy settings.
+
+### Anonymous Data
+
+Data that is completely ignored and never logged or processed. This is controlled by the ignore list configuration.
+
+## Data Retention
+
+{{ project_name }} does not retain any data beyond the current session. All logs are output to stdout/stderr and are not stored by the application itself.
+
+## Third-Party Services
+
+{{ project_name }} does not send any data to third-party services. All data processing happens locally on your machine.
+
+## Your Rights
+
+You have the right to:
+
+- **Control**: Enable or disable privacy mode at any time
+- **Configure**: Fine-tune what data is redacted through configuration options
+- **Ignore**: Specify identifiers that should never be logged or processed
+- **Inspect**: Review all log output to verify data redaction is working as expected
+
+## Security
+
+All data redaction happens locally before any output is generated. Sensitive data is never stored in plain text in memory or logs.
+
+## Changes to This Policy
+
+This privacy policy may be updated to reflect changes in {{ project_name }} functionality. Users will be notified of significant changes through release notes.
+
+## Contact
+
+For questions or concerns about privacy in {{ project_name }}, please refer to the project's issue tracker or documentation.
+
+## Compliance
+
+This privacy policy is designed to comply with:
+- GDPR (General Data Protection Regulation)
+- CCPA (California Consumer Privacy Act)
+- Industry best practices for CLI tool privacy
+
+## Version
+
+This privacy policy applies to {{ project_name }} version 1.0.0 and later.

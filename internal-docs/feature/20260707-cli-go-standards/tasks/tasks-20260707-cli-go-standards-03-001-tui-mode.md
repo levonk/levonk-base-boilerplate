@@ -27,16 +27,16 @@ Implement TUI (Terminal User Interface) mode using bubbletea library that allows
 
 ## Sub-Tasks
 
-- [ ] Add bubbletea library dependency — `core/files/go.mod.jinja`
-- [ ] Add --interactive and --tui flags — `core/files/main.go.jinja`
-- [ ] Create TUI application structure — `core/files/tui.go.jinja`
-- [ ] Implement argument selection UI — `core/files/tui.go.jinja`
-- [ ] Implement argument modification UI — `core/files/tui.go.jinja`
-- [ ] Add execution confirmation in TUI — `core/files/tui.go.jinja`
-- [ ] Handle keyboard navigation — `core/files/tui.go.jinja`
-- [ ] Test TUI launches correctly — `core/files/tui_test.go.jinja`
-- [ ] Test TUI argument modification — `core/files/tui_test.go.jinja`
-- [ ] Test TUI execution flow — `core/files/tui_test.go.jinja`
+- [x] Add bubbletea library dependency — `core/files/go.mod.jinja`
+- [x] Add --interactive and --tui flags — `core/files/main.go.jinja`
+- [x] Create TUI application structure — `core/files/tui.go.jinja`
+- [x] Implement argument selection UI — `core/files/tui.go.jinja`
+- [x] Implement argument modification UI — `core/files/tui.go.jinja`
+- [x] Add execution confirmation in TUI — `core/files/tui.go.jinja`
+- [x] Handle keyboard navigation — `core/files/tui.go.jinja`
+- [x] Test TUI launches correctly — `core/files/tui_test.go.jinja`
+- [x] Test TUI argument modification — `core/files/tui_test.go.jinja`
+- [x] Test TUI execution flow — `core/files/tui_test.go.jinja`
 
 ## Relevant Files
 
@@ -47,13 +47,13 @@ Implement TUI (Terminal User Interface) mode using bubbletea library that allows
 
 ## Acceptance Criteria
 
-- [ ] `--interactive` and `--tui` flags launch TUI
-- [ ] TUI allows viewing all arguments
-- [ ] TUI allows modifying arguments
-- [ ] TUI has intuitive keyboard navigation
-- [ ] TUI confirms before execution
-- [ ] TUI respects color settings
-- [ ] TUI works in different terminal sizes
+- [x] `--interactive` and `--tui` flags launch TUI
+- [x] TUI allows viewing all arguments
+- [x] TUI allows modifying arguments
+- [x] TUI has intuitive keyboard navigation
+- [x] TUI confirms before execution
+- [x] TUI respects color settings
+- [x] TUI works in different terminal sizes
 
 ## Test Plan
 

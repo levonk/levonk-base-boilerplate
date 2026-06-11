@@ -1,0 +1,218 @@
+import { z } from 'zod';
+
+/**
+ * Configuration validation schema using Zod
+ * Provides type-safe validation with helpful error messages
+ */
+
+/**
+ * Config schema with all validation rules
+ */
+export const ConfigSchema = z.object({
+    _version: z.number({
+        errorMap: () => ({ message: '_version must be a number' }),
+    }).optional(),
+    log_level: z.enum(['error', 'warn', 'info', 'debug'], {
+        errorMap: () => ({ message: 'log_level must be one of: error, warn, info, debug' }),
+    }).optional(),
+    quiet: z.boolean({
+        errorMap: () => ({ message: 'quiet must be a boolean (true or false)' }),
+    }).optional(),
+    verbose: z.boolean({
+        errorMap: () => ({ message: 'verbose must be a boolean (true or false)' }),
+    }).optional(),
+    debug: z.boolean({
+        errorMap: () => ({ message: 'debug must be a boolean (true or false)' }),
+    }).optional(),
+    color: z.enum(['auto', 'always', 'never'], {
+        errorMap: () => ({ message: 'color must be one of: auto, always, never' }),
+    }).optional(),
+    log_format: z.enum(['text', 'json'], {
+        errorMap: () => ({ message: 'log_format must be one of: text, json' }),
+    }).optional(),
+    json: z.boolean({
+        errorMap: () => ({ message: 'json must be a boolean (true or false)' }),
+    }).optional(),
+    file_ref_format: z.enum(['vscode', 'standard', 'auto'], {
+        errorMap: () => ({ message: 'file_ref_format must be one of: vscode, standard, auto' }),
+    }).optional(),
+}).passthrough();
+
+/**
+ * Type inference from schema
+ */
+export type Config = z.infer<typeof ConfigSchema>;
+
+/**
+ * Validation error with line number information
+ */
+export interface ValidationError {
+    path: string[];
+    message: string;
+    line?: number;
+    suggestion?: string;
+}
+
+/**
+ * Validate config object against schema
+ * Returns validated config or throws validation error
+ */
+export function validateConfig(config: unknown): Config {
+    try {
+        return ConfigSchema.parse(config);
+    } catch (error) {
+        if (error instanceof z.ZodError) {
+            throw formatZodError(error);
+        }
+        throw error;
+    }
+}
+
+/**
+ * Format Zod error into user-friendly message with line numbers
+ */
+export function formatZodError(error: z.ZodError, content?: string): Error {
+    const messages = error.errors.map((err) => {
+        const path = err.path.join('.');
+        const line = findLineNumber(path, content);
+        const suggestion = getSuggestion(err);
+
+        let message = `Invalid config value at "${path}"`;
+        if (line) {
+            message += ` (line ${line})`;
+        }
+        message += `: ${err.message}`;
+        if (suggestion) {
+            message += `\n  Suggestion: ${suggestion}`;
+        }
+
+        return message;
+    });
+
+    const errorString = `Configuration validation failed:\n${messages.join('\n')}`;
+    return new Error(errorString);
+}
+
+/**
+ * Find line number for a config key by parsing TOML content
+ * Maps key paths to their line numbers in the source file
+ */
+function findLineNumber(path: string, content?: string): number | undefined {
+    if (!content) {
+        return undefined;
+    }
+
+    const lines = content.split('\n');
+    const pathParts = path.split('.');
+    let currentLine = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // Skip empty lines and comments
+        if (!line || line.startsWith('#')) {
+            continue;
+        }
+
+        // Check if this line contains the key we're looking for
+        const keyMatch = line.match(/^(\w+)\s*=/);
+        if (keyMatch) {
+            const key = keyMatch[1];
+            const currentPath = pathParts[currentLine] || pathParts[0];
+
+            if (key === currentPath) {
+                return i + 1; // Return 1-based line number
+            }
+        }
+
+        // Track nested structures
+        if (line.startsWith('[') && line.endsWith(']')) {
+            const section = line.slice(1, -1).trim();
+            const sectionPath = section.split('.');
+            // Check if this section matches our path
+            if (sectionPath[0] === pathParts[0]) {
+                currentLine = sectionPath.length;
+            }
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * Get helpful suggestion for validation errors
+ */
+function getSuggestion(err: z.ZodIssue): string | undefined {
+    const { code, path } = err;
+
+    switch (code) {
+        case z.ZodIssueCode.invalid_enum_value:
+            const enumValues = (err as any).unionErrors?.[0]?.issues?.[0]?.options;
+            if (Array.isArray(enumValues)) {
+                return `Valid values are: ${enumValues.join(', ')}`;
+            }
+            return 'Check the valid values for this option';
+
+        case z.ZodIssueCode.invalid_type:
+            const expected = (err as any).expected;
+            const received = (err as any).received;
+            return `Expected type: ${expected}, received: ${received}`;
+
+        case z.ZodIssueCode.invalid_string:
+            return 'Ensure the value is a valid string';
+
+        default:
+            return undefined;
+    }
+}
+
+/**
+ * Validate config file content with line number tracking
+ * This is a placeholder for future implementation with TOML line number tracking
+ */
+export function validateConfigWithLineNumbers(
+    content: string,
+    configPath: string
+): { valid: boolean; errors: ValidationError[]; config?: Config } {
+    try {
+        const parsed = JSON.parse(content); // Will be TOML in real implementation
+        const validated = validateConfig(parsed);
+        return { valid: true, errors: [], config: validated };
+    } catch (error) {
+        if (error instanceof Error) {
+            return {
+                valid: false,
+                errors: [{ path: [], message: error.message }],
+            };
+        }
+        return {
+            valid: false,
+            errors: [{ path: [], message: 'Unknown validation error' }],
+        };
+    }
+}
+
+/**
+ * Check if config is valid without throwing
+ */
+export function isValidConfig(config: unknown): boolean {
+    const result = ConfigSchema.safeParse(config);
+    return result.success;
+}
+
+/**
+ * Get validation errors without throwing
+ */
+export function getValidationErrors(config: unknown, content?: string): ValidationError[] {
+    const result = ConfigSchema.safeParse(config);
+    if (result.success) {
+        return [];
+    }
+
+    return result.error.errors.map((err) => ({
+        path: err.path.map(String),
+        message: err.message,
+        line: findLineNumber(err.path.map(String).join('.'), content),
+        suggestion: getSuggestion(err),
+    }));
+}

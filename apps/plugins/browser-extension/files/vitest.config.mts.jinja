@@ -7,5 +7,11 @@ export default defineConfig({
       "__tests__/**/*.spec.mts",
     ],
     environment: "node",
+    // Security: Disable write and exec operations by default when API is exposed to network
+    // See: https://github.com/vitest-dev/vitest/security/advisories
+    api: {
+      allowWrite: false,
+      allowExec: false,
+    },
   },
 });

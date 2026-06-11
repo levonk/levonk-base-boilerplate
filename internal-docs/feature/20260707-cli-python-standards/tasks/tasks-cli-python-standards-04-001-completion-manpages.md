@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 4
 parallel_id: 1
 branch: "feature/current/cli-python-standards/story-04-001-completion-manpages"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["02-001"]
@@ -27,15 +27,15 @@ Enhance shell completion system and implement traditional Unix man pages. Ensure
 
 ## Sub-Tasks
 
-- [ ] Enhance completion generation to handle all subcommands — `apps/cli/python/core/files/{{project_slug}}/completion.py.jinja`
-- [ ] Ensure completions match current command structure — `completion.py.jinja`
-- [ ] Create `man_page.py.jinja` template file with man page generation — `apps/cli/python/core/files/{{project_slug}}/man_page.py.jinja`
-- [ ] Implement man page generation with standard sections (NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES, SEE ALSO) — `man_page.py.jinja`
-- [ ] Add `--man` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Integrate man page generation into install process — `completion.py.jinja`
-- [ ] Add man page installation to platform-specific paths — `completion.py.jinja`
-- [ ] Add tests for enhanced shell completions — `apps/cli/python/core/files/tests/test_completion.py.jinja`
-- [ ] Add tests for man page generation — `tests/test_completion.py.jinja`
+- [x] Enhance completion generation to handle all subcommands — `apps/cli/python/core/files/{{project_slug}}/completion.py.jinja`
+- [x] Ensure completions match current command structure — `completion.py.jinja`
+- [x] Create `man_page.py.jinja` template file with man page generation — `apps/cli/python/core/files/{{project_slug}}/man_page.py.jinja`
+- [x] Implement man page generation with standard sections (NAME, SYNOPSIS, DESCRIPTION, OPTIONS, EXAMPLES, SEE ALSO) — `man_page.py.jinja`
+- [x] Add `--man` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Integrate man page generation into install process — `completion.py.jinja`
+- [x] Add man page installation to platform-specific paths — `completion.py.jinja`
+- [x] Add tests for enhanced shell completions — `apps/cli/python/core/files/tests/test_completion.py.jinja`
+- [x] Add tests for man page generation — `tests/test_completion.py.jinja`
 
 ## Relevant Files
 
@@ -46,13 +46,13 @@ Enhance shell completion system and implement traditional Unix man pages. Ensure
 
 ## Acceptance Criteria
 
-- [ ] Shell completions handle all subcommands correctly
-- [ ] Completions match current command structure
-- [ ] Man pages generated with standard sections
-- [ ] `--man` flag displays man page content
-- [ ] Man pages install to correct platform-specific paths
-- [ ] Man pages accessible via `man <command>` after install
-- [ ] All tests pass for completions and man pages
+- [x] Shell completions handle all subcommands correctly
+- [x] Completions match current command structure
+- [x] Man pages generated with standard sections
+- [x] `--man` flag displays man page content
+- [x] Man pages install to correct platform-specific paths
+- [x] Man pages accessible via `man <command>` after install
+- [x] All tests pass for completions and man pages
 
 ## Test Plan
 

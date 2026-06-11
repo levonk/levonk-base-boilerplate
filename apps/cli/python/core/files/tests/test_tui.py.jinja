@@ -1,0 +1,42 @@
+{% if include_tui %}
+from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
+import pytest
+
+
+def test_cli_arguments_creation():
+    """Test CLIArguments dataclass creation."""
+    args = CLIArguments(
+        inputs=["file.txt"],
+        config="/path/to/config",
+        json_output=True,
+        quiet=False
+    )
+    assert args.inputs == ["file.txt"]
+    assert args.config == "/path/to/config"
+    assert args.json_output is True
+    assert args.quiet is False
+
+
+def test_launch_tui():
+    """Test TUI launch function."""
+    args = CLIArguments(inputs=["file.txt"])
+    result = launch_tui(args)
+    assert isinstance(result, CLIArguments)
+    # Placeholder implementation returns args unchanged
+    assert result.inputs == args.inputs
+
+
+def test_confirm_execution():
+    """Test execution confirmation."""
+    args = CLIArguments(inputs=["file.txt"])
+    result = confirm_execution(args)
+    # Placeholder implementation always returns True
+    assert result is True
+{% else %}
+import pytest
+
+
+def test_tui_not_enabled():
+    """Test that TUI is not enabled when include_tui is false."""
+    pytest.skip("TUI mode not enabled in this boilerplate configuration")
+{% endif %}

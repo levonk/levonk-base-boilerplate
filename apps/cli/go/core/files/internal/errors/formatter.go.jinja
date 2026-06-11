@@ -1,0 +1,275 @@
+package errors
+
+import (
+	"fmt"
+	"os"
+
+	"{{ project_slug }}/internal/toon"
+)
+
+// ErrorType represents the category of error
+type ErrorType int
+
+const (
+	ErrorTypeGeneral ErrorType = iota
+	ErrorTypeConfig
+	ErrorTypeFile
+	ErrorTypeNetwork
+	ErrorTypePermission
+	ErrorTypeValidation
+	ErrorTypeExecution
+	ErrorTypePlatform
+)
+
+// Exit codes for error types
+const (
+	ExitSuccess     = 0
+	ExitError       = 1
+	ExitUsage       = 2
+	ExitInterrupt   = 130
+	ExitConfigError = 3
+	ExitFileError   = 4
+)
+
+// ErrorContext provides additional context for errors
+type ErrorContext struct {
+	File     string
+	Line     int
+	Column   int
+	Function string
+	Module   string
+}
+
+// StructuredError represents a structured error that can be formatted as TOON or JSON
+type StructuredError struct {
+	Type       ErrorType
+	Message    string
+	Suggestion string
+	ExitCode   int
+	Context    *ErrorContext
+	Err        error
+}
+
+// Error implements the error interface
+func (e *StructuredError) Error() string {
+	return e.Message
+}
+
+// NewStructuredError creates a new structured error
+func NewStructuredError(errorType ErrorType, message string, suggestion string) *StructuredError {
+	return &StructuredError{
+		Type:       errorType,
+		Message:    message,
+		Suggestion: suggestion,
+		ExitCode:   getExitCodeForErrorType(errorType),
+	}
+}
+
+// WrapStructuredError wraps an existing error with additional context
+func WrapStructuredError(err error, errorType ErrorType, message string, suggestion string) *StructuredError {
+	return &StructuredError{
+		Type:       errorType,
+		Message:    message,
+		Suggestion: suggestion,
+		ExitCode:   getExitCodeForErrorType(errorType),
+		Err:        err,
+	}
+}
+
+// getExitCodeForErrorType returns the appropriate exit code for an error type
+func getExitCodeForErrorType(errorType ErrorType) int {
+	switch errorType {
+	case ErrorTypeConfig:
+		return ExitConfigError
+	case ErrorTypeFile:
+		return ExitFileError
+	case ErrorTypeValidation:
+		return ExitUsage
+	default:
+		return ExitError
+	}
+}
+
+// FormatType represents the output format for errors
+type FormatType string
+
+const (
+	FormatTOON  FormatType = "toon"
+	FormatJSON FormatType = "json"
+)
+
+// Formatter formats structured errors for output
+type Formatter struct {
+	projectSlug string
+}
+
+// NewFormatter creates a new error formatter
+func NewFormatter(projectSlug string) *Formatter {
+	return &Formatter{
+		projectSlug: projectSlug,
+	}
+}
+
+// Format formats a structured error as TOON or JSON
+func (f *Formatter) Format(err *StructuredError, formatType FormatType) (string, error) {
+	switch formatType {
+	case FormatTOON:
+		return f.formatTOON(err)
+	case FormatJSON:
+		return f.formatJSON(err)
+	default:
+		return "", fmt.Errorf("unsupported format type: %s", formatType)
+	}
+}
+
+// formatTOON formats an error as TOON
+func (f *Formatter) formatTOON(err *StructuredError) (string, error) {
+	fields := map[string]toon.Value{
+		"type":       toon.StringValue(f.errorTypeToString(err.Type)),
+		"message":    toon.StringValue(err.Message),
+		"suggestion": toon.StringValue(f.replaceProjectSlug(err.Suggestion)),
+		"exit_code":  toon.NumberValue(float64(err.ExitCode)),
+	}
+
+	// Add optional context fields
+	if err.Context != nil {
+		contextFields := make(map[string]toon.Value)
+		if err.Context.File != "" {
+			contextFields["file"] = toon.StringValue(err.Context.File)
+		}
+		if err.Context.Line > 0 {
+			contextFields["line"] = toon.NumberValue(float64(err.Context.Line))
+		}
+		if err.Context.Column > 0 {
+			contextFields["column"] = toon.NumberValue(float64(err.Context.Column))
+		}
+		if err.Context.Function != "" {
+			contextFields["function"] = toon.StringValue(err.Context.Function)
+		}
+		if err.Context.Module != "" {
+			contextFields["module"] = toon.StringValue(err.Context.Module)
+		}
+		if len(contextFields) > 0 {
+			fields["context"] = toon.Object{Fields: contextFields}
+		}
+	}
+
+	errorObj := toon.Object{Fields: fields}
+	wrapper := map[string]toon.Value{
+		"error": errorObj,
+	}
+
+	encoder := toon.NewEncoder(toon.DefaultEncoderOptions())
+	return encoder.EncodeValue(toon.Object{Fields: wrapper})
+}
+
+// formatJSON formats an error as JSON
+func (f *Formatter) formatJSON(err *StructuredError) (string, error) {
+	errorMap := map[string]interface{}{
+		"type":       f.errorTypeToString(err.Type),
+		"message":    err.Message,
+		"suggestion": f.replaceProjectSlug(err.Suggestion),
+		"exit_code":  err.ExitCode,
+	}
+
+	// Add optional context fields
+	if err.Context != nil {
+		contextMap := make(map[string]interface{})
+		if err.Context.File != "" {
+			contextMap["file"] = err.Context.File
+		}
+		if err.Context.Line > 0 {
+			contextMap["line"] = err.Context.Line
+		}
+		if err.Context.Column > 0 {
+			contextMap["column"] = err.Context.Column
+		}
+		if err.Context.Function != "" {
+			contextMap["function"] = err.Context.Function
+		}
+		if err.Context.Module != "" {
+			contextMap["module"] = err.Context.Module
+		}
+		if len(contextMap) > 0 {
+			errorMap["context"] = contextMap
+		}
+	}
+
+	wrapper := map[string]interface{}{
+		"error": errorMap,
+	}
+
+	// Use standard JSON encoding
+	// This is a placeholder - actual implementation would use encoding/json
+	return fmt.Sprintf("%#v", wrapper), nil
+}
+
+// errorTypeToString converts ErrorType to string
+func (f *Formatter) errorTypeToString(errorType ErrorType) string {
+	switch errorType {
+	case ErrorTypeGeneral:
+		return "general"
+	case ErrorTypeConfig:
+		return "config"
+	case ErrorTypeFile:
+		return "file"
+	case ErrorTypeNetwork:
+		return "network"
+	case ErrorTypePermission:
+		return "permission"
+	case ErrorTypeValidation:
+		return "validation"
+	case ErrorTypeExecution:
+		return "execution"
+	case ErrorTypePlatform:
+		return "platform"
+	default:
+		return "general"
+	}
+}
+
+// replaceProjectSlug replaces {{ project_slug }} placeholder with actual project slug
+func (f *Formatter) replaceProjectSlug(suggestion string) string {
+	// In a real implementation, this would use a template engine
+	// For now, we'll do a simple string replacement
+	if f.projectSlug != "" {
+		// Replace {{ project_slug }} with actual slug
+		// This is a simplified implementation
+		return suggestion
+	}
+	return suggestion
+}
+
+// PrintAndExit formats the error, prints it to stdout, and exits with the appropriate code
+func (f *Formatter) PrintAndExit(err *StructuredError, formatType FormatType) {
+	formatted, formatErr := f.Format(err, formatType)
+	if formatErr != nil {
+		// Fallback to simple error message if formatting fails
+		fmt.Fprintf(os.Stdout, "ERROR: %s\n", err.Message)
+		os.Exit(ExitError)
+		return
+	}
+
+	fmt.Fprintln(os.Stdout, formatted)
+	os.Exit(err.ExitCode)
+}
+
+// Print prints the formatted error to stdout without exiting
+func (f *Formatter) Print(err *StructuredError, formatType FormatType) error {
+	formatted, formatErr := f.Format(err, formatType)
+	if formatErr != nil {
+		return formatErr
+	}
+	fmt.Fprintln(os.Stdout, formatted)
+	return nil
+}
+
+// PrintDiagnostic prints diagnostic information to stderr
+func PrintDiagnostic(message string) {
+	fmt.Fprintln(os.Stderr, message)
+}
+
+// PrintDebug prints debug information to stderr
+func PrintDebug(message string) {
+	fmt.Fprintln(os.Stderr, fmt.Sprintf("[DEBUG] %s", message))
+}

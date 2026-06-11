@@ -15,6 +15,14 @@ export default defineConfig({
       { find: /^@\/types\/(.*)$/, replacement: path.resolve(__dirname, "src/types/$1") },
     ],
   },
+  // Security: Disable write and exec operations by default when API is exposed to network
+  // See: https://github.com/vitest-dev/vitest/security/advisories
+  test: {
+    api: {
+      allowWrite: false,
+      allowExec: false,
+    },
+  },
   projects: [
     defineProject({
       test: {

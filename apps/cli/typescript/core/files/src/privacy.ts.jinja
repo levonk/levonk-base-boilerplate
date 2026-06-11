@@ -1,0 +1,157 @@
+/**
+ * Privacy Mode Module
+ *
+ * Provides privacy mode for anonymous usage with:
+ * - Sensitive data detection and redaction
+ * - Explicit ignore lists for identifiers
+ * - Distinction between "unknown" (logged but not assigned) and "anonymous" (ignored entirely)
+ * - Configurable privacy toggles for specific data collection
+ */
+
+export interface PrivacyConfig {
+  /** Enable privacy mode. Default: false */
+  enabled?: boolean;
+  /** List of identifiers to never log or process. Default: [] */
+  ignoreList?: string[];
+  /** Toggle for logging user identifiers. Default: true */
+  logUserIds?: boolean;
+  /** Toggle for logging file paths. Default: true */
+  logFilePaths?: boolean;
+  /** Toggle for logging IP addresses. Default: true */
+  logIpAddresses?: boolean;
+  /** Toggle for logging timestamps. Default: true */
+  logTimestamps?: boolean;
+}
+
+export interface PrivacyManager {
+  config: PrivacyConfig;
+  isEnabled(): boolean;
+  shouldLogIdentifier(identifier: string): boolean;
+  redactSensitiveData(data: string): string;
+  redactSensitiveObject(obj: Record<string, unknown>): Record<string, unknown>;
+  isIdentifierIgnored(identifier: string): boolean;
+}
+
+class PrivacyManagerImpl implements PrivacyManager {
+  public config: PrivacyConfig;
+
+  constructor(config: PrivacyConfig = {}) {
+    this.config = {
+      enabled: false,
+      ignoreList: [],
+      logUserIds: true,
+      logFilePaths: true,
+      logIpAddresses: true,
+      logTimestamps: true,
+      ...config,
+    };
+  }
+
+  isEnabled(): boolean {
+    return this.config.enabled === true;
+  }
+
+  shouldLogIdentifier(identifier: string): boolean {
+    if (!this.isEnabled()) {
+      return true;
+    }
+
+    // Check if identifier is in ignore list
+    if (this.isIdentifierIgnored(identifier)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  isIdentifierIgnored(identifier: string): boolean {
+    if (!this.config.ignoreList || this.config.ignoreList.length === 0) {
+      return false;
+    }
+
+    return this.config.ignoreList.some(pattern => {
+      // Simple glob pattern matching
+      const regex = new RegExp(
+        '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
+      );
+      return regex.test(identifier);
+    });
+  }
+
+  redactSensitiveData(data: string): string {
+    if (!this.isEnabled()) {
+      return data;
+    }
+
+    let redacted = data;
+
+    // Redact PII patterns
+    redacted = redacted.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[REDACTED]');
+    redacted = redacted.replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[REDACTED]');
+    redacted = redacted.replace(/\b\d{3}[-]?\d{2}[-]?\d{4}\b/g, '[REDACTED]');
+
+    // Redact IP addresses
+    if (!this.config.logIpAddresses) {
+      redacted = redacted.replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[REDACTED]');
+      redacted = redacted.replace(/\b([0-9a-fA-F]{0,4}:){7}[0-9a-fA-F]{0,4}\b/g, '[REDACTED]');
+    }
+
+    // Redact file paths
+    if (!this.config.logFilePaths) {
+      redacted = redacted.replace(/\/[^\s]+/g, '[REDACTED]');
+      redacted = redacted.replace(/[A-Za-z]:\\(?:[^\\]+\\)*[^\\]+/g, '[REDACTED]');
+    }
+
+    // Redact user IDs
+    if (!this.config.logUserIds) {
+      redacted = redacted.replace(/\buser[_-]?id[:\s]*[^\s,)]+/gi, '[REDACTED]');
+      redacted = redacted.replace(/\busername[:\s]*[^\s,)]+/gi, '[REDACTED]');
+    }
+
+    return redacted;
+  }
+
+  redactSensitiveObject(obj: Record<string, unknown>): Record<string, unknown> {
+    if (!this.isEnabled()) {
+      return obj;
+    }
+
+    const redacted: Record<string, unknown> = {};
+    const sensitiveKeys = /\b(password|secret|token|apikey|api_key|access_token|refresh_token|auth|credential)\b/i;
+
+    for (const [key, value] of Object.entries(obj)) {
+      if (typeof value === 'string') {
+        // Redact sensitive field values
+        if (sensitiveKeys.test(key)) {
+          redacted[key] = '[REDACTED]';
+        } else {
+          redacted[key] = this.redactSensitiveData(value);
+        }
+      } else if (typeof value === 'object' && value !== null) {
+        redacted[key] = this.redactSensitiveObject(value as Record<string, unknown>);
+      } else {
+        redacted[key] = value;
+      }
+    }
+
+    return redacted;
+  }
+}
+
+let globalPrivacyManager: PrivacyManager | null = null;
+
+export function initPrivacyManager(config: PrivacyConfig = {}): PrivacyManager {
+  globalPrivacyManager = new PrivacyManagerImpl(config);
+  return globalPrivacyManager;
+}
+
+export function getPrivacyManager(): PrivacyManager {
+  if (!globalPrivacyManager) {
+    globalPrivacyManager = new PrivacyManagerImpl();
+  }
+  return globalPrivacyManager;
+}
+
+export function resetPrivacyManager(): void {
+  globalPrivacyManager = null;
+}

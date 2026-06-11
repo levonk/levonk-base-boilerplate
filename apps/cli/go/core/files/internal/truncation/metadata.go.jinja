@@ -1,0 +1,34 @@
+package truncation
+
+// Metadata contains information about truncated content
+type Metadata struct {
+	Truncated       bool   `json:"truncated"`
+	OriginalLength  int    `json:"original_length"`
+	TruncatedLength int    `json:"truncated_length"`
+	TruncationLimit int    `json:"truncation_limit"`
+	FieldType       string `json:"field_type"`
+}
+
+// NewMetadata creates new truncation metadata
+func NewMetadata(originalLength, truncatedLength, truncationLimit int, fieldType FieldType) *Metadata {
+	return &Metadata{
+		Truncated:       originalLength > truncationLimit,
+		OriginalLength:  originalLength,
+		TruncatedLength: truncatedLength,
+		TruncationLimit: truncationLimit,
+		FieldType:       string(fieldType),
+	}
+}
+
+// IsTruncated returns true if the content was truncated
+func (m *Metadata) IsTruncated() bool {
+	return m.Truncated
+}
+
+// HelpText returns a help suggestion for truncated content
+func (m *Metadata) HelpText() string {
+	if !m.Truncated {
+		return ""
+	}
+	return "(truncated from " + string(rune(m.OriginalLength)) + " chars, use --full for complete content)"
+}

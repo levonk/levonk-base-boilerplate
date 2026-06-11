@@ -1,0 +1,251 @@
+package session
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestGenerateContext(t *testing.T) {
+	opts := DefaultContextOptions()
+	opts.TokenBudget = 500
+
+	output, err := GenerateContext(opts)
+	if err != nil {
+		t.Fatalf("GenerateContext failed: %v", err)
+	}
+
+	if output == "" {
+		t.Error("GenerateContext returned empty output")
+	}
+
+	// Verify TOON format contains expected fields
+	expectedFields := []string{"working_dir", "project_type", "has_config", "has_data"}
+	for _, field := range expectedFields {
+		if !contains(output, field) {
+			t.Errorf("Output missing expected field: %s", field)
+		}
+	}
+}
+
+func TestDetectProjectType(t *testing.T) {
+	// Create temporary directory
+	tmpDir := t.TempDir()
+
+	tests := []struct {
+		name     string
+		files    map[string]string
+		expected string
+	}{
+		{
+			name:     "go project",
+			files:    map[string]string{"go.mod": "module test"},
+			expected: "go",
+		},
+		{
+			name:     "node project",
+			files:    map[string]string{"package.json": `{"name": "test"}`},
+			expected: "node",
+		},
+		{
+			name:     "python project",
+			files:    map[string]string{"pyproject.toml": "[project]"},
+			expected: "python",
+		},
+		{
+			name:     "rust project",
+			files:    map[string]string{"Cargo.toml": "[package]"},
+			expected: "rust",
+		},
+		{
+			name:     "java project",
+			files:    map[string]string{"pom.xml": "<project></project>"},
+			expected: "java",
+		},
+		{
+			name:     "unknown project",
+			files:    map[string]string{},
+			expected: "unknown",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create test files
+			for filename, content := range tt.files {
+				path := filepath.Join(tmpDir, filename)
+				if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+					t.Fatalf("Failed to create test file: %v", err)
+				}
+			}
+
+			// Test detection
+			result := detectProjectType(tmpDir)
+			if result != tt.expected {
+				t.Errorf("detectProjectType() = %v, want %v", result, tt.expected)
+			}
+
+			// Clean up files
+			for filename := range tt.files {
+				os.Remove(filepath.Join(tmpDir, filename))
+			}
+		})
+	}
+}
+
+func TestHasConfigFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Test with no config file
+	if hasConfigFile(tmpDir) {
+		t.Error("hasConfigFile returned true for directory with no config")
+	}
+
+	// Test with config file
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("test: value"), 0644); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	if !hasConfigFile(tmpDir) {
+		t.Error("hasConfigFile returned false for directory with config file")
+	}
+}
+
+func TestHasDataDirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Test with no data directory
+	if hasDataDirectory(tmpDir) {
+		t.Error("hasDataDirectory returned true for directory with no data dir")
+	}
+
+	// Test with data directory
+	dataPath := filepath.Join(tmpDir, "data")
+	if err := os.Mkdir(dataPath, 0755); err != nil {
+		t.Fatalf("Failed to create data directory: %v", err)
+	}
+
+	if !hasDataDirectory(tmpDir) {
+		t.Error("hasDataDirectory returned false for directory with data dir")
+	}
+}
+
+func TestApplyTokenBudget(t *testing.T) {
+	ctx := &Context{
+		WorkingDir:   "/test/dir",
+		ProjectType:  "go",
+		HasConfig:    true,
+		HasData:      true,
+		RecentFiles:  []string{"file1", "file2", "file3"},
+		HelpMessages: []string{"help1", "help2", "help3"},
+	}
+
+	// Test with budget larger than estimated
+	result := applyTokenBudget(ctx, 10000)
+	if len(result.HelpMessages) != 3 {
+		t.Error("applyTokenBudget reduced help messages unnecessarily")
+	}
+
+	// Test with small budget - should reduce to at least 1
+	result = applyTokenBudget(ctx, 10)
+	if len(result.HelpMessages) < 1 {
+		t.Error("applyTokenBudget reduced help messages too much")
+	}
+}
+
+func TestAddHelpMessage(t *testing.T) {
+	ctx := &Context{
+		HelpMessages: []string{},
+	}
+
+	ctx.AddHelpMessage("message1")
+	if len(ctx.HelpMessages) != 1 {
+		t.Error("AddHelpMessage did not add message")
+	}
+
+	ctx.AddHelpMessage("message2")
+	if len(ctx.HelpMessages) != 2 {
+		t.Error("AddHelpMessage did not add second message")
+	}
+}
+
+func TestAddRecentFile(t *testing.T) {
+	ctx := &Context{
+		RecentFiles: []string{},
+	}
+
+	// Add files
+	for i := 0; i < 12; i++ {
+		ctx.AddRecentFile(filepath.Join("dir", "file"+string(rune('0'+i))))
+	}
+
+	// Should keep only last 10
+	if len(ctx.RecentFiles) != 10 {
+		t.Errorf("AddRecentFile kept %d files, want 10", len(ctx.RecentFiles))
+	}
+}
+
+func TestFormatCompactContext(t *testing.T) {
+	output, err := FormatCompactContext()
+	if err != nil {
+		t.Fatalf("FormatCompactContext failed: %v", err)
+	}
+
+	if output == "" {
+		t.Error("FormatCompactContext returned empty output")
+	}
+
+	// Verify it's compact (should be shorter than full context)
+	if len(output) > 1000 {
+		t.Error("FormatCompactContext output is too long")
+	}
+}
+
+func TestIsDirectoryScoped(t *testing.T) {
+	ctx := &Context{WorkingDir: "/test"}
+	if !ctx.IsDirectoryScoped() {
+		t.Error("IsDirectoryScoped returned false for context with working dir")
+	}
+
+	ctx.WorkingDir = ""
+	if ctx.IsDirectoryScoped() {
+		t.Error("IsDirectoryScoped returned true for context without working dir")
+	}
+}
+
+func TestGetRelativePath(t *testing.T) {
+	ctx := &Context{WorkingDir: "/test/dir"}
+
+	// Test path within working dir
+	rel, err := ctx.GetRelativePath("/test/dir/subdir/file.txt")
+	if err != nil {
+		t.Fatalf("GetRelativePath failed: %v", err)
+	}
+	if rel != "subdir/file.txt" {
+		t.Errorf("GetRelativePath = %v, want subdir/file.txt", rel)
+	}
+
+	// Test path outside working dir
+	rel, err = ctx.GetRelativePath("/other/dir/file.txt")
+	if err != nil {
+		t.Fatalf("GetRelativePath failed: %v", err)
+	}
+	if rel != "/other/dir/file.txt" {
+		t.Errorf("GetRelativePath = %v, want /other/dir/file.txt", rel)
+	}
+}
+
+// Helper function to check if string contains substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && findSubstring(s, substr))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

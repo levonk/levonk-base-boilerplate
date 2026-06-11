@@ -1,0 +1,193 @@
+# vim: set ft=python :
+"""Tests for hook installation functionality."""
+
+import pytest
+from pathlib import Path
+from {{project_slug}}.hooks.installer import (
+    find_executable,
+    get_current_executable,
+    verify_hook_path,
+    make_executable,
+    install_hook,
+    uninstall_hook,
+)
+from {{project_slug}}.hooks.claude import (
+    install_claude_hook,
+    uninstall_claude_hook,
+    get_claude_hook_path,
+)
+from {{project_slug}}.hooks.codex import (
+    install_codex_hook,
+    uninstall_codex_hook,
+    get_codex_hook_path,
+)
+
+
+def test_find_executable_in_path():
+    """Test finding executable in PATH."""
+    # 'python3' should be in PATH
+    path = find_executable("python3")
+    assert path is not None
+    assert Path(path).exists()
+
+
+def test_find_executable_not_found():
+    """Test finding non-existent executable."""
+    path = find_executable("nonexistent-executable-xyz")
+    assert path is None
+
+
+def test_find_executable_absolute_path(tmp_path):
+    """Test finding executable with absolute path."""
+    # Create a test executable
+    test_file = tmp_path / "test_exec"
+    test_file.write_text("#!/bin/bash\necho test\n")
+    make_executable(test_file)
+
+    path = find_executable(str(test_file))
+    assert path == str(test_file)
+
+
+def test_get_current_executable():
+    """Test getting current executable path."""
+    path = get_current_executable()
+    assert path is not None
+    assert isinstance(path, str)
+
+
+def test_verify_hook_path_valid(tmp_path):
+    """Test verifying a valid hook path."""
+    hook = tmp_path / "hook.sh"
+    hook.write_text("#!/bin/bash\necho test\n")
+    make_executable(hook)
+
+    assert verify_hook_path(hook) is True
+
+
+def test_verify_hook_path_not_exists():
+    """Test verifying non-existent hook."""
+    hook = Path("/nonexistent/hook.sh")
+    assert verify_hook_path(hook) is False
+
+
+def test_verify_hook_path_not_executable(tmp_path):
+    """Test verifying non-executable file."""
+    hook = tmp_path / "hook.sh"
+    hook.write_text("#!/bin/bash\necho test\n")
+    # Don't make executable
+
+    assert verify_hook_path(hook) is False
+
+
+def test_make_executable(tmp_path):
+    """Test making a file executable."""
+    test_file = tmp_path / "test.sh"
+    test_file.write_text("#!/bin/bash\necho test\n")
+
+    result = make_executable(test_file)
+    assert result is True
+    assert verify_hook_path(test_file) is True
+
+
+def test_install_hook_new(tmp_path):
+    """Test installing a new hook."""
+    hook_path = tmp_path / "hook.sh"
+    hook_content = "#!/bin/bash\necho test\n"
+
+    result = install_hook(hook_path, hook_content, "/path/to/exec")
+
+    assert result["status"] == "success"
+    assert hook_path.exists()
+    assert verify_hook_path(hook_path) is True
+
+
+def test_install_hook_idempotent(tmp_path):
+    """Test that installing same hook is idempotent."""
+    hook_path = tmp_path / "hook.sh"
+    hook_content = "#!/bin/bash\necho test\n"
+
+    # First install
+    result1 = install_hook(hook_path, hook_content, "/path/to/exec")
+    assert result1["status"] == "success"
+
+    # Second install (should be no-op)
+    result2 = install_hook(hook_path, hook_content, "/path/to/exec")
+    assert result2["status"] == "noop"
+
+
+def test_install_hook_update(tmp_path):
+    """Test that installing different content updates the hook."""
+    hook_path = tmp_path / "hook.sh"
+    hook_content1 = "#!/bin/bash\necho test1\n"
+    hook_content2 = "#!/bin/bash\necho test2\n"
+
+    # First install
+    result1 = install_hook(hook_path, hook_content1, "/path/to/exec")
+    assert result1["status"] == "success"
+
+    # Second install with different content
+    result2 = install_hook(hook_path, hook_content2, "/path/to/exec")
+    assert result2["status"] == "success"
+    assert hook_content2 in hook_path.read_text()
+
+
+def test_uninstall_hook(tmp_path):
+    """Test uninstalling a hook."""
+    hook_path = tmp_path / "hook.sh"
+    hook_path.write_text("#!/bin/bash\necho test\n")
+
+    result = uninstall_hook(hook_path)
+
+    assert result["status"] == "success"
+    assert not hook_path.exists()
+
+
+def test_uninstall_hook_not_exists():
+    """Test uninstalling non-existent hook."""
+    hook_path = Path("/nonexistent/hook.sh")
+
+    result = uninstall_hook(hook_path)
+
+    assert result["status"] == "noop"
+
+
+def test_get_claude_hook_path():
+    """Test getting Claude hook path."""
+    path = get_claude_hook_path()
+    assert path.name == "session-end"
+    assert ".claude" in str(path)
+
+
+def test_get_codex_hook_path():
+    """Test getting Codex hook path."""
+    path = get_codex_hook_path()
+    assert path.name == "session-end"
+    assert ".codex" in str(path)
+
+
+def test_install_claude_hook(tmp_path, monkeypatch):
+    """Test installing Claude hook."""
+    # Monkeypatch get_current_executable to return test path
+    monkeypatch.setattr("{{project_slug}}.hooks.installer.sys.executable", str(tmp_path / "python"))
+    monkeypatch.setattr("{{project_slug}}.hooks.installer.sys.argv", [str(tmp_path / "python")])
+
+    # Monkeypatch hook path to use tmp_path
+    monkeypatch.setattr("{{project_slug}}.hooks.claude.Path.home", lambda: tmp_path)
+
+    result = install_claude_hook()
+
+    assert result["status"] in ("success", "noop")
+
+
+def test_install_codex_hook(tmp_path, monkeypatch):
+    """Test installing Codex hook."""
+    # Monkeypatch get_current_executable to return test path
+    monkeypatch.setattr("{{project_slug}}.hooks.installer.sys.executable", str(tmp_path / "python"))
+    monkeypatch.setattr("{{project_slug}}.hooks.installer.sys.argv", [str(tmp_path / "python")])
+
+    # Monkeypatch hook path to use tmp_path
+    monkeypatch.setattr("{{project_slug}}.hooks.codex.Path.home", lambda: tmp_path)
+
+    result = install_codex_hook()
+
+    assert result["status"] in ("success", "noop")

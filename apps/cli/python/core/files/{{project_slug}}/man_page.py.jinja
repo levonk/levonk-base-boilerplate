@@ -1,0 +1,211 @@
+# vim: set ft=python :
+from pathlib import Path
+from typing import Optional
+from platformdirs import user_data_dir
+from {{ project_slug }}.logging import get_logger
+
+logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
+
+
+def generate_man_page() -> str:
+    """
+    Generate man page content with standard Unix man page sections.
+
+    Returns:
+        Man page content as string
+    """
+    description = "{{ description }}"
+    man_content = f'''\
+.TH {{ project_slug.upper() }} 1 "{{ project_slug }}" "{{ project_slug }} User Manual"
+.SH NAME
+{{ project_slug }} \\- {description}
+.SH SYNOPSIS
+.B {{ project_slug }}
+[OPTIONS] [INPUTS]
+.SH DESCRIPTION
+{description}
+.SH OPTIONS
+.TP
+.B \\-h, \\-\\-help
+Show this message and exit.
+.TP
+.B \\-\\-version
+Show version and exit.
+.TP
+.B \\-\\-usage
+Show usage information and exit.
+.TP
+.B \\-\\-install
+Install shell completions and initialize config.
+.TP
+.B \\-\\-uninstall
+Uninstall shell completions and cleanup.
+.TP
+.B \\-\\-quiet, \\-q
+Suppress all log output.
+.TP
+.B \\-\\-verbose, \\-v
+Enable verbose logging.
+.TP
+.B \\-\\-debug
+Enable detailed debugging output.
+.TP
+.B \\-\\-color
+Color mode: auto, always, or never.
+.TP
+.B \\-\\-json
+Output results as JSON to stdout.
+.TP
+.B \\-\\-dry-run
+Preview changes without executing.
+.TP
+.B \\-\\-force
+Force overwrite during install and bypass confirmation prompts.
+.TP
+.B \\-\\-daemon
+Run in daemon mode (background process).
+.TP
+.B \\-\\-no-daemon
+Force synchronous operation (no daemon).
+.TP
+.B \\-\\-list-jobs
+List background jobs.
+.TP
+.B \\-\\-cancel-job <id>
+Cancel a specific background job by ID.
+.TP
+.B \\-\\-man
+Display this man page.
+.SH EXAMPLES
+.EX
+{{ project_slug }} file.txt
+.EE
+Process a single file.
+.EX
+{{ project_slug }} "**/*.txt"
+.EE
+Process all .txt files recursively.
+.EX
+cat file.txt | {{ project_slug }} -
+.EE
+Process content from stdin.
+.EX
+{{ project_slug }} --json file.txt
+.EE
+Output results as JSON.
+.SH EXIT CODES
+.TP
+.B 0
+Success
+.TP
+.B 1
+General error
+.TP
+.B 2
+Usage error
+.TP
+.B 3
+Network error
+.TP
+.B 4
+Validation error
+.TP
+.B 5
+File not found
+.TP
+.B 6
+Permission denied
+.TP
+.B 130
+Interrupted by user (SIGINT)
+.SH SEE ALSO
+.BR typer (1),
+.BR python (1)
+.SH AUTHOR
+{{ author_name }} <{{ author_email }}>
+.SH VERSION
+{{ project_slug }} 0.1.0
+'''
+    return man_content
+
+
+def get_man_page_dir() -> Path:
+    """
+    Get the platform-specific man page directory.
+
+    Returns:
+        Path to man page directory
+    """
+    # Use platform-specific man page directory
+    man_dir = Path(user_data_dir("man", appauthor="{{ project_slug }}")) / "man1"
+    man_dir.mkdir(parents=True, exist_ok=True)
+    return man_dir
+
+
+def install_man_page(force: bool = False) -> bool:
+    """
+    Install man page to platform-specific location.
+
+    Args:
+        force: If True, overwrite existing man page
+
+    Returns:
+        True if installation succeeded, False otherwise
+    """
+    try:
+        man_dir = get_man_page_dir()
+        man_content = generate_man_page()
+        man_file = man_dir / "{{ project_slug }}.1"
+
+        # Check if file exists
+        if man_file.exists() and not force:
+            logger.warn(f"Man page already exists: {man_file}", module="man")
+            logger.warn("Use --force to overwrite", module="man")
+            return False
+
+        # Write man page
+        man_file.write_text(man_content)
+        logger.info(f"Installed man page to {man_file}", module="man")
+        logger.info("Add man page directory to MANPATH or copy to system man path", module="man")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to install man page: {e}", module="man")
+        return False
+
+
+def uninstall_man_page() -> bool:
+    """
+    Uninstall man page from platform-specific location.
+
+    Returns:
+        True if uninstallation succeeded, False otherwise
+    """
+    try:
+        man_dir = get_man_page_dir()
+        man_file = man_dir / "{{ project_slug }}.1"
+
+        # Check if file exists
+        if not man_file.exists():
+            logger.warn(f"Man page not found: {man_file}", module="man")
+            return False
+
+        # Remove man page
+        man_file.unlink()
+        logger.info(f"Removed man page from {man_file}", module="man")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to uninstall man page: {e}", module="man")
+        return False
+
+
+def print_man_page() -> None:
+    """Print man page content to stdout."""
+    try:
+        import sys
+        man_content = generate_man_page()
+        sys.stdout.write(man_content)
+        sys.stdout.write("\n")
+    except Exception as e:
+        logger.error(f"Failed to generate man page: {e}", module="man")

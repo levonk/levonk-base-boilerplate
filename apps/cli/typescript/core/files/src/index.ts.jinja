@@ -4,11 +4,159 @@ import process from 'process';
 import { glob } from 'glob';
 import fs from 'fs/promises';
 import { createLogger, LoggerOptions } from './logger.js';
+import {
+    UsageError,
+    FileNotFoundError,
+    PermissionDeniedError,
+    GenericError,
+    handleError,
+    EXIT_CODES,
+} from './error.js';
+import {
+    loadConfigWithPrecedence,
+    initializeConfig,
+    type Config,
+    type ConfigOptions,
+} from './config.js';
+import {
+    writeCompletionScript,
+    getCompletionInstallInstructions,
+    type CompletionOptions,
+    type ShellType,
+} from './completions.js';
+import {
+    writeManPage,
+    getManPageInstallInstructions,
+    type ManPageOptions,
+} from './man.js';
+import {
+    install,
+    uninstall,
+    checkInstallStatus,
+    type InstallOptions,
+    type UninstallOptions,
+} from './install.js';
+import {
+    initGlobalDryRunManager,
+    getGlobalDryRunManager,
+    isDryRunEnabled,
+} from './dry-run.js';
+import {
+    confirmDelete,
+    confirmOverwrite,
+    confirmDestructive,
+    type PromptOptions,
+} from './prompts.js';
+import {
+    getProgressManager,
+    resetProgressManager,
+    type ProgressOptions,
+} from './progress.js';
+import {
+    createPager,
+    type PagerOptions,
+} from './pager.js';
+import {
+    launchTUI,
+    isTTY,
+    checkTUICompatibility,
+    type TUIOptions,
+} from './tui.js';
+import {
+    getDaemonManager,
+    type DaemonConfig,
+    type Job,
+} from './daemon.js';
+import {
+    reloadConfig,
+    type ConfigReloadResult,
+} from './config.js';
+import {
+    ensurePath,
+    formatErrorPath,
+    formatLogPath,
+    type PathOptions,
+} from './path.js';
+import {
+    createResourceMonitor,
+    parseMemoryLimit,
+    parseCpuLimit,
+    type ResourceLimits,
+    ResourceLimitError,
+} from './resources.js';
+import {
+    getProcessingManager,
+    type ExportOptions,
+    type ImportOptions,
+    type AnalysisOptions,
+    DataValidationError,
+} from './processing.js';
+import {
+    getHealthCheckJson,
+    getHealthCheckResponse,
+    type HealthCheckOptions,
+} from './health.js';
+import {
+    initPrivacyManager,
+    getPrivacyManager,
+    type PrivacyConfig,
+} from './privacy.js';
+import {
+    createAuditLogger,
+    type AuditConfig,
+} from './audit.js';
+import {
+    generateDeprecationReport,
+    type DeprecationConfig,
+} from './deprecation.js';
 
 // Handle Ctrl+C
 process.on('SIGINT', () => {
     process.stderr.write('\nOperation cancelled.\n');
-    process.exit(130);
+    process.exit(EXIT_CODES.SIGINT);
+});
+
+// Global state for config reload
+let currentConfigOptions: ConfigOptions | null = null;
+let currentCliArgs: Partial<Config> | null = null;
+let currentLogger: any = null;
+let currentAuditLogger: any = null;
+
+/**
+ * Handle SIGHUP signal for config reload
+ * Reloads config from file, validates it, and applies if valid
+ * Keeps old config active on validation errors
+ */
+process.on('SIGHUP', async () => {
+    if (!currentConfigOptions || !currentLogger) {
+        return;
+    }
+
+    try {
+        currentLogger.info('Received SIGHUP signal, reloading configuration...');
+
+        const reloadResult: ConfigReloadResult = await reloadConfig(
+            currentConfigOptions,
+            currentCliArgs || undefined,
+            currentLogger.options.verbose
+        );
+
+        if (reloadResult.success) {
+            currentLogger.info('Configuration reloaded successfully');
+            if (reloadResult.diff && Object.keys(reloadResult.diff).length > 0) {
+                currentLogger.debug('Configuration changes:');
+                for (const [key, change] of Object.entries(reloadResult.diff)) {
+                    currentLogger.debug(`  ${key}: ${JSON.stringify(change.old)} -> ${JSON.stringify(change.new)}`);
+                }
+            }
+        } else {
+            currentLogger.error(`Configuration reload failed: ${reloadResult.error}`);
+            currentLogger.error('Keeping previous configuration active');
+        }
+    } catch (error) {
+        currentLogger.error(`Error during config reload: ${error}`);
+        currentLogger.error('Keeping previous configuration active');
+    }
 });
 
 const program = new Command();
@@ -18,82 +166,940 @@ program
   .description('{{ description }}')
   .version('1.0.0', '-v, --version', 'Output the version number')
   .helpOption('-h, --help', 'Display help for command')
-  .addHelpText('after', 'Use "{{ project_slug }} help <command>" for more information on a command.')
+  .addHelpText('after', '\nError Message Format:\n  All errors follow the format: ERROR: <description> - <suggestion>\n  This provides clear, actionable guidance for resolving issues.')
+  .addHelpText('after', '\nUse "{{ project_slug }} help <command>" for more information on a command.')
+  .addHelpText('after', '\nPath Handling:\n  This CLI automatically handles cross-platform path differences:\n  - Normalizes both forward (/) and backward (\\) slashes\n  - Uses platform-appropriate separators for output\n  - Resolves . and .. segments in paths\n  - Handles paths with spaces and special characters\n  - Works consistently on Windows, Linux, and macOS')
+  .addHelpText('after', '\nExit Codes:\n  0   Success\n  1   Generic error\n  2   Usage error (invalid arguments, missing required args)\n  3   Network error (connection failures, timeouts)\n  4   Validation error (invalid config, schema validation failures)\n  5   File not found\n  6   Permission denied\n  130 SIGINT (Ctrl+C)')
   .argument('[inputs...]', 'Input files or glob patterns. Use "-" for stdin.')
   .option('-q, --quiet', 'Suppress all output except errors')
   .option('--verbose', 'Enable verbose output with extra details')
+  .option('--debug', 'Enable debug-level logging')
   .option('--usage', 'Display usage information')
-  .option('--nocolor', 'Disable colored output')
-  .option('-c, --config <path>', 'Config file path', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
+  .option('--color <mode>', 'Color mode: auto, always, or never', 'auto')
+  .option('--log-format <format>', 'Log format: text or json', 'text')
   .option('--json', 'Output results as JSON')
-  .action(async (inputs: string[], options) => {
-      // Handle --usage flag
-      if (options.usage) {
-          program.helpInformation();
-          process.exit(0);
-      }
-      // Create logger with options
-      const loggerOptions: LoggerOptions = {
-          quiet: options.quiet,
-          verbose: options.verbose,
-          noColor: options.nocolor,
-          module: '{{ project_slug }}',
+  .option('--install', 'Install CLI (generate completions, initialize config)')
+  .option('--skip-completions', 'Skip shell completion generation during install')
+  .option('--uninstall', 'Uninstall CLI (remove completions, clean up config)')
+  .option('--force', 'Force operation without confirmation')
+  .option('-c, --config <path>', 'Config file path (default: ~/.config/{{ project_slug }}/config.toml)', process.env.{{ project_slug | upper | replace('-', '_') }}_CONFIG)
+  .addHelpText('after', '\nConfig Precedence (highest to lowest):\n  1. CLI arguments\n  2. Environment variables ({{ PROJECT_SLUG }}_*)\n  3. Local project config (./.{{ project_slug }}/config.toml)\n  4. User config (~/.config/{{ project_slug }}/config.toml)\n  5. System config (/etc/{{ project_slug }}/config.toml)\n  6. Hardcoded defaults')
+  .addHelpText('after', '\nLogging Options:\n  --debug       Enable debug-level logging\n  --log-format  Log format: text (default) or json\n  --quiet        Suppress all output except errors\n  --verbose      Enable verbose output with extra details\n  Environment Variables:\n  LOG_LEVEL      Set log level (debug, info, warn, error, fatal)\n  NODE_ENV       Set to "development" to enable debug mode')
+  .addHelpText('after', '\nSecret Handling:\n  Secrets are automatically redacted from all log output, error messages,\n  and debug output. Supported secret patterns include API keys, passwords,\n  tokens, and other sensitive data. Secrets are never logged in plain text.\n  Environment Variables:\n  SECRET_STORAGE_METHOD  Storage method: keyring (recommended), environment, or config')
+  .addHelpText('after', '\nURL Formatting:\n  URLs in output are automatically formatted for terminal display\n  - Clickable links are enabled in supported terminals (OSC 8 escape sequences)\n  - URLs are normalized to use HTTP/HTTPS protocol\n  - Special characters are properly encoded\n  - Fallback to plain text for terminals without URL support\n  - NO_COLOR environment variable disables clickable URLs')
+  .addHelpText('after', '\nDry-Run Mode:\n  --dry-run     Preview changes without executing them\n                Shows what would be done without making any changes')
+  .addHelpText('after', '\nConfirmation Prompts:\n  --force       Bypass confirmation prompts for destructive operations\n                Use with caution in automated scripts\n  Environment Variables:\n  CONFIRM_BYPASS Set to "true" or "1" to bypass prompts in non-TTY environments')
+  .addHelpText('after', '\nProgress Indicators:\n  Progress bars are shown for long-running file operations\n  Progress is suppressed in quiet mode (--quiet) or JSON mode (--json)\n  Progress can be cancelled with Ctrl+C (SIGINT)')
+  .addHelpText('after', '\nFile References:\n  Error messages and log output include clickable file references\n  Format: file:///absolute/path/to/file:line:column (VSCode)\n  Format: file:line:column (standard terminal)\n  File references are automatically formatted based on environment detection')
+  .addHelpText('after', '\nInstallation:\n  --install      Install CLI (generate completions, initialize config)\n  --uninstall    Uninstall CLI (remove completions, clean up config)')
+  .addHelpText('after', '\nShell Completion:\n  Generate completion scripts with: {{ project_slug }} --completion <shell>\n  Show installation instructions with: {{ project_slug }} --completion-install <shell>')
+  .addHelpText('after', '\nMan Pages:\n  Generate man page with: {{ project_slug }} --man\n  Show installation instructions with: {{ project_slug }} --man-install')
+  .addHelpText('after', '\nPager:\n  Long output is automatically paged using the PAGER environment variable (default: less)\n  Use --no-pager to disable paging\n  Paging is disabled for JSON output mode and piped output\n  Environment Variables:\n  PAGER         Set pager command (default: less)')
+  .addHelpText('after', '\nTUI Mode:\n  --interactive, --tui  Launch interactive Terminal User Interface\n                        Allows viewing and modifying all arguments before execution\n                        Falls back to CLI mode in non-TTY environments')
+  .addHelpText('after', '\nDaemon Mode:\n  --daemon              Pre-launch daemon in background for long-running operations\n  --no-daemon           Force synchronous operation (disable daemon)\n  --list-jobs           List background job status\n  --cancel-job <id>     Cancel a specific background job\n  Daemon auto-spawns on first async operation unless --no-daemon is set')
+  .addHelpText('after', '\nConfig Reload:\n  Send SIGHUP signal to reload configuration without restart\n  Example: kill -HUP <pid>\n  New config is validated before applying\n  Validation errors keep old config active\n  Config changes are logged in verbose mode')
+  .addHelpText('after', '\nResource Limits:\n  --max-memory <limit>  Set maximum memory usage (e.g., "512MB", "1GB")\n  --max-cpu <percent>   Set maximum CPU usage percentage (e.g., "50", "75%")\n  Limits are enforced during execution with clear error messages\n  Resource usage is logged in verbose mode')
+  .addHelpText('after', '\nCollection vs Processing Separation:\n  --export-data <path>     Export collected daemon data to portable format\n  --import-data <path>     Import data for offline analysis (no daemon required)\n  --analyze <type>         Analyze imported data: summary, performance, errors, timeline\n  --analyze-input <path>   Input file for analysis (use with --analyze)\n  Data export works with daemon; import/analysis work offline\n  Export format is JSON with versioning for compatibility')
+  .addHelpText('after', '\nHealth Checks:\n  --health               Perform health check for container orchestration\n                        Returns JSON with service status, readiness, and dependency health\n                        Exit code 0 for healthy, 1 for unhealthy\n                        Supports Docker HEALTHCHECK and Kubernetes probes')
+  .addHelpText('after', '\nPrivacy Mode:\n  --privacy             Enable privacy mode for anonymous usage\n                        Redacts sensitive data from logs and telemetry\n                        Uses explicit ignore lists for identifiers\n                        Distinguishes between "unknown" and "anonymous" data\n                        Configurable privacy toggles disable specific data collection\n                        Environment Variables:\n  PRIVACY_MODE           Set to "true" or "1" to enable privacy mode')
+  .addHelpText('after', '\nAudit Logging:\n  --audit               Enable audit logging for sensitive operations\n                        Logs configuration changes, file operations, and other sensitive actions\n                        Uses append-only SQLite database for tamper-evident storage\n                        Supports configurable retention policy and log rotation\n                        Audit logs can be exported for external analysis\n  --audit-path <path>   Custom path for audit log database\n                        Default: ~/.local/share/{{ project_slug }}/audit.db\n  --audit-retention <days>  Retention period in days (default: 90)\n  --audit-export <path> Export audit logs to JSON file\n  --audit-verify        Verify audit log integrity (tamper evidence)')
+  .addHelpText('after', '\nDeprecation Policy:\n  --deprecation-status  Show status of all deprecated features\n                        Lists deprecated features with end-of-support dates and remaining time\n  --no-deprecation-warnings  Suppress deprecation warnings\n                        Disables warnings for deprecated features still in use\n                        Minimum deprecation period: 6 months from announcement\n                        Features are removed only after end-of-support date\n                        Environment Variables:\n  DEPRECATION_WARNINGS  Set to "false" or "0" to suppress deprecation warnings')
+  .addHelpText('after', '\nSubcommands:\n  {{ project_slug }} completion     Manage shell completion scripts\n  {{ project_slug }} man             Manage man pages\n  {{ project_slug }} daemon          Manage background daemon processes\n  {{ project_slug }} health           Perform health checks\n  {{ project_slug }} audit            Manage audit logging\n  {{ project_slug }} deprecation      Manage deprecation policy\n  Use "{{ project_slug }} <subcommand> --help" for more information on a subcommand.')
+  .addHelpText('after', '\nBackward Compatibility:\n  Most subcommand options are also available as top-level flags for compatibility.\n  Example: {{ project_slug }} --completion bash is equivalent to {{ project_slug }} completion --completion bash')
+  .option('--dry-run', 'Preview changes without executing them')
+  .option('--interactive, --tui', 'Launch interactive Terminal User Interface')
+  .option('--daemon', 'Pre-launch daemon in background')
+  .option('--no-daemon', 'Force synchronous operation (disable daemon)')
+  .option('--list-jobs', 'List background job status')
+  .option('--cancel-job <id>', 'Cancel a specific background job')
+  .option('--completion <shell>', 'Generate shell completion script (bash, zsh, fish)')
+  .option('--completion-install <shell>', 'Show shell completion installation instructions')
+  .option('--output-dir <path>', 'Output directory for completion scripts', 'completions')
+  .option('--stdout', 'Output completion script to stdout instead of file')
+  .option('--man', 'Generate man page')
+  .option('--man-install', 'Show man page installation instructions')
+  .option('--man-output-dir <path>', 'Output directory for man pages', 'man')
+  .option('--no-pager', 'Disable pager for long output')
+  .option('--max-memory <limit>', 'Set maximum memory usage (e.g., "512MB", "1GB")')
+  .option('--max-cpu <percent>', 'Set maximum CPU usage percentage (e.g., "50", "75%")')
+  .option('--export-data <path>', 'Export collected daemon data to portable format')
+  .option('--import-data <path>', 'Import data for offline analysis')
+  .option('--analyze <type>', 'Analyze imported data: summary, performance, errors, timeline')
+  .option('--analyze-input <path>', 'Input file for analysis (use with --analyze)')
+  .option('--health', 'Perform health check for container orchestration')
+  .option('--health-timeout <ms>', 'Health check timeout in milliseconds (default: 100)', '100')
+  .option('--health-include-deps', 'Include dependency checks in health check')
+  .option('--privacy', 'Enable privacy mode for anonymous usage')
+  .option('--audit', 'Enable audit logging for sensitive operations')
+  .option('--audit-path <path>', 'Custom path for audit log database')
+  .option('--audit-retention <days>', 'Retention period in days (default: 90)', '90')
+  .option('--audit-export <path>', 'Export audit logs to JSON file')
+  .option('--audit-verify', 'Verify audit log integrity')
+  .option('--deprecation-status', 'Show status of all deprecated features')
+  .option('--no-deprecation-warnings', 'Suppress deprecation warnings');
+
+// Add subcommands for better organization
+const completionCommand = new Command('completion')
+  .description('Manage shell completion scripts')
+  .alias('completions')
+  .option('--completion <shell>', 'Generate shell completion script (bash, zsh, fish)')
+  .option('--completion-install <shell>', 'Show shell completion installation instructions')
+  .option('--output-dir <path>', 'Output directory for completion scripts', 'completions')
+  .option('--stdout', 'Output completion script to stdout instead of file')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} completion --completion bash\n  {{ project_slug }} completion --completion-install zsh')
+  .action(async (options) => {
+    const shell = options.completion as ShellType;
+    if (shell) {
+      const completionOptions: CompletionOptions = {
+        shell,
+        outputDir: options.outputDir,
+        stdout: options.stdout,
       };
-      const logger = createLogger(loggerOptions);
+      const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: '{{ project_slug }}' });
+      await writeCompletionScript(program, completionOptions, logger);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    if (options.completionInstall) {
+      const shell = options.completionInstall as ShellType;
+      const instructions = getCompletionInstallInstructions(shell, '{{ project_slug }}');
+      console.log(instructions);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    program.help();
+  });
 
-      // Input Processing
-      const filesToProcess: string[] = [];
-      let readStdin = false;
+const manCommand = new Command('man')
+  .description('Manage man pages')
+  .alias('manpage')
+  .option('--man', 'Generate man page')
+  .option('--man-install', 'Show man page installation instructions')
+  .option('--man-output-dir <path>', 'Output directory for man pages', 'man')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} man --man\n  {{ project_slug }} man --man-install')
+  .action(async (options) => {
+    if (options.man) {
+      const manOptions: ManPageOptions = {
+        outputDir: options.manOutputDir,
+        stdout: options.stdout,
+      };
+      const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: '{{ project_slug }}' });
+      await writeManPage(program, manOptions, logger);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    if (options.manInstall) {
+      const instructions = getManPageInstallInstructions('{{ project_slug }}');
+      console.log(instructions);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    program.help();
+  });
 
-      if (inputs.length === 0) {
-          // Check if stdin is a TTY
-          if (process.stdin.isTTY) {
-              program.help();
-              process.exit(1);
-          } else {
-              readStdin = true;
-          }
+const daemonCommand = new Command('daemon')
+  .description('Manage background daemon processes')
+  .alias('jobs')
+  .option('--daemon', 'Pre-launch daemon in background')
+  .option('--no-daemon', 'Force synchronous operation (disable daemon)')
+  .option('--list-jobs', 'List background job status')
+  .option('--cancel-job <id>', 'Cancel a specific background job')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} daemon --list-jobs\n  {{ project_slug }} daemon --cancel-job abc123')
+  .action(async (options) => {
+    if (options.listJobs) {
+      const daemonManager = getDaemonManager();
+      const jobs = daemonManager.listJobs();
+      console.log(JSON.stringify(jobs, null, 2));
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    if (options.cancelJob) {
+      const daemonManager = getDaemonManager();
+      const cancelled = daemonManager.cancelJob(options.cancelJob as string);
+      if (cancelled) {
+        console.log(`Job ${options.cancelJob} cancelled`);
+        process.exit(EXIT_CODES.SUCCESS);
       } else {
-          for (const input of inputs) {
-              if (input === '-') {
-                  readStdin = true;
+        console.error(`Job ${options.cancelJob} not found`);
+        process.exit(EXIT_CODES.GENERIC_ERROR);
+      }
+    }
+    program.help();
+  });
+
+const healthCommand = new Command('health')
+  .description('Perform health checks')
+  .alias('status')
+  .option('--health', 'Perform health check for container orchestration')
+  .option('--health-timeout <ms>', 'Health check timeout in milliseconds (default: 100)', '100')
+  .option('--health-include-deps', 'Include dependency checks in health check')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} health\n  {{ project_slug }} health --health-timeout 200')
+  .action(async (options) => {
+    const healthOptions: HealthCheckOptions = {
+      timeout: parseInt(options.healthTimeout as string, 10) || 100,
+      includeDependencies: options.healthIncludeDeps === true,
+    };
+    const healthResult = await getHealthCheckResponse(healthOptions);
+    console.log(healthResult.body);
+    process.exit(healthResult.statusCode === 200 ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERIC_ERROR);
+  });
+
+const auditCommand = new Command('audit')
+  .description('Manage audit logging')
+  .alias('auditing')
+  .option('--audit', 'Enable audit logging for sensitive operations')
+  .option('--audit-path <path>', 'Custom path for audit log database')
+  .option('--audit-retention <days>', 'Retention period in days (default: 90)', '90')
+  .option('--audit-export <path>', 'Export audit logs to JSON file')
+  .option('--audit-verify', 'Verify audit log integrity')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} audit --audit-verify\n  {{ project_slug }} audit --audit-export /tmp/audit.json')
+  .action(async (options) => {
+    if (options.auditVerify) {
+      const auditLogger = createAuditLogger({ auditPath: options.auditPath as string });
+      const isValid = auditLogger.verifyIntegrity();
+      console.log(isValid ? 'Audit log integrity verified' : 'Audit log integrity check failed');
+      process.exit(isValid ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERIC_ERROR);
+    }
+    if (options.auditExport) {
+      const auditLogger = createAuditLogger({ auditPath: options.auditPath as string });
+      auditLogger.exportToJSON(options.auditExport as string);
+      console.log(`Audit logs exported to ${options.auditExport}`);
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    program.help();
+  });
+
+const deprecationCommand = new Command('deprecation')
+  .description('Manage deprecation policy')
+  .alias('deprecated')
+  .option('--deprecation-status', 'Show status of all deprecated features')
+  .option('--no-deprecation-warnings', 'Suppress deprecation warnings')
+  .addHelpText('after', '\nExamples:\n  {{ project_slug }} deprecation --deprecation-status')
+  .action(async (options) => {
+    if (options.deprecationStatus) {
+      const report = generateDeprecationReport();
+      console.log(JSON.stringify(report, null, 2));
+      process.exit(EXIT_CODES.SUCCESS);
+    }
+    program.help();
+  });
+
+program.addCommand(completionCommand);
+program.addCommand(manCommand);
+program.addCommand(daemonCommand);
+program.addCommand(healthCommand);
+program.addCommand(auditCommand);
+program.addCommand(deprecationCommand);
+
+program.action(async (inputs: string[], options) => {
+      try {
+          // Suppress console output immediately for quiet and json modes
+          // This must happen before any other processing to ensure all output is suppressed
+          let originalLog: any, originalError: any, originalWarn: any;
+          if (options.quiet === true || options.json === true) {
+              originalLog = console.log;
+              originalError = console.error;
+              originalWarn = console.warn;
+              console.log = () => {};
+              console.error = () => {};
+              console.warn = () => {};
+          }
+
+          // Handle --health flag
+          if (options.health) {
+              const healthOptions: HealthCheckOptions = {
+                  timeout: parseInt(options.healthTimeout as string, 10) || 100,
+                  includeDependencies: options.healthIncludeDeps === true,
+              };
+              const healthResult = await getHealthCheckResponse(healthOptions);
+              console.log(healthResult.body);
+              process.exit(healthResult.statusCode === 200 ? EXIT_CODES.SUCCESS : EXIT_CODES.GENERIC_ERROR);
+          }
+
+          // Handle --deprecation-status flag
+          if (options.deprecationStatus) {
+              const report = generateDeprecationReport();
+              console.log(JSON.stringify(report, null, 2));
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --usage flag
+          if (options.usage) {
+              program.helpInformation();
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --completion flag
+          if (options.completion) {
+              const shell = options.completion as ShellType;
+              const completionOptions: CompletionOptions = {
+                  shell,
+                  outputDir: options.outputDir,
+                  stdout: options.stdout,
+              };
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              await writeCompletionScript(program, completionOptions, logger);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --completion-install flag
+          if (options.completionInstall) {
+              const shell = options.completionInstall as ShellType;
+              const instructions = getCompletionInstallInstructions(shell, '{{ project_slug }}');
+              console.log(instructions);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --man flag
+          if (options.man) {
+              const manOptions: ManPageOptions = {
+                  outputDir: options.manOutputDir,
+                  stdout: options.stdout,
+              };
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              await writeManPage(program, manOptions, logger);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --man-install flag
+          if (options.manInstall) {
+              const instructions = getManPageInstallInstructions('{{ project_slug }}');
+              console.log(instructions);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --install flag
+          if (options.install) {
+              const installOptions: InstallOptions = {
+                  projectSlug: '{{ project_slug }}',
+                  verbose: options.verbose,
+                  force: options.force,
+                  skipCompletions: options.skipCompletions,
+              };
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              await install(installOptions, logger);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --uninstall flag
+          if (options.uninstall) {
+              const uninstallOptions: UninstallOptions = {
+                  projectSlug: '{{ project_slug }}',
+                  verbose: options.verbose,
+                  force: options.force,
+                  keepConfig: false,
+              };
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              await uninstall(uninstallOptions, logger);
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --list-jobs flag
+          if (options.listJobs) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const daemon = getDaemonManager({}, { quiet: false, verbose: options.verbose, color: 'auto', module: 'daemon' });
+              const jobs = daemon.listJobs();
+
+              if (jobs.length === 0) {
+                  logger.info('No background jobs found');
               } else {
-                  // Globbing
-                  const matches = await glob(input, { nodir: true });
-                  if (matches.length === 0) {
-                      logger.warn(`No files found for pattern '${input}'`);
+                  logger.info(`Found ${jobs.length} background job(s):`);
+                  for (const job of jobs) {
+                      logger.info(`  ${job.id}: ${job.status} - ${job.command} ${job.args.join(' ')}`);
+                      if (job.progress !== undefined) {
+                          logger.info(`    Progress: ${job.progress}%`);
+                      }
                   }
-                  filesToProcess.push(...matches);
+              }
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --cancel-job flag
+          if (options.cancelJob) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const daemon = getDaemonManager({}, { quiet: false, verbose: options.verbose, color: 'auto', module: 'daemon' });
+              const cancelled = await daemon.cancelJob(options.cancelJob);
+
+              if (cancelled) {
+                  logger.info(`Job ${options.cancelJob} cancelled successfully`);
+              } else {
+                  logger.error(`Failed to cancel job ${options.cancelJob}`);
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
+              process.exit(EXIT_CODES.SUCCESS);
+          }
+
+          // Handle --export-data flag
+          if (options.exportData) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const daemon = getDaemonManager({}, { quiet: false, verbose: options.verbose, color: 'auto', module: 'daemon' });
+              const processing = getProcessingManager({ quiet: false, verbose: options.verbose, color: 'auto', module: 'processing' });
+
+              const jobs = daemon.listJobs();
+              const events = daemon.listEvents();
+              const metrics = {
+                  totalJobs: jobs.length,
+                  completedJobs: jobs.filter(j => j.status === 'completed').length,
+                  failedJobs: jobs.filter(j => j.status === 'failed').length,
+                  cancelledJobs: jobs.filter(j => j.status === 'cancelled').length,
+              };
+
+              const exportOptions: ExportOptions = {
+                  outputPath: options.exportData,
+                  format: 'json',
+                  compression: 'none',
+                  includeMetrics: true,
+                  includeEvents: true,
+                  validate: true,
+              };
+
+              try {
+                  processing.exportData(jobs, metrics, events, exportOptions);
+                  logger.info('Data export completed successfully');
+                  process.exit(EXIT_CODES.SUCCESS);
+              } catch (error) {
+                  if (error instanceof DataValidationError) {
+                      logger.error(`Data validation error: ${error.message}`);
+                  } else {
+                      logger.error(`Export failed: ${error}`);
+                  }
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
               }
           }
-      }
 
-      const results: any[] = [];
+          // Handle --import-data flag
+          if (options.importData) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const processing = getProcessingManager({ quiet: false, verbose: options.verbose, color: 'auto', module: 'processing' });
 
-      if (readStdin) {
-          logger.info('Processing stdin...');
-          const chunks = [];
-          for await (const chunk of process.stdin) {
-              chunks.push(chunk);
+              const importOptions: ImportOptions = {
+                  inputPath: options.importData,
+                  validate: true,
+                  strict: false,
+              };
+
+              try {
+                  const data = processing.importData(importOptions);
+                  logger.info(`Imported ${data.metadata.totalRecords} records`);
+                  logger.info(`Export date: ${data.metadata.exportDate}`);
+                  logger.info(`Collection period: ${data.metadata.collectionStart} to ${data.metadata.collectionEnd}`);
+                  process.exit(EXIT_CODES.SUCCESS);
+              } catch (error) {
+                  if (error instanceof DataValidationError) {
+                      logger.error(`Data validation error: ${error.message}`);
+                  } else {
+                      logger.error(`Import failed: ${error}`);
+                  }
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
           }
-          const content = Buffer.concat(chunks).toString('utf-8');
-          results.push({ source: 'stdin', length: content.length });
-      }
 
-      for (const file of filesToProcess) {
-          try {
-              logger.info(`Processing ${file}...`);
-              const content = await fs.readFile(file, 'utf-8');
-              results.push({ source: file, length: content.length });
-          } catch (error) {
-              logger.error(`Error processing ${file}: ${error}`);
+          // Handle --analyze flag
+          if (options.analyze) {
+              const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+              const processing = getProcessingManager({ quiet: false, verbose: options.verbose, color: 'auto', module: 'processing' });
+
+              if (!options.analyzeInput) {
+                  logger.error('--analyze-input is required when using --analyze');
+                  process.exit(EXIT_CODES.USAGE_ERROR);
+              }
+
+              const importOptions: ImportOptions = {
+                  inputPath: options.analyzeInput,
+                  validate: true,
+                  strict: false,
+              };
+
+              try {
+                  const data = processing.importData(importOptions);
+                  const analysisOptions: AnalysisOptions = {
+                      inputPath: options.analyzeInput,
+                      analysisType: options.analyze as any,
+                      outputFormat: options.json ? 'json' : 'text',
+                  };
+
+                  const result = processing.analyzeData(data, analysisOptions);
+
+                  if (options.json) {
+                      console.log(JSON.stringify(result, null, 2));
+                  } else {
+                      logger.info(`Analysis type: ${result.analysisType}`);
+                      logger.info(`Timestamp: ${result.timestamp}`);
+                      console.log(JSON.stringify(result.data, null, 2));
+                  }
+                  process.exit(EXIT_CODES.SUCCESS);
+              } catch (error) {
+                  if (error instanceof DataValidationError) {
+                      logger.error(`Data validation error: ${error.message}`);
+                  } else {
+                      logger.error(`Analysis failed: ${error}`);
+                  }
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
           }
-      }
 
-      if (options.json) {
-          console.log(JSON.stringify(results, null, 2));
-      } else {
-          logger.info(`Processed ${results.length} inputs.`);
+          // Handle --interactive / --tui flag
+          if (options.interactive || options.tui) {
+              const compatibility = checkTUICompatibility();
+              if (!compatibility.compatible) {
+                  const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+                  logger.warn(`TUI mode not available: ${compatibility.reason}`);
+                  logger.info('Falling back to CLI mode');
+              } else {
+                  // Initialize config for TUI
+                  const configOptions: ConfigOptions = {
+                      projectSlug: '{{ project_slug }}',
+                      configPath: options.config,
+                      debug: options.verbose,
+                  };
+                  const cliArgs: Partial<Config> = {};
+                  if (options.quiet !== undefined) cliArgs.quiet = options.quiet;
+                  if (options.verbose !== undefined) cliArgs.verbose = options.verbose;
+                  if (options.debug !== undefined) cliArgs.debug = options.debug;
+                  if (options.color !== undefined) cliArgs.color = options.color;
+                  if (options.logFormat !== undefined) cliArgs.log_format = options.logFormat;
+                  if (options.json !== undefined) cliArgs.json = options.json;
+
+                  const config = await loadConfigWithPrecedence(configOptions, cliArgs);
+
+                  const tuiOptions: TUIOptions = {
+                      config,
+                      onExecute: (modifiedConfig) => {
+                          // Store modified config for use in main execution
+                          (options as any).tuiConfig = modifiedConfig;
+                      },
+                      onCancel: () => {
+                          const logger = createLogger({ quiet: false, verbose: options.verbose, color: 'auto', module: '{{ project_slug }}' });
+                          logger.info('TUI cancelled by user');
+                          process.exit(EXIT_CODES.SUCCESS);
+                      },
+                      projectSlug: '{{ project_slug }}',
+                  };
+
+                  launchTUI(tuiOptions);
+                  // TUI is synchronous, so we continue after it exits
+              }
+          }
+
+          // Initialize config with full precedence chain
+          const configOptions: ConfigOptions = {
+              projectSlug: '{{ project_slug }}',
+              configPath: options.config,
+              debug: options.verbose,
+          };
+
+          // Build CLI args for config precedence
+          const cliArgs: Partial<Config> = {};
+          if (options.quiet !== undefined) cliArgs.quiet = options.quiet;
+          if (options.verbose !== undefined) cliArgs.verbose = options.verbose;
+          if (options.debug !== undefined) cliArgs.debug = options.debug;
+          if (options.color !== undefined) cliArgs.color = options.color;
+          if (options.logFormat !== undefined) cliArgs.log_format = options.logFormat;
+          if (options.json !== undefined) cliArgs.json = options.json;
+          if (options.privacy !== undefined) cliArgs.privacy = options.privacy;
+
+          // Store global state for SIGHUP config reload
+          currentConfigOptions = configOptions;
+          currentCliArgs = cliArgs;
+
+          let config = await loadConfigWithPrecedence(configOptions, cliArgs);
+
+          // Use TUI-modified config if available
+          if ((options as any).tuiConfig) {
+              config = { ...config, ...(options as any).tuiConfig };
+          }
+
+          // Use merged config (CLI args already applied via precedence)
+          // For quiet and json, prefer CLI args directly to ensure they work as expected
+          const mergedOptions = {
+              quiet: options.quiet === true ? true : config.quiet,
+              verbose: options.verbose === true ? true : config.verbose,
+              debug: options.debug === true ? true : config.debug,
+              color: options.color !== undefined ? options.color : config.color,
+              logFormat: options.logFormat !== undefined ? options.logFormat : config.log_format,
+              json: options.json === true ? true : config.json,
+              privacy: options.privacy === true ? true : config.privacy,
+          };
+
+          // Initialize config (creates default if doesn't exist) - only when not installing/uninstalling
+          // This ensures config is created on first run when CLI is invoked
+          if (!options.install && !options.uninstall) {
+              await initializeConfig(configOptions, options.verbose);
+          }
+
+          // Create logger with merged options
+          // For quiet and json, use CLI options directly to ensure they work
+          const loggerOptions: LoggerOptions = {
+              quiet: options.quiet === true || options.json === true,
+              verbose: options.verbose === true,
+              debug: options.debug === true,
+              logLevel: config.log_level as any,
+              color: options.color !== undefined ? options.color : config.color,
+              logFormat: options.logFormat !== undefined ? options.logFormat : config.log_format,
+              module: '{{ project_slug }}',
+              privacy: mergedOptions.privacy,
+          };
+          const logger = createLogger(loggerOptions);
+
+          // Initialize privacy manager if privacy mode is enabled
+          if (mergedOptions.privacy) {
+              const privacyConfig: PrivacyConfig = {
+                  enabled: true,
+                  ignoreList: [],
+                  logUserIds: true,
+                  logFilePaths: true,
+                  logIpAddresses: true,
+                  logTimestamps: true,
+              };
+              initPrivacyManager(privacyConfig);
+              logger.debug('Privacy mode enabled');
+          }
+
+          // Store logger globally for SIGHUP config reload
+          currentLogger = logger;
+
+          // Initialize audit logger if enabled
+          let auditLogger: ReturnType<typeof createAuditLogger> | null = null;
+          if (options.audit) {
+              const auditConfig: AuditConfig = {
+                  enabled: true,
+                  auditPath: options.auditPath,
+                  retentionDays: parseInt(options.auditRetention as string, 10) || 90,
+                  sensitiveOperations: [
+                      'config_change',
+                      'config_reload',
+                      'file_write',
+                      'file_delete',
+                      'secret_access',
+                      'secret_write',
+                      'install',
+                      'uninstall',
+                      'daemon_start',
+                      'daemon_stop',
+                  ],
+              };
+              auditLogger = createAuditLogger('{{ project_slug }}', auditConfig);
+              currentAuditLogger = auditLogger;
+              logger.debug('Audit logging enabled');
+          }
+
+          // Handle --audit-verify flag
+          if (options.auditVerify) {
+              if (!auditLogger) {
+                  // Initialize audit logger temporarily for verification
+                  const auditConfig: AuditConfig = {
+                      enabled: true,
+                      auditPath: options.auditPath,
+                      retentionDays: parseInt(options.auditRetention as string, 10) || 90,
+                      sensitiveOperations: [],
+                  };
+                  auditLogger = createAuditLogger('{{ project_slug }}', auditConfig);
+              }
+              const integrity = auditLogger.verifyIntegrity();
+              if (integrity.valid) {
+                  logger.info('Audit log integrity verified: OK');
+                  process.exit(EXIT_CODES.SUCCESS);
+              } else {
+                  logger.error(`Audit log integrity check FAILED at ${integrity.brokenAt}`);
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
+          }
+
+          // Handle --audit-export flag
+          if (options.auditExport) {
+              if (!auditLogger) {
+                  // Initialize audit logger temporarily for export
+                  const auditConfig: AuditConfig = {
+                      enabled: true,
+                      auditPath: options.auditPath,
+                      retentionDays: parseInt(options.auditRetention as string, 10) || 90,
+                      sensitiveOperations: [],
+                  };
+                  auditLogger = createAuditLogger('{{ project_slug }}', auditConfig);
+              }
+              try {
+                  await auditLogger.export(options.auditExport);
+                  logger.info(`Audit logs exported to ${options.auditExport}`);
+                  process.exit(EXIT_CODES.SUCCESS);
+              } catch (error) {
+                  logger.error(`Failed to export audit logs: ${error}`);
+                  process.exit(EXIT_CODES.GENERIC_ERROR);
+              }
+          }
+
+          // Handle resource limits
+          const resourceLimits: ResourceLimits = {};
+          if (options.maxMemory) {
+              try {
+                  resourceLimits.maxMemoryMB = parseMemoryLimit(options.maxMemory);
+                  logger.info(`Memory limit set to ${resourceLimits.maxMemoryMB}MB`);
+              } catch (error) {
+                  throw new UsageError(
+                      `Invalid memory limit format: ${options.maxMemory}`,
+                      { value: options.maxMemory },
+                      undefined,
+                      'Use format like "512MB" or "1GB"'
+                  );
+              }
+          }
+          if (options.maxCpu) {
+              try {
+                  resourceLimits.maxCpuPercent = parseCpuLimit(options.maxCpu);
+                  logger.info(`CPU limit set to ${resourceLimits.maxCpuPercent}%`);
+              } catch (error) {
+                  throw new UsageError(
+                      `Invalid CPU limit format: ${options.maxCpu}`,
+                      { value: options.maxCpu },
+                      undefined,
+                      'Use format like "50" or "75%"'
+                  );
+              }
+          }
+
+          let resourceMonitor: ReturnType<typeof createResourceMonitor> | null = null;
+          if (Object.keys(resourceLimits).length > 0) {
+              resourceMonitor = createResourceMonitor(resourceLimits, {
+                  quiet: options.quiet === true || options.json === true,
+                  verbose: options.verbose === true,
+                  color: options.color !== undefined ? options.color : config.color,
+              });
+              // Log initial resource usage in verbose mode
+              if (options.verbose) {
+                  resourceMonitor.logUsage();
+              }
+          }
+
+          // Handle daemon mode
+          const daemonConfig: Partial<DaemonConfig> = {
+              enabled: options.noDaemon !== true,
+              autoSpawn: options.noDaemon !== true,
+          };
+          const daemon = getDaemonManager(daemonConfig, {
+              quiet: options.quiet === true || options.json === true,
+              verbose: options.verbose === true,
+              color: options.color !== undefined ? options.color : config.color,
+              module: 'daemon',
+          });
+
+          // Pre-launch daemon if --daemon flag is set
+          if (options.daemon) {
+              logger.info('Pre-launching daemon in background...');
+              await daemon.start();
+              logger.info('Daemon launched successfully');
+          }
+
+          // Initialize dry-run manager
+          initGlobalDryRunManager(logger, options.dryRun);
+
+          // Initialize progress manager
+          const progressOptions: ProgressOptions = {
+              quiet: mergedOptions.quiet,
+              json: mergedOptions.json,
+          };
+          const progressManager = getProgressManager(progressOptions);
+
+          // Initialize pager
+          const pagerOptions: PagerOptions = {
+              enabled: !options.noPager,
+              isJsonOutput: mergedOptions.json,
+          };
+          const pager = createPager(pagerOptions);
+
+          // Input Processing
+          const filesToProcess: string[] = [];
+          let readStdin = false;
+
+          if (inputs.length === 0) {
+              // Check if stdin is a TTY
+              if (process.stdin.isTTY) {
+                  throw new UsageError(
+                      'No inputs provided',
+                      undefined,
+                      undefined,
+                      'Use "-" for stdin or provide file patterns'
+                  );
+              } else {
+                  readStdin = true;
+              }
+          } else {
+              for (const input of inputs) {
+                  if (input === '-') {
+                      readStdin = true;
+                  } else {
+                      // Globbing
+                      const matches = await glob(input, { nodir: true });
+                      if (matches.length === 0) {
+                          logger.warn(`No files found for pattern '${input}'`);
+                      }
+                      filesToProcess.push(...matches);
+                  }
+              }
+          }
+
+          const results: any[] = [];
+
+          if (readStdin) {
+              logger.info('Processing stdin...');
+              const chunks = [];
+              for await (const chunk of process.stdin) {
+                  chunks.push(chunk);
+              }
+              const content = Buffer.concat(chunks).toString('utf-8');
+              results.push({ source: 'stdin', length: content.length });
+          }
+
+          // Process files with progress bar
+          if (filesToProcess.length > 0 && !mergedOptions.quiet && !mergedOptions.json) {
+              const bar = progressManager.createBar(filesToProcess.length, 'Processing files');
+              for (const file of filesToProcess) {
+                  try {
+                      // Check resource limits before processing each file
+                      if (resourceMonitor) {
+                          resourceMonitor.checkLimits();
+                          if (options.verbose) {
+                              resourceMonitor.logUsage();
+                          }
+                      }
+
+                      const normalizedPath = ensurePath(file, { normalize: true });
+                      const content = await fs.readFile(normalizedPath, 'utf-8');
+                      results.push({ source: normalizedPath, length: content.length });
+                      bar?.increment();
+                  } catch (error) {
+                      bar?.stop();
+                      if (error instanceof ResourceLimitError) {
+                          throw error;
+                      }
+                      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                          throw new FileNotFoundError(
+                              `File not found: ${formatErrorPath(file)}`,
+                              { file },
+                              undefined,
+                              'Check that the file exists and the path is correct'
+                          );
+                      } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+                          throw new PermissionDeniedError(
+                              `Permission denied: ${formatErrorPath(file)}`,
+                              { file },
+                              undefined,
+                              'Check file permissions and try again with appropriate access'
+                          );
+                      } else {
+                          throw new GenericError(
+                              `Error processing ${formatErrorPath(file)}: ${error}`,
+                              { file, error },
+                              undefined,
+                              'Try again or contact support if the issue persists'
+                          );
+                      }
+                  }
+              }
+              bar?.stop();
+          } else {
+              for (const file of filesToProcess) {
+                  try {
+                      // Check resource limits before processing each file
+                      if (resourceMonitor) {
+                          resourceMonitor.checkLimits();
+                          if (options.verbose) {
+                              resourceMonitor.logUsage();
+                          }
+                      }
+
+                      const normalizedPath = ensurePath(file, { normalize: true });
+                      logger.info(`Processing ${formatLogPath(file, mergedOptions.debug)}...`);
+                      const content = await fs.readFile(normalizedPath, 'utf-8');
+                      results.push({ source: normalizedPath, length: content.length });
+                  } catch (error) {
+                      if (error instanceof ResourceLimitError) {
+                          throw error;
+                      }
+                      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                          throw new FileNotFoundError(
+                              `File not found: ${formatErrorPath(file)}`,
+                              { file },
+                              undefined,
+                              'Check that the file exists and the path is correct'
+                          );
+                      } else if ((error as NodeJS.ErrnoException).code === 'EACCES') {
+                          throw new PermissionDeniedError(
+                              `Permission denied: ${formatErrorPath(file)}`,
+                              { file },
+                              undefined,
+                              'Check file permissions and try again with appropriate access'
+                          );
+                      } else {
+                          throw new GenericError(
+                              `Error processing ${formatErrorPath(file)}: ${error}`,
+                              { file, error },
+                              undefined,
+                              'Try again or contact support if the issue persists'
+                          );
+                      }
+                  }
+              }
+          }
+
+          // Final resource check after processing
+          if (resourceMonitor && options.verbose) {
+              resourceMonitor.logUsage();
+          }
+
+          if (mergedOptions.json) {
+              const output = {
+                  dryRun: isDryRunEnabled(),
+                  results,
+              };
+              // Restore console functions temporarily to output JSON
+              if (originalLog && originalError && originalWarn) {
+                  console.log = originalLog;
+                  console.error = originalError;
+                  console.warn = originalWarn;
+              }
+              console.log(JSON.stringify(output, null, 2));
+              // Re-suppress after output
+              console.log = () => {};
+              console.error = () => {};
+              console.warn = () => {};
+          } else {
+              if (isDryRunEnabled()) {
+                  logger.info('[DRY-RUN] Mode enabled - no changes were made');
+              }
+
+              // Build output string
+              const outputLines: string[] = [];
+              outputLines.push(`Processed ${results.length} inputs.`);
+
+              if (results.length > 0) {
+                  outputLines.push('');
+                  outputLines.push('Results:');
+                  for (const result of results) {
+                      outputLines.push(`  ${result.source}: ${result.length} bytes`);
+                  }
+              }
+
+              const outputString = outputLines.join('\n');
+
+              // Use pager for output if enabled and output is long
+              if (!options.noPager) {
+                  pager.page(outputString);
+              } else {
+                  console.log(outputString);
+              }
+          }
+
+          // Restore console functions if they were suppressed
+          if ((options.quiet === true || options.json === true) && originalLog && originalError && originalWarn) {
+              console.log = originalLog;
+              console.error = originalError;
+              console.warn = originalWarn;
+          }
+      } catch (error) {
+          const logger = createLogger({ quiet: false, verbose: false, color: 'auto', module: '{{ project_slug }}' });
+          // Handle resource limit errors with specific guidance
+          if (error instanceof ResourceLimitError) {
+              logger.error(error.message);
+              logger.error(`Current usage: ${error.resourceType === 'memory' ? `${error.currentUsage.toFixed(2)}MB` : `${error.currentUsage.toFixed(2)}%`}`);
+              logger.error(`Limit: ${error.resourceType === 'memory' ? `${error.limit}MB` : `${error.limit}%`}`);
+              logger.error('Consider increasing the limit or optimizing resource usage');
+              process.exit(EXIT_CODES.GENERIC_ERROR);
+          }
+          handleError(error, logger);
       }
   });
 

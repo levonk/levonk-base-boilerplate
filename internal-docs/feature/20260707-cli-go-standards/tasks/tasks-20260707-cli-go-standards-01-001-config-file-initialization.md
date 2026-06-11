@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 1
 parallel_id: 1
 branch: "feature/current/20260707-cli-go-standards/story-01-001-config-file-initialization"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,13 +27,13 @@ Implement automatic config file initialization on first run. When no config file
 
 ## Sub-Tasks
 
-- [ ] Add config initialization function to detect first run — `core/files/config.go.jinja`
-- [ ] Create default config template with all settings commented — `core/files/config.default.yaml.jinja`
-- [ ] Implement config file creation logic in initConfig — `core/files/main.go.jinja`
-- [ ] Add config file path detection and validation — `core/files/config.go.jinja`
-- [ ] Test config file creation on first run — `core/files/main_test.go.jinja`
-- [ ] Test config file is not overwritten if exists — `core/files/main_test.go.jinja`
-- [ ] Test default config template contains all required settings — `core/files/config_test.go.jinja`
+- [x] Add config initialization function to detect first run — `core/files/config.go.jinja`
+- [x] Create default config template with all settings commented — `core/files/config.default.yaml.jinja`
+- [x] Implement config file creation logic in initConfig — `core/files/main.go.jinja`
+- [x] Add config file path detection and validation — `core/files/config.go.jinja`
+- [x] Test config file creation on first run — `core/files/main_test.go.jinja`
+- [x] Test config file is not overwritten if exists — `core/files/main_test.go.jinja`
+- [x] Test default config template contains all required settings — `core/files/config_test.go.jinja`
 
 ## Relevant Files
 
@@ -45,12 +45,12 @@ Implement automatic config file initialization on first run. When no config file
 
 ## Acceptance Criteria
 
-- [ ] Config file is auto-created on first run at `$HOME/.config/{project_slug}/config.yaml`
-- [ ] Default config contains all settings commented with default values
-- [ ] Each setting has explanatory comments
-- [ ] Config file is not overwritten if it already exists
-- [ ] Config file creation respects XDG config directory
-- [ ] Error handling for permission issues during config creation
+- [x] Config file is auto-created on first run at `$HOME/.config/{project_slug}/config.yaml`
+- [x] Default config contains all settings commented with default values
+- [x] Each setting has explanatory comments
+- [x] Config file is not overwritten if it already exists
+- [x] Config file creation respects XDG config directory
+- [x] Error handling for permission issues during config creation
 
 ## Test Plan
 

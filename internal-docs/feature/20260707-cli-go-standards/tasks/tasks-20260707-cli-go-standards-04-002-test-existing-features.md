@@ -27,20 +27,20 @@ Ensure comprehensive test coverage for all existing CLI functionality that was a
 
 ## Sub-Tasks
 
-- [ ] Test existing --verbose flag — `core/files/main_test.go.jinja`
-- [ ] Test existing --quiet flag — `core/files/main_test.go.jinja`
-- [ ] Test existing --no-color flag (backward compatibility) — `core/files/logger_test.go.jinja`
-- [ ] Test existing globbing with doublestar or glob — `core/files/main_test.go.jinja`
-- [ ] Test existing stdin handling — `core/files/main_test.go.jinja`
-- [ ] Test existing SIGINT handling (fix exit code to 130) — `core/files/main_test.go.jinja`
-- [ ] Test existing environment variable naming — `core/files/config_test.go.jinja`
-- [ ] Test existing cross-platform path handling — `core/files/main_test.go.jinja`
-- [ ] Test existing subcommand organization — `core/files/main_test.go.jinja`
-- [ ] Test existing help output — `core/files/main_test.go.jinja`
-- [ ] Test existing version output — `core/files/main_test.go.jinja`
-- [ ] Test existing usage output — `core/files/main_test.go.jinja`
-- [ ] Run test coverage analysis for existing code — `Makefile.jinja`
-- [ ] Ensure existing features have adequate coverage — All test files
+- [x] Test existing --verbose flag — `core/files/main_test.go.jinja`
+- [x] Test existing --quiet flag — `core/files/main_test.go.jinja`
+- [x] Test existing --no-color flag (backward compatibility) — `core/files/logger_test.go.jinja`
+- [x] Test existing globbing with doublestar or glob — `core/files/main_test.go.jinja`
+- [x] Test existing stdin handling — `core/files/main_test.go.jinja`
+- [x] Test existing SIGINT handling (fix exit code to 130) — `core/files/main_test.go.jinja`
+- [x] Test existing environment variable naming — `core/files/config_test.go.jinja`
+- [x] Test existing cross-platform path handling — `core/files/main_test.go.jinja`
+- [x] Test existing subcommand organization — `core/files/main_test.go.jinja`
+- [x] Test existing help output — `core/files/main_test.go.jinja`
+- [x] Test existing version output — `core/files/main_test.go.jinja`
+- [x] Test existing usage output — `core/files/main_test.go.jinja`
+- [x] Run test coverage analysis for existing code — `Makefile.jinja`
+- [x] Ensure existing features have adequate coverage — All test files
 
 ## Relevant Files
 
@@ -51,11 +51,11 @@ Ensure comprehensive test coverage for all existing CLI functionality that was a
 
 ## Acceptance Criteria
 
-- [ ] All existing features have tests
-- [ ] SIGINT exit code is fixed to 130
-- [ ] Test coverage is adequate for existing code
-- [ ] All existing tests still pass
-- [ ] Backward compatibility maintained
+- [x] All existing features have tests
+- [x] SIGINT exit code is fixed to 130
+- [x] Test coverage is adequate for existing code
+- [x] All existing tests still pass
+- [x] Backward compatibility maintained
 
 ## Test Plan
 

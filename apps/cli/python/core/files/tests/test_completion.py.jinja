@@ -1,0 +1,146 @@
+from typer.testing import CliRunner
+from {{ project_slug }}.__main__ import app
+from {{ project_slug }}.completion import (
+    install_completion,
+    uninstall_completion,
+    install_all_completions,
+    uninstall_all_completions,
+    generate_completion_script,
+    get_completion_dir
+)
+from {{ project_slug }}.man_page import (
+    generate_man_page,
+    install_man_page,
+    uninstall_man_page,
+    get_man_page_dir
+)
+from pathlib import Path
+import tempfile
+import shutil
+
+runner = CliRunner()
+
+
+def test_install_bash_completion():
+    """Test bash completion installation."""
+    result = runner.invoke(app, ["process", "--install", "--force", "--quiet"])
+    assert result.exit_code == 0
+
+
+def test_uninstall_bash_completion():
+    """Test bash completion uninstallation."""
+    result = runner.invoke(app, ["process", "--uninstall", "--force", "--quiet"])
+    assert result.exit_code == 0
+
+
+def test_install_with_force():
+    """Test install with --force flag."""
+    result = runner.invoke(app, ["process", "--install", "--force", "--quiet"])
+    assert result.exit_code == 0
+
+
+def test_generate_bash_completion():
+    """Test bash completion script generation."""
+    script = generate_completion_script("bash", app)
+    assert script is not None
+    assert len(script) > 0
+    assert "{{ project_slug }}" in script
+
+
+def test_generate_zsh_completion():
+    """Test zsh completion script generation."""
+    script = generate_completion_script("zsh", app)
+    assert script is not None
+    assert len(script) > 0
+    assert "{{ project_slug }}" in script
+
+
+def test_generate_fish_completion():
+    """Test fish completion script generation."""
+    script = generate_completion_script("fish", app)
+    assert script is not None
+    assert len(script) > 0
+    assert "{{ project_slug }}" in script
+
+
+def test_generate_invalid_shell():
+    """Test invalid shell raises error."""
+    try:
+        generate_completion_script("invalid", app)
+        assert False, "Should have raised ValueError"
+    except ValueError as e:
+        assert "Unsupported shell" in str(e)
+
+
+def test_install_all_completions():
+    """Test install all completions."""
+    results = install_all_completions(app, force=True)
+    assert "bash" in results
+    assert "zsh" in results
+    assert "fish" in results
+    assert "man_page" in results
+
+
+def test_get_completion_dir():
+    """Test completion directory resolution."""
+    completion_dir = get_completion_dir()
+    assert completion_dir is not None
+    assert completion_dir.exists()
+
+
+def test_install_all_completions_old():
+    """Test installing all shell completions (old signature for compatibility)."""
+    results = install_all_completions(app, force=True)
+    assert "bash" in results
+    assert "zsh" in results
+    assert "fish" in results
+    # At least one should succeed
+    assert any(results.values())
+
+
+def test_uninstall_all_completions():
+    """Test uninstalling all shell completions."""
+    results = uninstall_all_completions()
+    assert "bash" in results
+    assert "zsh" in results
+    assert "fish" in results
+
+
+def test_generate_man_page():
+    """Test man page generation."""
+    man_content = generate_man_page()
+    assert man_content is not None
+    assert len(man_content) > 0
+    assert "{{ project_slug }}" in man_content
+    assert "{{ description }}" in man_content
+    assert "NAME" in man_content
+    assert "SYNOPSIS" in man_content
+    assert "DESCRIPTION" in man_content
+    assert "OPTIONS" in man_content
+
+
+def test_get_man_page_dir():
+    """Test man page directory resolution."""
+    man_dir = get_man_page_dir()
+    assert man_dir is not None
+    assert man_dir.exists()
+
+
+def test_install_man_page():
+    """Test man page installation."""
+    result = install_man_page(force=True)
+    assert result is True
+
+
+def test_uninstall_man_page():
+    """Test man page uninstallation."""
+    result = uninstall_man_page()
+    assert result is True
+
+
+def test_man_flag():
+    """Test --man flag displays man page."""
+    result = runner.invoke(app, ["process", "--man"])
+    assert result.exit_code == 0
+    # The man page functionality exists and doesn't crash
+    # Output verification is handled by generate_man_page tests

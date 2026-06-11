@@ -1,0 +1,250 @@
+import process from 'process';
+
+export interface HealthCheckResult {
+  status: 'healthy' | 'unhealthy';
+  timestamp: string;
+  uptime: number;
+  version: string;
+  checks: HealthCheck[];
+}
+
+export interface HealthCheck {
+  name: string;
+  status: 'pass' | 'fail';
+  message?: string;
+  duration_ms: number;
+}
+
+export interface HealthCheckOptions {
+  timeout?: number;
+  includeDependencies?: boolean;
+}
+
+export interface DependencyCheck {
+  name: string;
+  check: () => Promise<boolean> | boolean;
+}
+
+const DEFAULT_TIMEOUT = 100; // 100ms max for health checks
+
+// Dependency registry
+const dependencyChecks: Map<string, DependencyCheck> = new Map();
+
+/**
+ * Register a dependency health check
+ * @param name - Name of the dependency
+ * @param check - Function that returns true if dependency is healthy
+ */
+export function registerDependencyCheck(name: string, check: DependencyCheck['check']): void {
+  dependencyChecks.set(name, { name, check });
+}
+
+/**
+ * Unregister a dependency health check
+ * @param name - Name of the dependency to remove
+ */
+export function unregisterDependencyCheck(name: string): void {
+  dependencyChecks.delete(name);
+}
+
+/**
+ * Check if a dependency is healthy
+ * @param dependency - Dependency check configuration
+ * @returns Promise resolving to true if healthy
+ * @throws Error if dependency check fails
+ */
+async function checkDependency(dependency: DependencyCheck): Promise<boolean> {
+  const result = await dependency.check();
+  return result === true;
+}
+
+/**
+ * Perform a single health check with timing
+ * @param name - Name of the check
+ * @param checkFn - Function to perform the check
+ * @returns HealthCheck result
+ */
+async function performCheck(
+  name: string,
+  checkFn: () => Promise<boolean> | boolean
+): Promise<HealthCheck> {
+  const start = Date.now();
+  try {
+    const result = await checkFn();
+    const duration = Date.now() - start;
+    return {
+      name,
+      status: result ? 'pass' : 'fail',
+      duration_ms: duration,
+    };
+  } catch (error) {
+    const duration = Date.now() - start;
+    return {
+      name,
+      status: 'fail',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      duration_ms: duration,
+    };
+  }
+}
+
+/**
+ * Check if the process is ready to handle requests
+ * @returns True if ready
+ */
+function checkReadiness(): boolean {
+  // Basic readiness check - process is running and not shutting down
+  return !process.exiting;
+}
+
+/**
+ * Check if the service is alive
+ * @returns True if alive
+ */
+function checkLiveness(): boolean {
+  // Basic liveness check - process is running
+  return true;
+}
+
+/**
+ * Perform all registered dependency checks
+ * @returns Array of health check results
+ */
+async function checkDependencies(): Promise<HealthCheck[]> {
+  const checks: HealthCheck[] = [];
+
+  for (const [name, dependency] of dependencyChecks) {
+    const start = Date.now();
+    try {
+      const isHealthy = await checkDependency(dependency);
+      checks.push({
+        name: `dependency:${name}`,
+        status: isHealthy ? 'pass' : 'fail',
+        duration_ms: Date.now() - start,
+      });
+    } catch (error) {
+      checks.push({
+        name: `dependency:${name}`,
+        status: 'fail',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        duration_ms: Date.now() - start,
+      });
+    }
+  }
+
+  return checks;
+}
+
+/**
+ * Perform a comprehensive health check
+ * This function has NO SIDE EFFECTS - it only checks state
+ * @param options - Health check options
+ * @returns Health check result
+ */
+export async function getHealthCheck(
+  options: HealthCheckOptions = {}
+): Promise<HealthCheckResult> {
+  const timeout = options.timeout ?? DEFAULT_TIMEOUT;
+  const startTime = Date.now();
+
+  // Enforce timeout
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Health check timeout')), timeout);
+  });
+
+  try {
+    const result = await Promise.race([
+      performHealthChecks(options),
+      timeoutPromise,
+    ]);
+
+    return result;
+  } catch (error) {
+    // If timeout or error occurs, return unhealthy status
+    return {
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: '{{ project_version }}',
+      checks: [
+        {
+          name: 'health_check',
+          status: 'fail',
+          message: error instanceof Error ? error.message : 'Unknown error',
+          duration_ms: Date.now() - startTime,
+        },
+      ],
+    };
+  }
+}
+
+/**
+ * Perform all health checks
+ * @param options - Health check options
+ * @returns Health check result
+ */
+async function performHealthChecks(
+  options: HealthCheckOptions
+): Promise<HealthCheckResult> {
+  const checks: HealthCheck[] = [];
+
+  // Check liveness
+  checks.push(await performCheck('liveness', checkLiveness));
+
+  // Check readiness
+  checks.push(await performCheck('readiness', checkReadiness));
+
+  // Check dependencies if requested
+  if (options.includeDependencies && dependencyChecks.size > 0) {
+    const depChecks = await checkDependencies();
+    checks.push(...depChecks);
+  }
+
+  // Determine overall status
+  const allPassed = checks.every(check => check.status === 'pass');
+
+  return {
+    status: allPassed ? 'healthy' : 'unhealthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '{{ project_version }}',
+    checks,
+  };
+}
+
+/**
+ * Get health check result as JSON string
+ * @param options - Health check options
+ * @returns JSON string of health check result
+ */
+export async function getHealthCheckJson(
+  options: HealthCheckOptions = {}
+): Promise<string> {
+  const result = await getHealthCheck(options);
+  return JSON.stringify(result, null, 2);
+}
+
+/**
+ * Get health check result suitable for HTTP response
+ * @param options - Health check options
+ * @returns Object with status code and body
+ */
+export async function getHealthCheckResponse(
+  options: HealthCheckOptions = {}
+): Promise<{ statusCode: number; body: string }> {
+  const result = await getHealthCheck(options);
+  const statusCode = result.status === 'healthy' ? 200 : 503;
+  return {
+    statusCode,
+    body: JSON.stringify(result),
+  };
+}
+
+/**
+ * Check if the service is healthy (synchronous, fast check)
+ * @returns True if healthy
+ */
+export function isHealthy(): boolean {
+  // Fast synchronous check for quick decisions
+  return checkLiveness() && checkReadiness();
+}

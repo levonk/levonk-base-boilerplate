@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 6
 parallel_id: 1
 branch: "feature/current/cli-python-standards/story-06-001-structured-logging"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["04-003"]
@@ -27,16 +27,16 @@ Implement structured logging with format auto-detection based on TTY. Support Py
 
 ## Sub-Tasks
 
-- [ ] Add structlog dependency to `pyproject.toml.jinja` — `apps/cli/python/core/files/pyproject.toml.jinja`
-- [ ] Implement structured logging (JSON format) in `logging.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/logging.py.jinja`
-- [ ] Add format auto-detection based on TTY — `logging.py.jinja`
-- [ ] Support Python-native env filters (LOG_LEVEL, PYTHON_LOG) — `logging.py.jinja`
-- [ ] Implement log level resolution: env vars > CLI flags > config file > defaults — `logging.py.jinja`
-- [ ] Add `--log-format` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Add structured text format option (human-readable but structured) — `logging.py.jinja`
-- [ ] Add tests for structured logging format auto-detection — `apps/cli/python/core/files/tests/test_logging.py.jinja`
-- [ ] Add tests for log level resolution precedence — `tests/test_logging.py.jinja`
-- [ ] Add tests for env filter support — `tests/test_logging.py.jinja`
+- [x] Add structlog dependency to `pyproject.toml.jinja` — `apps/cli/python/core/files/pyproject.toml.jinja`
+- [x] Implement structured logging (JSON format) in `logging.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/logging.py.jinja`
+- [x] Add format auto-detection based on TTY — `logging.py.jinja`
+- [x] Support Python-native env filters (LOG_LEVEL, PYTHON_LOG) — `logging.py.jinja`
+- [x] Implement log level resolution: env vars > CLI flags > config file > defaults — `logging.py.jinja`
+- [x] Add `--log-format` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Add structured text format option (human-readable but structured) — `logging.py.jinja`
+- [x] Add tests for structured logging format auto-detection — `apps/cli/python/core/files/tests/test_logging.py.jinja`
+- [x] Add tests for log level resolution precedence — `tests/test_logging.py.jinja`
+- [x] Add tests for env filter support — `tests/test_logging.py.jinja`
 
 ## Relevant Files
 
@@ -47,13 +47,13 @@ Implement structured logging with format auto-detection based on TTY. Support Py
 
 ## Acceptance Criteria
 
-- [ ] Structured logging (JSON format) implemented
-- [ ] Format auto-detection based on TTY working
-- [ ] Python-native env filters (LOG_LEVEL, PYTHON_LOG) supported
-- [ ] Log level resolution follows: env vars > CLI flags > config file > defaults
-- [ ] `--log-format` flag allows choosing between human, JSON, and structured text
-- [ ] Structured text format provides human-readable but structured output
-- [ ] All tests pass for structured logging scenarios
+- [x] Structured logging (JSON format) implemented
+- [x] Format auto-detection based on TTY working
+- [x] Python-native env filters (LOG_LEVEL, PYTHON_LOG) supported
+- [x] Log level resolution follows: env vars > CLI flags > config file > defaults
+- [x] `--log-format` flag allows choosing between human, JSON, and structured text
+- [x] Structured text format provides human-readable but structured output
+- [x] All tests pass for structured logging scenarios
 
 ## Test Plan
 

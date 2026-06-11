@@ -1,0 +1,222 @@
+# vim: set ft=python:
+"""
+Tests for output format selection and formatter.
+"""
+
+import pytest
+import sys
+from io import StringIO
+
+from {{ project_slug }}.output.formatter import OutputFormatter, OutputFormat, get_formatter
+from {{ project_slug }}.mode import Mode
+
+
+class TestOutputFormat:
+    """Test OutputFormat enum."""
+
+    def test_format_values(self):
+        """Test format enum values."""
+        assert OutputFormat.TOON.value == "toon"
+        assert OutputFormat.JSON.value == "json"
+        assert OutputFormat.HUMAN.value == "human"
+
+
+class TestOutputFormatter:
+    """Test OutputFormatter class."""
+
+    def test_agent_mode_defaults_to_toon(self):
+        """Test that agent mode defaults to TOON format."""
+        formatter = OutputFormatter(mode=Mode.AGENT)
+        assert formatter.get_format() == OutputFormat.TOON
+
+    def test_human_mode_defaults_to_human(self):
+        """Test that human mode defaults to human format."""
+        formatter = OutputFormatter(mode=Mode.HUMAN)
+        assert formatter.get_format() == OutputFormat.HUMAN
+
+    def test_format_override(self):
+        """Test that format override takes precedence."""
+        formatter = OutputFormatter(mode=Mode.AGENT, format_override=OutputFormat.JSON)
+        assert formatter.get_format() == OutputFormat.JSON
+
+    def test_format_override_human_mode(self):
+        """Test format override in human mode."""
+        formatter = OutputFormatter(mode=Mode.HUMAN, format_override=OutputFormat.TOON)
+        assert formatter.get_format() == OutputFormat.TOON
+
+    def test_format_toon_output(self, capsys):
+        """Test TOON format output."""
+        formatter = OutputFormatter(mode=Mode.AGENT)
+        data = {"tasks": [{"id": 1, "title": "Fix bug"}]}
+
+        output = formatter.format_output(data)
+
+        assert "tasks" in output
+        assert "Fix bug" in output
+        # TOON format uses compact syntax
+        assert "{" in output
+        assert "}" in output
+
+    def test_format_json_output(self):
+        """Test JSON format output."""
+        formatter = OutputFormatter(mode=Mode.AGENT, format_override=OutputFormat.JSON)
+        data = {"tasks": [{"id": 1, "title": "Fix bug"}]}
+
+        output = formatter.format_output(data)
+
+        assert '"tasks"' in output
+        assert '"Fix bug"' in output
+        # JSON format uses quoted keys
+        assert '"id"' in output
+
+    def test_format_human_output_dict(self):
+        """Test human format output for dict."""
+        formatter = OutputFormatter(mode=Mode.HUMAN)
+        data = {"name": "Alice", "age": 30}
+
+        output = formatter.format_output(data)
+
+        assert "name: Alice" in output
+        assert "age: 30" in output
+
+    def test_format_human_output_list(self):
+        """Test human format output for list."""
+        formatter = OutputFormatter(mode=Mode.HUMAN)
+        data = ["Alice", "Bob", "Charlie"]
+
+        output = formatter.format_output(data)
+
+        assert "- Alice" in output
+        assert "- Bob" in output
+
+    def test_format_error_toon(self):
+        """Test error formatting in TOON mode."""
+        formatter = OutputFormatter(mode=Mode.AGENT)
+
+        output = formatter.format_error("File not found", "Check the file path")
+
+        assert "error" in output
+        assert "File not found" in output
+        assert "help" in output
+        # TOON format uses compact syntax
+        assert "{" in output
+
+    def test_format_error_json(self):
+        """Test error formatting in JSON mode."""
+        formatter = OutputFormatter(mode=Mode.AGENT, format_override=OutputFormat.JSON)
+
+        output = formatter.format_error("File not found", "Check the file path")
+
+        assert '"error"' in output
+        assert '"File not found"' in output
+        # JSON format uses quoted keys
+        assert '"help"' in output
+
+    def test_format_error_human(self):
+        """Test error formatting in human mode."""
+        formatter = OutputFormatter(mode=Mode.HUMAN)
+
+        output = formatter.format_error("File not found", "Check the file path")
+
+        assert "Error: File not found" in output
+        assert "Help: Check the file path" in output
+
+    def test_format_error_without_suggestion(self):
+        """Test error formatting without suggestion."""
+        formatter = OutputFormatter(mode=Mode.AGENT)
+
+        output = formatter.format_error("Invalid input")
+
+        assert "error" in output
+        assert "Invalid input" in output
+
+
+class TestGetFormatter:
+    """Test get_formatter helper function."""
+
+    def test_get_formatter_agent_mode(self):
+        """Test get_formatter in agent mode."""
+        formatter = get_formatter(mode=Mode.AGENT)
+        assert formatter.get_format() == OutputFormat.TOON
+
+    def test_get_formatter_human_mode(self):
+        """Test get_formatter in human mode."""
+        formatter = get_formatter(mode=Mode.HUMAN)
+        assert formatter.get_format() == OutputFormat.HUMAN
+
+    def test_get_formatter_with_toon_flag(self):
+        """Test get_formatter with toon flag."""
+        formatter = get_formatter(mode=Mode.HUMAN, toon=True)
+        assert formatter.get_format() == OutputFormat.TOON
+
+    def test_get_formatter_with_json_flag(self):
+        """Test get_formatter with json flag."""
+        formatter = get_formatter(mode=Mode.AGENT, json_output=True)
+        assert formatter.get_format() == OutputFormat.JSON
+
+    def test_get_formatter_precedence(self):
+        """Test flag precedence in get_formatter."""
+        # toon flag should override mode
+        formatter = get_formatter(mode=Mode.HUMAN, toon=True)
+        assert formatter.get_format() == OutputFormat.TOON
+
+        # json flag should override mode
+        formatter = get_formatter(mode=Mode.AGENT, json_output=True)
+        assert formatter.get_format() == OutputFormat.JSON
+
+
+class TestFormatIntegration:
+    """Integration tests for format selection."""
+
+    def test_mode_detection_with_format(self):
+        """Test that mode detection works with format selection."""
+        # Agent mode with JSON override
+        formatter = get_formatter(mode=Mode.AGENT, json_output=True)
+        assert formatter.get_format() == OutputFormat.JSON
+
+        # Human mode with TOON override
+        formatter = get_formatter(mode=Mode.HUMAN, toon=True)
+        assert formatter.get_format() == OutputFormat.TOON
+
+    def test_complex_data_structure(self):
+        """Test formatting complex data structures."""
+        formatter = OutputFormatter(mode=Mode.AGENT)
+        data = {
+            "tasks": [
+                {"id": 1, "title": "Fix bug", "status": "open", "assignee": "Alice"},
+                {"id": 2, "title": "Add feature", "status": "closed", "assignee": "Bob"}
+            ],
+            "count": 2,
+            "total": 847
+        }
+
+        output = formatter.format_output(data)
+
+        assert "tasks" in output
+        assert "Fix bug" in output
+        assert "Add feature" in output
+        assert "count" in output
+
+    def test_empty_data(self):
+        """Test formatting empty data with aggregated empty state schema."""
+        formatter = OutputFormatter(mode=Mode.AGENT)
+
+        output = formatter.format_output([])
+        # Empty data should have aggregated schema with count and context
+        assert "count:0" in output
+        assert "success:true" in output
+
+        output = formatter.format_output({})
+        # Empty dict should have aggregated schema
+        assert "count:0" in output
+        assert "success:true" in output
+
+    def test_null_values(self):
+        """Test formatting null values."""
+        formatter = OutputFormatter(mode=Mode.AGENT)
+        data = {"name": "Alice", "email": None}
+
+        output = formatter.format_output(data)
+
+        assert "name" in output
+        assert "null" in output

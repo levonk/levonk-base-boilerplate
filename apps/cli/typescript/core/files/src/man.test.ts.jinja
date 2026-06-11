@@ -1,0 +1,276 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Command } from 'commander';
+import fs from 'fs/promises';
+import path from 'path';
+import {
+    generateManPage,
+    writeManPage,
+    getManPageInstallInstructions,
+    validateManPage,
+    MAN_PAGE_VERSION,
+    MAN_SECTION,
+    type ManPageOptions,
+} from './man.js';
+
+describe('man', () => {
+    let program: Command;
+
+    beforeEach(() => {
+        program = new Command();
+        program.name('{{ project_slug }}');
+        program.description('{{ description }}');
+        program.version('1.0.0');
+        program.option('--quiet', 'Suppress all output except errors');
+        program.option('--verbose', 'Enable verbose output with extra details');
+        program.option('--debug', 'Enable debug-level logging');
+        program.option('--color <mode>', 'Color mode: auto, always, or never', 'auto');
+        program.option('--config <path>', 'Config file path');
+        program.option('--json', 'Output results as JSON');
+    });
+
+    describe('generateManPage', () => {
+        it('should generate man page with required sections', () => {
+            const manPage = generateManPage(program);
+
+            expect(manPage).toContain('.TH');
+            expect(manPage).toContain('.SH NAME');
+            expect(manPage).toContain('.SH SYNOPSIS');
+            expect(manPage).toContain('.SH DESCRIPTION');
+            expect(manPage).toContain('.SH OPTIONS');
+            expect(manPage).toContain('.SH EXAMPLES');
+            expect(manPage).toContain('.SH EXIT CODES');
+            expect(manPage).toContain('.SH CONFIGURATION');
+            expect(manPage).toContain('.SH SEE ALSO');
+        });
+
+        it('should include program name in man page', () => {
+            const manPage = generateManPage(program);
+            expect(manPage).toContain('{{ project_slug }}');
+        });
+
+        it('should include version in man page', () => {
+            const manPage = generateManPage(program);
+            expect(manPage).toContain('1.0.0');
+        });
+
+        it('should include all command options', () => {
+            const manPage = generateManPage(program);
+            expect(manPage).toContain('--quiet');
+            expect(manPage).toContain('--verbose');
+            expect(manPage).toContain('--debug');
+            expect(manPage).toContain('--color');
+            expect(manPage).toContain('--config');
+            expect(manPage).toContain('--json');
+        });
+
+        it('should include examples section', () => {
+            const manPage = generateManPage(program);
+            expect(manPage).toContain('.SH EXAMPLES');
+            expect(manPage).toContain('Process a single file');
+        });
+
+        it('should include exit codes', () => {
+            const manPage = generateManPage(program);
+            expect(manPage).toContain('.SH EXIT CODES');
+            expect(manPage).toContain('0');
+            expect(manPage).toContain('130');
+        });
+
+        it('should include configuration section', () => {
+            const manPage = generateManPage(program);
+            expect(manPage).toContain('.SH CONFIGURATION');
+            expect(manPage).toContain('{{ project_slug | upper | replace("-", "_") }}');
+        });
+    });
+
+    describe('writeManPage', () => {
+        const mockLogger = {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn(),
+        };
+
+        beforeEach(() => {
+            vi.clearAllMocks();
+        });
+
+        it('should write man page to file', async () => {
+            const options: ManPageOptions = {
+                outputDir: '/tmp/test-man',
+            };
+
+            vi.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
+            vi.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
+
+            await writeManPage(program, options, mockLogger as any);
+
+            expect(fs.mkdir).toHaveBeenCalledWith('/tmp/test-man', {
+                recursive: true,
+            });
+            expect(fs.writeFile).toHaveBeenCalled();
+            expect(mockLogger.info).toHaveBeenCalled();
+        });
+
+        it('should output to stdout when stdout option is true', async () => {
+            const options: ManPageOptions = {
+                stdout: true,
+            };
+
+            const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+            await writeManPage(program, options, mockLogger as any);
+
+            expect(consoleLogSpy).toHaveBeenCalled();
+            expect(fs.mkdir).not.toHaveBeenCalled();
+            expect(fs.writeFile).not.toHaveBeenCalled();
+
+            consoleLogSpy.mockRestore();
+        });
+
+        it('should use default output directory when not specified', async () => {
+            const options: ManPageOptions = {};
+
+            vi.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
+            vi.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
+
+            await writeManPage(program, options, mockLogger as any);
+
+            expect(fs.mkdir).toHaveBeenCalledWith(
+                path.join(process.cwd(), 'man'),
+                { recursive: true }
+            );
+        });
+
+        it('should use custom section when specified', async () => {
+            const options: ManPageOptions = {
+                outputDir: '/tmp/test-man',
+                section: 8,
+            };
+
+            vi.spyOn(fs, 'mkdir').mockResolvedValue(undefined);
+            vi.spyOn(fs, 'writeFile').mockResolvedValue(undefined);
+
+            await writeManPage(program, options, mockLogger as any);
+
+            expect(fs.writeFile).toHaveBeenCalled();
+        });
+
+        it('should throw error when write fails', async () => {
+            const options: ManPageOptions = {};
+
+            vi.spyOn(fs, 'mkdir').mockRejectedValue(new Error('Permission denied'));
+
+            await expect(
+                writeManPage(program, options, mockLogger as any)
+            ).rejects.toThrow('Failed to write man page');
+        });
+    });
+
+    describe('getManPageInstallInstructions', () => {
+        it('should return installation instructions', () => {
+            const instructions = getManPageInstallInstructions('{{ project_slug }}');
+
+            expect(instructions).toContain('Man page installation');
+            expect(instructions).toContain('~/.local/share/man/man1');
+            expect(instructions).toContain('{{ project_slug }}.1');
+            expect(instructions).toContain('man {{ project_slug }}');
+        });
+
+        it('should include user-level installation', () => {
+            const instructions = getManPageInstallInstructions('{{ project_slug }}');
+            expect(instructions).toContain('User-level installation');
+        });
+
+        it('should include system-wide installation', () => {
+            const instructions = getManPageInstallInstructions('{{ project_slug }}');
+            expect(instructions).toContain('System-wide installation');
+            expect(instructions).toContain('sudo');
+        });
+    });
+
+    describe('validateManPage', () => {
+        it('should validate complete man page', () => {
+            const manPage = `.TH TEST 1 "2025-01-01" "test 1.0.0" "User Commands"
+.SH NAME
+test - Test program
+.SH SYNOPSIS
+.B test
+[options]
+.SH DESCRIPTION
+Test description
+.SH OPTIONS
+.TP
+--help
+Show help
+.SH EXAMPLES
+Test examples
+.SH EXIT CODES
+0
+Success
+.SH CONFIGURATION
+Config info
+.SH SEE ALSO
+Test docs`;
+            const result = validateManPage(manPage);
+
+            expect(result.valid).toBe(true);
+            expect(result.errors).toHaveLength(0);
+        });
+
+        it('should fail validation for missing .TH directive', () => {
+            const manPage = `.SH NAME
+test - Test program`;
+            const result = validateManPage(manPage);
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Missing .TH directive');
+        });
+
+        it('should fail validation for missing NAME section', () => {
+            const manPage = `.TH TEST 1 "2025-01-01" "test 1.0.0" "User Commands"
+.SH SYNOPSIS
+.B test`;
+            const result = validateManPage(manPage);
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Missing required section: .SH NAME');
+        });
+
+        it('should fail validation for missing SYNOPSIS section', () => {
+            const manPage = `.TH TEST 1 "2025-01-01" "test 1.0.0" "User Commands"
+.SH NAME
+test - Test program`;
+            const result = validateManPage(manPage);
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Missing required section: .SH SYNOPSIS');
+        });
+
+        it('should fail validation for empty man page', () => {
+            const manPage = '';
+            const result = validateManPage(manPage);
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Man page is empty');
+        });
+
+        it('should fail validation for whitespace-only man page', () => {
+            const manPage = '   \n  \n  ';
+            const result = validateManPage(manPage);
+
+            expect(result.valid).toBe(false);
+            expect(result.errors).toContain('Man page is empty');
+        });
+    });
+
+    describe('constants', () => {
+        it('should export MAN_PAGE_VERSION', () => {
+            expect(MAN_PAGE_VERSION).toBe('1.0.0');
+        });
+
+        it('should export MAN_SECTION', () => {
+            expect(MAN_SECTION).toBe(1);
+        });
+    });
+});

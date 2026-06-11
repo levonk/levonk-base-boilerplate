@@ -1,0 +1,482 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import {
+  getSeparator,
+  normalizePath,
+  toPlatformPath,
+  toUnixPath,
+  joinPath,
+  resolvePath,
+  getRelativePath,
+  isAbsolutePath,
+  getDirName,
+  getBaseName,
+  getExtension,
+  parsePath,
+  isValidPath,
+  formatErrorPath,
+  formatHelpPath,
+  formatLogPath,
+  ensurePath,
+  getHomeDir,
+  getTempDir,
+  isPathWithin,
+} from './path.js';
+
+describe('Path Utilities', () => {
+  describe('getSeparator', () => {
+    it('should return platform-specific separator', () => {
+      const separator = getSeparator();
+      if (process.platform === 'win32') {
+        expect(separator).toBe('\\');
+      } else {
+        expect(separator).toBe('/');
+      }
+    });
+  });
+
+  describe('normalizePath', () => {
+    it('should normalize paths with forward slashes', () => {
+      expect(normalizePath('path/to/file')).toBe('path/to/file');
+    });
+
+    it('should normalize paths with backward slashes', () => {
+      expect(normalizePath('path\\to\\file')).toBe('path/to/file');
+    });
+
+    it('should normalize mixed slashes', () => {
+      expect(normalizePath('path/to\\file')).toBe('path/to/file');
+    });
+
+    it('should remove redundant slashes', () => {
+      expect(normalizePath('path//to///file')).toBe('path/to/file');
+    });
+
+    it('should remove trailing slashes', () => {
+      expect(normalizePath('path/to/file/')).toBe('path/to/file');
+    });
+
+    it('should preserve root path', () => {
+      expect(normalizePath('/')).toBe('/');
+    });
+
+    it('should resolve . segments', () => {
+      expect(normalizePath('path/./file')).toBe('path/file');
+    });
+
+    it('should resolve .. segments', () => {
+      expect(normalizePath('path/../file')).toBe('file');
+    });
+
+    it('should handle empty string', () => {
+      expect(normalizePath('')).toBe('.');
+    });
+  });
+
+  describe('toPlatformPath', () => {
+    it('should convert to Windows backslashes on Windows', () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+
+      const result = toPlatformPath('path/to/file');
+      expect(result).toBe('path\\to\\file');
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+
+    it('should convert to Unix forward slashes on Unix', () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+
+      const result = toPlatformPath('path\\to\\file');
+      expect(result).toBe('path/to/file');
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+
+    it('should normalize before converting', () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+
+      const result = toPlatformPath('path//to\\file');
+      expect(result).toBe('path/to/file');
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+  });
+
+  describe('toUnixPath', () => {
+    it('should convert backslashes to forward slashes', () => {
+      expect(toUnixPath('path\\to\\file')).toBe('path/to/file');
+    });
+
+    it('should preserve forward slashes', () => {
+      expect(toUnixPath('path/to/file')).toBe('path/to/file');
+    });
+
+    it('should normalize before converting', () => {
+      expect(toUnixPath('path//to\\file')).toBe('path/to/file');
+    });
+  });
+
+  describe('joinPath', () => {
+    it('should join path segments', () => {
+      const result = joinPath('path', 'to', 'file');
+      expect(result).toContain('path');
+      expect(result).toContain('to');
+      expect(result).toContain('file');
+    });
+
+    it('should handle single segment', () => {
+      const result = joinPath('path');
+      expect(result).toContain('path');
+    });
+
+    it('should handle empty segments', () => {
+      const result = joinPath('path', '', 'file');
+      expect(result).toContain('path');
+      expect(result).toContain('file');
+    });
+
+    it('should use platform-appropriate separators', () => {
+      const result = joinPath('path', 'to', 'file');
+      if (process.platform === 'win32') {
+        expect(result).toContain('\\');
+      } else {
+        expect(result).toContain('/');
+      }
+    });
+  });
+
+  describe('resolvePath', () => {
+    it('should resolve relative paths to absolute', () => {
+      const result = resolvePath('path/to/file');
+      expect(isAbsolutePath(result)).toBe(true);
+    });
+
+    it('should preserve absolute paths', () => {
+      const absolutePath = process.platform === 'win32' ? 'C:\\path\\to\\file' : '/path/to/file';
+      const result = resolvePath(absolutePath);
+      expect(isAbsolutePath(result)).toBe(true);
+    });
+
+    it('should resolve . to current directory', () => {
+      const result = resolvePath('.');
+      expect(isAbsolutePath(result)).toBe(true);
+    });
+  });
+
+  describe('getRelativePath', () => {
+    it('should get relative path from one path to another', () => {
+      const from = '/path/to';
+      const to = '/path/to/file';
+      const result = getRelativePath(from, to);
+      expect(result).toBe('file');
+    });
+
+    it('should handle going up directories', () => {
+      const from = '/path/to/deep';
+      const to = '/path/to';
+      const result = getRelativePath(from, to);
+      expect(result).toBe('..');
+    });
+
+    it('should handle complex relative paths', () => {
+      const from = '/path/to/deep';
+      const to = '/path/other/file';
+      const result = getRelativePath(from, to);
+      expect(result).toContain('..');
+    });
+  });
+
+  describe('isAbsolutePath', () => {
+    it('should return true for Unix absolute paths', () => {
+      expect(isAbsolutePath('/path/to/file')).toBe(true);
+    });
+
+    it('should return true for Windows absolute paths', () => {
+      if (process.platform !== 'win32') {
+        // Skip on non-Windows platforms
+        return;
+      }
+      expect(isAbsolutePath('C:\\path\\to\\file')).toBe(true);
+      expect(isAbsolutePath('C:/path/to/file')).toBe(true);
+    });
+
+    it('should return false for relative paths', () => {
+      expect(isAbsolutePath('path/to/file')).toBe(false);
+      expect(isAbsolutePath('./path')).toBe(false);
+      expect(isAbsolutePath('../path')).toBe(false);
+    });
+  });
+
+  describe('getDirName', () => {
+    it('should get directory name', () => {
+      expect(getDirName('/path/to/file')).toBe('/path/to');
+    });
+
+    it('should handle trailing slash', () => {
+      expect(getDirName('/path/to/')).toBe('/path');
+    });
+
+    it('should return . for current directory', () => {
+      expect(getDirName('file')).toBe('.');
+    });
+  });
+
+  describe('getBaseName', () => {
+    it('should get base name', () => {
+      expect(getBaseName('/path/to/file')).toBe('file');
+    });
+
+    it('should filter by extension', () => {
+      expect(getBaseName('/path/to/file.txt', '.txt')).toBe('file');
+    });
+
+    it('should handle files with multiple dots', () => {
+      expect(getBaseName('/path/to/file.tar.gz')).toBe('file.tar.gz');
+    });
+  });
+
+  describe('getExtension', () => {
+    it('should get file extension', () => {
+      expect(getExtension('/path/to/file.txt')).toBe('.txt');
+    });
+
+    it('should return empty string for files without extension', () => {
+      expect(getExtension('/path/to/file')).toBe('');
+    });
+
+    it('should handle multiple dots', () => {
+      expect(getExtension('/path/to/file.tar.gz')).toBe('.gz');
+    });
+  });
+
+  describe('parsePath', () => {
+    it('should parse path into components', () => {
+      const parsed = parsePath('/path/to/file.txt');
+      expect(parsed.dir).toBe('/path/to');
+      expect(parsed.base).toBe('file.txt');
+      expect(parsed.ext).toBe('.txt');
+      expect(parsed.name).toBe('file');
+    });
+
+    it('should parse Windows paths', () => {
+      if (process.platform !== 'win32') {
+        // Skip on non-Windows platforms
+        return;
+      }
+      const parsed = parsePath('C:\\path\\to\\file.txt');
+      expect(parsed.base).toBe('file.txt');
+      expect(parsed.ext).toBe('.txt');
+    });
+  });
+
+  describe('isValidPath', () => {
+    it('should return true for valid paths', () => {
+      expect(isValidPath('path/to/file')).toBe(true);
+      expect(isValidPath('/path/to/file')).toBe(true);
+    });
+
+    it('should return false for empty paths', () => {
+      expect(isValidPath('')).toBe(false);
+      expect(isValidPath('   ')).toBe(false);
+    });
+
+    it('should return false for Windows invalid characters on Windows', () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+
+      expect(isValidPath('path<>to')).toBe(false);
+      expect(isValidPath('path:to')).toBe(false);
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+
+    it('should return false for Windows reserved names on Windows', () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+
+      expect(isValidPath('CON')).toBe(false);
+      expect(isValidPath('PRN')).toBe(false);
+      expect(isValidPath('AUX')).toBe(false);
+      expect(isValidPath('NUL')).toBe(false);
+      expect(isValidPath('COM1')).toBe(false);
+      expect(isValidPath('LPT1')).toBe(false);
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+
+    it('should return false for null character on Unix', () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+
+      expect(isValidPath('path\0to')).toBe(false);
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+
+    it('should return true for valid paths with reserved names in subdirectories', () => {
+      const originalPlatform = process.platform;
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+
+      expect(isValidPath('path/to/CON/file')).toBe(true);
+
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+  });
+
+  describe('formatErrorPath', () => {
+    it('should format path for error messages', () => {
+      const result = formatErrorPath('path/to/file');
+      expect(result).toContain('path');
+      expect(result).toContain('to');
+      expect(result).toContain('file');
+    });
+
+    it('should use platform-appropriate separators', () => {
+      const result = formatErrorPath('path/to/file');
+      if (process.platform === 'win32') {
+        expect(result).toContain('\\');
+      } else {
+        expect(result).toContain('/');
+      }
+    });
+  });
+
+  describe('formatHelpPath', () => {
+    it('should format path for help text with forward slashes', () => {
+      const result = formatHelpPath('path\\to\\file');
+      expect(result).toBe('path/to/file');
+    });
+
+    it('should preserve forward slashes', () => {
+      const result = formatHelpPath('path/to/file');
+      expect(result).toBe('path/to/file');
+    });
+  });
+
+  describe('formatLogPath', () => {
+    it('should format path for log output', () => {
+      const result = formatLogPath('path/to/file', false);
+      expect(result).toContain('path');
+      expect(result).toContain('to');
+      expect(result).toContain('file');
+    });
+
+    it('should include debug information when debug is true', () => {
+      const result = formatLogPath('path/to/file.txt', true);
+      expect(result).toContain('path');
+      expect(result).toContain('dir:');
+      expect(result).toContain('base:');
+      expect(result).toContain('ext:');
+    });
+
+    it('should not include debug information when debug is false', () => {
+      const result = formatLogPath('path/to/file.txt', false);
+      expect(result).not.toContain('dir:');
+      expect(result).not.toContain('base:');
+      expect(result).not.toContain('ext:');
+    });
+  });
+
+  describe('ensurePath', () => {
+    it('should normalize path by default', () => {
+      const result = ensurePath('path//to\\file');
+      expect(result).toBe(toPlatformPath('path/to/file'));
+    });
+
+    it('should not normalize when normalize is false', () => {
+      const result = ensurePath('path//to\\file', { normalize: false });
+      expect(result).toBe(toPlatformPath('path//to\\file'));
+    });
+
+    it('should convert to absolute when absolute is true', () => {
+      const result = ensurePath('path/to/file', { absolute: true });
+      expect(isAbsolutePath(result)).toBe(true);
+    });
+
+    it('should not convert to absolute when absolute is false', () => {
+      const result = ensurePath('path/to/file', { absolute: false });
+      // Result should be relative unless it was already absolute
+      if (!isAbsolutePath('path/to/file')) {
+        expect(isAbsolutePath(result)).toBe(false);
+      }
+    });
+
+    it('should use platform-appropriate separators', () => {
+      const result = ensurePath('path/to/file');
+      if (process.platform === 'win32') {
+        expect(result).toContain('\\');
+      } else {
+        expect(result).toContain('/');
+      }
+    });
+  });
+
+  describe('getHomeDir', () => {
+    it('should return home directory path', () => {
+      const result = getHomeDir();
+      expect(result).toBeTruthy();
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    it('should use platform-appropriate separators', () => {
+      const result = getHomeDir();
+      if (process.platform === 'win32') {
+        expect(result).toContain('\\');
+      } else {
+        expect(result).toContain('/');
+      }
+    });
+  });
+
+  describe('getTempDir', () => {
+    it('should return temp directory path', () => {
+      const result = getTempDir();
+      expect(result).toBeTruthy();
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    it('should use platform-appropriate separators', () => {
+      const result = getTempDir();
+      if (process.platform === 'win32') {
+        expect(result).toContain('\\');
+      } else {
+        expect(result).toContain('/');
+      }
+    });
+  });
+
+  describe('isPathWithin', () => {
+    it('should return true when child is within parent', () => {
+      const result = isPathWithin('/path/to', '/path/to/file');
+      expect(result).toBe(true);
+    });
+
+    it('should return true when child is deeply nested', () => {
+      const result = isPathWithin('/path', '/path/to/deep/file');
+      expect(result).toBe(true);
+    });
+
+    it('should return false when child is not within parent', () => {
+      const result = isPathWithin('/path/to', '/other/file');
+      expect(result).toBe(false);
+    });
+
+    it('should return false when child is parent', () => {
+      const result = isPathWithin('/path/to', '/path/to');
+      // A path is not considered to be "within" itself
+      expect(result).toBe(false);
+    });
+
+    it('should return false when child is sibling', () => {
+      const result = isPathWithin('/path/to', '/path/other');
+      expect(result).toBe(false);
+    });
+
+    it('should handle relative paths', () => {
+      const result = isPathWithin('path/to', 'path/to/file');
+      expect(result).toBe(true);
+    });
+  });
+});

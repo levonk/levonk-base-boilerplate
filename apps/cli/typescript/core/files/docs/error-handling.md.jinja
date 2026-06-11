@@ -1,0 +1,190 @@
+# Error Handling
+
+This document describes the error handling system in {{ project_name }}, including error message formatting, exit codes, and best practices.
+
+## Error Message Format (ADR #14)
+
+All error messages follow the standardized format:
+
+```
+ERROR: <description> - <suggestion>
+```
+
+### Components
+
+- **ERROR**: Literal prefix to identify error messages
+- **<description>**: Clear, concise description of what went wrong
+- **<suggestion>**: Actionable suggestion for how to fix the issue
+
+### Examples
+
+```bash
+# Usage error
+ERROR: Invalid memory limit format: invalid - Use format like "512MB" or "1GB"
+
+# File not found error
+ERROR: File not found: /path/to/file.txt - Check that the file exists and the path is correct
+
+# Permission denied error
+ERROR: Permission denied: /path/to/file.txt - Check file permissions and try again with appropriate access
+
+# Network error
+ERROR: Connection timeout - Check your network connection and try again
+
+# Validation error
+ERROR: Invalid configuration - Review your configuration and fix validation errors
+```
+
+### Additional Context
+
+Error messages may include additional context:
+
+- **File references**: When applicable, file locations are included using the format `file:/path/to/file.ts:line:column`
+- **Context data**: Structured context information may be appended as JSON
+- **Secrets redaction**: Sensitive data (passwords, tokens, etc.) is automatically redacted from error messages
+
+## Exit Codes
+
+The CLI uses standard Unix exit codes:
+
+| Code | Name | Description |
+|------|------|-------------|
+| 0 | SUCCESS | Command completed successfully |
+| 1 | GENERIC_ERROR | Generic error (unspecified) |
+| 2 | USAGE_ERROR | Invalid arguments or missing required arguments |
+| 3 | NETWORK_ERROR | Connection failures, timeouts |
+| 4 | VALIDATION_ERROR | Invalid config, schema validation failures |
+| 5 | FILE_NOT_FOUND | File not found |
+| 6 | PERMISSION_DENIED | Permission denied |
+| 130 | SIGINT | Interrupted by Ctrl+C |
+
+## Error Types
+
+### CLIError
+
+Base class for all CLI errors. Includes:
+
+- `message`: Error description
+- `exitCode`: Associated exit code
+- `context`: Optional context information
+- `fileLocation`: Optional file location reference
+- `suggestion`: Optional actionable suggestion
+
+### Specialized Error Classes
+
+- **GenericError**: Generic errors (exit code 1)
+- **UsageError**: Invalid arguments or missing required args (exit code 2)
+- **NetworkError**: Connection failures, timeouts (exit code 3)
+- **ValidationError**: Invalid config, schema validation failures (exit code 4)
+- **FileNotFoundError**: File not found (exit code 5)
+- **PermissionDeniedError**: Permission denied (exit code 6)
+
+## Suggestion Generation
+
+The `SuggestionGenerator` class provides contextual suggestions based on error type and context:
+
+### Usage Errors
+
+- With `missing_arg` context: "Provide the required argument: <arg>"
+- With `invalid_arg` context: "Check the argument value: <arg>"
+- Default: "Run with --help to see usage information"
+
+### Network Errors
+
+- With `url` context: "Check your network connection and verify the URL: <url>"
+- Default: "Check your network connection and try again"
+
+### Validation Errors
+
+- With `field` context: "Fix the validation error in field: <field>"
+- With `config_file` context: "Check your configuration file: <path>"
+- Default: "Review your configuration and fix validation errors"
+
+### File Not Found Errors
+
+- With `path` context: "Verify the file exists at: <path>"
+- Default: "Check that the file exists and the path is correct"
+
+### Permission Denied Errors
+
+- With `path` context: "Check permissions for: <path>"
+- Default: "Check file permissions and try again with appropriate access"
+
+### Generic Errors
+
+- Default: "Try again or contact support if the issue persists"
+
+## Best Practices
+
+### When Throwing Errors
+
+1. **Use specific error types**: Choose the most appropriate error class for the situation
+2. **Provide clear descriptions**: Describe what went wrong in simple terms
+3. **Include actionable suggestions**: Help users understand how to fix the issue
+4. **Add context when relevant**: Include file paths, field names, or other relevant information
+5. **Use suggestion generator**: Leverage `SuggestionGenerator` for consistent suggestions
+
+Example:
+
+```typescript
+throw new UsageError(
+    'Invalid memory limit format',
+    { value: options.maxMemory },
+    undefined,
+    'Use format like "512MB" or "1GB"'
+);
+```
+
+### When Handling Errors
+
+1. **Use the `handleError` function**: This ensures proper exit codes and formatting
+2. **Pass a logger when available**: This integrates with the logging system
+3. **Let errors propagate**: Don't catch and suppress errors unnecessarily
+
+Example:
+
+```typescript
+try {
+    // Some operation
+} catch (error) {
+    handleError(error, logger);
+}
+```
+
+### Writing Error Messages
+
+1. **Be specific**: Identify the exact problem
+2. **Be concise**: Keep descriptions short and to the point
+3. **Be actionable**: Provide clear next steps
+4. **Avoid jargon**: Use language that non-experts can understand
+5. **Include relevant details**: File paths, field names, values, etc.
+
+## Testing
+
+### Unit Tests
+
+Error formatting is tested in `src/error.test.ts`:
+
+- Error message format with suggestions
+- Error message format without suggestions
+- Error message format with context
+- Error message format with file locations
+- Suggestion generation for all error types
+
+### Integration Tests
+
+Error messages are tested in `src/index.test.ts`:
+
+- Usage errors with suggestions
+- File not found errors with suggestions
+- Permission denied errors with suggestions
+- Context inclusion in error messages
+
+## Compliance
+
+This error handling system implements:
+
+- **CLI Tool Standards ADR #8**: Standard exit codes
+- **CLI Tool Standards ADR #14**: Error message formatting with suggestions
+- **CLI Tool Standards ADR #15**: File reference formatting
+- **CLI Tool Standards ADR #33**: Secret redaction in error messages

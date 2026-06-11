@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 3
 parallel_id: 7
 branch: "feature/current/20260707-cli-go-standards/story-03-007-structured-logging"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,31 +27,31 @@ Implement structured logging (JSON or structured text) with format auto-detectio
 
 ## Sub-Tasks
 
-- [ ] Add structured logging library dependency (e.g., logrus, zap) — `core/files/go.mod.jinja`
-- [ ] Implement structured logging format (JSON for non-TTY, pretty for TTY) — `core/files/logger.go.jinja`
-- [ ] Add TTY detection for format auto-detection — `core/files/logger.go.jinja`
-- [ ] Implement LOG_LEVEL env var support — `core/files/logger.go.jinja`
-- [ ] Implement log level resolution precedence — `core/files/logger.go.jinja`
-- [ ] Update existing logger to use structured logging — `core/files/logger.go.jinja`
-- [ ] Test JSON format for non-TTY output — `core/files/logger_test.go.jinja`
-- [ ] Test pretty format for TTY output — `core/files/logger_test.go.jinja`
-- [ ] Test LOG_LEVEL env var precedence — `core/files/logger_test.go.jinja`
-- [ ] Test log level resolution chain — `core/files/logger_test.go.jinja`
+- [x] Add structured logging library dependency (e.g., logrus, zap) — `core/files/go.mod.jinja`
+- [x] Implement structured logging format (JSON for non-TTY, pretty for TTY) — `core/files/logger.go.jinja`
+- [x] Add TTY detection for format auto-detection — `core/files/logger.go.jinja`
+- [x] Implement LOG_LEVEL env var support — `core/files/logger.go.jinja`
+- [x] Implement log level resolution precedence — `core/files/logger.go.jinja`
+- [x] Update existing logger to use structured logging — `core/files/logger.go.jinja`
+- [x] Test JSON format for non-TTY output — `core/files/logger_test.go.jinja`
+- [x] Test pretty format for TTY output — `core/files/logger_test.go.jinja`
+- [x] Test LOG_LEVEL env var precedence — `core/files/logger_test.go.jinja`
+- [x] Test log level resolution chain — `core/files/logger_test.go.jinja`
 
 ## Relevant Files
 
-- `apps/cli/go/core/files/go.mod.jinja` — Add structured logging library
-- `apps/cli/go/core/files/logger.go.jinja` — Implement structured logging
-- `apps/cli/go/core/files/logger_test.go.jinja` — Tests for structured logging
+- `apps/cli/go/core/files/go.mod.jinja` — Add logrus dependency for structured logging
+- `apps/cli/go/core/files/logger.go.jinja` — Implement structured logging with logrus, TTY detection, LOG_LEVEL support, and log level resolution
+- `apps/cli/go/core/files/logger_test.go.jinja` — Add tests for JSON format, pretty format, LOG_LEVEL precedence, and log level resolution chain
 
 ## Acceptance Criteria
 
-- [ ] Structured logging uses JSON format for non-TTY
-- [ ] Structured logging uses pretty format for TTY
-- [ ] LOG_LEVEL env var is supported
-- [ ] Log level resolution follows precedence: env vars > CLI flags > config > defaults
-- [ ] Structured logs include consistent fields (timestamp, level, module, message)
-- [ ] Format auto-detection works correctly
+- [x] Structured logging uses JSON format for non-TTY
+- [x] Structured logging uses pretty format for TTY
+- [x] LOG_LEVEL env var is supported
+- [x] Log level resolution follows precedence: env vars > CLI flags > config > defaults
+- [x] Structured logs include consistent fields (timestamp, level, module, message)
+- [x] Format auto-detection works correctly
 
 ## Test Plan
 

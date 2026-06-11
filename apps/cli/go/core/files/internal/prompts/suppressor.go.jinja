@@ -1,0 +1,160 @@
+package prompts
+
+import (
+	"fmt"
+)
+
+// Mode represents the CLI operation mode
+type Mode string
+
+const (
+	// ModeAgent is the agent mode (default for non-interactive environments)
+	ModeAgent Mode = "agent"
+	// ModeHuman is the human mode (interactive)
+	ModeHuman Mode = "human"
+)
+
+// Logger is a minimal interface for logging
+type Logger interface {
+	Debug(format string, args ...interface{})
+}
+
+// PromptSuppressor manages prompt suppression based on operation mode
+type PromptSuppressor struct {
+	mode        Mode
+	force       bool
+	quiet       bool
+	logger      Logger
+}
+
+// NewPromptSuppressor creates a new prompt suppressor
+func NewPromptSuppressor(mode Mode, force, quiet bool, logger Logger) *PromptSuppressor {
+	return &PromptSuppressor{
+		mode:  mode,
+		force: force,
+		quiet: quiet,
+		logger: logger,
+	}
+}
+
+// ShouldSuppress determines if prompts should be suppressed based on mode and flags
+// Returns true if prompts should be suppressed, false otherwise
+func (ps *PromptSuppressor) ShouldSuppress() bool {
+	// Force flag always suppresses prompts (user explicitly requested bypass)
+	if ps.force {
+		ps.logger.Debug("Prompts suppressed: --force flag set")
+		return true
+	}
+
+	// Quiet flag suppresses prompts with safe default (no)
+	if ps.quiet {
+		ps.logger.Debug("Prompts suppressed: --quiet flag set")
+		return true
+	}
+
+	// Agent mode suppresses prompts (non-interactive environment)
+	if ps.mode == ModeAgent {
+		ps.logger.Debug("Prompts suppressed: agent mode detected")
+		return true
+	}
+
+	// Human mode allows prompts
+	return false
+}
+
+// ShouldPrompt determines if a prompt should be shown
+// Returns true if prompt should be shown, false if suppressed
+func (ps *PromptSuppressor) ShouldPrompt() bool {
+	return !ps.ShouldSuppress()
+}
+
+// GetPromptResult returns the appropriate result when prompts are suppressed
+// In agent mode or with --quiet, returns false (safe default)
+// With --force, returns true (bypass confirmation)
+func (ps *PromptSuppressor) GetPromptResult() bool {
+	if ps.force {
+		return true
+	}
+	// Agent mode and quiet mode use safe default (no)
+	return false
+}
+
+// RequireValue ensures a required value is present, failing with clear error if not
+// This is used in agent mode where prompts are not allowed
+func (ps *PromptSuppressor) RequireValue(value, fieldName string) error {
+	if value == "" {
+		return fmt.Errorf("required value '%s' is missing. In %s mode, all values must be provided via flags or config. Use --help to see available flags.", fieldName, ps.mode)
+	}
+	return nil
+}
+
+// LogPromptSuppression logs when a prompt is suppressed
+func (ps *PromptSuppressor) LogPromptSuppression(promptType, message string) {
+	if ps.ShouldSuppress() {
+		ps.logger.Debug("Prompt suppressed [%s]: %s (mode: %s, force: %v, quiet: %v)",
+			promptType, message, ps.mode, ps.force, ps.quiet)
+	}
+}
+
+// GetPromptExplanation returns a user-friendly explanation of why a prompt was suppressed
+func (ps *PromptSuppressor) GetPromptExplanation() string {
+	if ps.force {
+		return "Prompts bypassed via --force flag"
+	}
+	if ps.quiet {
+		return "Prompts suppressed via --quiet flag (using safe default: no)"
+	}
+	if ps.mode == ModeAgent {
+		return "Prompts suppressed in agent mode (non-interactive environment)"
+	}
+	return "Prompts allowed in human mode"
+}
+
+// ValidateMode checks if the current mode is valid for the operation
+func (ps *PromptSuppressor) ValidateMode() error {
+	if ps.mode == ModeAgent {
+		// Agent mode is always valid (prompts auto-suppressed)
+		return nil
+	}
+	if ps.mode == ModeHuman {
+		// Human mode is always valid
+		return nil
+	}
+	return fmt.Errorf("invalid mode: %s", ps.mode)
+}
+
+// IsAgentMode returns true if running in agent mode
+func (ps *PromptSuppressor) IsAgentMode() bool {
+	return ps.mode == ModeAgent
+}
+
+// IsHumanMode returns true if running in human mode
+func (ps *PromptSuppressor) IsHumanMode() bool {
+	return ps.mode == ModeHuman
+}
+
+// SetMode updates the operation mode
+func (ps *PromptSuppressor) SetMode(mode Mode) {
+	ps.mode = mode
+	if ps.logger != nil {
+		ps.logger.Debug("Prompt suppressor mode updated to: %s", mode)
+	}
+}
+
+// SetForce updates the force flag
+func (ps *PromptSuppressor) SetForce(force bool) {
+	ps.force = force
+	if ps.logger != nil {
+		ps.logger.Debug("Prompt suppressor force flag updated to: %v", force)
+	}
+}
+
+// SetQuiet updates the quiet flag
+func (ps *PromptSuppressor) SetQuiet(quiet bool) {
+	ps.quiet = quiet
+	if ps.logger != nil {
+		ps.logger.Debug("Prompt suppressor quiet flag updated to: %v", quiet)
+	}
+}
+
+{# vim: set ft=go: #}

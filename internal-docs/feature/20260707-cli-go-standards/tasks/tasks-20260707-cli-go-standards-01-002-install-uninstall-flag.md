@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 1
 parallel_id: 2
 branch: "feature/current/20260707-cli-go-standards/story-01-002-install-uninstall-flag"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,17 +27,17 @@ Implement `--install` and `--uninstall` flags to automate CLI tool setup and cle
 
 ## Sub-Tasks
 
-- [ ] Add --install and --uninstall flags to root command — `core/files/main.go.jinja`
-- [ ] Create install command handler function — `core/files/install.go.jinja`
-- [ ] Implement shell completion generation using cobra — `core/files/install.go.jinja`
-- [ ] Add completion script installation logic — `core/files/install.go.jinja`
-- [ ] Implement config file initialization in install — `core/files/install.go.jinja`
-- [ ] Create uninstall command handler — `core/files/install.go.jinja`
-- [ ] Add uninstall cleanup logic — `core/files/install.go.jinja`
-- [ ] Generate installation instructions output — `core/files/install.go.jinja`
-- [ ] Test install flag generates completions — `core/files/install_test.go.jinja`
-- [ ] Test uninstall flag removes artifacts — `core/files/install_test.go.jinja`
-- [ ] Test install idempotency — `core/files/install_test.go.jinja`
+- [x] Add --install and --uninstall flags to root command — `core/files/main.go.jinja`
+- [x] Create install command handler function — `core/files/install.go.jinja`
+- [x] Implement shell completion generation using cobra — `core/files/install.go.jinja`
+- [x] Add completion script installation logic — `core/files/install.go.jinja`
+- [x] Implement config file initialization in install — `core/files/install.go.jinja`
+- [x] Create uninstall command handler — `core/files/install.go.jinja`
+- [x] Add uninstall cleanup logic — `core/files/install.go.jinja`
+- [x] Generate installation instructions output — `core/files/install.go.jinja`
+- [x] Test install flag generates completions — `core/files/install_test.go.jinja`
+- [x] Test uninstall flag removes artifacts — `core/files/install_test.go.jinja`
+- [x] Test install idempotency — `core/files/install_test.go.jinja`
 
 ## Relevant Files
 
@@ -50,13 +50,13 @@ Implement `--install` and `--uninstall` flags to automate CLI tool setup and cle
 
 ## Acceptance Criteria
 
-- [ ] `--install` flag generates shell completion scripts for bash, zsh, and fish
-- [ ] `--install` initializes default config files
-- [ ] `--install` provides clear installation instructions
-- [ ] `--uninstall` removes completion scripts and config files
-- [ ] Install is idempotent (can run multiple times safely)
-- [ ] Uninstall handles missing artifacts gracefully
-- [ ] Completion scripts work with cobra's command structure
+- [x] `--install` flag generates shell completion scripts for bash, zsh, and fish
+- [x] `--install` initializes default config files
+- [x] `--install` provides clear installation instructions
+- [x] `--uninstall` removes completion scripts and config files
+- [x] Install is idempotent (can run multiple times safely)
+- [x] Uninstall handles missing artifacts gracefully
+- [x] Completion scripts work with cobra's command structure
 
 ## Test Plan
 

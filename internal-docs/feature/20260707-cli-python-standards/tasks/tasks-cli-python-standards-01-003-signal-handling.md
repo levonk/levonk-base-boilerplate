@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 1
 parallel_id: 3
 branch: "feature/current/cli-python-standards/story-01-003-signal-handling"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,17 +27,17 @@ Enhance signal handling and implement standard exit codes. Maintain existing SIG
 
 ## Sub-Tasks
 
-- [ ] Define exit code constants in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Implement exit code 0 for success — `__main__.py.jinja`
-- [ ] Implement exit code 1 for generic errors — `__main__.py.jinja`
-- [ ] Implement exit code 2 for usage errors — `__main__.py.jinja`
-- [ ] Implement exit code 3 for network errors — `__main__.py.jinja`
-- [ ] Implement exit code 4 for validation errors — `__main__.py.jinja`
-- [ ] Implement exit code 5 for file not found errors — `__main__.py.jinja`
-- [ ] Implement exit code 6 for permission denied errors — `__main__.py.jinja`
-- [ ] Ensure existing SIGINT handling with exit code 130 is maintained — `__main__.py.jinja`
-- [ ] Add exit code usage throughout error handling — `__main__.py.jinja`
-- [ ] Add tests for all exit code scenarios — `apps/cli/python/core/files/tests/test_main.py.jinja`
+- [x] Define exit code constants in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Implement exit code 0 for success — `__main__.py.jinja`
+- [x] Implement exit code 1 for generic errors — `__main__.py.jinja`
+- [x] Implement exit code 2 for usage errors — `__main__.py.jinja`
+- [x] Implement exit code 3 for network errors — `__main__.py.jinja`
+- [x] Implement exit code 4 for validation errors — `__main__.py.jinja`
+- [x] Implement exit code 5 for file not found errors — `__main__.py.jinja`
+- [x] Implement exit code 6 for permission denied errors — `__main__.py.jinja`
+- [x] Ensure existing SIGINT handling with exit code 130 is maintained — `__main__.py.jinja`
+- [x] Add exit code usage throughout error handling — `__main__.py.jinja`
+- [x] Add tests for all exit code scenarios — `apps/cli/python/core/files/tests/test_main.py.jinja`
 
 ## Relevant Files
 
@@ -47,15 +47,15 @@ Enhance signal handling and implement standard exit codes. Maintain existing SIG
 
 ## Acceptance Criteria
 
-- [ ] Exit code 0 returned on successful execution
-- [ ] Exit code 1 returned for generic errors
-- [ ] Exit code 2 returned for usage errors
-- [ ] Exit code 3 returned for network errors
-- [ ] Exit code 4 returned for validation errors
-- [ ] Exit code 5 returned for file not found errors
-- [ ] Exit code 6 returned for permission denied errors
-- [ ] Exit code 130 returned on SIGINT (user abort)
-- [ ] All exit codes tested and documented
+- [x] Exit code 0 returned on successful execution
+- [x] Exit code 1 returned for generic errors
+- [x] Exit code 2 returned for usage errors
+- [x] Exit code 3 returned for network errors
+- [x] Exit code 4 returned for validation errors
+- [x] Exit code 5 returned for file not found errors
+- [x] Exit code 6 returned for permission denied errors
+- [x] Exit code 130 returned on SIGINT (user abort)
+- [x] All exit codes tested and documented
 
 ## Test Plan
 

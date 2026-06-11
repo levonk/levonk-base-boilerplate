@@ -1,0 +1,344 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestMigrationManager_DetectConfigVersion(t *testing.T) {
+	logger := NewLogger("test")
+
+	// Test with non-existent file
+	mm := NewMigrationManager("/nonexistent/config.yaml", logger)
+	version, err := mm.DetectConfigVersion()
+	if err != nil {
+		t.Errorf("DetectConfigVersion() for non-existent file error = %v", err)
+	}
+	if version != CurrentConfigVersion {
+		t.Errorf("DetectConfigVersion() for non-existent file = %v, want %v", version, CurrentConfigVersion)
+	}
+}
+
+func TestMigrationManager_NeedsMigration(t *testing.T) {
+	logger := NewLogger("test")
+
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	// Test with new config file (current version)
+	currentConfig := `# Config version: 3
+version: 3
+quiet: false
+`
+	if err := os.WriteFile(configPath, []byte(currentConfig), 0600); err != nil {
+		t.Fatalf("Failed to write test config: %v", err)
+	}
+
+	mm := NewMigrationManager(configPath, logger)
+	needsMigration, currentVersion, err := mm.NeedsMigration()
+	if err != nil {
+		t.Errorf("NeedsMigration() error = %v", err)
+	}
+	if needsMigration {
+		t.Errorf("NeedsMigration() = true, want false for current version")
+	}
+	if currentVersion != CurrentConfigVersion {
+		t.Errorf("NeedsMigration() currentVersion = %v, want %v", currentVersion, CurrentConfigVersion)
+	}
+
+	// Test with legacy config file (no version field)
+	legacyConfig := `quiet: false
+verbose: false
+`
+	if err := os.WriteFile(configPath, []byte(legacyConfig), 0600); err != nil {
+		t.Fatalf("Failed to write legacy config: %v", err)
+	}
+
+	mm = NewMigrationManager(configPath, logger)
+	needsMigration, currentVersion, err = mm.NeedsMigration()
+	if err != nil {
+		t.Errorf("NeedsMigration() error = %v", err)
+	}
+	if !needsMigration {
+		t.Errorf("NeedsMigration() = false, want true for legacy version")
+	}
+	if currentVersion != LegacyConfigVersion {
+		t.Errorf("NeedsMigration() currentVersion = %v, want %v", currentVersion, LegacyConfigVersion)
+	}
+}
+
+func TestMigrationManager_CreateBackup(t *testing.T) {
+	logger := NewLogger("test")
+
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	// Create a test config file
+	testConfig := `quiet: false
+verbose: true
+`
+	if err := os.WriteFile(configPath, []byte(testConfig), 0600); err != nil {
+		t.Fatalf("Failed to write test config: %v", err)
+	}
+
+	// Create backup
+	mm := NewMigrationManager(configPath, logger)
+	if err := mm.createBackup(); err != nil {
+		t.Errorf("createBackup() error = %v", err)
+	}
+
+	// Check backup exists
+	backupPath := configPath + ".bak"
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		t.Errorf("createBackup() backup file not created at %s", backupPath)
+	}
+
+	// Verify backup content
+	backupContent, err := os.ReadFile(backupPath)
+	if err != nil {
+		t.Errorf("Failed to read backup file: %v", err)
+	}
+	if string(backupContent) != testConfig {
+		t.Errorf("Backup content mismatch")
+	}
+}
+
+func TestMigrationManager_CreateBackup_Timestamped(t *testing.T) {
+	logger := NewLogger("test")
+
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	// Create a test config file
+	testConfig := `quiet: false
+`
+	if err := os.WriteFile(configPath, []byte(testConfig), 0600); err != nil {
+		t.Fatalf("Failed to write test config: %v", err)
+	}
+
+	// Create first backup
+	mm := NewMigrationManager(configPath, logger)
+	if err := mm.createBackup(); err != nil {
+		t.Errorf("createBackup() error = %v", err)
+	}
+
+	// Create second backup (should be timestamped)
+	if err := mm.createBackup(); err != nil {
+		t.Errorf("createBackup() error = %v", err)
+	}
+
+	// Check that timestamped backup exists
+	backupPath := configPath + ".bak"
+	timestampedBackupPath := configPath + ".bak."
+
+	// First backup should still exist
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		t.Errorf("First backup file not found")
+	}
+
+	// Timestamped backup should exist
+	matches, err := filepath.Glob(timestampedBackupPath + "*")
+	if err != nil {
+		t.Errorf("Failed to glob timestamped backups: %v", err)
+	}
+	if len(matches) != 1 {
+		t.Errorf("Expected 1 timestamped backup, got %d", len(matches))
+	}
+}
+
+func TestMigrationManager_Migrate(t *testing.T) {
+	logger := NewLogger("test")
+
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	// Create a legacy config file
+	legacyConfig := `quiet: false
+verbose: true
+debug: false
+`
+	if err := os.WriteFile(configPath, []byte(legacyConfig), 0600); err != nil {
+		t.Fatalf("Failed to write legacy config: %v", err)
+	}
+
+	// Run migration
+	mm := NewMigrationManager(configPath, logger)
+	if err := mm.Migrate(); err != nil {
+		t.Errorf("Migrate() error = %v", err)
+	}
+
+	// Check that backup was created
+	backupPath := configPath + ".bak"
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		t.Errorf("Migrate() backup file not created")
+	}
+
+	// Check that config was migrated
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Errorf("Failed to read migrated config: %v", err)
+	}
+	migratedContent := string(content)
+
+	// Verify version field was added
+	if !strings.Contains(migratedContent, "version: 3") {
+		t.Errorf("Migrated config does not contain version field")
+	}
+
+	// Verify original fields are preserved
+	if !strings.Contains(migratedContent, "quiet: false") {
+		t.Errorf("Migrated config lost quiet field")
+	}
+	if !strings.Contains(migratedContent, "verbose: true") {
+		t.Errorf("Migrated config lost verbose field")
+	}
+}
+
+func TestMigrationManager_Migrate_Idempotent(t *testing.T) {
+	logger := NewLogger("test")
+
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	// Create a legacy config file
+	legacyConfig := `quiet: false
+`
+	if err := os.WriteFile(configPath, []byte(legacyConfig), 0600); err != nil {
+		t.Fatalf("Failed to write legacy config: %v", err)
+	}
+
+	// Run migration twice
+	mm := NewMigrationManager(configPath, logger)
+	if err := mm.Migrate(); err != nil {
+		t.Errorf("First Migrate() error = %v", err)
+	}
+
+	if err := mm.Migrate(); err != nil {
+		t.Errorf("Second Migrate() error = %v", err)
+	}
+
+	// Check that only one backup was created (second migration should be no-op)
+	backupPath := configPath + ".bak"
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		t.Errorf("Backup file not found")
+	}
+
+	// Check for timestamped backups (should not exist for idempotent migration)
+	timestampedBackupPath := configPath + ".bak."
+	matches, err := filepath.Glob(timestampedBackupPath + "*")
+	if err != nil {
+		t.Errorf("Failed to glob timestamped backups: %v", err)
+	}
+	if len(matches) > 0 {
+		t.Errorf("Migration not idempotent: timestamped backup created on second run")
+	}
+}
+
+func TestMigrationManager_CheckLegacyFormat(t *testing.T) {
+	logger := NewLogger("test")
+
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	// Test with legacy format (no version field)
+	legacyConfig := `quiet: false
+`
+	if err := os.WriteFile(configPath, []byte(legacyConfig), 0600); err != nil {
+		t.Fatalf("Failed to write legacy config: %v", err)
+	}
+
+	mm := NewMigrationManager(configPath, logger)
+	if !mm.CheckLegacyFormat() {
+		t.Errorf("CheckLegacyFormat() = false, want true for legacy format")
+	}
+
+	// Test with current format (has version field)
+	currentConfig := `version: 3
+quiet: false
+`
+	if err := os.WriteFile(configPath, []byte(currentConfig), 0600); err != nil {
+		t.Fatalf("Failed to write current config: %v", err)
+	}
+
+	mm = NewMigrationManager(configPath, logger)
+	if mm.CheckLegacyFormat() {
+		t.Errorf("CheckLegacyFormat() = true, want false for current format")
+	}
+}
+
+func TestSupportsLegacyFormat(t *testing.T) {
+	// Create a temporary directory
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	// Test with legacy format (no version field)
+	legacyConfig := `quiet: false
+`
+	if err := os.WriteFile(configPath, []byte(legacyConfig), 0600); err != nil {
+		t.Fatalf("Failed to write legacy config: %v", err)
+	}
+
+	if !SupportsLegacyFormat(configPath) {
+		t.Errorf("SupportsLegacyFormat() = false, want true for legacy format")
+	}
+
+	// Test with current format (has version field)
+	currentConfig := `version: 2
+quiet: false
+`
+	if err := os.WriteFile(configPath, []byte(currentConfig), 0600); err != nil {
+		t.Fatalf("Failed to write current config: %v", err)
+	}
+
+	if SupportsLegacyFormat(configPath) {
+		t.Errorf("SupportsLegacyFormat() = true, want false for current format")
+	}
+
+	// Test with non-existent file
+	nonExistentPath := filepath.Join(tmpDir, "nonexistent.yaml")
+	if SupportsLegacyFormat(nonExistentPath) {
+		t.Errorf("SupportsLegacyFormat() = true for non-existent file, want false")
+	}
+}
+
+func TestParseConfigContent(t *testing.T) {
+	// Test parsing simple config
+	content := `quiet: false
+verbose: true
+debug: false
+`
+	config, err := parseConfigContent(content)
+	if err != nil {
+		t.Errorf("parseConfigContent() error = %v", err)
+	}
+
+	if config["quiet"] != "false" {
+		t.Errorf("parseConfigContent() quiet = %v, want false", config["quiet"])
+	}
+	if config["verbose"] != "true" {
+		t.Errorf("parseConfigContent() verbose = %v, want true", config["verbose"])
+	}
+
+	// Test parsing with comments
+	contentWithComments := `# This is a comment
+quiet: false
+# Another comment
+verbose: true
+`
+	config, err = parseConfigContent(contentWithComments)
+	if err != nil {
+		t.Errorf("parseConfigContent() with comments error = %v", err)
+	}
+
+	if config["quiet"] != "false" {
+		t.Errorf("parseConfigContent() with comments quiet = %v, want false", config["quiet"])
+	}
+}

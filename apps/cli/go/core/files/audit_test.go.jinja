@@ -1,0 +1,403 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+	"testing"
+	"time"
+)
+
+func TestNewAuditLogger(t *testing.T) {
+	// Create a temporary database path
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+
+	// Create audit logger
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	// Verify it's enabled
+	if !auditLogger.IsEnabled() {
+		t.Error("Expected audit logger to be enabled by default")
+	}
+
+	// Verify retention days
+	if auditLogger.GetRetentionDays() != 90 {
+		t.Errorf("Expected retention days to be 90, got %d", auditLogger.GetRetentionDays())
+	}
+}
+
+func TestLogEvent(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	ctx := context.Background()
+	metadata := map[string]interface{}{
+		"user": "test-user",
+		"file": "test.txt",
+	}
+
+	err = auditLogger.LogEvent(ctx, "file_processed", "stdin", metadata)
+	if err != nil {
+		t.Fatalf("Failed to log event: %v", err)
+	}
+
+	// Verify event was logged
+	count, err := auditLogger.GetEventCount(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get event count: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 event, got %d", count)
+	}
+}
+
+func TestLogEventDisabled(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	// Disable audit logging
+	auditLogger.SetEnabled(false)
+
+	ctx := context.Background()
+	metadata := map[string]interface{}{"user": "test-user"}
+
+	err = auditLogger.LogEvent(ctx, "file_processed", "stdin", metadata)
+	if err != nil {
+		t.Fatalf("Failed to log event when disabled: %v", err)
+	}
+
+	// Verify no event was logged
+	count, err := auditLogger.GetEventCount(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get event count: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected 0 events when disabled, got %d", count)
+	}
+}
+
+func TestPruneOldEvents(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+
+	auditLogger, err := NewAuditLogger(dbPath, 7, nil) // 7 day retention
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	ctx := context.Background()
+
+	// Log some events
+	for i := 0; i < 5; i++ {
+		metadata := map[string]interface{}{"index": i}
+		auditLogger.LogEvent(ctx, "test_event", "test", metadata)
+	}
+
+	// Verify initial count
+	count, _ := auditLogger.GetEventCount(ctx)
+	if count != 5 {
+		t.Errorf("Expected 5 events before prune, got %d", count)
+	}
+
+	// Prune events older than 10 days (should prune 1 event)
+	cutoff := time.Now().AddDate(0, 0, -10)
+	query := `UPDATE audit_events SET timestamp = ? WHERE id = ?`
+	auditLogger.db.Exec(query, cutoff.Format("2006-01-02 15:04:05"), 1)
+
+	auditLogger.PruneOldEvents(ctx)
+	count, _ = auditLogger.GetEventCount(ctx)
+	if count != 4 {
+		t.Errorf("Expected 4 events after pruning 1 old event, got %d", count)
+	}
+}
+
+func TestPruneDisabled(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+
+	auditLogger, err := NewAuditLogger(dbPath, 0, nil) // 0 = disabled
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	ctx := context.Background()
+
+	// Log some events
+	for i := 0; i < 3; i++ {
+		metadata := map[string]interface{}{"index": i}
+		auditLogger.LogEvent(ctx, "test_event", "test", metadata)
+	}
+
+	// Prune should not delete anything
+	auditLogger.PruneOldEvents(ctx)
+	count, _ := auditLogger.GetEventCount(ctx)
+	if count != 3 {
+		t.Errorf("Expected 3 events when pruning disabled, got %d", count)
+	}
+}
+
+func TestExportEvents(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+	exportPath := tmpDir + "/export.json"
+
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	ctx := context.Background()
+
+	// Log some events
+	for i := 0; i < 3; i++ {
+		metadata := map[string]interface{}{"index": i}
+		auditLogger.LogEvent(ctx, "test_event", "test", metadata)
+	}
+
+	// Export all events
+	err = auditLogger.ExportEvents(ctx, exportPath, nil, time.Time{})
+	if err != nil {
+		t.Fatalf("Failed to export events: %v", err)
+	}
+
+	// Verify export file exists
+	if _, err := os.Stat(exportPath); os.IsNotExist(err) {
+		t.Error("Export file was not created")
+	}
+
+	// Verify export content
+	data, err := os.ReadFile(exportPath)
+	if err != nil {
+		t.Fatalf("Failed to read export file: %v", err)
+	}
+
+	var events []AuditEvent
+	if err := json.Unmarshal(data, &events); err != nil {
+		t.Fatalf("Failed to unmarshal export data: %v", err)
+	}
+
+	if len(events) != 3 {
+		t.Errorf("Expected 3 exported events, got %d", len(events))
+	}
+}
+
+func TestExportEventsWithFilters(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+	exportPath := tmpDir + "/export.json"
+
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	ctx := context.Background()
+
+	// Log events with different types
+	auditLogger.LogEvent(ctx, "file_processed", "test", map[string]interface{}{"index": 1})
+	auditLogger.LogEvent(ctx, "config_loaded", "test", map[string]interface{}{"index": 2})
+	auditLogger.LogEvent(ctx, "file_processed", "test", map[string]interface{}{"index": 3})
+
+	// Export only file_processed events
+	eventTypes := []string{"file_processed"}
+	err = auditLogger.ExportEvents(ctx, exportPath, eventTypes, time.Time{})
+	if err != nil {
+		t.Fatalf("Failed to export events with filter: %v", err)
+	}
+
+	// Verify export content
+	data, err := os.ReadFile(exportPath)
+	if err != nil {
+		t.Fatalf("Failed to read export file: %v", err)
+	}
+
+	var events []AuditEvent
+	if err := json.Unmarshal(data, &events); err != nil {
+		t.Fatalf("Failed to unmarshal export data: %v", err)
+	}
+
+	if len(events) != 2 {
+		t.Errorf("Expected 2 exported events with filter, got %d", len(events))
+	}
+
+	// Verify all events are of the correct type
+	for _, event := range events {
+		if event.EventType != "file_processed" {
+			t.Errorf("Expected event type 'file_processed', got '%s'", event.EventType)
+		}
+	}
+}
+
+func TestExportEventsWithSince(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+	exportPath := tmpDir + "/export.json"
+
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	ctx := context.Background()
+
+	// Log events
+	auditLogger.LogEvent(ctx, "test_event", "test", map[string]interface{}{"index": 1})
+
+	// Manually set one event to be old
+	oldTime := time.Now().AddDate(0, 0, -10)
+	query := `UPDATE audit_events SET timestamp = ? WHERE id = 1`
+	auditLogger.db.Exec(query, oldTime.Format("2006-01-02 15:04:05"))
+
+	// Log a new event
+	auditLogger.LogEvent(ctx, "test_event", "test", map[string]interface{}{"index": 2})
+
+	// Export events since yesterday
+	since := time.Now().AddDate(0, 0, -1)
+	err = auditLogger.ExportEvents(ctx, exportPath, nil, since)
+	if err != nil {
+		t.Fatalf("Failed to export events with since filter: %v", err)
+	}
+
+	// Verify export content
+	data, err := os.ReadFile(exportPath)
+	if err != nil {
+		t.Fatalf("Failed to read export file: %v", err)
+	}
+
+	var events []AuditEvent
+	if err := json.Unmarshal(data, &events); err != nil {
+		t.Fatalf("Failed to unmarshal export data: %v", err)
+	}
+
+	if len(events) != 1 {
+		t.Errorf("Expected 1 exported event with since filter, got %d", len(events))
+	}
+}
+
+func TestSetRetentionDays(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	// Set new retention period
+	auditLogger.SetRetentionDays(30)
+	if auditLogger.GetRetentionDays() != 30 {
+		t.Errorf("Expected retention days to be 30, got %d", auditLogger.GetRetentionDays())
+	}
+
+	// Set to 0 (disabled)
+	auditLogger.SetRetentionDays(0)
+	if auditLogger.GetRetentionDays() != 0 {
+		t.Errorf("Expected retention days to be 0, got %d", auditLogger.GetRetentionDays())
+	}
+}
+
+func TestSetEnabled(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	// Disable
+	auditLogger.SetEnabled(false)
+	if auditLogger.IsEnabled() {
+		t.Error("Expected audit logger to be disabled")
+	}
+
+	// Enable
+	auditLogger.SetEnabled(true)
+	if !auditLogger.IsEnabled() {
+		t.Error("Expected audit logger to be enabled")
+	}
+}
+
+func TestGetDefaultAuditPath(t *testing.T) {
+	path, err := GetDefaultAuditPath()
+	if err != nil {
+		t.Fatalf("Failed to get default audit path: %v", err)
+	}
+
+	if path == "" {
+		t.Error("Expected non-empty audit path")
+	}
+
+	// Verify path includes project name
+	if path == "" {
+		t.Error("Expected path to include project directory")
+	}
+}
+
+func TestAppendOnlySchema(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := tmpDir + "/audit.db"
+
+	auditLogger, err := NewAuditLogger(dbPath, 90, nil)
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+	defer auditLogger.Close()
+
+	ctx := context.Background()
+
+	// Log events
+	for i := 0; i < 5; i++ {
+		metadata := map[string]interface{}{"index": i}
+		auditLogger.LogEvent(ctx, "test_event", "test", metadata)
+	}
+
+	// Verify IDs are sequential and increasing
+	rows, err := auditLogger.db.Query("SELECT id FROM audit_events ORDER BY id")
+	if err != nil {
+		t.Fatalf("Failed to query events: %v", err)
+	}
+	defer rows.Close()
+
+	ids := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			t.Fatalf("Failed to scan id: %v", err)
+		}
+		ids = append(ids, id)
+	}
+
+	// Verify IDs are sequential
+	for i := 1; i < len(ids); i++ {
+		if ids[i] != ids[i-1]+1 {
+			t.Errorf("IDs are not sequential: %v", ids)
+		}
+	}
+}
+
+{# vim: set ft=go: #}

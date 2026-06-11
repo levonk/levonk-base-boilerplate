@@ -1,0 +1,152 @@
+import createProgressBar from 'cli-progress';
+import process from 'process';
+
+export type ProgressType = 'bar' | 'spinner';
+
+export interface ProgressOptions {
+  quiet?: boolean;
+  json?: boolean;
+  total?: number;
+  title?: string;
+}
+
+export interface ProgressContext {
+  isActive: boolean;
+  type: ProgressType;
+}
+
+// Global progress context to track active progress indicators
+const progressContext: ProgressContext = {
+  isActive: false,
+  type: 'bar',
+};
+
+export class ProgressManager {
+  private options: ProgressOptions;
+  private bar: createProgressBar.SingleBar | null = null;
+  private spinner: createProgressBar.Preset | null = null;
+
+  constructor(options: ProgressOptions = {}) {
+    this.options = {
+      quiet: false,
+      json: false,
+      ...options,
+    };
+  }
+
+  /**
+   * Check if progress indicators should be shown
+   */
+  private shouldShowProgress(): boolean {
+    // Don't show progress in quiet mode
+    if (this.options.quiet) return false;
+    // Don't show progress in JSON mode
+    if (this.options.json) return false;
+    // Don't show progress if not a TTY
+    if (!process.stdout.isTTY) return false;
+    return true;
+  }
+
+  /**
+   * Create a progress bar for operations with known total
+   */
+  createBar(total: number, title?: string): createProgressBar.SingleBar | null {
+    if (!this.shouldShowProgress()) return null;
+
+    // Clean up any existing progress indicator
+    this.stop();
+
+    progressContext.isActive = true;
+    progressContext.type = 'bar';
+
+    const barFormat = `${title || 'Progress'} [{bar}] {percentage}% | ETA: {eta}s | {value}/{total}`;
+    this.bar = new createProgressBar.SingleBar({
+      format: barFormat,
+      barCompleteChar: '=',
+      barIncompleteChar: '-',
+      hideCursor: true,
+    }, createProgressBar.Presets.shades_classic);
+
+    this.bar.start(total, 0);
+    return this.bar;
+  }
+
+  /**
+   * Create a spinner for indeterminate operations
+   */
+  createSpinner(title?: string): createProgressBar.Preset | null {
+    if (!this.shouldShowProgress()) return null;
+
+    // Clean up any existing progress indicator
+    this.stop();
+
+    progressContext.isActive = true;
+    progressContext.type = 'spinner';
+
+    this.spinner = createProgressBar.Presets.shades_classic;
+    return this.spinner;
+  }
+
+  /**
+   * Update progress bar value
+   */
+  update(value: number): void {
+    if (this.bar) {
+      this.bar.update(value);
+    }
+  }
+
+  /**
+   * Increment progress bar by 1
+   */
+  increment(): void {
+    if (this.bar) {
+      this.bar.increment();
+    }
+  }
+
+  /**
+   * Stop and clean up progress indicator
+   */
+  stop(): void {
+    if (this.bar) {
+      this.bar.stop();
+      this.bar = null;
+    }
+    if (this.spinner) {
+      // Spinners don't have a stop method in cli-progress
+      this.spinner = null;
+    }
+    progressContext.isActive = false;
+  }
+
+  /**
+   * Get current progress context
+   */
+  getContext(): ProgressContext {
+    return { ...progressContext };
+  }
+}
+
+// Global progress manager instance
+let globalProgressManager: ProgressManager | null = null;
+
+export function getProgressManager(options?: ProgressOptions): ProgressManager {
+  if (!globalProgressManager) {
+    globalProgressManager = new ProgressManager(options);
+  }
+  return globalProgressManager;
+}
+
+export function resetProgressManager(): void {
+  if (globalProgressManager) {
+    globalProgressManager.stop();
+    globalProgressManager = null;
+  }
+}
+
+// Handle SIGINT to gracefully stop progress indicators
+process.on('SIGINT', () => {
+  resetProgressManager();
+  process.exit(130); // Standard exit code for SIGINT
+});

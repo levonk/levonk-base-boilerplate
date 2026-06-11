@@ -1,0 +1,414 @@
+package toon
+
+import (
+	"testing"
+)
+
+func TestDecodePrimitive(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	tests := []struct {
+		name     string
+		input    string
+		expected Value
+	}{
+		{
+			name:     "string",
+			input:    "hello",
+			expected: StringValue("hello"),
+		},
+		{
+			name:     "quoted string",
+			input:    `"hello world"`,
+			expected: StringValue("hello world"),
+		},
+		{
+			name:     "number",
+			input:    "42",
+			expected: NumberValue(42),
+		},
+		{
+			name:     "negative number",
+			input:    "-42",
+			expected: NumberValue(-42),
+		},
+		{
+			name:     "float",
+			input:    "3.14",
+			expected: NumberValue(3.14),
+		},
+		{
+			name:     "true",
+			input:    "true",
+			expected: BoolValue(true),
+		},
+		{
+			name:     "false",
+			input:    "false",
+			expected: BoolValue(false),
+		},
+		{
+			name:     "null",
+			input:    "null",
+			expected: NullValue{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := decoder.Decode(tt.input)
+			if err != nil {
+				t.Fatalf("Decode() error = %v", err)
+			}
+
+			switch exp := tt.expected.(type) {
+			case StringValue:
+				if res, ok := result.(StringValue); !ok || string(res) != string(exp) {
+					t.Errorf("Decode() = %v, want %v", result, tt.expected)
+				}
+			case NumberValue:
+				if res, ok := result.(NumberValue); !ok || float64(res) != float64(exp) {
+					t.Errorf("Decode() = %v, want %v", result, tt.expected)
+				}
+			case BoolValue:
+				if res, ok := result.(BoolValue); !ok || bool(res) != bool(exp) {
+					t.Errorf("Decode() = %v, want %v", result, tt.expected)
+				}
+			case NullValue:
+				if _, ok := result.(NullValue); !ok {
+					t.Errorf("Decode() = %v, want %v", result, tt.expected)
+				}
+			}
+		})
+	}
+}
+
+func TestDecodeInlineArray(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	input := "[3]: hello,42,true"
+	result, err := decoder.Decode(input)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+
+	arr, ok := result.(Array)
+	if !ok {
+		t.Fatalf("Decode() result is not Array, got %T", result)
+	}
+
+	if arr.Length != 3 {
+		t.Errorf("Array.Length = %v, want 3", arr.Length)
+	}
+
+	if len(arr.Items) != 3 {
+		t.Fatalf("Array.Items length = %v, want 3", len(arr.Items))
+	}
+}
+
+func TestDecodeEmptyArray(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "empty array literal",
+			input: "[]",
+		},
+		{
+			name:  "empty array header",
+			input: "[0]:",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := decoder.Decode(tt.input)
+			if err != nil {
+				t.Fatalf("Decode() error = %v", err)
+			}
+
+			arr, ok := result.(Array)
+			if !ok {
+				t.Fatalf("Decode() result is not Array, got %T", result)
+			}
+
+			if arr.Length != 0 {
+				t.Errorf("Array.Length = %v, want 0", arr.Length)
+			}
+		})
+	}
+}
+
+func TestDecodeTabularArray(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	input := `[2]{id,name,role}:
+  1,Alice,admin
+  2,Bob,user`
+
+	result, err := decoder.Decode(input)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+
+	// Tabular arrays with a header at root should decode as Array
+	arr, ok := result.(Array)
+	if !ok {
+		t.Fatalf("Decode() result is not Array, got %T", result)
+	}
+
+	if arr.Length != 2 {
+		t.Errorf("Array.Length = %v, want 2", arr.Length)
+	}
+
+	if len(arr.Fields) != 3 {
+		t.Errorf("Array.Fields length = %v, want 3", len(arr.Fields))
+	}
+
+	if !arr.IsTabular {
+		t.Errorf("Array.IsTabular = false, want true")
+	}
+}
+
+func TestDecodeObject(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	input := `name: Alice
+age: 30
+admin: true`
+
+	result, err := decoder.Decode(input)
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+
+	obj, ok := result.(Object)
+	if !ok {
+		t.Fatalf("Decode() result is not Object, got %T", result)
+	}
+
+	if len(obj.Fields) != 3 {
+		t.Errorf("Object.Fields length = %v, want 3", len(obj.Fields))
+	}
+
+	if _, ok := obj.Fields["name"]; !ok {
+		t.Errorf("Object.Fields missing 'name' key")
+	}
+
+	if _, ok := obj.Fields["age"]; !ok {
+		t.Errorf("Object.Fields missing 'age' key")
+	}
+
+	if _, ok := obj.Fields["admin"]; !ok {
+		t.Errorf("Object.Fields missing 'admin' key")
+	}
+}
+
+func TestDecodeEmptyDocument(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	result, err := decoder.Decode("")
+	if err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+
+	obj, ok := result.(Object)
+	if !ok {
+		t.Fatalf("Decode() result is not Object, got %T", result)
+	}
+
+	if len(obj.Fields) != 0 {
+		t.Errorf("Object.Fields length = %v, want 0", len(obj.Fields))
+	}
+}
+
+func TestUnquoteString(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple",
+			input:    `"hello"`,
+			expected: "hello",
+		},
+		{
+			name:     "with space",
+			input:    `"hello world"`,
+			expected: "hello world",
+		},
+		{
+			name:     "with newline",
+			input:    `"hello\nworld"`,
+			expected: "hello\nworld",
+		},
+		{
+			name:     "with tab",
+			input:    `"hello\tworld"`,
+			expected: "hello\tworld",
+		},
+		{
+			name:     "with backslash",
+			input:    `"hello\\world"`,
+			expected: "hello\\world",
+		},
+		{
+			name:     "with quote",
+			input:    `"hello\"world"`,
+			expected: "hello\"world",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := decoder.unquoteString(tt.input)
+			if err != nil {
+				t.Fatalf("unquoteString() error = %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("unquoteString() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseNumber(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	tests := []struct {
+		name     string
+		input    string
+		expected float64
+	}{
+		{
+			name:     "integer",
+			input:    "42",
+			expected: 42,
+		},
+		{
+			name:     "negative",
+			input:    "-42",
+			expected: -42,
+		},
+		{
+			name:     "float",
+			input:    "3.14",
+			expected: 3.14,
+		},
+		{
+			name:     "exponent",
+			input:    "1e-6",
+			expected: 1e-6,
+		},
+		{
+			name:     "zero",
+			input:    "0",
+			expected: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := decoder.parseNumber(tt.input)
+			if err != nil {
+				t.Fatalf("parseNumber() error = %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("parseNumber() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseHeader(t *testing.T) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	tests := []struct {
+		name          string
+		input         string
+		expectedKey   string
+		expectedLen   int
+		expectedDelim Delimiter
+		expectedFields []string
+	}{
+		{
+			name:          "simple header",
+			input:         "[3]:",
+			expectedKey:   "",
+			expectedLen:   3,
+			expectedDelim: DelimiterComma,
+			expectedFields: nil,
+		},
+		{
+			name:          "header with key",
+			input:         "items[3]:",
+			expectedKey:   "items",
+			expectedLen:   3,
+			expectedDelim: DelimiterComma,
+			expectedFields: nil,
+		},
+		{
+			name:          "header with tab delimiter",
+			input:         "[3\t]:",
+			expectedKey:   "",
+			expectedLen:   3,
+			expectedDelim: DelimiterTab,
+			expectedFields: nil,
+		},
+		{
+			name:          "header with pipe delimiter",
+			input:         "[3|]:",
+			expectedKey:   "",
+			expectedLen:   3,
+			expectedDelim: DelimiterPipe,
+			expectedFields: nil,
+		},
+		{
+			name:          "tabular header",
+			input:         "[3]{id,name}:",
+			expectedKey:   "",
+			expectedLen:   3,
+			expectedDelim: DelimiterComma,
+			expectedFields: []string{"id", "name"},
+		},
+		{
+			name:          "full header",
+			input:         "items[3]{id,name}:",
+			expectedKey:   "items",
+			expectedLen:   3,
+			expectedDelim: DelimiterComma,
+			expectedFields: []string{"id", "name"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := decoder.parseHeader(tt.input)
+			if err != nil {
+				t.Fatalf("parseHeader() error = %v", err)
+			}
+
+			if result.Key != tt.expectedKey {
+				t.Errorf("parseHeader().Key = %v, want %v", result.Key, tt.expectedKey)
+			}
+
+			if result.Length != tt.expectedLen {
+				t.Errorf("parseHeader().Length = %v, want %v", result.Length, tt.expectedLen)
+			}
+
+			if result.Delimiter != tt.expectedDelim {
+				t.Errorf("parseHeader().Delimiter = %v, want %v", result.Delimiter, tt.expectedDelim)
+			}
+
+			if len(result.Fields) != len(tt.expectedFields) {
+				t.Errorf("parseHeader().Fields length = %v, want %v", len(result.Fields), len(tt.expectedFields))
+			}
+		})
+	}
+}

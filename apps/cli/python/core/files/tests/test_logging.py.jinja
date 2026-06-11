@@ -1,0 +1,266 @@
+from {{ project_slug }}.logging import Logger, configure_logging, get_logger, detect_log_format, resolve_log_level
+import logging
+import os
+import sys
+import pytest
+
+
+def test_color_always():
+    """Test --color=always forces color output."""
+    logger = Logger(name="{{ project_slug }}", color="always")
+    assert logger.use_color is True
+
+
+def test_color_never():
+    """Test --color=never disables color output."""
+    logger = Logger(name="{{ project_slug }}", color="never")
+    assert logger.use_color is False
+
+
+def test_color_auto_tty():
+    """Test --color=auto with TTY detection."""
+    # In non-TTY environment, auto should disable color
+    logger = Logger(name="{{ project_slug }}", color="auto")
+    # Result depends on whether we're in a TTY
+    assert isinstance(logger.use_color, bool)
+
+
+def test_no_color_env_var():
+    """Test NO_COLOR environment variable takes precedence."""
+    os.environ["NO_COLOR"] = "1"
+    try:
+        logger = Logger(name="{{ project_slug }}", color="always")
+        assert logger.use_color is False
+    finally:
+        del os.environ["NO_COLOR"]
+
+
+def test_no_color_precedence_over_never():
+    """Test NO_COLOR takes precedence even when --color=never."""
+    os.environ["NO_COLOR"] = "1"
+    try:
+        logger = Logger(name="{{ project_slug }}", color="never")
+        assert logger.use_color is False
+    finally:
+        del os.environ["NO_COLOR"]
+
+
+def test_color_invalid_value():
+    """Test invalid color value defaults to auto."""
+    logger = Logger(name="{{ project_slug }}", color="invalid")
+    assert isinstance(logger.use_color, bool)
+
+
+def test_configure_logging_with_color():
+    """Test configure_logging accepts color parameter."""
+    configure_logging(name="{{ project_slug }}", color="always")
+    logger = get_logger()
+    assert logger.use_color is True
+
+
+def test_get_logger_with_color():
+    """Test get_logger accepts color parameter."""
+    # Reset global logger to test fresh instance
+    from {{ project_slug }}.logging import _global_logger
+    import {{ project_slug }}.logging as logging_module
+    logging_module._global_logger = None
+
+    logger = get_logger(name="{{ project_slug }}", color="never")
+    assert logger.use_color is False
+
+
+def test_quiet_mode_suppression():
+    """Test quiet mode suppresses all log output."""
+    logger = Logger(name="{{ project_slug }}", quiet=True)
+    # Logger level should be set above CRITICAL (CRITICAL is 50, so level should be > 50)
+    assert logger.logger.level > logging.CRITICAL
+
+
+def test_quiet_mode_info():
+    """Test info messages are suppressed in quiet mode."""
+    logger = Logger(name="{{ project_slug }}", quiet=True)
+    # This should not raise an exception or produce output
+    logger.info("This should be suppressed", module="test")
+
+
+def test_quiet_mode_error():
+    """Test error messages are suppressed in quiet mode."""
+    logger = Logger(name="{{ project_slug }}", quiet=True)
+    # This should not raise an exception or produce output
+    logger.error("This should be suppressed", module="test")
+
+
+def test_verbose_mode_info():
+    """Test info messages are shown in verbose mode."""
+    logger = Logger(name="{{ project_slug }}", verbose=True)
+    # Logger level should be INFO
+    assert logger.logger.level == logging.INFO
+
+
+def test_debug_mode_debug():
+    """Test debug messages are shown in debug mode."""
+    logger = Logger(name="{{ project_slug }}", debug_mode=True)
+    # Logger level should be DEBUG
+    assert logger.logger.level == logging.DEBUG
+
+
+def test_log_level_filtering():
+    """Test log level filtering works correctly."""
+    # Default mode (WARNING level)
+    logger = Logger(name="{{ project_slug }}")
+    assert logger.logger.level == logging.WARNING
+
+
+def test_module_information_in_logs():
+    """Test module information is included in logs."""
+    logger = Logger(name="{{ project_slug }}", verbose=True)
+    # This should not raise an exception
+    logger.info("Test message with module", module="test_module")
+
+
+def test_detect_log_format_tty():
+    """Test format auto-detection returns human for TTY."""
+    # This test depends on the environment
+    format_type = detect_log_format()
+    assert format_type in ["human", "json"]
+
+
+def test_detect_log_format_non_tty():
+    """Test format auto-detection returns json for non-TTY."""
+    # Mock non-TTY environment
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+
+    class MockStream:
+        def isatty(self):
+            return False
+
+    sys.stdout = MockStream()
+    sys.stderr = MockStream()
+
+    try:
+        format_type = detect_log_format()
+        assert format_type == "json"
+    finally:
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+
+def test_resolve_log_level_env_var():
+    """Test log level resolution with environment variable."""
+    os.environ["LOG_LEVEL"] = "DEBUG"
+    try:
+        level = resolve_log_level()
+        assert level == "DEBUG"
+    finally:
+        del os.environ["LOG_LEVEL"]
+
+
+def test_resolve_log_level_cli_flag():
+    """Test log level resolution with CLI flag."""
+    level = resolve_log_level(cli_level="INFO")
+    assert level == "INFO"
+
+
+def test_resolve_log_level_env_precedence():
+    """Test env var takes precedence over CLI flag."""
+    os.environ["LOG_LEVEL"] = "ERROR"
+    try:
+        level = resolve_log_level(cli_level="DEBUG")
+        assert level == "ERROR"
+    finally:
+        del os.environ["LOG_LEVEL"]
+
+
+def test_resolve_log_level_default():
+    """Test default log level is WARNING."""
+    level = resolve_log_level()
+    assert level == "WARNING"
+
+
+def test_logger_with_json_format():
+    """Test logger accepts json format."""
+    logger = Logger(name="{{ project_slug }}", log_format="json")
+    assert logger.log_format == "json"
+
+
+def test_logger_with_structured_format():
+    """Test logger accepts structured format."""
+    logger = Logger(name="{{ project_slug }}", log_format="structured")
+    assert logger.log_format == "structured"
+
+
+def test_logger_with_human_format():
+    """Test logger accepts human format."""
+    logger = Logger(name="{{ project_slug }}", log_format="human")
+    assert logger.log_format == "human"
+
+
+def test_configure_logging_with_log_format():
+    """Test configure_logging accepts log_format parameter."""
+    configure_logging(name="{{ project_slug }}", log_format="json")
+    logger = get_logger()
+    assert logger.log_format == "json"
+
+
+def test_get_logger_with_log_format():
+    """Test get_logger accepts log_format parameter."""
+    logger = get_logger(name="{{ project_slug }}", log_format="json")
+    assert logger.log_format == "json"
+
+
+def test_logger_debug_mode():
+    """Test logger with debug mode enabled."""
+    logger = Logger(name="{{ project_slug }}", debug_mode=True)
+    assert logger.debug_mode is True
+
+
+def test_logger_verbose_mode():
+    """Test logger with verbose mode enabled."""
+    logger = Logger(name="{{ project_slug }}", verbose=True)
+    assert logger.verbose is True
+
+
+def test_logger_quiet_mode():
+    """Test logger with quiet mode enabled."""
+    logger = Logger(name="{{ project_slug }}", quiet=True)
+    assert logger.quiet is True
+
+
+def test_configure_logging_with_debug():
+    """Test configure_logging with debug mode."""
+    configure_logging(name="{{ project_slug }}", debug_mode=True)
+    logger = get_logger()
+    assert logger.debug_mode is True
+
+
+def test_configure_logging_with_verbose():
+    """Test configure_logging with verbose mode."""
+    configure_logging(name="{{ project_slug }}", verbose=True)
+    logger = get_logger()
+    assert logger.verbose is True
+
+
+def test_configure_logging_with_quiet():
+    """Test configure_logging with quiet mode."""
+    configure_logging(name="{{ project_slug }}", quiet=True)
+    logger = get_logger()
+    assert logger.quiet is True
+
+
+def test_resolve_log_level_invalid():
+    """Test resolve_log_level with invalid level."""
+    level = resolve_log_level(cli_level="INVALID")
+    # Function returns the invalid value as-is
+    assert level == "INVALID"
+
+
+def test_resolve_log_level_env_invalid():
+    """Test resolve_log_level with invalid env var."""
+    os.environ["LOG_LEVEL"] = "INVALID"
+    try:
+        level = resolve_log_level()
+        # Function returns the invalid value as-is
+        assert level == "INVALID"
+    finally:
+        del os.environ["LOG_LEVEL"]

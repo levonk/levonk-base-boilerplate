@@ -1,0 +1,328 @@
+package toon
+
+import (
+	"testing"
+)
+
+func TestEncodeString(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	tests := []struct {
+		name     string
+		input    StringValue
+		expected string
+	}{
+		{
+			name:     "simple string",
+			input:    "hello",
+			expected: "hello",
+		},
+		{
+			name:     "string with space",
+			input:    "hello world",
+			expected: `"hello world"`,
+		},
+		{
+			name:     "string with comma",
+			input:    "hello,world",
+			expected: `"hello,world"`,
+		},
+		{
+			name:     "string with colon",
+			input:    "hello:world",
+			expected: `"hello:world"`,
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: `""`,
+		},
+		{
+			name:     "string with escape",
+			input:    "hello\nworld",
+			expected: `"hello\nworld"`,
+		},
+		{
+			name:     "string with quote",
+			input:    `hello"world`,
+			expected: `"hello\"world"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := encoder.EncodeValue(tt.input)
+			if err != nil {
+				t.Fatalf("EncodeValue() error = %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("EncodeValue() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestEncodeNumber(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	tests := []struct {
+		name     string
+		input    NumberValue
+		expected string
+	}{
+		{
+			name:     "integer",
+			input:    42,
+			expected: "42",
+		},
+		{
+			name:     "negative integer",
+			input:    -42,
+			expected: "-42",
+		},
+		{
+			name:     "float",
+			input:    3.14,
+			expected: "3.14",
+		},
+		{
+			name:     "scientific notation at boundary",
+			input:    1e-6,
+			expected: "0.000001",
+		},
+		{
+			name:     "zero",
+			input:    0,
+			expected: "0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := encoder.EncodeValue(tt.input)
+			if err != nil {
+				t.Fatalf("EncodeValue() error = %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("EncodeValue() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestEncodeBool(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	tests := []struct {
+		name     string
+		input    BoolValue
+		expected string
+	}{
+		{
+			name:     "true",
+			input:    true,
+			expected: "true",
+		},
+		{
+			name:     "false",
+			input:    false,
+			expected: "false",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := encoder.EncodeValue(tt.input)
+			if err != nil {
+				t.Fatalf("EncodeValue() error = %v", err)
+			}
+			if result != tt.expected {
+				t.Errorf("EncodeValue() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestEncodeNull(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	result, err := encoder.EncodeValue(NullValue{})
+	if err != nil {
+		t.Fatalf("EncodeValue() error = %v", err)
+	}
+	if result != "null" {
+		t.Errorf("EncodeValue() = %v, want null", result)
+	}
+}
+
+func TestEncodePrimitiveArray(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	arr := Array{
+		Length:    3,
+		Delimiter: DelimiterComma,
+		Items: []Value{
+			StringValue("hello"),
+			NumberValue(42),
+			BoolValue(true),
+		},
+	}
+
+	result, err := encoder.EncodeValue(arr)
+	if err != nil {
+		t.Fatalf("EncodeValue() error = %v", err)
+	}
+
+	expected := "[3]: hello,42,true"
+	if result != expected {
+		t.Errorf("EncodeValue() = %v, want %v", result, expected)
+	}
+}
+
+func TestEncodeEmptyArray(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	arr := Array{
+		Length: 0,
+	}
+
+	result, err := encoder.EncodeValue(arr)
+	if err != nil {
+		t.Fatalf("EncodeValue() error = %v", err)
+	}
+
+	if result != "[]" {
+		t.Errorf("EncodeValue() = %v, want []", result)
+	}
+}
+
+func TestEncodeObject(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	obj := Object{
+		Fields: map[string]Value{
+			"name":  StringValue("Alice"),
+			"age":   NumberValue(30),
+			"admin": BoolValue(true),
+		},
+	}
+
+	result, err := encoder.EncodeValue(obj)
+	if err != nil {
+		t.Fatalf("EncodeValue() error = %v", err)
+	}
+
+	// Check that all fields are present
+	if !contains(result, "name:") {
+		t.Errorf("EncodeValue() missing 'name' field")
+	}
+	if !contains(result, "age:") {
+		t.Errorf("EncodeValue() missing 'age' field")
+	}
+	if !contains(result, "admin:") {
+		t.Errorf("EncodeValue() missing 'admin' field")
+	}
+}
+
+func TestEncodeTabularArray(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	arr := Array{
+		Length:    2,
+		Delimiter: DelimiterComma,
+		Fields:    []string{"id", "name", "role"},
+		IsTabular: true,
+		Items: []Value{
+			Object{
+				Fields: map[string]Value{
+					"id":   NumberValue(1),
+					"name": StringValue("Alice"),
+					"role": StringValue("admin"),
+				},
+			},
+			Object{
+				Fields: map[string]Value{
+					"id":   NumberValue(2),
+					"name": StringValue("Bob"),
+					"role": StringValue("user"),
+				},
+			},
+		},
+	}
+
+	result, err := encoder.EncodeValue(arr)
+	if err != nil {
+		t.Fatalf("EncodeValue() error = %v", err)
+	}
+
+	// Check for header
+	if !contains(result, "[2]{id,name,role}:") {
+		t.Errorf("EncodeValue() missing tabular header")
+	}
+
+	// Check for rows
+	if !contains(result, "1,Alice,admin") {
+		t.Errorf("EncodeValue() missing first row")
+	}
+	if !contains(result, "2,Bob,user") {
+		t.Errorf("EncodeValue() missing second row")
+	}
+}
+
+func TestEncodeKey(t *testing.T) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple key",
+			input:    "name",
+			expected: "name",
+		},
+		{
+			name:     "key with underscore",
+			input:    "user_name",
+			expected: "user_name",
+		},
+		{
+			name:     "key with dot",
+			input:    "user.name",
+			expected: "user.name",
+		},
+		{
+			name:     "key with space",
+			input:    "user name",
+			expected: `"user name"`,
+		},
+		{
+			name:     "key starting with number",
+			input:    "1name",
+			expected: `"1name"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := encoder.encodeKey(tt.input)
+			if result != tt.expected {
+				t.Errorf("encodeKey() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && findSubstring(s, substr))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

@@ -27,30 +27,32 @@ Implement SIGHUP signal handling to reload config files without restart. Validat
 
 ## Sub-Tasks
 
-- [ ] Add signal handling for SIGHUP — `core/files/main.go.jinja`
-- [ ] Implement config reload function — `core/files/config.go.jinja`
-- [ ] Add config validation before applying — `core/files/config.go.jinja`
-- [ ] Implement graceful error handling (keep old config) — `core/files/config.go.jinja`
-- [ ] Add logging for reload events — `core/files/config.go.jinja`
-- [ ] Test SIGHUP triggers config reload — `core/files/config_test.go.jinja`
-- [ ] Test invalid config keeps old config — `core/files/config_test.go.jinja`
-- [ ] Test valid config is applied — `core/files/config_test.go.jinja`
-- [ ] Test reload events are logged — `core/files/config_test.go.jinja`
+- [x] Add signal handling for SIGHUP — `core/files/main.go.jinja`
+- [x] Implement config reload function — `core/files/config.go.jinja`
+- [x] Add config validation before applying — `core/files/config.go.jinja`
+- [x] Implement graceful error handling (keep old config) — `core/files/config.go.jinja`
+- [x] Add logging for reload events — `core/files/config.go.jinja`
+- [x] Test SIGHUP triggers config reload — `core/files/config_test.go.jinja`
+- [x] Test invalid config keeps old config — `core/files/config_test.go.jinja`
+- [x] Test valid config is applied — `core/files/config_test.go.jinja`
+- [x] Test reload events are logged — `core/files/config_test.go.jinja`
 
 ## Relevant Files
 
-- `apps/cli/go/core/files/main.go.jinja` — Add signal handling
-- `apps/cli/go/core/files/config.go.jinja` — Implement reload logic
-- `apps/cli/go/core/files/config_test.go.jinja` — Tests for config reload
+- `apps/cli/go/core/files/main.go.jinja` — Add signal handling for SIGHUP
+- `apps/cli/go/core/files/config.go.jinja` — Implement ReloadConfig function with validation
+- `apps/cli/go/core/files/config_test.go.jinja` — Tests for config reload (valid, invalid, missing file)
+- `apps/cli/go/core/files/docs.go.jinja` — Fixed date filter issue
+- `apps/cli/go/core/files/man.1.jinja` — Fixed date filter issue
 
 ## Acceptance Criteria
 
-- [ ] SIGHUP signal triggers config reload
-- [ ] New config is validated before applying
-- [ ] Invalid config keeps old config active
-- [ ] Reload events are logged
-- [ ] Validation errors are handled gracefully
-- [ ] Reload works without restart
+- [x] SIGHUP signal triggers config reload
+- [x] New config is validated before applying
+- [x] Invalid config keeps old config active
+- [x] Reload events are logged
+- [x] Validation errors are handled gracefully
+- [x] Reload works without restart
 
 ## Test Plan
 

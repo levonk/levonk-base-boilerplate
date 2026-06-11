@@ -1,18 +1,28 @@
 import chalk from 'chalk';
 import supportsColor from 'supports-color';
 import process from 'process';
+import { formatLogFileRef, type FileLocation } from './file-ref.js';
+import { redactSecretsFromObject, detectSecrets } from './secrets.js';
+import { getPrivacyManager, type PrivacyConfig } from './privacy.js';
 
-export type LogLevel = 'info' | 'warn' | 'error' | 'fatal';
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export type ColorMode = 'auto' | 'always' | 'never';
+export type LogFormat = 'text' | 'json';
 
 export interface LoggerOptions {
   quiet?: boolean;
   verbose?: boolean;
-  noColor?: boolean;
+  debug?: boolean;
+  logLevel?: LogLevel;
+  color?: ColorMode;
+  logFormat?: LogFormat;
   module?: string;
+  privacy?: boolean;
 }
 
 // Color palette for log levels
 const levelColors = {
+  debug: chalk.gray,
   info: chalk.blue,
   warn: chalk.yellow,
   error: chalk.red,
@@ -32,9 +42,9 @@ const moduleColors = [
 ];
 
 // Module name to color mapping
-const moduleColorMap = new Map<string, typeof chalk.Chalk>();
+const moduleColorMap = new Map<string, typeof chalk>();
 
-function getModuleColor(moduleName: string): typeof chalk.Chalk {
+function getModuleColor(moduleName: string): typeof chalk {
   if (!moduleColorMap.has(moduleName)) {
     const index = moduleColorMap.size % moduleColors.length;
     moduleColorMap.set(moduleName, moduleColors[index]);
@@ -47,23 +57,107 @@ function formatTimestamp(): string {
   return now.toISOString();
 }
 
-function shouldUseColor(options: LoggerOptions): boolean {
-  if (options.noColor) return false;
-  if (process.env.NO_COLOR) return false;
-  return supportsColor.stdout !== false;
+function formatJsonMessage(
+  level: LogLevel,
+  message: string,
+  module: string,
+  extra?: Record<string, unknown>
+): string {
+  const logEntry: Record<string, unknown> = {
+    timestamp: formatTimestamp(),
+    level,
+    module,
+    message,
+  };
+
+  if (extra) {
+    Object.assign(logEntry, extra);
+  }
+
+  return JSON.stringify(logEntry);
 }
+
+function shouldUseColor(options: LoggerOptions): boolean {
+  // NO_COLOR environment variable takes highest precedence
+  if (process.env.NO_COLOR) return false;
+
+  // Use the color mode from options (from --color flag or config file)
+  const colorMode = options.color || 'auto';
+
+  switch (colorMode) {
+    case 'always':
+      return true;
+    case 'never':
+      return false;
+    case 'auto':
+    default:
+      // Auto mode: use supports-color library for TTY detection
+      return supportsColor.stdout !== false;
+  }
+}
+
+// Log level hierarchy (lower number = lower priority)
+const levelPriority: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+  fatal: 4,
+};
 
 export class Logger {
   private options: LoggerOptions;
+  private currentLevel: LogLevel;
+  private privacyManager: ReturnType<typeof getPrivacyManager>;
 
   constructor(options: LoggerOptions = {}) {
+    // Auto-detect log format if not specified
+    const logFormat = options.logFormat || (process.stdout.isTTY ? 'text' : 'json');
+
+    // Support language-native env filters
+    // NODE_ENV=development enables debug mode
+    // LOG_LEVEL sets the log level directly
+    const envLogLevel = process.env.LOG_LEVEL as LogLevel;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
     this.options = {
       quiet: false,
       verbose: false,
-      noColor: false,
+      debug: isDevelopment || options.debug,
+      color: 'auto',
+      logFormat,
       module: '{{ project_slug }}',
+      privacy: false,
       ...options,
     };
+
+    // Initialize privacy manager if privacy mode is enabled
+    if (this.options.privacy) {
+      this.privacyManager = getPrivacyManager();
+      if (!this.privacyManager.isEnabled()) {
+        this.privacyManager.config.enabled = true;
+      }
+    } else {
+      this.privacyManager = getPrivacyManager();
+    }
+
+    // Set current log level: env var > config log_level > debug flag > info default
+    if (envLogLevel && ['debug', 'info', 'warn', 'error', 'fatal'].includes(envLogLevel)) {
+      this.currentLevel = envLogLevel;
+    } else if (options.logLevel && ['debug', 'info', 'warn', 'error', 'fatal'].includes(options.logLevel)) {
+      this.currentLevel = options.logLevel;
+    } else if (this.options.debug) {
+      this.currentLevel = 'debug';
+    } else {
+      this.currentLevel = 'info';
+    }
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    // Always log errors and fatal regardless of level
+    if (level === 'error' || level === 'fatal') return true;
+    // Check if level is at or above current level
+    return levelPriority[level] >= levelPriority[this.currentLevel];
   }
 
   private formatMessage(
@@ -71,8 +165,25 @@ export class Logger {
     message: string,
     extra?: Record<string, unknown>
   ): string {
-    const timestamp = formatTimestamp();
     const module = this.options.module || '{{ project_slug }}';
+
+    // Redact secrets from message and extra data
+    let redactedMessage = this.redactSecrets(message);
+    let redactedExtra = extra ? redactSecretsFromObject(extra) : undefined;
+
+    // Apply privacy mode redaction if enabled
+    if (this.privacyManager.isEnabled()) {
+      redactedMessage = this.privacyManager.redactSensitiveData(redactedMessage);
+      redactedExtra = redactedExtra ? this.privacyManager.redactSensitiveObject(redactedExtra) : undefined;
+    }
+
+    // Use JSON format if specified
+    if (this.options.logFormat === 'json') {
+      return formatJsonMessage(level, redactedMessage, module, redactedExtra);
+    }
+
+    // Text format (existing logic)
+    const timestamp = formatTimestamp();
     const useColor = shouldUseColor(this.options);
 
     const levelFn = useColor ? levelColors[level] : (text: string) => text;
@@ -81,10 +192,18 @@ export class Logger {
     const levelStr = levelFn(`[${level.toUpperCase()}]`);
     const moduleStr = moduleFn(`[${module}]`);
 
-    let output = `${timestamp} ${moduleStr} ${levelStr} ${message}`;
+    let output = `${timestamp} ${moduleStr} ${levelStr} ${redactedMessage}`;
 
-    if (extra && this.options.verbose) {
-      const extraStr = Object.entries(extra)
+    // Format file location if present in extra
+    if (redactedExtra && 'fileLocation' in redactedExtra && redactedExtra.fileLocation) {
+      const fileLocation = redactedExtra.fileLocation as FileLocation;
+      output += ` ${formatLogFileRef(fileLocation)}`;
+      // Remove fileLocation from extra to avoid duplication
+      redactedExtra = { ...redactedExtra, fileLocation: undefined } as any;
+    }
+
+    if (redactedExtra && this.options.verbose) {
+      const extraStr = Object.entries(redactedExtra)
         .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
         .join(' ');
       output += ` ${extraStr}`;
@@ -93,21 +212,49 @@ export class Logger {
     return output;
   }
 
+  /**
+   * Redact secrets from a message string
+   * @param message - Message to redact
+   * @returns Redacted message
+   */
+  private redactSecrets(message: string): string {
+    const secrets = detectSecrets(message);
+    if (secrets.length === 0) {
+      return message;
+    }
+
+    // Import redactSecrets dynamically to avoid circular dependency
+    const { redactSecrets: redact } = require('./secrets.js');
+    return redact(message, secrets);
+  }
+
+  debug(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    if (!this.shouldLog('debug')) return;
+    console.log(this.formatMessage('debug', message, extra));
+  }
+
   info(message: string, extra?: Record<string, unknown>): void {
     if (this.options.quiet) return;
+    if (!this.shouldLog('info')) return;
     console.log(this.formatMessage('info', message, extra));
   }
 
   warn(message: string, extra?: Record<string, unknown>): void {
     if (this.options.quiet) return;
+    if (!this.shouldLog('warn')) return;
     console.warn(this.formatMessage('warn', message, extra));
   }
 
   error(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    if (!this.shouldLog('error')) return;
     console.error(this.formatMessage('error', message, extra));
   }
 
   fatal(message: string, extra?: Record<string, unknown>): void {
+    if (this.options.quiet) return;
+    if (!this.shouldLog('fatal')) return;
     console.error(this.formatMessage('fatal', message, extra));
   }
 }

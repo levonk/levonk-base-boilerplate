@@ -1,0 +1,265 @@
+package session
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"{{ project_slug }}/internal/toon"
+)
+
+// Context represents session context information
+type Context struct {
+	WorkingDir    string
+	ProjectType   string
+	HasConfig     bool
+	HasData       bool
+	RecentFiles   []string
+	HelpMessages  []string
+	TokenBudget   int // Maximum tokens for context output
+}
+
+// ContextOptions configures session context generation
+type ContextOptions struct {
+	TokenBudget   int  // Maximum tokens (default: 500)
+	IncludeFiles  bool // Include recent files (default: false)
+	IncludeHelp   bool // Include help messages (default: true)
+}
+
+// DefaultContextOptions returns default context options
+func DefaultContextOptions() ContextOptions {
+	return ContextOptions{
+		TokenBudget:  500,
+		IncludeFiles: false,
+		IncludeHelp:  true,
+	}
+}
+
+// GenerateContext generates session context in TOON format
+func GenerateContext(opts ContextOptions) (string, error) {
+	if opts.TokenBudget == 0 {
+		opts.TokenBudget = 500
+	}
+
+	ctx, err := collectContext()
+	if err != nil {
+		return "", fmt.Errorf("failed to collect context: %w", err)
+	}
+
+	// Apply token budget constraints
+	ctx = applyTokenBudget(ctx, opts.TokenBudget)
+
+	// Convert to TOON
+	return encodeToTOON(ctx, opts)
+}
+
+// collectContext collects session context from the current directory
+func collectContext() (*Context, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := &Context{
+		WorkingDir:   wd,
+		ProjectType:  detectProjectType(wd),
+		HasConfig:    hasConfigFile(wd),
+		HasData:      hasDataDirectory(wd),
+		RecentFiles:  []string{},
+		HelpMessages: []string{},
+	}
+
+	return ctx, nil
+}
+
+// detectProjectType detects the type of project in the current directory
+func detectProjectType(wd string) string {
+	// Check for common project markers
+	if _, err := os.Stat(filepath.Join(wd, "go.mod")); err == nil {
+		return "go"
+	}
+	if _, err := os.Stat(filepath.Join(wd, "package.json")); err == nil {
+		return "node"
+	}
+	if _, err := os.Stat(filepath.Join(wd, "pyproject.toml")); err == nil {
+		return "python"
+	}
+	if _, err := os.Stat(filepath.Join(wd, "Cargo.toml")); err == nil {
+		return "rust"
+	}
+	if _, err := os.Stat(filepath.Join(wd, "pom.xml")); err == nil {
+		return "java"
+	}
+	return "unknown"
+}
+
+// hasConfigFile checks if a config file exists in the current directory
+func hasConfigFile(wd string) bool {
+	configFiles := []string{
+		"config.yaml", "config.yml", "config.json",
+		".{{ project_slug }}rc", ".{{ project_slug }}.yaml",
+		"{{ project_slug }}.conf", "{{ project_slug }}.toml",
+	}
+	for _, cfg := range configFiles {
+		if _, err := os.Stat(filepath.Join(wd, cfg)); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// hasDataDirectory checks if a data directory exists
+func hasDataDirectory(wd string) bool {
+	dataDirs := []string{"data", "db", "storage", ".data"}
+	for _, dir := range dataDirs {
+		if info, err := os.Stat(filepath.Join(wd, dir)); err == nil && info.IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
+// applyTokenBudget applies token budget constraints to context
+func applyTokenBudget(ctx *Context, budget int) *Context {
+	// Estimate token count (rough approximation: 1 token ≈ 4 characters)
+	estimatedTokens := estimateTokens(ctx)
+
+	if estimatedTokens <= budget {
+		return ctx
+	}
+
+	// Reduce content to fit budget
+	reductionFactor := float64(budget) / float64(estimatedTokens)
+
+	// Reduce help messages first
+	if len(ctx.HelpMessages) > 0 {
+		maxHelp := int(float64(len(ctx.HelpMessages)) * reductionFactor)
+		if maxHelp < 1 {
+			maxHelp = 1
+		}
+		ctx.HelpMessages = ctx.HelpMessages[:maxHelp]
+	}
+
+	// Then reduce files if still over budget
+	if len(ctx.RecentFiles) > 0 {
+		maxFiles := int(float64(len(ctx.RecentFiles)) * reductionFactor)
+		if maxFiles < 1 {
+			maxFiles = 1
+		}
+		ctx.RecentFiles = ctx.RecentFiles[:maxFiles]
+	}
+
+	return ctx
+}
+
+// estimateTokens estimates the token count of context
+func estimateTokens(ctx *Context) int {
+	// Rough approximation: 1 token ≈ 4 characters
+	totalChars := len(ctx.WorkingDir) +
+		len(ctx.ProjectType) +
+		len(ctx.RecentFiles)*20 + // Average filename length
+		len(ctx.HelpMessages)*50 // Average help message length
+	return totalChars / 4
+}
+
+// encodeToTOON encodes context to TOON format
+func encodeToTOON(ctx *Context, opts ContextOptions) (string, error) {
+	encoder := toon.NewEncoder(toon.DefaultEncoderOptions())
+
+	obj := toon.Object{
+		Fields: map[string]toon.Value{
+			"working_dir":  toon.StringValue(ctx.WorkingDir),
+			"project_type": toon.StringValue(ctx.ProjectType),
+			"has_config":   toon.BoolValue(ctx.HasConfig),
+			"has_data":     toon.BoolValue(ctx.HasData),
+		},
+	}
+
+	// Add help messages if enabled
+	if opts.IncludeHelp && len(ctx.HelpMessages) > 0 {
+		helpItems := make([]toon.Value, len(ctx.HelpMessages))
+		for i, msg := range ctx.HelpMessages {
+			helpItems[i] = toon.StringValue(msg)
+		}
+		obj.Fields["help"] = toon.Array{
+			Length:    len(ctx.HelpMessages),
+			Delimiter: toon.DelimiterComma,
+			Items:     helpItems,
+		}
+	}
+
+	// Add recent files if enabled
+	if opts.IncludeFiles && len(ctx.RecentFiles) > 0 {
+		fileItems := make([]toon.Value, len(ctx.RecentFiles))
+		for i, file := range ctx.RecentFiles {
+			fileItems[i] = toon.StringValue(file)
+		}
+		obj.Fields["recent_files"] = toon.Array{
+			Length:    len(ctx.RecentFiles),
+			Delimiter: toon.DelimiterComma,
+			Items:     fileItems,
+		}
+	}
+
+	return encoder.EncodeValue(obj)
+}
+
+// AddHelpMessage adds a help message to the context
+func (ctx *Context) AddHelpMessage(msg string) {
+	ctx.HelpMessages = append(ctx.HelpMessages, msg)
+}
+
+// AddRecentFile adds a recent file to the context
+func (ctx *Context) AddRecentFile(file string) {
+	// Keep only last 10 files
+	if len(ctx.RecentFiles) >= 10 {
+		ctx.RecentFiles = ctx.RecentFiles[1:]
+	}
+	ctx.RecentFiles = append(ctx.RecentFiles, file)
+}
+
+// FormatCompactContext formats context in compact TOON format for --session-context
+func FormatCompactContext() (string, error) {
+	opts := DefaultContextOptions()
+	opts.TokenBudget = 300 // More aggressive budget for compact output
+	opts.IncludeFiles = false
+	opts.IncludeHelp = true
+
+	ctx, err := collectContext()
+	if err != nil {
+		return "", err
+	}
+
+	// Add default help message
+	ctx.AddHelpMessage(fmt.Sprintf("Run %s --help for available commands", "{{ project_slug }}"))
+
+	return encodeToTOON(ctx, opts)
+}
+
+// IsDirectoryScoped returns true if context is scoped to current directory
+func (ctx *Context) IsDirectoryScoped() bool {
+	return ctx.WorkingDir != ""
+}
+
+// GetWorkingDir returns the current working directory
+func (ctx *Context) GetWorkingDir() string {
+	return ctx.WorkingDir
+}
+
+// GetProjectType returns the detected project type
+func (ctx *Context) GetProjectType() string {
+	return ctx.ProjectType
+}
+
+// GetRelativePath returns a path relative to working directory
+func (ctx *Context) GetRelativePath(path string) (string, error) {
+	if !strings.HasPrefix(path, ctx.WorkingDir) {
+		return path, nil
+	}
+	rel, err := filepath.Rel(ctx.WorkingDir, path)
+	if err != nil {
+		return path, err
+	}
+	return rel, nil
+}

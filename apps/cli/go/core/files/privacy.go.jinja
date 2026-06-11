@@ -1,0 +1,128 @@
+package main
+
+import (
+	"strings"
+)
+
+// PrivacyMode manages privacy settings for the CLI
+type PrivacyMode struct {
+	enabled bool
+	ignoreList []string
+	anonymousList []string
+	toggles PrivacyToggles
+}
+
+// PrivacyToggles controls specific privacy features
+type PrivacyToggles struct {
+	DisableIPLogging bool
+	DisableUserLogging bool
+	DisablePathLogging bool
+	DisableTimestampLogging bool
+}
+
+// NewPrivacyMode creates a new privacy mode instance
+func NewPrivacyMode(enabled bool) *PrivacyMode {
+	return &PrivacyMode{
+		enabled: enabled,
+		ignoreList: []string{},
+		anonymousList: []string{},
+		toggles: PrivacyToggles{
+			DisableIPLogging: false,
+			DisableUserLogging: false,
+			DisablePathLogging: false,
+			DisableTimestampLogging: false,
+		},
+	}
+}
+
+// IsEnabled returns whether privacy mode is enabled
+func (p *PrivacyMode) IsEnabled() bool {
+	return p.enabled
+}
+
+// AddToIgnoreList adds an identifier to the ignore list (logged but not assigned)
+func (p *PrivacyMode) AddToIgnoreList(identifier string) {
+	p.ignoreList = append(p.ignoreList, identifier)
+}
+
+// AddToAnonymousList adds an identifier to the anonymous list (ignored entirely)
+func (p *PrivacyMode) AddToAnonymousList(identifier string) {
+	p.anonymousList = append(p.anonymousList, identifier)
+}
+
+// ShouldIgnore checks if an identifier should be ignored (logged but not assigned)
+func (p *PrivacyMode) ShouldIgnore(identifier string) bool {
+	if !p.enabled {
+		return false
+	}
+	for _, ignored := range p.ignoreList {
+		if strings.Contains(identifier, ignored) {
+			return true
+		}
+	}
+	return false
+}
+
+// ShouldAnonymize checks if an identifier should be anonymized (ignored entirely)
+func (p *PrivacyMode) ShouldAnonymize(identifier string) bool {
+	if !p.enabled {
+		return false
+	}
+	for _, anon := range p.anonymousList {
+		if strings.Contains(identifier, anon) {
+			return true
+		}
+	}
+	return false
+}
+
+// SanitizeIdentifier returns a sanitized version of an identifier based on privacy settings
+func (p *PrivacyMode) SanitizeIdentifier(identifier string) string {
+	if !p.enabled {
+		return identifier
+	}
+
+	// Check if should be anonymized (ignored entirely)
+	if p.ShouldAnonymize(identifier) {
+		return "<anonymous>"
+	}
+
+	// Check if should be ignored (logged but not assigned)
+	if p.ShouldIgnore(identifier) {
+		return "<unknown>"
+	}
+
+	return identifier
+}
+
+// SetToggle sets a privacy toggle
+func (p *PrivacyMode) SetToggle(toggle string, value bool) {
+	switch toggle {
+	case "disable_ip_logging":
+		p.toggles.DisableIPLogging = value
+	case "disable_user_logging":
+		p.toggles.DisableUserLogging = value
+	case "disable_path_logging":
+		p.toggles.DisablePathLogging = value
+	case "disable_timestamp_logging":
+		p.toggles.DisableTimestampLogging = value
+	}
+}
+
+// GetToggle gets a privacy toggle value
+func (p *PrivacyMode) GetToggle(toggle string) bool {
+	switch toggle {
+	case "disable_ip_logging":
+		return p.toggles.DisableIPLogging
+	case "disable_user_logging":
+		return p.toggles.DisableUserLogging
+	case "disable_path_logging":
+		return p.toggles.DisablePathLogging
+	case "disable_timestamp_logging":
+		return p.toggles.DisableTimestampLogging
+	default:
+		return false
+	}
+}
+
+{# vim: set ft=go: #}

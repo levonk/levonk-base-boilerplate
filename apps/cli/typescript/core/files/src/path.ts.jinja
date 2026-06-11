@@ -1,0 +1,274 @@
+import * as path from 'path';
+import * as os from 'os';
+
+export interface PathOptions {
+  /** Whether to normalize the path (default: true) */
+  normalize?: boolean;
+  /** Whether to convert to absolute path (default: false) */
+  absolute?: boolean;
+  /** Whether to log path operations in debug mode (default: false) */
+  debug?: boolean;
+}
+
+/**
+ * Gets the platform-specific path separator
+ * Returns '\\' on Windows, '/' on Unix-like systems
+ */
+export function getSeparator(): string {
+  return path.sep;
+}
+
+/**
+ * Normalizes a path by resolving '.' and '..' segments
+ * Handles both forward and backward slashes
+ * Removes redundant separators and trailing separators
+ */
+export function normalizePath(inputPath: string): string {
+  let normalized = inputPath;
+
+  // Replace all backward slashes with forward slashes for processing
+  normalized = normalized.replace(/\\/g, '/');
+
+  // Remove redundant slashes
+  normalized = normalized.replace(/\/+/g, '/');
+
+  // Remove trailing slash (except for root paths)
+  if (normalized.length > 1 && normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
+
+  // Use Node.js path.normalize for platform-specific normalization
+  normalized = path.normalize(normalized);
+
+  return normalized;
+}
+
+/**
+ * Converts a path to use platform-appropriate separators
+ * Ensures Windows uses backslashes, Unix uses forward slashes
+ */
+export function toPlatformPath(inputPath: string): string {
+  const normalized = normalizePath(inputPath);
+
+  // On Windows, convert forward slashes to backslashes
+  if (process.platform === 'win32') {
+    return normalized.replace(/\//g, '\\');
+  }
+
+  // On Unix, ensure forward slashes
+  return normalized.replace(/\\/g, '/');
+}
+
+/**
+ * Converts a path to use forward slashes (Unix-style)
+ * Useful for display purposes or when consistent format is needed
+ */
+export function toUnixPath(inputPath: string): string {
+  const normalized = normalizePath(inputPath);
+  return normalized.replace(/\\/g, '/');
+}
+
+/**
+ * Joins path segments using platform-appropriate separators
+ * Handles any number of path segments
+ */
+export function joinPath(...segments: string[]): string {
+  return path.join(...segments);
+}
+
+/**
+ * Resolves a path to an absolute path
+ * If the path is already absolute, it's normalized
+ * If relative, it's resolved against the current working directory
+ */
+export function resolvePath(inputPath: string): string {
+  return path.resolve(inputPath);
+}
+
+/**
+ * Gets the relative path from one path to another
+ * Returns a relative path that can be used to get from 'from' to 'to'
+ */
+export function getRelativePath(from: string, to: string): string {
+  return path.relative(from, to);
+}
+
+/**
+ * Checks if a path is absolute
+ * Returns true for absolute paths, false for relative paths
+ */
+export function isAbsolutePath(inputPath: string): boolean {
+  return path.isAbsolute(inputPath);
+}
+
+/**
+ * Gets the directory name of a path
+ * Returns the directory portion of the path
+ */
+export function getDirName(inputPath: string): string {
+  return path.dirname(inputPath);
+}
+
+/**
+ * Gets the base name (file name) of a path
+ * Optionally filters by extension
+ */
+export function getBaseName(inputPath: string, ext?: string): string {
+  return path.basename(inputPath, ext);
+}
+
+/**
+ * Gets the extension of a file path
+ * Returns the extension including the dot (e.g., '.ts')
+ */
+export function getExtension(inputPath: string): string {
+  return path.extname(inputPath);
+}
+
+/**
+ * Parses a path into its components
+ * Returns an object with root, dir, base, ext, and name
+ */
+export function parsePath(inputPath: string): path.ParsedPath {
+  return path.parse(inputPath);
+}
+
+/**
+ * Validates a path for the current platform
+ * Checks for invalid characters and patterns
+ */
+export function isValidPath(inputPath: string): boolean {
+  try {
+    // Check for empty path
+    if (!inputPath || inputPath.trim().length === 0) {
+      return false;
+    }
+
+    // Windows-specific validation
+    if (process.platform === 'win32') {
+      // Check for invalid Windows characters
+      const invalidChars = /[<>:"|?*]/;
+      if (invalidChars.test(inputPath)) {
+        return false;
+      }
+
+      // Check for reserved device names (CON, PRN, AUX, NUL, etc.)
+      const reservedNames = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i;
+      const baseName = getBaseName(inputPath);
+      if (reservedNames.test(baseName)) {
+        return false;
+      }
+    }
+
+    // Unix-specific validation
+    if (process.platform !== 'win32') {
+      // Check for null character
+      if (inputPath.includes('\0')) {
+        return false;
+      }
+    }
+
+    // Try to normalize the path - if it fails, it's invalid
+    normalizePath(inputPath);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Formats a path for display in error messages
+ * Uses platform-appropriate separators and ensures readability
+ */
+export function formatErrorPath(inputPath: string): string {
+  return toPlatformPath(inputPath);
+}
+
+/**
+ * Formats a path for display in help text
+ * Uses forward slashes for consistency in documentation
+ */
+export function formatHelpPath(inputPath: string): string {
+  return toUnixPath(inputPath);
+}
+
+/**
+ * Formats a path for log output
+ * Respects debug mode and platform conventions
+ */
+export function formatLogPath(inputPath: string, debug: boolean = false): string {
+  const formatted = toPlatformPath(inputPath);
+
+  if (debug) {
+    // In debug mode, include additional path information
+    const parsed = parsePath(inputPath);
+    return `${formatted} (dir: ${parsed.dir}, base: ${parsed.base}, ext: ${parsed.ext})`;
+  }
+
+  return formatted;
+}
+
+/**
+ * Ensures a path uses the correct format for the current platform
+ * This is the main entry point for path handling in the CLI
+ */
+export function ensurePath(inputPath: string, options: PathOptions = {}): string {
+  const {
+    normalize = true,
+    absolute = false,
+    debug = false,
+  } = options;
+
+  let result = inputPath;
+
+  if (normalize) {
+    result = normalizePath(result);
+  }
+
+  if (absolute && !isAbsolutePath(result)) {
+    result = resolvePath(result);
+  }
+
+  result = toPlatformPath(result);
+
+  if (debug) {
+    // Log path operations in debug mode
+    console.debug(`[path] ${inputPath} -> ${result}`);
+  }
+
+  return result;
+}
+
+/**
+ * Gets the home directory path
+ * Returns the user's home directory with platform-appropriate separators
+ */
+export function getHomeDir(): string {
+  return toPlatformPath(os.homedir());
+}
+
+/**
+ * Gets the temporary directory path
+ * Returns the OS temp directory with platform-appropriate separators
+ */
+export function getTempDir(): string {
+  return toPlatformPath(os.tmpdir());
+}
+
+/**
+ * Checks if a path is within another path
+ * Useful for security checks and path validation
+ */
+export function isPathWithin(parent: string, child: string): boolean {
+  const resolvedParent = resolvePath(parent);
+  const resolvedChild = resolvePath(child);
+
+  // A path is not considered to be "within" itself
+  if (resolvedParent === resolvedChild) {
+    return false;
+  }
+
+  const relative = getRelativePath(resolvedParent, resolvedChild);
+  return !relative.startsWith('..');
+}

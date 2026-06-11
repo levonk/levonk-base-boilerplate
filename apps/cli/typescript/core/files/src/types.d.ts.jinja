@@ -1,0 +1,36 @@
+/**
+ * Type declarations for optional dependencies
+ */
+
+declare module 'better-sqlite3' {
+  interface Database {
+    exec(sql: string): void;
+    prepare(sql: string): Statement;
+    pragma(pragma: string): void;
+    close(): void;
+  }
+
+  interface Statement {
+    run(...params: any[]): RunResult;
+    get(...params: any[]): any;
+    all(...params: any[]): any[];
+  }
+
+  interface RunResult {
+    changes: number;
+    lastInsertRowid: number | bigint;
+  }
+
+  interface DatabaseConstructor {
+    new (path: string): Database;
+  }
+
+  const Database: DatabaseConstructor;
+  export default Database;
+}
+
+declare module 'keytar' {
+  export function getPassword(service: string, account: string): Promise<string | null>;
+  export function setPassword(service: string, account: string, password: string): Promise<void>;
+  export function deletePassword(service: string, account: string): Promise<void>;
+}

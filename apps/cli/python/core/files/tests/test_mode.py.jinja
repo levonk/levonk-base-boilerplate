@@ -1,0 +1,209 @@
+# vim: set ft=python :
+from {{ project_slug }}.mode import (
+    Mode, DetectionMethod, is_tty, detect_agent_session,
+    detect_agent_parent_process, auto_detect_mode, get_mode_from_env,
+    get_mode_from_config, determine_mode, is_agent_mode, is_human_mode
+)
+import pytest
+import os
+
+
+def test_mode_enum():
+    """Test Mode enum values."""
+    assert Mode.AGENT.value == "agent"
+    assert Mode.HUMAN.value == "human"
+
+
+def test_detection_method_enum():
+    """Test DetectionMethod enum values."""
+    assert DetectionMethod.AUTO_DETECT.value == "auto_detect"
+    assert DetectionMethod.CLI_FLAG.value == "cli_flag"
+    assert DetectionMethod.ENV_VAR.value == "env_var"
+    assert DetectionMethod.CONFIG.value == "config"
+
+
+def test_is_tty():
+    """Test TTY detection."""
+    result = is_tty()
+    assert isinstance(result, bool)
+
+
+def test_detect_agent_session():
+    """Test agent session detection via environment variables."""
+    result = detect_agent_session()
+    assert isinstance(result, bool)
+
+
+def test_detect_agent_session_with_env():
+    """Test agent session detection with CLAUDE_SESSION set."""
+    original = os.environ.get("CLAUDE_SESSION")
+    try:
+        os.environ["CLAUDE_SESSION"] = "1"
+        result = detect_agent_session()
+        assert result is True
+    finally:
+        if original is None:
+            os.environ.pop("CLAUDE_SESSION", None)
+        else:
+            os.environ["CLAUDE_SESSION"] = original
+
+
+def test_detect_agent_parent_process():
+    """Test agent parent process detection."""
+    result = detect_agent_parent_process()
+    assert isinstance(result, bool)
+
+
+def test_auto_detect_mode():
+    """Test automatic mode detection."""
+    mode = auto_detect_mode()
+    assert isinstance(mode, Mode)
+    assert mode in [Mode.AGENT, Mode.HUMAN]
+
+
+def test_get_mode_from_env():
+    """Test getting mode from environment variable."""
+    env_var = "{{ project_slug|upper|replace('-', '_') }}_MODE"
+    original = os.environ.get(env_var)
+    try:
+        os.environ[env_var] = "agent"
+        mode = get_mode_from_env()
+        assert mode == Mode.AGENT
+    finally:
+        if original is None:
+            os.environ.pop(env_var, None)
+        else:
+            os.environ[env_var] = original
+
+
+def test_get_mode_from_env_human():
+    """Test getting human mode from environment variable."""
+    env_var = "{{ project_slug|upper|replace('-', '_') }}_MODE"
+    original = os.environ.get(env_var)
+    try:
+        os.environ[env_var] = "human"
+        mode = get_mode_from_env()
+        assert mode == Mode.HUMAN
+    finally:
+        if original is None:
+            os.environ.pop(env_var, None)
+        else:
+            os.environ[env_var] = original
+
+
+def test_get_mode_from_env_invalid():
+    """Test getting mode from environment variable with invalid value."""
+    env_var = "{{ project_slug|upper|replace('-', '_') }}_MODE"
+    original = os.environ.get(env_var)
+    try:
+        os.environ[env_var] = "invalid"
+        mode = get_mode_from_env()
+        assert mode is None
+    finally:
+        if original is None:
+            os.environ.pop(env_var, None)
+        else:
+            os.environ[env_var] = original
+
+
+def test_get_mode_from_env_not_set():
+    """Test getting mode from environment variable when not set."""
+    env_var = "{{ project_slug|upper|replace('-', '_') }}_MODE"
+    original = os.environ.get(env_var)
+    try:
+        os.environ.pop(env_var, None)
+        mode = get_mode_from_env()
+        assert mode is None
+    finally:
+        if original is not None:
+            os.environ[env_var] = original
+
+
+def test_get_mode_from_config():
+    """Test getting mode from config file."""
+    mode = get_mode_from_config("agent")
+    assert mode == Mode.AGENT
+
+
+def test_get_mode_from_config_human():
+    """Test getting human mode from config file."""
+    mode = get_mode_from_config("human")
+    assert mode == Mode.HUMAN
+
+
+def test_get_mode_from_config_invalid():
+    """Test getting mode from config file with invalid value."""
+    mode = get_mode_from_config("invalid")
+    assert mode is None
+
+
+def test_get_mode_from_config_none():
+    """Test getting mode from config file when None."""
+    mode = get_mode_from_config(None)
+    assert mode is None
+
+
+def test_determine_mode_cli_flag():
+    """Test mode determination with CLI flag."""
+    mode, method = determine_mode(cli_flag=Mode.AGENT)
+    assert mode == Mode.AGENT
+    assert method == DetectionMethod.CLI_FLAG
+
+
+def test_determine_mode_env_var():
+    """Test mode determination with environment variable."""
+    env_var = "{{ project_slug|upper|replace('-', '_') }}_MODE"
+    original = os.environ.get(env_var)
+    try:
+        os.environ[env_var] = "human"
+        mode, method = determine_mode()
+        assert mode == Mode.HUMAN
+        assert method == DetectionMethod.ENV_VAR
+    finally:
+        if original is None:
+            os.environ.pop(env_var, None)
+        else:
+            os.environ[env_var] = original
+
+
+def test_determine_mode_config():
+    """Test mode determination with config file."""
+    mode, method = determine_mode(config_mode="agent")
+    assert mode == Mode.AGENT
+    assert method == DetectionMethod.CONFIG
+
+
+def test_determine_mode_auto_detect():
+    """Test mode determination with auto-detection."""
+    mode, method = determine_mode()
+    assert isinstance(mode, Mode)
+    assert method == DetectionMethod.AUTO_DETECT
+
+
+def test_determine_mode_precedence():
+    """Test mode determination precedence chain."""
+    env_var = "{{ project_slug|upper|replace('-', '_') }}_MODE"
+    original = os.environ.get(env_var)
+    try:
+        os.environ[env_var] = "human"
+        # CLI flag should override env var
+        mode, method = determine_mode(cli_flag=Mode.AGENT)
+        assert mode == Mode.AGENT
+        assert method == DetectionMethod.CLI_FLAG
+    finally:
+        if original is None:
+            os.environ.pop(env_var, None)
+        else:
+            os.environ[env_var] = original
+
+
+def test_is_agent_mode():
+    """Test checking if mode is agent mode."""
+    assert is_agent_mode(Mode.AGENT) is True
+    assert is_agent_mode(Mode.HUMAN) is False
+
+
+def test_is_human_mode():
+    """Test checking if mode is human mode."""
+    assert is_human_mode(Mode.HUMAN) is True
+    assert is_human_mode(Mode.AGENT) is False

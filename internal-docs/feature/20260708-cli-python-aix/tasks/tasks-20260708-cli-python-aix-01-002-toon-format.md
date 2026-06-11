@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-python-aix/prd.md"
 phase: 1
 parallel_id: 2
 branch: "feature/current/20260708-cli-python-aix/story-01-002-toon-format"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,17 +27,17 @@ Implement TOON (Token-Oriented Object Notation) format for token-efficient struc
 
 ## Sub-Tasks
 
-- [ ] Research or implement TOON encoder/decoder for Python — `output/toon.py`
-- [ ] Follow TOON format specification from https://toonformat.dev/reference/spec.html — `output/toon.py`
-- [ ] Implement compact, agent-readable syntax — `output/toon.py`
-- [ ] Add `--toon` flag to CLI using click/typer — `cli/main.py`
-- [ ] Add `--format=toon|json|human` flag to CLI — `cli/main.py`
-- [ ] Implement output format selection logic based on mode and flags — `output/formatter.py`
-- [ ] Default to TOON format in agent mode for stdout — `output/formatter.py`
-- [ ] Keep internal logic in JSON, convert at output boundary — `output/formatter.py`
-- [ ] Test TOON encoding/decoding with various data structures — `tests/test_toon.py`
-- [ ] Test format selection with mode and flag combinations — `tests/test_format.py`
-- [ ] Verify ~40% token savings over equivalent JSON — `tests/test_toon.py`
+- [x] Research or implement TOON encoder/decoder for Python — `output/toon.py`
+- [x] Follow TOON format specification from https://toonformat.dev/reference/spec.html — `output/toon.py`
+- [x] Implement compact, agent-readable syntax — `output/toon.py`
+- [x] Add `--toon` flag to CLI using click/typer — `cli/main.py`
+- [x] Add `--format=toon|json|human` flag to CLI — `cli/main.py`
+- [x] Implement output format selection logic based on mode and flags — `output/formatter.py`
+- [x] Default to TOON format in agent mode for stdout — `output/formatter.py`
+- [x] Keep internal logic in JSON, convert at output boundary — `output/formatter.py`
+- [x] Test TOON encoding/decoding with various data structures — `tests/test_toon.py`
+- [x] Test format selection with mode and flag combinations — `tests/test_format.py`
+- [x] Verify ~40% token savings over equivalent JSON — `tests/test_toon.py`
 
 ## Relevant Files
 
@@ -49,15 +49,15 @@ Implement TOON (Token-Oriented Object Notation) format for token-efficient struc
 
 ## Acceptance Criteria
 
-- [ ] `--toon` flag outputs in TOON format
-- [ ] `--format=toon|json|human` flag selects format explicitly
-- [ ] Agent mode defaults to TOON format for stdout
-- [ ] Human mode uses JSON or human-readable formats
-- [ ] TOON output follows specification from toonformat.dev
-- [ ] TOON achieves ~40% token savings over equivalent JSON
-- [ ] Internal logic remains in JSON
-- [ ] Conversion happens at output boundary only
-- [ ] All tests pass
+- [x] `--toon` flag outputs in TOON format
+- [x] `--format=toon|json|human` flag selects format explicitly
+- [x] Agent mode defaults to TOON format for stdout
+- [x] Human mode uses JSON or human-readable formats
+- [x] TOON output follows specification from toonformat.dev
+- [x] TOON achieves ~40% token savings over equivalent JSON
+- [x] Internal logic remains in JSON
+- [x] Conversion happens at output boundary only
+- [x] All tests pass
 
 ## Test Plan
 

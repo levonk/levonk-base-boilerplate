@@ -2,7 +2,7 @@
   description = "Dev shell for a Python CLI project";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils/v1.0.0";
   };
 

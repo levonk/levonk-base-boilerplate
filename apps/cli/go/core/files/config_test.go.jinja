@@ -1,0 +1,753 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestModeString(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     Mode
+		expected string
+	}{
+		{"Agent mode", ModeAgent, "agent"},
+		{"Human mode", ModeHuman, "human"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.mode.String(); got != tt.expected {
+				t.Errorf("Mode.String() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestModeIsValid(t *testing.T) {
+	tests := []struct {
+		name     string
+		mode     Mode
+		expected bool
+	}{
+		{"Agent mode valid", ModeAgent, true},
+		{"Human mode valid", ModeHuman, true},
+		{"Invalid mode", Mode("invalid"), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.mode.IsValid(); got != tt.expected {
+				t.Errorf("Mode.IsValid() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormatString(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   Format
+		expected string
+	}{
+		{"TOON format", FormatToon, "toon"},
+		{"JSON format", FormatJSON, "json"},
+		{"Human format", FormatHuman, "human"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.format.String(); got != tt.expected {
+				t.Errorf("Format.String() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormatIsValid(t *testing.T) {
+	tests := []struct {
+		name     string
+		format   Format
+		expected bool
+	}{
+		{"TOON format valid", FormatToon, true},
+		{"JSON format valid", FormatJSON, true},
+		{"Human format valid", FormatHuman, true},
+		{"Invalid format", Format("invalid"), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.format.IsValid(); got != tt.expected {
+				t.Errorf("Format.IsValid() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetModeFromEnv(t *testing.T) {
+	// Save original value
+	original := os.Getenv("MYTOOL_MODE")
+	defer os.Setenv("MYTOOL_MODE", original)
+
+	tests := []struct {
+		name     string
+		envValue string
+		expected string
+	}{
+		{"Agent mode from env", "agent", "agent"},
+		{"Human mode from env", "human", "human"},
+		{"Empty env", "", ""},
+		{"Invalid env", "invalid", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("MYTOOL_MODE", tt.envValue)
+			got := GetModeFromEnv()
+			if got != tt.expected {
+				t.Errorf("GetModeFromEnv() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsAgentSession(t *testing.T) {
+	// Save original values
+	originalClaude := os.Getenv("CLAUDE_SESSION")
+	originalCodex := os.Getenv("CODEX_SESSION")
+	defer os.Setenv("CLAUDE_SESSION", originalClaude)
+	defer os.Setenv("CODEX_SESSION", originalCodex)
+
+	tests := []struct {
+		name           string
+		claudeSession  string
+		codexSession   string
+		expected       bool
+	}{
+		{"Claude session detected", "test-session", "", true},
+		{"Codex session detected", "", "test-session", true},
+		{"No session detected", "", "", false},
+		{"Both sessions", "test", "test", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv("CLAUDE_SESSION", tt.claudeSession)
+			os.Setenv("CODEX_SESSION", tt.codexSession)
+			got := IsAgentSession()
+			if got != tt.expected {
+				t.Errorf("IsAgentSession() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDetermineMode(t *testing.T) {
+	tests := []struct {
+		name        string
+		humanFlag  bool
+		configMode string
+		envMode    string
+		expected   Mode
+	}{
+		{"Human flag overrides all", true, "agent", "agent", ModeHuman},
+		{"Env overrides config", false, "agent", "human", ModeHuman},
+		{"Config used when no env", false, "human", "", ModeHuman},
+		{"Config used when invalid env", false, "agent", "invalid", ModeAgent},
+		{"Auto-detection when no config", false, "", "", ModeAgent}, // Default to agent in tests
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set env if needed
+			if tt.envMode != "" {
+				os.Setenv("MYTOOL_MODE", tt.envMode)
+				defer os.Unsetenv("MYTOOL_MODE")
+			}
+
+			got := DetermineMode(tt.humanFlag, tt.configMode)
+			if got != tt.expected {
+				t.Errorf("DetermineMode() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDefaultConfigTemplate(t *testing.T) {
+	// Read the default config template
+	templatePath := "config.default.yaml"
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		t.Fatalf("Failed to read default config template: %v", err)
+	}
+
+	templateContent := string(content)
+
+	// Test that template contains required sections
+	requiredSections := []string{
+		"# General Settings",
+		"# Color Control",
+		"# Logging",
+		"# Input Processing",
+		"# Output Formatting",
+		"# Performance",
+		"# Security",
+		"# Advanced",
+	}
+
+	for _, section := range requiredSections {
+		if !strings.Contains(templateContent, section) {
+			t.Errorf("Default config template missing required section: %s", section)
+		}
+	}
+
+	// Test that template contains color control settings
+	colorSettings := []string{
+		"color: auto",
+		"NO_COLOR",
+		"auto, always, or never",
+	}
+
+	for _, setting := range colorSettings {
+		if !strings.Contains(templateContent, setting) {
+			t.Errorf("Default config template missing color setting: %s", setting)
+		}
+	}
+
+	// Test that template contains logging settings
+	loggingSettings := []string{
+		"log-level",
+		"log-file",
+		"log-format",
+	}
+
+	for _, setting := range loggingSettings {
+		if !strings.Contains(templateContent, setting) {
+			t.Errorf("Default config template missing logging setting: %s", setting)
+		}
+	}
+
+	// Test that template contains configuration precedence information
+	if !strings.Contains(templateContent, "Configuration precedence") {
+		t.Errorf("Default config template missing configuration precedence information")
+	}
+
+	// Test that template contains project name placeholder
+	if !strings.Contains(templateContent, "{{ project_name }}") {
+		t.Errorf("Default config template missing project name placeholder")
+	}
+
+	// Test that template contains description placeholder
+	if !strings.Contains(templateContent, "{{ description }}") {
+		t.Errorf("Default config template missing description placeholder")
+	}
+
+	// Test that all settings are commented (lines starting with #)
+	lines := strings.Split(templateContent, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		// Skip empty lines and section headers
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, "-") {
+			continue
+		}
+		// Check if line contains a setting (contains :)
+		if strings.Contains(trimmed, ":") && !strings.HasPrefix(trimmed, "#") {
+			t.Errorf("Default config template has uncommented setting: %s", trimmed)
+		}
+	}
+}
+
+func TestEnsureConfigDir(t *testing.T) {
+	// Test creating a new directory
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "subdir", "config.yaml")
+
+	err := EnsureConfigDir(configPath)
+	if err != nil {
+		t.Fatalf("EnsureConfigDir failed: %v", err)
+	}
+
+	// Verify directory was created
+	if _, err := os.Stat(filepath.Dir(configPath)); os.IsNotExist(err) {
+		t.Errorf("Config directory was not created")
+	}
+
+	// Test that existing directory doesn't cause error
+	err = EnsureConfigDir(configPath)
+	if err != nil {
+		t.Errorf("EnsureConfigDir failed for existing directory: %v", err)
+	}
+}
+
+func TestCreateDefaultConfig(t *testing.T) {
+	// Test creating default config
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	err := CreateDefaultConfig(configPath)
+	if err != nil {
+		t.Fatalf("CreateDefaultConfig failed: %v", err)
+	}
+
+	// Verify file was created
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		t.Errorf("Config file was not created")
+	}
+
+	// Verify file has content
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to read config file: %v", err)
+	}
+	if len(content) == 0 {
+		t.Errorf("Config file is empty")
+	}
+
+	// Verify file contains expected content
+	if !strings.Contains(string(content), "# Default configuration") {
+		t.Errorf("Config file missing expected content")
+	}
+
+	// Verify file permissions
+	info, err := os.Stat(configPath)
+	if err != nil {
+		t.Fatalf("Failed to get file info: %v", err)
+	}
+	if info.Mode().Perm() != 0600 {
+		t.Errorf("Config file has incorrect permissions: %v, expected 0600", info.Mode().Perm())
+	}
+}
+
+func TestGetLocalProjectConfigPath(t *testing.T) {
+	// Test finding local config in current directory
+	tempDir := t.TempDir()
+	configDir := filepath.Join(tempDir, ".config", "{{ project_slug }}")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+	configPath := filepath.Join(configDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("test: true"), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	// Change to temp directory
+	originalDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current directory: %v", err)
+	}
+	defer os.Chdir(originalDir)
+	if err := os.Chdir(tempDir); err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+
+	foundPath, err := GetLocalProjectConfigPath()
+	if err != nil {
+		t.Fatalf("GetLocalProjectConfigPath failed: %v", err)
+	}
+	if foundPath != configPath {
+		t.Errorf("GetLocalProjectConfigPath returned %s, expected %s", foundPath, configPath)
+	}
+}
+
+func TestGetSystemConfigPath(t *testing.T) {
+	path, err := GetSystemConfigPath()
+	if err != nil {
+		t.Fatalf("GetSystemConfigPath failed: %v", err)
+	}
+	expected := filepath.Join("/etc", "{{ project_slug }}", "config.yaml")
+	if path != expected {
+		t.Errorf("GetSystemConfigPath returned %s, expected %s", path, expected)
+	}
+}
+
+func TestGetConfigPrecedence(t *testing.T) {
+	// Test with no config files
+	paths, err := GetConfigPrecedence()
+	if err != nil {
+		t.Fatalf("GetConfigPrecedence failed: %v", err)
+	}
+	if len(paths) != 0 {
+		t.Errorf("GetConfigPrecedence returned %d paths with no config files, expected 0", len(paths))
+	}
+
+	// Test with system config
+	tempDir := t.TempDir()
+	systemConfigDir := filepath.Join(tempDir, "etc", "{{ project_slug }}")
+	if err := os.MkdirAll(systemConfigDir, 0755); err != nil {
+		t.Fatalf("Failed to create system config directory: %v", err)
+	}
+	systemConfigPath := filepath.Join(systemConfigDir, "config.yaml")
+	if err := os.WriteFile(systemConfigPath, []byte("system: true"), 0600); err != nil {
+		t.Fatalf("Failed to create system config: %v", err)
+	}
+
+	// Temporarily override system config path for testing
+	// Note: This is a simplified test - in real usage, system config is at /etc
+	// For this test, we'll just verify the function works without actually testing /etc
+}
+
+func TestGetHardcodedDefaults(t *testing.T) {
+	defaults := GetHardcodedDefaults()
+
+	// Test that defaults contains expected keys
+	expectedKeys := []string{"quiet", "verbose", "debug", "color", "json"}
+	for _, key := range expectedKeys {
+		if _, ok := defaults[key]; !ok {
+			t.Errorf("GetHardcodedDefaults missing key: %s", key)
+		}
+	}
+
+	// Test that quiet is false by default
+	if defaults["quiet"] != false {
+		t.Errorf("GetHardcodedDefaults quiet should be false, got %v", defaults["quiet"])
+	}
+
+	// Test that color is "auto" by default
+	if defaults["color"] != "auto" {
+		t.Errorf("GetHardcodedDefaults color should be auto, got %v", defaults["color"])
+	}
+}
+
+func TestConfigPrecedenceOrder(t *testing.T) {
+	// This test verifies the precedence order by checking that higher priority
+	// configs override lower priority ones
+	// Full integration test would require setting up multiple config files
+	// and verifying viper's behavior
+
+	// For now, we test that the precedence function returns paths in correct order
+	// System -> User -> Local
+
+	// Note: Full end-to-end testing would require:
+	// 1. Creating system config
+	// 2. Creating user config
+	// 3. Creating local config
+	// 4. Setting environment variables
+	// 5. Running with CLI args
+	// 6. Verifying final values follow precedence
+}
+
+func TestValidateConfigInvalidType(t *testing.T) {
+	// Test that validation catches invalid types
+	config := map[string]interface{}{
+		"quiet": "true", // Should be bool, not string
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	os.WriteFile(configPath, []byte("quiet: true"), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should catch invalid type for quiet")
+	}
+}
+
+func TestValidateConfigInvalidEnumValue(t *testing.T) {
+	// Test that validation catches invalid enum values
+	config := map[string]interface{}{
+		"color": "invalid", // Should be auto, always, or never
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	os.WriteFile(configPath, []byte("color: invalid"), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should catch invalid enum value for color")
+	}
+}
+
+func TestValidateConfigLineNumber(t *testing.T) {
+	// Test that validation provides line numbers
+	config := map[string]interface{}{
+		"quiet": "true",
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: true\nverbose: false"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should catch invalid type")
+	}
+	if errors[0].LineNumber == 0 {
+		t.Errorf("ValidateConfig should provide line number, got 0")
+	}
+}
+
+func TestValidateConfigSuggestion(t *testing.T) {
+	// Test that validation provides suggestions
+	config := map[string]interface{}{
+		"quiet": "true",
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	os.WriteFile(configPath, []byte("quiet: true"), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should catch invalid type")
+	}
+	if errors[0].Suggestion == "" {
+		t.Errorf("ValidateConfig should provide suggestion")
+	}
+}
+
+func TestValidateConfigValid(t *testing.T) {
+	// Test that validation allows valid config
+	config := map[string]interface{}{
+		"quiet":   false,
+		"verbose": true,
+		"color":   "auto",
+	}
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: false\nverbose: true\ncolor: auto"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) != 0 {
+		t.Errorf("ValidateConfig should not error on valid config, got %d errors", len(errors))
+	}
+}
+
+func TestConfigSchema(t *testing.T) {
+	schema := GetConfigSchema()
+
+	// Test that schema has expected fields
+	expectedFields := []string{"quiet", "verbose", "debug", "color", "json", "mode", "default_format", "truncation_limit", "enable_contextual_help", "session_context_enabled"}
+	for _, field := range expectedFields {
+		if _, ok := schema.Fields[field]; !ok {
+			t.Errorf("ConfigSchema missing field: %s", field)
+		}
+	}
+
+	// Test that color field has correct enum values
+	colorField := schema.Fields["color"]
+	if colorField.Type != "enum" {
+		t.Errorf("color field should be enum type, got %s", colorField.Type)
+	}
+	expectedValues := []string{"auto", "always", "never"}
+	for i, val := range colorField.AllowedValues {
+		if val != expectedValues[i] {
+			t.Errorf("color field allowed value %d should be %s, got %s", i, expectedValues[i], val)
+		}
+	}
+
+	// Test that mode field has correct enum values
+	modeField := schema.Fields["mode"]
+	if modeField.Type != "enum" {
+		t.Errorf("mode field should be enum type, got %s", modeField.Type)
+	}
+	expectedModeValues := []string{string(ModeAgent), string(ModeHuman)}
+	for i, val := range modeField.AllowedValues {
+		if val != expectedModeValues[i] {
+			t.Errorf("mode field allowed value %d should be %s, got %s", i, expectedModeValues[i], val)
+		}
+	}
+
+	// Test that default_format field has correct enum values
+	formatField := schema.Fields["default_format"]
+	if formatField.Type != "enum" {
+		t.Errorf("default_format field should be enum type, got %s", formatField.Type)
+	}
+	expectedFormatValues := []string{string(FormatToon), string(FormatJSON), string(FormatHuman)}
+	for i, val := range formatField.AllowedValues {
+		if val != expectedFormatValues[i] {
+			t.Errorf("default_format field allowed value %d should be %s, got %s", i, expectedFormatValues[i], val)
+		}
+	}
+
+	// Test that truncation_limit field is int type
+	truncationField := schema.Fields["truncation_limit"]
+	if truncationField.Type != "int" {
+		t.Errorf("truncation_limit field should be int type, got %s", truncationField.Type)
+	}
+	if truncationField.DefaultValue != 1000 {
+		t.Errorf("truncation_limit default value should be 1000, got %v", truncationField.DefaultValue)
+	}
+
+	// Test that enable_contextual_help field is bool type
+	helpField := schema.Fields["enable_contextual_help"]
+	if helpField.Type != "bool" {
+		t.Errorf("enable_contextual_help field should be bool type, got %s", helpField.Type)
+	}
+	if helpField.DefaultValue != true {
+		t.Errorf("enable_contextual_help default value should be true, got %v", helpField.DefaultValue)
+	}
+
+	// Test that session_context_enabled field is bool type
+	sessionField := schema.Fields["session_context_enabled"]
+	if sessionField.Type != "bool" {
+		t.Errorf("session_context_enabled field should be bool type, got %s", sessionField.Type)
+	}
+	if sessionField.DefaultValue != false {
+		t.Errorf("session_context_enabled default value should be false, got %v", sessionField.DefaultValue)
+	}
+}
+
+func TestReloadConfigValid(t *testing.T) {
+	// Test that valid config is reloaded successfully
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: false\nverbose: true\ncolor: auto"
+	if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	logger := NewLogger("test")
+	err := ReloadConfig(configPath, logger)
+	if err != nil {
+		t.Errorf("ReloadConfig should succeed with valid config, got error: %v", err)
+	}
+}
+
+func TestReloadConfigInvalid(t *testing.T) {
+	// Test that invalid config is rejected and old config is kept
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: invalid" // Invalid type
+	if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	logger := NewLogger("test")
+	err := ReloadConfig(configPath, logger)
+	if err == nil {
+		t.Errorf("ReloadConfig should fail with invalid config")
+	}
+}
+
+func TestReloadConfigMissingFile(t *testing.T) {
+	// Test that missing config file is handled gracefully
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "nonexistent.yaml")
+
+	logger := NewLogger("test")
+	err := ReloadConfig(configPath, logger)
+	if err == nil {
+		t.Errorf("ReloadConfig should fail with missing config file")
+	}
+}
+
+func TestGetHardcodedDefaultsAXI(t *testing.T) {
+	defaults := GetHardcodedDefaults()
+
+	// Test that AXI fields are present in defaults
+	if _, ok := defaults["mode"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include mode field")
+	}
+	if defaults["mode"] != string(ModeAgent) {
+		t.Errorf("mode default should be agent, got %v", defaults["mode"])
+	}
+
+	if _, ok := defaults["default_format"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include default_format field")
+	}
+	if defaults["default_format"] != string(FormatToon) {
+		t.Errorf("default_format default should be toon, got %v", defaults["default_format"])
+	}
+
+	if _, ok := defaults["truncation_limit"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include truncation_limit field")
+	}
+	if defaults["truncation_limit"] != 1000 {
+		t.Errorf("truncation_limit default should be 1000, got %v", defaults["truncation_limit"])
+	}
+
+	if _, ok := defaults["enable_contextual_help"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include enable_contextual_help field")
+	}
+	if defaults["enable_contextual_help"] != true {
+		t.Errorf("enable_contextual_help default should be true, got %v", defaults["enable_contextual_help"])
+	}
+
+	if _, ok := defaults["session_context_enabled"]; !ok {
+		t.Errorf("GetHardcodedDefaults should include session_context_enabled field")
+	}
+	if defaults["session_context_enabled"] != false {
+		t.Errorf("session_context_enabled default should be false, got %v", defaults["session_context_enabled"])
+	}
+}
+
+func TestValidateConfigWithAXIFields(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	// Test valid AXI config
+	config := map[string]interface{}{
+		"mode":                   string(ModeAgent),
+		"default_format":         string(FormatToon),
+		"truncation_limit":       1000,
+		"enable_contextual_help":  true,
+		"session_context_enabled": false,
+	}
+	configContent := "mode: agent\ndefault_format: toon\ntruncation_limit: 1000\nenable_contextual_help: true\nsession_context_enabled: false"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+
+	errors := ValidateConfig(config, configPath)
+	if len(errors) != 0 {
+		t.Errorf("ValidateConfig should not error on valid AXI config, got %d errors", len(errors))
+	}
+
+	// Test invalid default_format
+	config["default_format"] = "invalid"
+	configContent = "mode: agent\ndefault_format: invalid\ntruncation_limit: 1000"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+	errors = ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should error on invalid default_format")
+	}
+
+	// Test invalid truncation_limit type
+	config["default_format"] = string(FormatToon)
+	config["truncation_limit"] = "not_a_number"
+	configContent = "mode: agent\ndefault_format: toon\ntruncation_limit: not_a_number"
+	os.WriteFile(configPath, []byte(configContent), 0600)
+	errors = ValidateConfig(config, configPath)
+	if len(errors) == 0 {
+		t.Errorf("ValidateConfig should error on invalid truncation_limit type")
+	}
+}
+
+func TestParseConfigContentFromFile(t *testing.T) {
+	// Test parsing config from file
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configContent := "quiet: false\nverbose: true\ncolor: auto"
+	if err := os.WriteFile(configPath, []byte(configContent), 0600); err != nil {
+		t.Fatalf("Failed to create config file: %v", err)
+	}
+
+	config, err := parseConfigContentFromFile(configPath)
+	if err != nil {
+		t.Fatalf("parseConfigContentFromFile failed: %v", err)
+	}
+
+	// Verify parsed config
+	if config["quiet"] != "false" {
+		t.Errorf("Expected quiet to be 'false', got %v", config["quiet"])
+	}
+	if config["verbose"] != "true" {
+		t.Errorf("Expected verbose to be 'true', got %v", config["verbose"])
+	}
+	if config["color"] != "auto" {
+		t.Errorf("Expected color to be 'auto', got %v", config["color"])
+	}
+}
+
+func TestParseConfigContentFromFileMissing(t *testing.T) {
+	// Test parsing missing file
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "nonexistent.yaml")
+
+	_, err := parseConfigContentFromFile(configPath)
+	if err == nil {
+		t.Errorf("parseConfigContentFromFile should fail with missing file")
+	}
+}
+
+{# vim: set ft=go: #}

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 2
 parallel_id: 2
 branch: "feature/current/20260707-cli-go-standards/story-02-002-confirmation-prompts"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,14 +27,14 @@ Require confirmation for destructive operations (delete, overwrite) with a `--fo
 
 ## Sub-Tasks
 
-- [ ] Add --force flag to root command — `core/files/main.go.jinja`
-- [ ] Create prompt utility functions — `core/files/prompt.go.jinja`
-- [ ] Implement confirmation prompt for delete operations — `core/files/main.go.jinja`
-- [ ] Implement confirmation prompt for overwrite operations — `core/files/main.go.jinja`
-- [ ] Add --force bypass logic — `core/files/main.go.jinja`
-- [ ] Test confirmation prompts work — `core/files/prompt_test.go.jinja`
-- [ ] Test --force bypasses prompts — `core/files/prompt_test.go.jinja`
-- [ ] Test prompts respect --quiet flag — `core/files/prompt_test.go.jinja`
+- [x] Add --force flag to root command — `core/files/main.go.jinja`
+- [x] Create prompt utility functions — `core/files/prompt.go.jinja`
+- [x] Implement confirmation prompt for delete operations — `core/files/main.go.jinja`
+- [x] Implement confirmation prompt for overwrite operations — `core/files/main.go.jinja`
+- [x] Add --force bypass logic — `core/files/main.go.jinja`
+- [x] Test confirmation prompts work — `core/files/prompt_test.go.jinja`
+- [x] Test --force bypasses prompts — `core/files/prompt_test.go.jinja`
+- [x] Test prompts respect --quiet flag — `core/files/prompt_test.go.jinja`
 
 ## Relevant Files
 
@@ -44,12 +44,12 @@ Require confirmation for destructive operations (delete, overwrite) with a `--fo
 
 ## Acceptance Criteria
 
-- [ ] Destructive operations require confirmation
-- [ ] `--force` flag bypasses confirmation prompts
-- [ ] Prompt format is consistent across operations
-- [ ] Prompts respect --quiet flag
-- [ ] Prompts show what will be affected
-- [ ] Default answer is safe (usually "no")
+- [x] Destructive operations require confirmation
+- [x] `--force` flag bypasses confirmation prompts
+- [x] Prompt format is consistent across operations
+- [x] Prompts respect --quiet flag
+- [x] Prompts show what will be affected
+- [x] Default answer is safe (usually "no")
 
 ## Test Plan
 

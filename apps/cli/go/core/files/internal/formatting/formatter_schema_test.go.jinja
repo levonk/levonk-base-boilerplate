@@ -1,0 +1,227 @@
+package formatting
+
+import (
+	"testing"
+
+	"{{ project_slug }}/internal/schema"
+)
+
+func TestFormatterWithSchema(t *testing.T) {
+	t.Run("with schema and default fields", func(t *testing.T) {
+		s := schema.NewSchema("test")
+		s.AddField("id", schema.FieldTypeString, "ID", true, nil)
+		s.AddField("title", schema.FieldTypeString, "Title", true, nil)
+		s.AddField("status", schema.FieldTypeString, "Status", true, nil)
+		s.AddField("description", schema.FieldTypeString, "Description", false, nil)
+		s.SetDefaultFields("id", "title", "status")
+
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
+		formatter.WithSchema(s)
+
+		data := map[string]interface{}{
+			"id":          "123",
+			"title":       "Test",
+			"status":      "active",
+			"description": "A test item",
+		}
+
+		output, err := formatter.FormatValue(data)
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		// Check that description is not in output
+		if contains(output, "description") {
+			t.Error("Expected description to be excluded from output")
+		}
+
+		// Check that default fields are in output
+		if !contains(output, "id") || !contains(output, "title") || !contains(output, "status") {
+			t.Error("Expected default fields to be in output")
+		}
+	})
+
+	t.Run("with schema and custom fields", func(t *testing.T) {
+		s := schema.NewSchema("test")
+		s.AddField("id", schema.FieldTypeString, "ID", true, nil)
+		s.AddField("title", schema.FieldTypeString, "Title", true, nil)
+		s.AddField("status", schema.FieldTypeString, "Status", true, nil)
+		s.AddField("description", schema.FieldTypeString, "Description", false, nil)
+		s.SetDefaultFields("id", "title", "status")
+
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
+		formatter.WithSchema(s)
+		formatter.WithFields([]string{"id", "description"})
+
+		data := map[string]interface{}{
+			"id":          "123",
+			"title":       "Test",
+			"status":      "active",
+			"description": "A test item",
+		}
+
+		output, err := formatter.FormatValue(data)
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		// Check that only custom fields are in output
+		if !contains(output, "id") || !contains(output, "description") {
+			t.Error("Expected custom fields to be in output")
+		}
+
+		if contains(output, "title") || contains(output, "status") {
+			t.Error("Expected non-custom fields to be excluded from output")
+		}
+	})
+
+	t.Run("with schema and slice data", func(t *testing.T) {
+		s := schema.NewSchema("test")
+		s.AddField("id", schema.FieldTypeString, "ID", true, nil)
+		s.AddField("title", schema.FieldTypeString, "Title", true, nil)
+		s.AddField("status", schema.FieldTypeString, "Status", true, nil)
+		s.AddField("description", schema.FieldTypeString, "Description", false, nil)
+		s.SetDefaultFields("id", "title", "status")
+
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
+		formatter.WithSchema(s)
+
+		data := []map[string]interface{}{
+			{
+				"id":          "123",
+				"title":       "Test 1",
+				"status":      "active",
+				"description": "First item",
+			},
+			{
+				"id":          "456",
+				"title":       "Test 2",
+				"status":      "inactive",
+				"description": "Second item",
+			},
+		}
+
+		output, err := formatter.FormatValue(data)
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		// Check that description is not in output
+		if contains(output, "description") {
+			t.Error("Expected description to be excluded from output")
+		}
+	})
+
+	t.Run("with schema and limit", func(t *testing.T) {
+		s := schema.NewSchema("test")
+		s.AddField("id", schema.FieldTypeString, "ID", true, nil)
+		s.AddField("title", schema.FieldTypeString, "Title", true, nil)
+		s.SetDefaultFields("id", "title")
+		s.MaxItems = 2
+
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
+		formatter.WithSchema(s)
+
+		data := []map[string]interface{}{
+			{"id": "1", "title": "Test 1"},
+			{"id": "2", "title": "Test 2"},
+			{"id": "3", "title": "Test 3"},
+			{"id": "4", "title": "Test 4"},
+			{"id": "5", "title": "Test 5"},
+		}
+
+		output, err := formatter.FormatValue(data)
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		// Check that only 2 items are in output
+		if !contains(output, "Test 1") || !contains(output, "Test 2") {
+			t.Error("Expected first 2 items to be in output")
+		}
+
+		if contains(output, "Test 3") || contains(output, "Test 4") || contains(output, "Test 5") {
+			t.Error("Expected items beyond limit to be excluded from output")
+		}
+	})
+
+	t.Run("without schema", func(t *testing.T) {
+		formatter := NewFormatter(ModeAgent, true, "", false, false)
+
+		data := map[string]interface{}{
+			"id":          "123",
+			"title":       "Test",
+			"status":      "active",
+			"description": "A test item",
+		}
+
+		_, err := formatter.FormatValue(data)
+		if err != nil {
+			t.Errorf("Expected no error without schema, got: %v", err)
+		}
+	})
+}
+
+func TestFormatterWithInvalidFields(t *testing.T) {
+	s := schema.NewSchema("test")
+	s.AddField("id", schema.FieldTypeString, "ID", true, nil)
+	s.AddField("title", schema.FieldTypeString, "Title", true, nil)
+	s.SetDefaultFields("id", "title")
+
+	formatter := NewFormatter(ModeAgent, true, "", false, false)
+	formatter.WithSchema(s)
+	formatter.WithFields([]string{"id", "nonexistent"})
+
+	data := map[string]interface{}{
+		"id":    "123",
+		"title": "Test",
+	}
+
+	_, err := formatter.FormatValue(data)
+	if err == nil {
+		t.Error("Expected error for invalid field name")
+	}
+}
+
+func TestFormatterJSONWithSchema(t *testing.T) {
+	s := schema.NewSchema("test")
+	s.AddField("id", schema.FieldTypeString, "ID", true, nil)
+	s.AddField("title", schema.FieldTypeString, "Title", true, nil)
+	s.AddField("status", schema.FieldTypeString, "Status", true, nil)
+	s.AddField("description", schema.FieldTypeString, "Description", false, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	formatter := NewFormatter(ModeAgent, false, "", true, false)
+	formatter.WithSchema(s)
+
+	data := map[string]interface{}{
+		"id":          "123",
+		"title":       "Test",
+		"status":      "active",
+		"description": "A test item",
+	}
+
+	output, err := formatter.FormatValue(data)
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+
+	// Check that description is not in output
+	if contains(output, "description") {
+		t.Error("Expected description to be excluded from JSON output")
+	}
+}
+
+// Helper function to check if a string contains a substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && findSubstring(s, substr))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

@@ -1,0 +1,145 @@
+package emptystate
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
+
+// Formatter handles empty state message formatting for different output formats
+type Formatter struct {
+	detector *Detector
+}
+
+// NewFormatter creates a new empty state formatter
+func NewFormatter() *Formatter {
+	return &Formatter{
+		detector: NewDetector(),
+	}
+}
+
+// Format formats an empty state for the specified output format
+// Supported formats: "toon", "json", "human"
+func (f *Formatter) Format(es *EmptyState, outputFormat string) (string, error) {
+	if !es.IsEmpty {
+		return "", nil
+	}
+
+	switch strings.ToLower(outputFormat) {
+	case "toon":
+		return f.formatTOON(es)
+	case "json":
+		return f.formatJSON(es)
+	case "human":
+		return f.formatHuman(es)
+	default:
+		// Default to human-readable
+		return f.formatHuman(es)
+	}
+}
+
+// formatTOON formats an empty state as TOON
+func (f *Formatter) formatTOON(es *EmptyState) (string, error) {
+	// TOON format for empty state:
+	// # Empty State
+	// message: "No results found..."
+	// context: { ... }
+	
+	lines := []string{
+		"# Empty State",
+		fmt.Sprintf(`message: "%s"`, escapeString(es.Message)),
+	}
+
+	if len(es.Context.Filters) > 0 || es.Context.Resource != "" || es.Context.Scope != "" {
+		lines = append(lines, "context: {")
+		
+		if es.Context.Resource != "" {
+			lines = append(lines, fmt.Sprintf(`  resource: "%s",`, es.Context.Resource))
+		}
+		if es.Context.Scope != "" {
+			lines = append(lines, fmt.Sprintf(`  scope: "%s",`, es.Context.Scope))
+		}
+		if len(es.Context.Filters) > 0 {
+			lines = append(lines, "  filters: {")
+			for key, value := range es.Context.Filters {
+				lines = append(lines, fmt.Sprintf(`    %s: "%s",`, key, value))
+			}
+			lines = append(lines, "  },")
+		}
+		if es.Context.TotalCount > 0 {
+			lines = append(lines, fmt.Sprintf("  total: %d,", es.Context.TotalCount))
+		}
+		
+		lines = append(lines, "}")
+	}
+
+	return strings.Join(lines, "\n"), nil
+}
+
+// formatJSON formats an empty state as JSON
+func (f *Formatter) formatJSON(es *EmptyState) (string, error) {
+	result := map[string]interface{}{
+		"empty":     true,
+		"message":   es.Message,
+		"exit_code": es.ExitCode,
+	}
+
+	// Add context if present
+	if es.Context.Resource != "" || len(es.Context.Filters) > 0 || es.Context.Scope != "" {
+		contextMap := make(map[string]interface{})
+		if es.Context.Resource != "" {
+			contextMap["resource"] = es.Context.Resource
+		}
+		if es.Context.Scope != "" {
+			contextMap["scope"] = es.Context.Scope
+		}
+		if len(es.Context.Filters) > 0 {
+			contextMap["filters"] = es.Context.Filters
+		}
+		if es.Context.TotalCount > 0 {
+			contextMap["total"] = es.Context.TotalCount
+		}
+		result["context"] = contextMap
+	}
+
+	jsonBytes, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal empty state to JSON: %w", err)
+	}
+
+	return string(jsonBytes), nil
+}
+
+// formatHuman formats an empty state as human-readable text
+func (f *Formatter) formatHuman(es *EmptyState) (string, error) {
+	lines := []string{
+		es.Message,
+	}
+
+	// Add context details for human readability
+	if es.Context.Resource != "" {
+		lines = append(lines, fmt.Sprintf("Resource: %s", es.Context.Resource))
+	}
+	if es.Context.Scope != "" {
+		lines = append(lines, fmt.Sprintf("Scope: %s", es.Context.Scope))
+	}
+	if len(es.Context.Filters) > 0 {
+		lines = append(lines, "Filters:")
+		for key, value := range es.Context.Filters {
+			lines = append(lines, fmt.Sprintf("  %s: %s", key, value))
+		}
+	}
+	if es.Context.TotalCount > 0 {
+		lines = append(lines, fmt.Sprintf("Total count: %d", es.Context.TotalCount))
+	}
+
+	return strings.Join(lines, "\n"), nil
+}
+
+// escapeString escapes special characters for TOON string literals
+func escapeString(s string) string {
+	s = strings.ReplaceAll(s, `"`, `\"`)
+	s = strings.ReplaceAll(s, "\n", `\n`)
+	s = strings.ReplaceAll(s, "\t", `\t`)
+	return s
+}

@@ -1,0 +1,170 @@
+# vim: set ft=python :
+"""Idempotent mutation logic for CLI operations.
+
+This module provides utilities for ensuring operations are idempotent,
+meaning they can be applied multiple times without changing the result
+beyond the initial application.
+"""
+
+from typing import Any, Callable, Optional
+
+
+class IdempotentOperationError(Exception):
+    """Raised when an idempotent operation fails unexpectedly."""
+    pass
+
+
+class StateAlreadyExistsError(IdempotentOperationError):
+    """Raised when attempting to create state that already exists (not an error)."""
+    pass
+
+
+class StateNotFoundError(IdempotentOperationError):
+    """Raised when attempting to operate on state that doesn't exist."""
+    pass
+
+
+def check_state_exists(
+    current_state: Any,
+    desired_state: Any,
+    state_identifier: str = "state"
+) -> bool:
+    """Check if the current state matches the desired state.
+    
+    Args:
+        current_state: The current state of the system
+        desired_state: The desired state to achieve
+        state_identifier: Human-readable identifier for the state
+        
+    Returns:
+        True if states match, False otherwise
+    """
+    return current_state == desired_state
+
+
+def ensure_idempotent_create(
+    create_func: Callable,
+    current_state: Any,
+    desired_state: Any,
+    state_identifier: str = "state"
+) -> Any:
+    """Ensure a create operation is idempotent.
+    
+    If the desired state already exists, this returns without error
+    (no-op). Otherwise, it executes the create function.
+    
+    Args:
+        create_func: Function to create the desired state
+        current_state: The current state of the system
+        desired_state: The desired state to achieve
+        state_identifier: Human-readable identifier for the state
+        
+    Returns:
+        The result of the create operation, or None if no-op
+        
+    Raises:
+        StateNotFoundError: If the state check fails unexpectedly
+    """
+    if check_state_exists(current_state, desired_state, state_identifier):
+        # State already exists - this is a no-op, not an error
+        return None
+    
+    # State doesn't exist, create it
+    return create_func()
+
+
+def ensure_idempotent_update(
+    update_func: Callable,
+    current_state: Any,
+    desired_state: Any,
+    state_identifier: str = "state"
+) -> Any:
+    """Ensure an update operation is idempotent.
+    
+    If the current state already matches the desired state, this returns
+    without error (no-op). Otherwise, it executes the update function.
+    
+    Args:
+        update_func: Function to update to the desired state
+        current_state: The current state of the system
+        desired_state: The desired state to achieve
+        state_identifier: Human-readable identifier for the state
+        
+    Returns:
+        The result of the update operation, or None if no-op
+    """
+    if check_state_exists(current_state, desired_state, state_identifier):
+        # State already matches - this is a no-op
+        return None
+    
+    # State doesn't match, update it
+    return update_func()
+
+
+def ensure_idempotent_delete(
+    delete_func: Callable,
+    current_state: Any,
+    state_identifier: str = "state"
+) -> Any:
+    """Ensure a delete operation is idempotent.
+    
+    If the state doesn't exist, this returns without error (no-op).
+    Otherwise, it executes the delete function.
+    
+    Args:
+        delete_func: Function to delete the state
+        current_state: The current state of the system
+        state_identifier: Human-readable identifier for the state
+        
+    Returns:
+        The result of the delete operation, or None if no-op
+    """
+    if current_state is None or current_state == {}:
+        # State doesn't exist - this is a no-op
+        return None
+    
+    # State exists, delete it
+    return delete_func()
+
+
+def is_noop(result: Any) -> bool:
+    """Check if an operation result represents a no-op.
+    
+    Args:
+        result: The result from an idempotent operation
+        
+    Returns:
+        True if the operation was a no-op, False otherwise
+    """
+    return result is None
+
+
+def handle_idempotent_result(
+    result: Any,
+    operation_name: str,
+    state_identifier: str = "state"
+) -> dict:
+    """Handle the result of an idempotent operation.
+    
+    Args:
+        result: The result from an idempotent operation
+        operation_name: Name of the operation (create, update, delete)
+        state_identifier: Human-readable identifier for the state
+        
+    Returns:
+        Dictionary with operation status and details
+    """
+    if is_noop(result):
+        return {
+            "status": "noop",
+            "operation": operation_name,
+            "state": state_identifier,
+            "message": f"{operation_name.capitalize()} was a no-op - {state_identifier} already in desired state"
+        }
+    
+    return {
+        "status": "success",
+        "operation": operation_name,
+        "state": state_identifier,
+        "message": f"{operation_name.capitalize()} completed successfully"
+    }

@@ -1,0 +1,212 @@
+# vim: set ft=python :
+"""Exit code definitions and handling for CLI operations.
+
+This module defines standard exit codes and provides utilities for
+determining the appropriate exit code based on operation results.
+Exit codes are reserved for unsatisfiable intents only.
+"""
+
+from typing import Any, Dict, Optional
+
+
+# Standard exit codes
+EXIT_SUCCESS = 0
+EXIT_ERROR = 1
+EXIT_USAGE = 2
+
+
+class ExitCode:
+    """Exit code constants with descriptions."""
+    
+    SUCCESS = 0
+    ERROR = 1
+    USAGE = 2
+    
+    @classmethod
+    def get_description(cls, code: int) -> str:
+        """Get a human-readable description for an exit code.
+        
+        Args:
+            code: The exit code
+            
+        Returns:
+            Description of the exit code
+        """
+        descriptions = {
+            0: "Success",
+            1: "Error",
+            2: "Usage error"
+        }
+        return descriptions.get(code, f"Unknown exit code: {code}")
+
+
+def determine_exit_code(
+    result: Dict[str, Any],
+    default_error: int = EXIT_ERROR
+) -> int:
+    """Determine the appropriate exit code based on operation result.
+    
+    Args:
+        result: The result dictionary from an operation
+        default_error: Default error code to use if error type is unknown
+        
+    Returns:
+        Appropriate exit code
+    """
+    # Check for success
+    if result.get("status") == "success":
+        return EXIT_SUCCESS
+    
+    # Check for no-op (should be treated as success)
+    if result.get("status") == "noop":
+        return EXIT_SUCCESS
+    
+    # Check for error
+    if result.get("error", False):
+        error_type = result.get("error_type", "")
+        
+        # Usage errors get exit code 2
+        if "usage" in error_type.lower() or "validation" in error_type.lower():
+            return EXIT_USAGE
+        
+        # Command not found gets exit code 127 (but we map to usage for consistency)
+        if "command_not_found" in error_type.lower():
+            return EXIT_USAGE
+        
+        # All other errors get exit code 1
+        return EXIT_ERROR
+    
+    # Default to success if no error indicator
+    return EXIT_SUCCESS
+
+
+def determine_exit_code_from_exception(
+    error: Exception,
+    default_error: int = EXIT_ERROR
+) -> int:
+    """Determine the appropriate exit code based on exception type.
+    
+    Args:
+        error: The exception that occurred
+        default_error: Default error code to use if error type is unknown
+        
+    Returns:
+        Appropriate exit code
+    """
+    error_type = type(error).__name__
+    
+    # Validation and usage-related errors get exit code 2
+    usage_errors = [
+        'ValidationError',
+        'MissingRequiredError',
+        'InvalidValueError',
+        'ValueError',
+        'TypeError',
+    ]
+    
+    if error_type in usage_errors:
+        return EXIT_USAGE
+    
+    # All other errors get exit code 1
+    return default_error
+
+
+def determine_exit_code_from_subprocess(
+    returncode: int,
+    sanitize: bool = True
+) -> int:
+    """Determine the appropriate exit code from subprocess return code.
+    
+    Args:
+        returncode: The subprocess return code
+        sanitize: Whether to sanitize non-standard return codes
+        
+    Returns:
+        Appropriate exit code (0, 1, or 2)
+    """
+    if returncode == 0:
+        return EXIT_SUCCESS
+    
+    if returncode == 1:
+        return EXIT_ERROR
+    
+    if returncode == 2:
+        return EXIT_USAGE
+    
+    # Command not found (127) maps to usage error
+    if returncode == 127:
+        return EXIT_USAGE
+    
+    # Other non-zero codes map to error
+    if sanitize:
+        return EXIT_ERROR
+    
+    return returncode
+
+
+def should_exit_with_error(result: Dict[str, Any]) -> bool:
+    """Determine if the result indicates an error condition.
+    
+    Args:
+        result: The result dictionary from an operation
+        
+    Returns:
+        True if should exit with error, False otherwise
+    """
+    exit_code = determine_exit_code(result)
+    return exit_code != EXIT_SUCCESS
+
+
+def format_exit_message(
+    result: Dict[str, Any],
+    exit_code: Optional[int] = None
+) -> str:
+    """Format a message to display before exiting.
+    
+    Args:
+        result: The result dictionary from an operation
+        exit_code: Optional exit code (auto-determined if not provided)
+        
+    Returns:
+        Formatted exit message
+    """
+    if exit_code is None:
+        exit_code = determine_exit_code(result)
+    
+    if exit_code == EXIT_SUCCESS:
+        return "Operation completed successfully"
+    
+    if exit_code == EXIT_USAGE:
+        description = result.get("description", "Invalid usage")
+        suggestion = result.get("suggestion", "Check command usage")
+        return f"Usage error: {description}. {suggestion}"
+    
+    # Error case
+    description = result.get("description", "An error occurred")
+    suggestion = result.get("suggestion", "Check the error details")
+    return f"Error: {description}. {suggestion}"
+
+
+def exit_with_code(
+    result: Dict[str, Any],
+    show_message: bool = True
+) -> int:
+    """Exit with the appropriate code based on result.
+    
+    This function determines the exit code and optionally prints
+    a message before returning the code (for use with sys.exit).
+    
+    Args:
+        result: The result dictionary from an operation
+        show_message: Whether to print an exit message
+        
+    Returns:
+        Exit code (0, 1, or 2)
+    """
+    exit_code = determine_exit_code(result)
+    
+    if show_message:
+        message = format_exit_message(result, exit_code)
+        print(message)
+    
+    return exit_code

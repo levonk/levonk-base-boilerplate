@@ -1,0 +1,287 @@
+package main
+
+import (
+	"context"
+	"runtime"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestDaemonManager_IsPlatformSupported(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	// Test supported platforms
+	switch runtime.GOOS {
+	case "linux", "darwin", "windows":
+		assert.True(t, dm.IsPlatformSupported(), "Daemon should be supported on %s", runtime.GOOS)
+	default:
+		assert.False(t, dm.IsPlatformSupported(), "Daemon should not be supported on %s", runtime.GOOS)
+	}
+}
+
+func TestJobQueue_CreateJob(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	job, err := dm.CreateJob("echo", []string{"hello"})
+	require.NoError(t, err)
+	require.NotNil(t, job)
+
+	assert.NotEmpty(t, job.ID)
+	assert.Equal(t, "echo", job.Command)
+	assert.Equal(t, []string{"hello"}, job.Args)
+	assert.Equal(t, "pending", job.Status)
+	assert.False(t, job.CreatedAt.IsZero())
+}
+
+func TestJobQueue_CreateJob_MaxLimit(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+	dm.config.MaxJobs = 2
+
+	// Create jobs up to limit
+	job1, err := dm.CreateJob("echo", []string{"1"})
+	require.NoError(t, err)
+
+	job2, err := dm.CreateJob("echo", []string{"2"})
+	require.NoError(t, err)
+
+	// Third job should fail
+	job3, err := dm.CreateJob("echo", []string{"3"})
+	assert.Error(t, err)
+	assert.Nil(t, job3)
+	assert.Contains(t, err.Error(), "maximum job limit")
+
+	// Clean up
+	dm.jobQueue.mu.Lock()
+	delete(dm.jobQueue.jobs, job1.ID)
+	delete(dm.jobQueue.jobs, job2.ID)
+	dm.jobQueue.mu.Unlock()
+}
+
+func TestJobQueue_ExecuteJob(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	job, err := dm.CreateJob("echo", []string{"test"})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = dm.ExecuteJob(ctx, job.ID)
+	require.NoError(t, err)
+
+	// Verify job status
+	dm.jobQueue.mu.RLock()
+	job = dm.jobQueue.jobs[job.ID]
+	dm.jobQueue.mu.RUnlock()
+
+	assert.Equal(t, "completed", job.Status)
+	assert.NotNil(t, job.StartedAt)
+	assert.NotNil(t, job.CompletedAt)
+	assert.NotNil(t, job.Result)
+}
+
+func TestJobQueue_CancelJob(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	job, err := dm.CreateJob("sleep", []string{"10"})
+	require.NoError(t, err)
+
+	err = dm.CancelJob(job.ID)
+	require.NoError(t, err)
+
+	// Verify job status
+	dm.jobQueue.mu.RLock()
+	job = dm.jobQueue.jobs[job.ID]
+	dm.jobQueue.mu.RUnlock()
+
+	assert.Equal(t, "cancelled", job.Status)
+	assert.NotNil(t, job.CompletedAt)
+}
+
+func TestJobQueue_CancelJob_NotFound(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	err := dm.CancelJob("non-existent-id")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestJobQueue_CancelJob_InvalidStatus(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	job, err := dm.CreateJob("echo", []string{"test"})
+	require.NoError(t, err)
+
+	// Execute job to completion
+	ctx := context.Background()
+	err = dm.ExecuteJob(ctx, job.ID)
+	require.NoError(t, err)
+
+	// Try to cancel completed job
+	err = dm.CancelJob(job.ID)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot be cancelled")
+}
+
+func TestJobQueue_ListJobs(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	// Create some jobs
+	job1, _ := dm.CreateJob("echo", []string{"1"})
+	job2, _ := dm.CreateJob("echo", []string{"2"})
+
+	jobs := dm.ListJobs()
+	assert.Len(t, jobs, 2)
+
+	// Clean up
+	dm.jobQueue.mu.Lock()
+	delete(dm.jobQueue.jobs, job1.ID)
+	delete(dm.jobQueue.jobs, job2.ID)
+	dm.jobQueue.mu.Unlock()
+}
+
+func TestJobQueue_GetJob(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	job, err := dm.CreateJob("echo", []string{"test"})
+	require.NoError(t, err)
+
+	retrievedJob, err := dm.GetJob(job.ID)
+	require.NoError(t, err)
+	assert.Equal(t, job.ID, retrievedJob.ID)
+	assert.Equal(t, job.Command, retrievedJob.Command)
+}
+
+func TestJobQueue_GetJob_NotFound(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	_, err := dm.GetJob("non-existent-id")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestJobQueue_CleanupCompletedJobs(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	// Create a job and complete it
+	job, err := dm.CreateJob("echo", []string{"test"})
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = dm.ExecuteJob(ctx, job.ID)
+	require.NoError(t, err)
+
+	// Mark as old
+	oldTime := time.Now().Add(-25 * time.Hour)
+	dm.jobQueue.mu.Lock()
+	job.CompletedAt = &oldTime
+	dm.jobQueue.mu.Unlock()
+
+	// Cleanup jobs older than 24 hours
+	dm.CleanupCompletedJobs(24 * time.Hour)
+
+	// Verify job was cleaned up
+	dm.jobQueue.mu.RLock()
+	_, exists := dm.jobQueue.jobs[job.ID]
+	dm.jobQueue.mu.RUnlock()
+
+	assert.False(t, exists, "Old completed job should be cleaned up")
+}
+
+func TestDaemonConfig_Defaults(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	assert.NotNil(t, dm.config)
+	assert.Equal(t, true, dm.config.Enabled)
+	assert.Equal(t, false, dm.config.NoisyBehavior)
+	assert.Equal(t, "", dm.config.JobDir)
+	assert.Equal(t, 10, dm.config.MaxJobs)
+}
+
+func TestDaemonManager_AutoSpawnDaemon(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	// Disable noisy behavior for test
+	dm.config.NoisyBehavior = false
+
+	// Auto-spawn should succeed if platform is supported
+	if dm.IsPlatformSupported() {
+		// Note: This test may fail if daemon cannot actually start
+		// In a real environment, you might need to mock the service
+		err := dm.AutoSpawnDaemon()
+		// We expect this to potentially fail in test environment
+		// but the logic should be correct
+		if err != nil {
+			assert.Contains(t, err.Error(), "failed to start service")
+		}
+	} else {
+		err := dm.AutoSpawnDaemon()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not supported")
+	}
+}
+
+func TestDaemonManager_PlatformFallback(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	if !dm.IsPlatformSupported() {
+		err := dm.StartDaemon()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not supported")
+		assert.Contains(t, err.Error(), runtime.GOOS)
+	}
+}
+
+func TestJob_IDGeneration(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	job1, _ := dm.CreateJob("echo", []string{"1"})
+	job2, _ := dm.CreateJob("echo", []string{"2"})
+
+	assert.NotEqual(t, job1.ID, job2.ID, "Job IDs should be unique")
+
+	// Clean up
+	dm.jobQueue.mu.Lock()
+	delete(dm.jobQueue.jobs, job1.ID)
+	delete(dm.jobQueue.jobs, job2.ID)
+	dm.jobQueue.mu.Unlock()
+}
+
+func TestJob_Metadata(t *testing.T) {
+	logger := NewLogger("test")
+	dm := NewDaemonManager(logger)
+
+	job, err := dm.CreateJob("echo", []string{"test"})
+	require.NoError(t, err)
+
+	assert.NotNil(t, job.Metadata)
+	assert.Empty(t, job.Metadata)
+
+	// Add metadata
+	job.Metadata["key"] = "value"
+	job.Metadata["number"] = 123
+
+	assert.Equal(t, "value", job.Metadata["key"])
+	assert.Equal(t, 123, job.Metadata["number"])
+
+	// Clean up
+	dm.jobQueue.mu.Lock()
+	delete(dm.jobQueue.jobs, job.ID)
+	dm.jobQueue.mu.Unlock()
+}

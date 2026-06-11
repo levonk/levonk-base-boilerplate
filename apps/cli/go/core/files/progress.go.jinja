@@ -1,0 +1,88 @@
+package main
+
+import (
+	"io"
+
+	"github.com/schollz/progressbar/v3"
+)
+
+// ProgressConfig holds configuration for progress bars
+type ProgressConfig struct {
+	Total      int64
+	Description string
+	Quiet      bool
+}
+
+// NewProgressBar creates a new progress bar with the given configuration
+func NewProgressBar(config ProgressConfig) *progressbar.ProgressBar {
+	if config.Quiet {
+		return nil
+	}
+
+	return progressbar.NewOptions64(
+		config.Total,
+		progressbar.OptionSetDescription(config.Description),
+		progressbar.OptionSetWriter(io.Discard), // Will be overridden in actual usage
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionOnCompletion(func() {
+			// Progress bar completes automatically
+		}),
+	)
+}
+
+// ProgressWriter wraps an io.Writer to track progress
+type ProgressWriter struct {
+	writer  io.Writer
+	bar     *progressbar.ProgressBar
+	written int64
+	total   int64
+}
+
+// NewProgressWriter creates a new progress writer
+func NewProgressWriter(writer io.Writer, bar *progressbar.ProgressBar, total int64) *ProgressWriter {
+	return &ProgressWriter{
+		writer:  writer,
+		bar:     bar,
+		total:   total,
+		written: 0,
+	}
+}
+
+// Write implements io.Writer
+func (pw *ProgressWriter) Write(p []byte) (int, error) {
+	n, err := pw.writer.Write(p)
+	pw.written += int64(n)
+	if pw.bar != nil {
+		pw.bar.Add64(int64(n))
+	}
+	return n, err
+}
+
+// ProgressReader wraps an io.Reader to track progress
+type ProgressReader struct {
+	reader io.Reader
+	bar    *progressbar.ProgressBar
+	read   int64
+	total  int64
+}
+
+// NewProgressReader creates a new progress reader
+func NewProgressReader(reader io.Reader, bar *progressbar.ProgressBar, total int64) *ProgressReader {
+	return &ProgressReader{
+		reader: reader,
+		bar:    bar,
+		total:  total,
+		read:   0,
+	}
+}
+
+// Read implements io.Reader
+func (pr *ProgressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	pr.read += int64(n)
+	if pr.bar != nil {
+		pr.bar.Add64(int64(n))
+	}
+	return n, err
+}

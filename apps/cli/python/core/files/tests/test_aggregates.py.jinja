@@ -1,0 +1,263 @@
+# vim: set ft=python:
+"""
+Tests for aggregate computation system.
+"""
+
+from {{ project_slug }}.output.aggregates import (
+    CountAggregate,
+    StatusAggregate,
+    SummaryAggregate,
+    AggregateComputer,
+    get_aggregate_computer,
+    compute_aggregates,
+    add_aggregates_to_output
+)
+
+
+class TestCountAggregate:
+    """Tests for CountAggregate."""
+    
+    def test_count_format(self):
+        """Test count formatting."""
+        agg = CountAggregate(current_count=30, total_count=847)
+        assert agg.format() == "count: 30 of 847 total"
+    
+    def test_count_to_dict(self):
+        """Test count serialization."""
+        agg = CountAggregate(current_count=5, total_count=100)
+        result = agg.to_dict()
+        assert result == {
+            "count": 5,
+            "total": 100,
+            "formatted": "count: 5 of 100 total"
+        }
+    
+    def test_count_single_item(self):
+        """Test count with single item."""
+        agg = CountAggregate(current_count=1, total_count=1)
+        assert agg.format() == "count: 1 of 1 total"
+
+
+class TestStatusAggregate:
+    """Tests for StatusAggregate."""
+    
+    def test_status_passed(self):
+        """Test status computation with all passed."""
+        items = [{"status": "passed"}, {"status": "passed"}]
+        computer = AggregateComputer()
+        result = computer.compute_status(items)
+        assert result.status == "passed"
+        assert result.details["breakdown"] == {"passed": 2}
+    
+    def test_status_failed(self):
+        """Test status computation with failures."""
+        items = [{"status": "passed"}, {"status": "failed"}]
+        computer = AggregateComputer()
+        result = computer.compute_status(items)
+        assert result.status == "failed"
+        assert "failed" in result.details["breakdown"]
+    
+    def test_status_pending(self):
+        """Test status computation with pending items."""
+        items = [{"status": "pending"}, {"status": "running"}]
+        computer = AggregateComputer()
+        result = computer.compute_status(items)
+        assert result.status == "pending"
+    
+    def test_status_empty(self):
+        """Test status computation with empty list."""
+        computer = AggregateComputer()
+        result = computer.compute_status([])
+        assert result.status == "empty"
+    
+    def test_status_to_dict(self):
+        """Test status serialization."""
+        agg = StatusAggregate(status="passed", details={"breakdown": {"passed": 3}})
+        result = agg.to_dict()
+        assert result == {
+            "status": "passed",
+            "breakdown": {"passed": 3}
+        }
+
+
+class TestSummaryAggregate:
+    """Tests for SummaryAggregate."""
+    
+    def test_summary_computation(self):
+        """Test summary computation."""
+        items = [
+            {"status": "passed"},
+            {"status": "passed"},
+            {"status": "failed"}
+        ]
+        computer = AggregateComputer()
+        result = computer.compute_summary(items)
+        assert "3 passed" in result.summary or "2 passed" in result.summary
+        assert result.breakdown["passed"] == 2
+        assert result.breakdown["failed"] == 1
+    
+    def test_summary_empty(self):
+        """Test summary with empty list."""
+        computer = AggregateComputer()
+        result = computer.compute_summary([])
+        assert result.summary == "no items"
+    
+    def test_summary_to_dict(self):
+        """Test summary serialization."""
+        agg = SummaryAggregate(
+            summary="checks: 3/3 passed",
+            breakdown={"passed": 3}
+        )
+        result = agg.to_dict()
+        assert result == {
+            "summary": "checks: 3/3 passed",
+            "breakdown": {"passed": 3}
+        }
+
+
+class TestAggregateComputer:
+    """Tests for AggregateComputer."""
+    
+    def test_compute_count_list(self):
+        """Test count computation for list."""
+        data = [{"id": 1}, {"id": 2}, {"id": 3}]
+        computer = AggregateComputer()
+        result = computer.compute_count(data)
+        assert result.current_count == 3
+        assert result.total_count == 3
+    
+    def test_compute_count_with_total(self):
+        """Test count computation with explicit total."""
+        data = [{"id": 1}, {"id": 2}]
+        computer = AggregateComputer()
+        result = computer.compute_count(data, total=100)
+        assert result.current_count == 2
+        assert result.total_count == 100
+    
+    def test_compute_count_dict(self):
+        """Test count computation for dict."""
+        data = {"key1": "val1", "key2": "val2"}
+        computer = AggregateComputer()
+        result = computer.compute_count(data)
+        assert result.current_count == 2
+        assert result.total_count == 2
+    
+    def test_apply_to_list(self):
+        """Test applying aggregates to list."""
+        data = [
+            {"id": 1, "status": "passed"},
+            {"id": 2, "status": "passed"},
+            {"id": 3, "status": "failed"}
+        ]
+        computer = AggregateComputer()
+        result = computer.apply_to_list(data)
+        
+        assert "count" in result
+        assert result["count"]["count"] == 3
+        assert result["count"]["total"] == 3
+        assert "status" in result
+        assert result["status"]["status"] == "failed"
+        assert "summary" in result
+    
+    def test_apply_to_list_empty(self):
+        """Test applying aggregates to empty list."""
+        computer = AggregateComputer()
+        result = computer.apply_to_list([])
+        
+        assert "count" in result
+        assert result["count"]["count"] == 0
+        assert result["count"]["total"] == 0
+    
+    def test_apply_to_detail(self):
+        """Test applying aggregates to detail view."""
+        data = {"id": 1, "state": "running", "summary": "Test item"}
+        computer = AggregateComputer()
+        result = computer.apply_to_detail(data)
+        
+        assert "derived_status" in result
+        assert result["derived_status"] == "running"
+        assert "summary" in result
+        assert result["summary"] == "Test item"
+    
+    def test_is_cheap_computation(self):
+        """Test cheap computation check."""
+        computer = AggregateComputer()
+        assert computer.is_cheap_computation(lambda: None) is True
+
+
+class TestGlobalFunctions:
+    """Tests for global utility functions."""
+    
+    def test_get_aggregate_computer_singleton(self):
+        """Test that get_aggregate_computer returns singleton."""
+        computer1 = get_aggregate_computer()
+        computer2 = get_aggregate_computer()
+        assert computer1 is computer2
+    
+    def test_compute_aggregates_list(self):
+        """Test compute_aggregates for list view."""
+        data = [{"id": 1}, {"id": 2}]
+        result = compute_aggregates(data, view_type="list")
+        
+        assert "count" in result
+        assert result["count"]["count"] == 2
+    
+    def test_compute_aggregates_detail(self):
+        """Test compute_aggregates for detail view."""
+        data = {"id": 1, "state": "passed"}
+        result = compute_aggregates(data, view_type="detail")
+        
+        assert "derived_status" in result
+        assert result["derived_status"] == "passed"
+    
+    def test_compute_aggregates_with_total(self):
+        """Test compute_aggregates with total count."""
+        data = [{"id": 1}]
+        result = compute_aggregates(data, view_type="list", total=100)
+        
+        assert result["count"]["count"] == 1
+        assert result["count"]["total"] == 100
+    
+    def test_add_aggregates_to_output(self):
+        """Test adding aggregates to output."""
+        output = {"data": [{"id": 1}]}
+        data = [{"id": 1}]
+        result = add_aggregates_to_output(output, data, view_type="list")
+        
+        assert "_aggregates" in result
+        assert "count" in result["_aggregates"]
+        assert result["data"] == [{"id": 1}]
+    
+    def test_add_aggregates_to_output_detail(self):
+        """Test adding aggregates to detail output."""
+        output = {"data": {"id": 1, "state": "passed"}}
+        data = {"id": 1, "state": "passed"}
+        result = add_aggregates_to_output(output, data, view_type="detail")
+        
+        assert "_aggregates" in result
+        assert "derived_status" in result["_aggregates"]
+
+
+class TestAggregatePerformance:
+    """Performance tests for aggregate computation."""
+    
+    def test_large_list_performance(self):
+        """Test aggregate computation on large list."""
+        # Create a large list
+        data = [{"id": i, "status": "passed" if i % 2 == 0 else "failed"} for i in range(1000)]
+        
+        computer = AggregateComputer()
+        result = computer.apply_to_list(data)
+        
+        assert result["count"]["count"] == 1000
+        assert result["count"]["total"] == 1000
+        assert result["status"]["status"] == "failed"
+    
+    def test_aggregate_efficiency(self):
+        """Test that aggregates are computed efficiently."""
+        data = [{"id": i} for i in range(100)]
+        computer = AggregateComputer()
+        
+        # Should complete quickly
+        result = computer.apply_to_list(data)
+        assert result["count"]["count"] == 100

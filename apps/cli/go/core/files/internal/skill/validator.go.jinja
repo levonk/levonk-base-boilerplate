@@ -1,0 +1,83 @@
+package skill
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+)
+
+// Validator checks if a skill file is stale (out of date)
+type Validator struct {
+	projectName string
+	projectSlug string
+	description string
+	version     string
+	rootCmd     interface{} // *cobra.Command, but using interface to avoid import cycle
+}
+
+// NewValidator creates a new skill validator
+func NewValidator(projectName, projectSlug, description, version string, rootCmd interface{}) *Validator {
+	return &Validator{
+		projectName: projectName,
+		projectSlug: projectSlug,
+		description: description,
+		version:     version,
+		rootCmd:     rootCmd,
+	}
+}
+
+// CheckSkill checks if the skill file at the given path is up to date
+func (v *Validator) CheckSkill(filepath string) error {
+	// Read existing skill file
+	existingContent, err := os.ReadFile(filepath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("skill file does not exist: %s", filepath)
+		}
+		return fmt.Errorf("failed to read skill file: %w", err)
+	}
+
+	// Generate expected skill content
+	generator := NewGenerator(v.projectName, v.projectSlug, v.description, v.version, v.rootCmd.(*cobra.Command))
+	expectedContent, err := generator.Generate()
+	if err != nil {
+		return fmt.Errorf("failed to generate expected skill content: %w", err)
+	}
+
+	// Compare hashes
+	existingHash := sha256.Sum256(existingContent)
+	expectedHash := sha256.Sum256([]byte(expectedContent))
+
+	if existingHash != expectedHash {
+		return &StaleSkillError{
+			Filepath:        filepath,
+			ExistingHash:    hex.EncodeToString(existingHash[:]),
+			ExpectedHash:    hex.EncodeToString(expectedHash[:]),
+			Suggestion:      "Run --generate-skill to update the skill file",
+		}
+	}
+
+	return nil
+}
+
+// StaleSkillError is returned when the skill file is out of date
+type StaleSkillError struct {
+	Filepath     string
+	ExistingHash string
+	ExpectedHash string
+	Suggestion   string
+}
+
+func (e *StaleSkillError) Error() string {
+	return fmt.Sprintf("skill file is stale: %s\n  existing hash: %s\n  expected hash: %s\n  suggestion: %s",
+		e.Filepath, e.ExistingHash, e.ExpectedHash, e.Suggestion)
+}
+
+// IsStaleSkill checks if an error is a StaleSkillError
+func IsStaleSkill(err error) bool {
+	_, ok := err.(*StaleSkillError)
+	return ok
+}

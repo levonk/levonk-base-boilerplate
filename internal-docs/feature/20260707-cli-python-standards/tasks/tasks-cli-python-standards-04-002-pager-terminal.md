@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 4
 parallel_id: 2
 branch: "feature/current/cli-python-standards/story-04-002-pager-terminal"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,16 +27,16 @@ Implement auto-pager for long output and terminal size awareness. Respect `PAGER
 
 ## Sub-Tasks
 
-- [ ] Create `terminal.py.jinja` template file with terminal utilities — `apps/cli/python/core/files/{{project_slug}}/terminal.py.jinja`
-- [ ] Implement terminal size detection on startup — `terminal.py.jinja`
-- [ ] Implement terminal resize event handling where possible — `terminal.py.jinja`
-- [ ] Add responsive output formatting based on terminal width — `terminal.py.jinja`
-- [ ] Implement auto-pager for long output in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Respect `PAGER` environment variable with default to `less` — `__main__.py.jinja`
-- [ ] Add `--no-pager` flag to bypass paging — `__main__.py.jinja`
-- [ ] Detect when output exceeds terminal height and auto-pager — `terminal.py.jinja`
-- [ ] Add tests for pager integration — `apps/cli/python/core/files/tests/test_terminal.py.jinja`
-- [ ] Add tests for terminal size awareness — `tests/test_terminal.py.jinja`
+- [x] Create `terminal.py.jinja` template file with terminal utilities — `apps/cli/python/core/files/{{project_slug}}/terminal.py.jinja`
+- [x] Implement terminal size detection on startup — `terminal.py.jinja`
+- [x] Implement terminal resize event handling where possible — `terminal.py.jinja`
+- [x] Add responsive output formatting based on terminal width — `terminal.py.jinja`
+- [x] Implement auto-pager for long output in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Respect `PAGER` environment variable with default to `less` — `terminal.py.jinja`
+- [x] Add `--no-pager` flag to bypass paging — `__main__.py.jinja`
+- [x] Detect when output exceeds terminal height and auto-pager — `terminal.py.jinja`
+- [x] Add tests for pager integration — `apps/cli/python/core/files/tests/test_terminal.py.jinja`
+- [x] Add tests for terminal size awareness — `tests/test_terminal.py.jinja`
 
 ## Relevant Files
 
@@ -46,14 +46,14 @@ Implement auto-pager for long output and terminal size awareness. Respect `PAGER
 
 ## Acceptance Criteria
 
-- [ ] Terminal size detected on startup
-- [ ] Terminal resize events handled where possible
-- [ ] Output formatting responsive to terminal width
-- [ ] Auto-pager activates for long output
-- [ ] `PAGER` environment variable respected with default to `less`
-- [ ] `--no-pager` flag bypasses paging
-- [ ] Auto-pager triggers when output exceeds terminal height
-- [ ] All tests pass for pager and terminal scenarios
+- [x] Terminal size detected on startup
+- [x] Terminal resize events handled where possible
+- [x] Output formatting responsive to terminal width
+- [x] Auto-pager activates for long output
+- [x] `PAGER` environment variable respected with default to `less`
+- [x] `--no-pager` flag bypasses paging
+- [x] Auto-pager triggers when output exceeds terminal height
+- [x] All tests pass for pager and terminal scenarios
 
 ## Test Plan
 

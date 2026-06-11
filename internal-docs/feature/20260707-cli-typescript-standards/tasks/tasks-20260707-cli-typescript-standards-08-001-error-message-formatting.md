@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 8
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-08-001-error-message-formatting"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-002", "05-003"]
@@ -27,18 +27,18 @@ Implement consistent, actionable error messages with suggestions using the forma
 
 ## Sub-Tasks
 
-- [ ] Define error message format standard
-- [ ] Implement error message formatter
-- [ ] Add suggestion generation logic
-- [ ] Update all error paths to use new format
-- [ ] Add file references to error messages
-- [ ] Add context information to error messages
-- [ ] Implement error categorization
-- [ ] Add unit tests for error formatting
-- [ ] Add unit tests for suggestion generation
-- [ ] Add integration tests for error messages
-- [ ] Update help text to document error format
-- [ ] Add error message documentation
+- [x] Define error message format standard
+- [x] Implement error message formatter
+- [x] Add suggestion generation logic
+- [x] Update all error paths to use new format
+- [x] Add file references to error messages
+- [x] Add context information to error messages
+- [x] Implement error categorization
+- [x] Add unit tests for error formatting
+- [x] Add unit tests for suggestion generation
+- [x] Add integration tests for error messages
+- [x] Update help text to document error format
+- [x] Add error message documentation
 
 ## Relevant Files
 
@@ -49,14 +49,14 @@ Implement consistent, actionable error messages with suggestions using the forma
 
 ## Acceptance Criteria
 
-- [ ] All error messages follow format: `ERROR: <description> - <suggestion>`
-- [ ] Error messages are actionable
-- [ ] Error messages include helpful suggestions
-- [ ] Error messages include file references where applicable
-- [ ] Error messages include context information
-- [ ] Error categorization works correctly
-- [ ] Error format is consistent across all error paths
-- [ ] Error messages are user-friendly
+- [x] All error messages follow format: `ERROR: <description> - <suggestion>`
+- [x] Error messages are actionable
+- [x] Error messages include helpful suggestions
+- [x] Error messages include file references where applicable
+- [x] Error messages include context information
+- [x] Error categorization works correctly
+- [x] Error format is consistent across all error paths
+- [x] Error messages are user-friendly
 
 ## Test Plan
 

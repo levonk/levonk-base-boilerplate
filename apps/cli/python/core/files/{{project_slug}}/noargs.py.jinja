@@ -1,0 +1,157 @@
+# vim: set ft=python :
+"""No-args content-first behavior.
+
+This module provides content-first behavior for CLI invocation with no arguments,
+showing relevant live state instead of a usage manual.
+"""
+
+from pathlib import Path
+from typing import Dict, Any, Optional
+from {{project_slug}}.mode import Mode
+
+
+def get_directory_context(directory: Path) -> Dict[str, Any]:
+    """Get context about the current directory.
+    
+    Args:
+        directory: The directory to analyze
+        
+    Returns:
+        Dictionary with directory context
+    """
+    context = {
+        "path": str(directory.absolute()),
+        "exists": directory.exists(),
+        "is_dir": directory.is_dir() if directory.exists() else False,
+    }
+    
+    if directory.exists() and directory.is_dir():
+        # Count files
+        try:
+            files = list(directory.iterdir())
+            context["file_count"] = len(files)
+            context["has_files"] = len(files) > 0
+        except PermissionError:
+            context["file_count"] = -1
+            context["has_files"] = False
+        
+        # Check for common project indicators
+        context["is_git_repo"] = (directory / ".git").exists()
+        context["has_package_json"] = (directory / "package.json").exists()
+        context["has_pyproject"] = (directory / "pyproject.toml").exists()
+        context["has_cargo_toml"] = (directory / "Cargo.toml").exists()
+    
+    return context
+
+
+def get_relevant_content(directory: Path, mode: Mode) -> str:
+    """Get relevant content for no-args invocation.
+    
+    Args:
+        directory: The current directory
+        mode: Execution mode (agent or human)
+        
+    Returns:
+        Formatted content string
+    """
+    context = get_directory_context(directory)
+    
+    if mode == Mode.AGENT:
+        return format_content_toon(context)
+    else:
+        return format_content_human(context)
+
+
+def format_content_toon(context: Dict[str, Any]) -> str:
+    """Format content in TOON format for agent mode.
+    
+    Args:
+        context: Directory context
+        
+    Returns:
+        TOON-formatted string
+    """
+    lines = []
+    
+    if not context.get("exists"):
+        lines.append("state:dir_not_found")
+        return "\n".join(lines)
+    
+    if not context.get("is_dir"):
+        lines.append("state:is_file")
+        lines.append(f"path:{context['path']}")
+        return "\n".join(lines)
+    
+    lines.append(f"cwd:{context['path']}")
+    
+    if context.get("is_git_repo"):
+        lines.append("vcs:git")
+    
+    if context.get("has_package_json"):
+        lines.append("project:node")
+    elif context.get("has_pyproject"):
+        lines.append("project:python")
+    elif context.get("has_cargo_toml"):
+        lines.append("project:rust")
+    
+    if context.get("has_files"):
+        lines.append(f"files:{context['file_count']}")
+    
+    return "\n".join(lines)
+
+
+def format_content_human(context: Dict[str, Any]) -> str:
+    """Format content in human-readable format.
+    
+    Args:
+        context: Directory context
+        
+    Returns:
+        Human-readable string
+    """
+    lines = []
+    
+    if not context.get("exists"):
+        lines.append(f"Directory not found: {context['path']}")
+        lines.append("\nUse --help for usage information.")
+        return "\n".join(lines)
+    
+    if not context.get("is_dir"):
+        lines.append(f"Path is a file: {context['path']}")
+        lines.append("\nUse --help for usage information.")
+        return "\n".join(lines)
+    
+    lines.append(f"Current directory: {context['path']}")
+    
+    if context.get("is_git_repo"):
+        lines.append("✓ Git repository detected")
+    
+    if context.get("has_package_json"):
+        lines.append("✓ Node.js project detected")
+    elif context.get("has_pyproject"):
+        lines.append("✓ Python project detected")
+    elif context.get("has_cargo_toml"):
+        lines.append("✓ Rust project detected")
+    
+    if context.get("has_files"):
+        lines.append(f"✓ {context['file_count']} items in directory")
+    
+    lines.append("\nUse --help for usage information.")
+    
+    return "\n".join(lines)
+
+
+def show_no_args_content(directory: Optional[Path] = None, mode: Mode = Mode.AGENT) -> str:
+    """Show content for no-args invocation.
+    
+    Args:
+        directory: Optional directory (defaults to cwd)
+        mode: Execution mode
+        
+    Returns:
+        Formatted content string
+    """
+    if directory is None:
+        directory = Path.cwd()
+    
+    return get_relevant_content(directory, mode)

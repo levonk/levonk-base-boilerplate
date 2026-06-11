@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 3
 parallel_id: 4
 branch: "feature/current/cli-python-standards/story-03-004-progress-indicators"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,14 +27,14 @@ Implement progress indicators (progress bars or spinners) for long-running opera
 
 ## Sub-Tasks
 
-- [ ] Create `progress.py.jinja` template file with progress utilities — `apps/cli/python/core/files/{{project_slug}}/progress.py.jinja`
-- [ ] Implement progress bar using rich.progress for file operations — `progress.py.jinja`
-- [ ] Implement spinner for indeterminate operations — `progress.py.jinja`
-- [ ] Add progress indicator integration to long-running operations in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Ensure progress indicators respect `--quiet` flag — `progress.py.jinja`
-- [ ] Add progress indicator for file processing operations — `__main__.py.jinja`
-- [ ] Add tests for progress indicators — `apps/cli/python/core/files/tests/test_progress.py.jinja`
-- [ ] Add tests for quiet mode suppression — `tests/test_progress.py.jinja`
+- [x] Create `progress.py.jinja` template file with progress utilities — `apps/cli/python/core/files/{{project_slug}}/progress.py.jinja`
+- [x] Implement progress bar using rich.progress for file operations — `progress.py.jinja`
+- [x] Implement spinner for indeterminate operations — `progress.py.jinja`
+- [x] Ensure progress indicators respect `--quiet` flag — `progress.py.jinja`
+- [x] Add progress indicator integration to long-running operations in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Add progress indicator for file processing operations — `__main__.py.jinja`
+- [x] Add tests for progress indicators — `apps/cli/python/core/files/tests/test_progress.py.jinja`
+- [x] Add tests for quiet mode suppression — `tests/test_progress.py.jinja`
 
 ## Relevant Files
 
@@ -44,12 +44,12 @@ Implement progress indicators (progress bars or spinners) for long-running opera
 
 ## Acceptance Criteria
 
-- [ ] Progress bars shown for file operations (>30 seconds)
-- [ ] Spinners shown for indeterminate operations (>30 seconds)
-- [ ] Progress indicators respect `--quiet` flag (no progress in quiet mode)
-- [ ] Progress indicators provide clear status information
-- [ ] Progress indicators do not interfere with output
-- [ ] All tests pass for progress indicator scenarios
+- [x] Progress bars shown for file operations (>30 seconds)
+- [x] Spinners shown for indeterminate operations (>30 seconds)
+- [x] Progress indicators respect `--quiet` flag (no progress in quiet mode)
+- [x] Progress indicators provide clear status information
+- [x] Progress indicators do not interfere with output
+- [x] All tests pass for progress indicator scenarios
 
 ## Test Plan
 

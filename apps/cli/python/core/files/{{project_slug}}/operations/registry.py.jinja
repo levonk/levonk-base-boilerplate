@@ -1,0 +1,217 @@
+# vim: set ft=python :
+"""Operation registry for CLI operations.
+
+This module provides a registry for mutation operations that can be
+executed idempotently. Each operation is registered with its type
+(create, update, delete) and associated state checking logic.
+"""
+
+from typing import Callable, Dict, Any, Optional, List
+from enum import Enum
+
+
+class OperationType(Enum):
+    """Types of mutation operations."""
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+
+
+class Operation:
+    """Represents a registered mutation operation."""
+
+    def __init__(
+        self,
+        name: str,
+        op_type: OperationType,
+        execute_func: Callable,
+        check_state_func: Callable,
+        description: str = ""
+    ):
+        """Initialize an operation.
+
+        Args:
+            name: Unique name for the operation
+            op_type: Type of operation (CREATE, UPDATE, DELETE)
+            execute_func: Function to execute the operation
+            check_state_func: Function to check current state
+            description: Human-readable description
+        """
+        self.name = name
+        self.op_type = op_type
+        self.execute_func = execute_func
+        self.check_state_func = check_state_func
+        self.description = description
+
+    def execute(self, *args, **kwargs) -> Dict[str, Any]:
+        """Execute the operation with idempotent checking.
+
+        Args:
+            *args: Positional arguments for the operation
+            **kwargs: Keyword arguments for the operation
+
+        Returns:
+            Result dictionary with status and details
+        """
+        from {{project_slug}}.errors.idempotent import (
+            ensure_idempotent_create,
+            ensure_idempotent_update,
+            ensure_idempotent_delete,
+            handle_idempotent_result,
+        )
+
+        # Get current state (check_state_func doesn't need desired_state)
+        state_kwargs = {k: v for k, v in kwargs.items() if k != 'desired_state'}
+        current_state = self.check_state_func(*args, **state_kwargs)
+
+        # Determine desired state based on operation type
+        # Filter out desired_state from execute kwargs
+        exec_kwargs = {k: v for k, v in kwargs.items() if k != 'desired_state'}
+
+        if self.op_type == OperationType.CREATE:
+            desired_state = kwargs.get('desired_state', {})
+            result = ensure_idempotent_create(
+                lambda: self.execute_func(*args, **exec_kwargs),
+                current_state,
+                desired_state,
+                self.name
+            )
+        elif self.op_type == OperationType.UPDATE:
+            desired_state = kwargs.get('desired_state', {})
+            result = ensure_idempotent_update(
+                lambda: self.execute_func(*args, **exec_kwargs),
+                current_state,
+                desired_state,
+                self.name
+            )
+        elif self.op_type == OperationType.DELETE:
+            result = ensure_idempotent_delete(
+                lambda: self.execute_func(*args, **exec_kwargs),
+                current_state,
+                self.name
+            )
+        else:
+            raise ValueError(f"Unknown operation type: {self.op_type}")
+
+        return handle_idempotent_result(result, self.op_type.value, self.name)
+
+
+class OperationRegistry:
+    """Registry for mutation operations."""
+
+    def __init__(self):
+        """Initialize the operation registry."""
+        self._operations: Dict[str, Operation] = {}
+
+    def register(
+        self,
+        name: str,
+        op_type: OperationType,
+        execute_func: Callable,
+        check_state_func: Callable,
+        description: str = ""
+    ) -> Operation:
+        """Register a mutation operation.
+
+        Args:
+            name: Unique name for the operation
+            op_type: Type of operation (CREATE, UPDATE, DELETE)
+            execute_func: Function to execute the operation
+            check_state_func: Function to check current state
+            description: Human-readable description
+
+        Returns:
+            The registered operation
+        """
+        if name in self._operations:
+            raise ValueError(f"Operation '{name}' already registered")
+
+        operation = Operation(name, op_type, execute_func, check_state_func, description)
+        self._operations[name] = operation
+        return operation
+
+    def get(self, name: str) -> Optional[Operation]:
+        """Get an operation by name.
+
+        Args:
+            name: Name of the operation
+
+        Returns:
+            The operation or None if not found
+        """
+        return self._operations.get(name)
+
+    def list_operations(self, op_type: Optional[OperationType] = None) -> List[Operation]:
+        """List all registered operations.
+
+        Args:
+            op_type: Optional filter by operation type
+
+        Returns:
+            List of operations
+        """
+        operations = list(self._operations.values())
+
+        if op_type:
+            operations = [op for op in operations if op.op_type == op_type]
+
+        return operations
+
+    def list_create_operations(self) -> List[Operation]:
+        """List all create operations."""
+        return self.list_operations(OperationType.CREATE)
+
+    def list_update_operations(self) -> List[Operation]:
+        """List all update operations."""
+        return self.list_operations(OperationType.UPDATE)
+
+    def list_delete_operations(self) -> List[Operation]:
+        """List all delete operations."""
+        return self.list_operations(OperationType.DELETE)
+
+
+# Global registry instance
+_registry = OperationRegistry()
+
+
+def register_operation(
+    name: str,
+    op_type: OperationType,
+    execute_func: Callable,
+    check_state_func: Callable,
+    description: str = ""
+) -> Operation:
+    """Register a mutation operation in the global registry.
+
+    Args:
+        name: Unique name for the operation
+        op_type: Type of operation (CREATE, UPDATE, DELETE)
+        execute_func: Function to execute the operation
+        check_state_func: Function to check current state
+        description: Human-readable description
+
+    Returns:
+        The registered operation
+    """
+    return _registry.register(name, op_type, execute_func, check_state_func, description)
+
+
+def get_operation(name: str) -> Optional[Operation]:
+    """Get an operation from the global registry.
+
+    Args:
+        name: Name of the operation
+
+    Returns:
+        The operation or None if not found
+    """
+    return _registry.get(name)
+
+
+def get_registry() -> OperationRegistry:
+    """Get the global operation registry.
+
+    Returns:
+        The global registry instance
+    """
+    return _registry

@@ -1,0 +1,209 @@
+package main
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/spf13/cobra"
+
+	"{{ project_slug }}/internal/idempotency"
+)
+
+func TestInstallCompletions(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	// Override home directory for testing
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create a test command
+	cmd := &cobra.Command{
+		Use: "{{ project_slug }}",
+	}
+
+	// Create logger and idempotency handler
+	logger := NewLogger("test")
+	handler := idempotency.NewHandler(logger)
+
+	// Test installCompletions
+	ctx := context.Background()
+	err := installCompletions(ctx, cmd, handler)
+	if err != nil {
+		t.Fatalf("installCompletions failed: %v", err)
+	}
+
+	// Verify bash completion file exists
+	bashFile := filepath.Join(tmpDir, ".local", "share", "bash-completion", "completions", "{{ project_slug }}")
+	if _, err := os.Stat(bashFile); os.IsNotExist(err) {
+		t.Errorf("bash completion file not created: %s", bashFile)
+	}
+
+	// Verify zsh completion file exists
+	zshFile := filepath.Join(tmpDir, ".local", "share", "zsh", "site-functions", "_{{ project_slug }}")
+	if _, err := os.Stat(zshFile); os.IsNotExist(err) {
+		t.Errorf("zsh completion file not created: %s", zshFile)
+	}
+
+	// Verify fish completion file exists
+	fishFile := filepath.Join(tmpDir, ".local", "share", "fish", "completions", "{{ project_slug }}.fish")
+	if _, err := os.Stat(fishFile); os.IsNotExist(err) {
+		t.Errorf("fish completion file not created: %s", fishFile)
+	}
+}
+
+func TestUninstallCompletions(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	// Override home directory for testing
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create a test command
+	cmd := &cobra.Command{
+		Use: "{{ project_slug }}",
+	}
+
+	// Create logger and idempotency handler
+	logger := NewLogger("test")
+	handler := idempotency.NewHandler(logger)
+
+	// First install completions
+	ctx := context.Background()
+	err := installCompletions(ctx, cmd, handler)
+	if err != nil {
+		t.Fatalf("installCompletions failed: %v", err)
+	}
+
+	// Then uninstall completions
+	err = uninstallCompletions(ctx, handler)
+	if err != nil {
+		t.Fatalf("uninstallCompletions failed: %v", err)
+	}
+
+	// Verify bash completion file is removed
+	bashFile := filepath.Join(tmpDir, ".local", "share", "bash-completion", "completions", "{{ project_slug }}")
+	if _, err := os.Stat(bashFile); !os.IsNotExist(err) {
+		t.Errorf("bash completion file not removed: %s", bashFile)
+	}
+
+	// Verify zsh completion file is removed
+	zshFile := filepath.Join(tmpDir, ".local", "share", "zsh", "site-functions", "_{{ project_slug }}")
+	if _, err := os.Stat(zshFile); !os.IsNotExist(err) {
+		t.Errorf("zsh completion file not removed: %s", zshFile)
+	}
+
+	// Verify fish completion file is removed
+	fishFile := filepath.Join(tmpDir, ".local", "share", "fish", "completions", "{{ project_slug }}.fish")
+	if _, err := os.Stat(fishFile); !os.IsNotExist(err) {
+		t.Errorf("fish completion file not removed: %s", fishFile)
+	}
+}
+
+func TestInstallIdempotency(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	// Override home directory for testing
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create a test command
+	cmd := &cobra.Command{
+		Use: "{{ project_slug }}",
+	}
+
+	// Create logger and idempotency handler
+	logger := NewLogger("test")
+	handler := idempotency.NewHandler(logger)
+
+	// Install completions first time
+	ctx := context.Background()
+	err := installCompletions(ctx, cmd, handler)
+	if err != nil {
+		t.Fatalf("first installCompletions failed: %v", err)
+	}
+
+	// Install completions second time (should succeed - idempotent)
+	err = installCompletions(ctx, cmd, handler)
+	if err != nil {
+		t.Fatalf("second installCompletions failed (not idempotent): %v", err)
+	}
+
+	// Verify files still exist
+	bashFile := filepath.Join(tmpDir, ".local", "share", "bash-completion", "completions", "{{ project_slug }}")
+	if _, err := os.Stat(bashFile); os.IsNotExist(err) {
+		t.Errorf("bash completion file missing after second install: %s", bashFile)
+	}
+}
+
+func TestUninstallHandlesMissingFiles(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	// Override home directory for testing
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	// Create logger and idempotency handler
+	logger := NewLogger("test")
+	handler := idempotency.NewHandler(logger)
+
+	// Try to uninstall without installing first (should not error - idempotent)
+	ctx := context.Background()
+	err := uninstallCompletions(ctx, handler)
+	if err != nil {
+		t.Errorf("uninstallCompletions failed with missing files: %v", err)
+	}
+}
+
+func TestIdempotentExitCodeZero(t *testing.T) {
+	// Test that idempotent no-ops return exit code 0
+	tmpDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	logger := NewLogger("test")
+	handler := idempotency.NewHandler(logger)
+	ctx := context.Background()
+
+	// Install completions first time
+	cmd := &cobra.Command{Use: "{{ project_slug }}"}
+	err := installCompletions(ctx, cmd, handler)
+	if err != nil {
+		t.Fatalf("first install failed: %v", err)
+	}
+
+	// Install completions second time - should return nil (exit code 0)
+	err = installCompletions(ctx, cmd, handler)
+	if err != nil {
+		t.Errorf("idempotent install returned error (should be nil for exit code 0): %v", err)
+	}
+}
+
+func TestIdempotentUninstallExitCodeZero(t *testing.T) {
+	// Test that idempotent uninstall no-ops return exit code 0
+	tmpDir := t.TempDir()
+	oldHome := os.Getenv("HOME")
+	os.Setenv("HOME", tmpDir)
+	defer os.Setenv("HOME", oldHome)
+
+	logger := NewLogger("test")
+	handler := idempotency.NewHandler(logger)
+	ctx := context.Background()
+
+	// Try to uninstall without installing - should return nil (exit code 0)
+	err := uninstallCompletions(ctx, handler)
+	if err != nil {
+		t.Errorf("idempotent uninstall with missing files returned error (should be nil for exit code 0): %v", err)
+	}
+}
+{# vim: set ft=go: #}

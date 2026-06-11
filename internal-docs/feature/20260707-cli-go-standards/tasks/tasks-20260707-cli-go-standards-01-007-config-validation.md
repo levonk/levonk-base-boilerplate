@@ -27,16 +27,16 @@ Implement configuration file validation on load with clear, specific error messa
 
 ## Sub-Tasks
 
-- [ ] Define config schema/validation rules — `core/files/config.go.jinja`
-- [ ] Implement config validation function — `core/files/config.go.jinja`
-- [ ] Add line number tracking for errors — `core/files/config.go.jinja`
-- [ ] Implement suggestion generation for common errors — `core/files/config.go.jinja`
-- [ ] Integrate validation into config loading — `core/files/main.go.jinja`
-- [ ] Test validation catches invalid types — `core/files/config_test.go.jinja`
-- [ ] Test validation provides line numbers — `core/files/config_test.go.jinja`
-- [ ] Test validation provides suggestions — `core/files/config_test.go.jinja`
-- [ ] Test validation allows valid config — `core/files/config_test.go.jinja`
-- [ ] Test validation error messages are clear — `core/files/config_test.go.jinja`
+- [x] Define config schema/validation rules — `core/files/config.go.jinja`
+- [x] Implement config validation function — `core/files/config.go.jinja`
+- [x] Add line number tracking for errors — `core/files/config.go.jinja`
+- [x] Implement suggestion generation for common errors — `core/files/config.go.jinja`
+- [x] Integrate validation into config loading — `core/files/main.go.jinja`
+- [x] Test validation catches invalid types — `core/files/config_test.go.jinja`
+- [x] Test validation provides line numbers — `core/files/config_test.go.jinja`
+- [x] Test validation provides suggestions — `core/files/config_test.go.jinja`
+- [x] Test validation allows valid config — `core/files/config_test.go.jinja`
+- [x] Test validation error messages are clear — `core/files/config_test.go.jinja`
 
 ## Relevant Files
 
@@ -46,13 +46,13 @@ Implement configuration file validation on load with clear, specific error messa
 
 ## Acceptance Criteria
 
-- [ ] Config files are validated on load
-- [ ] Validation errors include line numbers
-- [ ] Validation errors include specific descriptions
-- [ ] Validation errors include suggestions for resolution
-- [ ] Invalid config prevents application startup
-- [ ] Valid config passes validation without errors
-- [ ] Validation handles both YAML and TOML formats
+- [x] Config files are validated on load
+- [x] Validation errors include line numbers
+- [x] Validation errors include specific descriptions
+- [x] Validation errors include suggestions for resolution
+- [x] Invalid config prevents application startup
+- [x] Valid config passes validation without errors
+- [x] Validation handles both YAML and TOML formats
 
 ## Test Plan
 

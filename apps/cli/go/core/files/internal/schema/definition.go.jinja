@@ -1,0 +1,168 @@
+package schema
+
+import (
+	"fmt"
+	"strings"
+)
+
+// Field represents a single field in a schema
+type Field struct {
+	Name        string
+	Type        FieldType
+	Description string
+	Required    bool
+	Default     interface{}
+}
+
+// FieldType represents the type of a field
+type FieldType string
+
+const (
+	FieldTypeString   FieldType = "string"
+	FieldTypeNumber   FieldType = "number"
+	FieldTypeBoolean  FieldType = "boolean"
+	FieldTypeArray    FieldType = "array"
+	FieldTypeObject   FieldType = "object"
+	FieldTypeNull     FieldType = "null"
+)
+
+// Schema defines the output schema for a command
+type Schema struct {
+	CommandName string
+	Fields      []Field
+	DefaultFields []string // Fields to include by default (3-4 fields)
+	MaxItems    int       // Default limit for list outputs
+}
+
+// NewSchema creates a new schema for a command
+func NewSchema(commandName string) *Schema {
+	return &Schema{
+		CommandName:  commandName,
+		Fields:      []Field{},
+		DefaultFields: []string{},
+		MaxItems:    100,
+	}
+}
+
+// AddField adds a field to the schema
+func (s *Schema) AddField(name string, fieldType FieldType, description string, required bool, defaultValue interface{}) {
+	s.Fields = append(s.Fields, Field{
+		Name:        name,
+		Type:        fieldType,
+		Description: description,
+		Required:    required,
+		Default:     defaultValue,
+	})
+}
+
+// SetDefaultFields sets the default fields for the schema
+// IMPORTANT: Default fields should be 3-4 fields maximum and should NOT include
+// long-form content such as "body", "description", "content", or other large text fields.
+// Recommended default fields: identifier (id, key, name), title/name, status, and one metadata field.
+func (s *Schema) SetDefaultFields(fieldNames ...string) {
+	s.DefaultFields = fieldNames
+}
+
+// Validate validates the schema
+func (s *Schema) Validate() error {
+	// Check that default fields exist in the schema
+	for _, defaultField := range s.DefaultFields {
+		found := false
+		for _, field := range s.Fields {
+			if field.Name == defaultField {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("default field '%s' not found in schema", defaultField)
+		}
+	}
+
+	// Check that default fields count is 3-4
+	if len(s.DefaultFields) < 3 || len(s.DefaultFields) > 4 {
+		return fmt.Errorf("default fields count must be 3-4, got %d", len(s.DefaultFields))
+	}
+
+	return nil
+}
+
+// GetField returns a field by name
+func (s *Schema) GetField(name string) (*Field, error) {
+	for _, field := range s.Fields {
+		if field.Name == name {
+			return &field, nil
+		}
+	}
+	return nil, fmt.Errorf("field '%s' not found", name)
+}
+
+// HasField checks if a field exists in the schema
+func (s *Schema) HasField(name string) bool {
+	for _, field := range s.Fields {
+		if field.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// GetFieldNames returns all field names
+func (s *Schema) GetFieldNames() []string {
+	names := make([]string, len(s.Fields))
+	for i, field := range s.Fields {
+		names[i] = field.Name
+	}
+	return names
+}
+
+// ApplyToMap applies the schema to a map, returning only the specified fields
+func (s *Schema) ApplyToMap(data map[string]interface{}, fieldNames []string) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	for _, fieldName := range fieldNames {
+		if !s.HasField(fieldName) {
+			return nil, fmt.Errorf("field '%s' not found in schema", fieldName)
+		}
+		if value, ok := data[fieldName]; ok {
+			result[fieldName] = value
+		}
+	}
+
+	return result, nil
+}
+
+// ApplyDefaultToMap applies the default schema to a map
+func (s *Schema) ApplyDefaultToMap(data map[string]interface{}) (map[string]interface{}, error) {
+	return s.ApplyToMap(data, s.DefaultFields)
+}
+
+// ParseFieldNames parses a comma-separated list of field names
+func ParseFieldNames(fieldsStr string) []string {
+	if fieldsStr == "" {
+		return nil
+	}
+
+	fields := strings.Split(fieldsStr, ",")
+	result := make([]string, 0, len(fields))
+
+	for _, field := range fields {
+		trimmed := strings.TrimSpace(field)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+
+	return result
+}
+
+// ValidateFieldNames validates that all field names exist in the schema
+func (s *Schema) ValidateFieldNames(fieldNames []string) error {
+	for _, fieldName := range fieldNames {
+		if !s.HasField(fieldName) {
+			return fmt.Errorf("field '%s' not found in schema. Available fields: %s",
+				fieldName, strings.Join(s.GetFieldNames(), ", "))
+		}
+	}
+	return nil
+}

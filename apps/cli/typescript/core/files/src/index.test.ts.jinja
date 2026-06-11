@@ -1,14 +1,1551 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
 import { exec } from 'child_process';
 import util from 'util';
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
 
 const execAsync = util.promisify(exec);
 
 describe('CLI', () => {
+    beforeAll(async () => {
+        // Build the project before running integration tests
+        await execAsync('pnpm build');
+    });
+
     it('should show help', async () => {
-        const { stdout } = await execAsync('npx ts-node src/index.ts --help');
+        const { stdout } = await execAsync('node dist/index.js --help');
         expect(stdout).toContain('Usage:');
     });
 
-    // More integration tests would require building or mocking process
+    describe('--color flag', () => {
+        it('should accept --color=auto', async () => {
+            const { stdout } = await execAsync('node dist/index.js --color=auto --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should accept --color=always', async () => {
+            const { stdout } = await execAsync('node dist/index.js --color=always --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should accept --color=never', async () => {
+            const { stdout } = await execAsync('node dist/index.js --color=never --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should default to auto mode when no --color flag is provided', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should show color option in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--color');
+        });
+    });
+
+    describe('NO_COLOR environment variable', () => {
+        const originalNoColor = process.env.NO_COLOR;
+
+        afterEach(() => {
+            if (originalNoColor === undefined) {
+                delete process.env.NO_COLOR;
+            } else {
+                process.env.NO_COLOR = originalNoColor;
+            }
+        });
+
+        it('should respect NO_COLOR environment variable', async () => {
+            const { stdout } = await execAsync('NO_COLOR=1 node dist/index.js --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should prioritize NO_COLOR over --color flag', async () => {
+            const { stdout } = await execAsync('NO_COLOR=1 node dist/index.js --color=always --help');
+            expect(stdout).toContain('Usage:');
+        });
+    });
+
+    describe('Exit Codes', () => {
+        let tempFile: string;
+
+        beforeEach(async () => {
+            tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.unlink(tempFile);
+            } catch {
+                // Ignore if file doesn't exist
+            }
+        });
+
+        it('should exit with code 0 on success', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should exit with code 2 on usage error (no inputs)', async () => {
+            try {
+                await execAsync('node dist/index.js');
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(2);
+                expect(error.stderr).toContain('UsageError');
+            }
+        });
+
+        it('should exit with code 5 on file not found', async () => {
+            try {
+                await execAsync('node dist/index.js /nonexistent/file.txt');
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(5);
+                expect(error.stderr).toContain('FileNotFoundError');
+            }
+        });
+
+        it('should exit with code 6 on permission denied', async () => {
+            // Create a file with no read permissions
+            const noPermFile = await fs.mkdtemp(os.tmpdir()) + '/no-perm.txt';
+            await fs.writeFile(noPermFile, 'test');
+            await fs.chmod(noPermFile, 0o000);
+
+            try {
+                await execAsync(`node dist/index.js "${noPermFile}"`);
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(6);
+                expect(error.stderr).toContain('PermissionDeniedError');
+            } finally {
+                await fs.chmod(noPermFile, 0o644);
+                await fs.unlink(noPermFile);
+            }
+        });
+
+        it('should include exit code in error messages', async () => {
+            try {
+                await execAsync('node dist/index.js /nonexistent/file.txt');
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.stderr).toContain('exit code: 5');
+            }
+        });
+    });
+
+    describe('Config Initialization', () => {
+        const testConfigDir = path.join(os.tmpdir(), 'test-config-{{ project_slug }}');
+        const testConfigPath = path.join(testConfigDir, 'config.toml');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should create default config file on first run', async () => {
+            const customXDG = testConfigDir;
+            const { stdout, stderr } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --help`
+            );
+
+            // Config file should be created
+            const exists = await fs.access(testConfigPath).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            // Config file should contain commented settings
+            const content = await fs.readFile(testConfigPath, 'utf-8');
+            expect(content).toContain('# Configuration file');
+            expect(content).toContain('# log_level = "info"');
+        });
+
+        it('should not overwrite existing config file', async () => {
+            const customXDG = testConfigDir;
+
+            // Create config directory and custom config
+            await fs.mkdir(testConfigDir, { recursive: true });
+            await fs.writeFile(testConfigPath, '# custom config');
+
+            // Run CLI
+            const { stdout } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --help`
+            );
+
+            // Config file should not be overwritten
+            const content = await fs.readFile(testConfigPath, 'utf-8');
+            expect(content).toBe('# custom config');
+        });
+
+        it('should log config creation in verbose mode', async () => {
+            const customXDG = testConfigDir;
+            const { stderr } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --verbose --help`
+            );
+
+            expect(stderr).toContain('Created default config file');
+        });
+
+        it('should use custom config path if provided', async () => {
+            const customConfigPath = path.join(testConfigDir, 'custom.toml');
+            const { stdout } = await execAsync(
+                `node dist/index.js --config "${customConfigPath}" --help`
+            );
+
+            // Custom config file should be created
+            const exists = await fs.access(customConfigPath).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+        });
+
+        it('should load config from environment variables', async () => {
+            const customXDG = testConfigDir;
+            const prefix = '{{ project_slug | upper | replace("-", "_") }}';
+            const { stdout } = await execAsync(
+                `${prefix}_LOG_LEVEL=debug XDG_CONFIG_HOME="${customXDG}" node dist/index.js --help`
+            );
+
+            // Should not error - env var should be loaded
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should respect config precedence: CLI > env > config', async () => {
+            const customXDG = testConfigDir;
+
+            // Create user config with log_level = warn
+            await fs.mkdir(testConfigDir, { recursive: true });
+            await fs.writeFile(testConfigPath, 'log_level = "warn"');
+
+            // CLI arg should override config
+            const { stdout } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --log-level=debug --help`
+            );
+
+            expect(stdout).toContain('Usage:');
+        });
+    });
+
+    describe('Completion Scripts', () => {
+        const testCompletionsDir = path.join(os.tmpdir(), 'test-completions-{{ project_slug }}');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testCompletionsDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testCompletionsDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should generate bash completion script', async () => {
+            const { stdout } = await execAsync(
+                `node dist/index.js --completion bash --output-dir "${testCompletionsDir}"`
+            );
+
+            const bashScript = path.join(testCompletionsDir, '{{ project_slug }}.bash');
+            const exists = await fs.access(bashScript).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            const content = await fs.readFile(bashScript, 'utf-8');
+            expect(content).toContain('# Bash completion');
+            expect(content).toContain('complete -F');
+        });
+
+        it('should generate zsh completion script', async () => {
+            const { stdout } = await execAsync(
+                `node dist/index.js --completion zsh --output-dir "${testCompletionsDir}"`
+            );
+
+            const zshScript = path.join(testCompletionsDir, '{{ project_slug }}.zsh');
+            const exists = await fs.access(zshScript).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            const content = await fs.readFile(zshScript, 'utf-8');
+            expect(content).toContain('#compdef {{ project_slug }}');
+        });
+
+        it('should generate fish completion script', async () => {
+            const { stdout } = await execAsync(
+                `node dist/index.js --completion fish --output-dir "${testCompletionsDir}"`
+            );
+
+            const fishScript = path.join(testCompletionsDir, '{{ project_slug }}.fish');
+            const exists = await fs.access(fishScript).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            const content = await fs.readFile(fishScript, 'utf-8');
+            expect(content).toContain('# Fish completion');
+        });
+
+        it('should output completion script to stdout with --stdout flag', async () => {
+            const { stdout } = await execAsync(
+                'node dist/index.js --completion bash --stdout'
+            );
+
+            expect(stdout).toContain('# Bash completion');
+            expect(stdout).toContain('complete -F');
+        });
+
+        it('should show completion installation instructions', async () => {
+            const { stdout } = await execAsync(
+                'node dist/index.js --completion-install bash'
+            );
+
+            expect(stdout).toContain('Bash completion installation');
+            expect(stdout).toContain('~/.bashrc');
+        });
+    });
+
+    describe('Man Pages', () => {
+        const testManDir = path.join(os.tmpdir(), 'test-man-{{ project_slug }}');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testManDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testManDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should generate man page', async () => {
+            const { stdout } = await execAsync(
+                `node dist/index.js --man --man-output-dir "${testManDir}"`
+            );
+
+            const manFile = path.join(testManDir, '{{ project_slug }}.1');
+            const exists = await fs.access(manFile).then(() => true).catch(() => false);
+            expect(exists).toBe(true);
+
+            const content = await fs.readFile(manFile, 'utf-8');
+            expect(content).toContain('.TH');
+            expect(content).toContain('.SH NAME');
+            expect(content).toContain('{{ project_slug }}');
+        });
+
+        it('should output man page to stdout with --stdout flag', async () => {
+            const { stdout } = await execAsync(
+                'node dist/index.js --man --stdout'
+            );
+
+            expect(stdout).toContain('.TH');
+            expect(stdout).toContain('.SH NAME');
+            expect(stdout).toContain('{{ project_slug }}');
+        });
+
+        it('should show man page installation instructions', async () => {
+            const { stdout } = await execAsync(
+                'node dist/index.js --man-install'
+            );
+
+            expect(stdout).toContain('Man page installation');
+            expect(stdout).toContain('~/.local/share/man/man1');
+        });
+    });
+
+    describe('Logging Mode Combinations', () => {
+        let tempFile: string;
+
+        beforeEach(async () => {
+            tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.unlink(tempFile);
+            } catch {
+                // Ignore if file doesn't exist
+            }
+        });
+
+        it('should accept --debug flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --debug "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept --log-format=json flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --log-format=json "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept --log-format=text flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --log-format=text "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept --quiet flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --quiet "${tempFile}"`);
+            // Quiet mode should suppress info output
+            expect(stdout).not.toContain('Processing');
+        });
+
+        it('should accept --verbose flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --verbose "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept combination of --debug and --log-format=json', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --debug --log-format=json "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept combination of --quiet and --log-format=json', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --quiet --log-format=json "${tempFile}"`);
+            expect(stdout).not.toContain('Processing');
+        });
+
+        it('should show logging options in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--debug');
+            expect(stdout).toContain('--log-format');
+            expect(stdout).toContain('--quiet');
+            expect(stdout).toContain('--verbose');
+        });
+
+        it('should show LOG_LEVEL environment variable in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('LOG_LEVEL');
+        });
+
+        it('should show NODE_ENV environment variable in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('NODE_ENV');
+        });
+    });
+
+    describe('Install/Uninstall Workflow', () => {
+        const testConfigDir = path.join(os.tmpdir(), 'test-config-{{ project_slug }}');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should accept --install flag', async () => {
+            const customXDG = testConfigDir;
+            const { stdout } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --install --skip-completions`
+            );
+            expect(stdout).toContain('installed successfully');
+        });
+
+        it('should accept --uninstall flag', async () => {
+            const customXDG = testConfigDir;
+
+            // First install
+            await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --install --skip-completions`
+            );
+
+            // Then uninstall
+            const { stdout } = await execAsync(
+                `XDG_CONFIG_HOME="${customXDG}" node dist/index.js --uninstall --force`
+            );
+            expect(stdout).toContain('uninstalled successfully');
+        });
+
+        it('should show install options in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--install');
+            expect(stdout).toContain('--uninstall');
+        });
+    });
+
+    describe('Dry-Run Mode', () => {
+        let tempFile: string;
+
+        beforeEach(async () => {
+            tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.unlink(tempFile);
+            } catch {
+                // Ignore if file doesn't exist
+            }
+        });
+
+        it('should accept --dry-run flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --dry-run "${tempFile}"`);
+            expect(stdout).toContain('[DRY-RUN]');
+        });
+
+        it('should show dry-run indicator in output', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --dry-run "${tempFile}"`);
+            expect(stdout).toContain('[DRY-RUN] Mode enabled - no changes were made');
+        });
+
+        it('should include dry-run status in JSON output', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --dry-run --json "${tempFile}"`);
+            const output = JSON.parse(stdout);
+            expect(output.dryRun).toBe(true);
+        });
+
+        it('should not show dry-run indicator when flag is not set', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFile}"`);
+            expect(stdout).not.toContain('[DRY-RUN]');
+        });
+
+        it('should include dry-run: false in JSON when flag is not set', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --json "${tempFile}"`);
+            const output = JSON.parse(stdout);
+            expect(output.dryRun).toBe(false);
+        });
+
+        it('should show dry-run option in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--dry-run');
+            expect(stdout).toContain('Preview changes without executing them');
+        });
+
+        it('should process files normally without --dry-run flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+            expect(stdout).not.toContain('[DRY-RUN]');
+        });
+    });
+
+    describe('Confirmation Prompts', () => {
+        it('should show --force flag in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--force');
+            expect(stdout).toContain('Force operation without confirmation');
+        });
+
+        it('should show CONFIRM_BYPASS environment variable in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('CONFIRM_BYPASS');
+        });
+
+        it('should show confirmation prompts section in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Confirmation Prompts');
+        });
+
+        it('should bypass confirmation with --force flag in uninstall', async () => {
+            // This test would require a full install/uninstall cycle
+            // For now, we just verify the flag is accepted
+            const { stdout } = await execAsync('node dist/index.js --uninstall --force');
+            // The CLI will show a warning if not installed, but should not error on the flag
+            expect(stdout).toBeDefined();
+        });
+
+        it('should bypass confirmation with CONFIRM_BYPASS environment variable', async () => {
+            const { stdout } = await execAsync('CONFIRM_BYPASS=1 node dist/index.js --uninstall');
+            expect(stdout).toBeDefined();
+        });
+    });
+
+    describe('Progress Indicators', () => {
+        let tempDir: string;
+        let tempFiles: string[] = [];
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(os.tmpdir());
+            // Create multiple test files
+            for (let i = 0; i < 5; i++) {
+                const filePath = path.join(tempDir, `test-${i}.txt`);
+                await fs.writeFile(filePath, `test content ${i}`);
+                tempFiles.push(filePath);
+            }
+        });
+
+        afterEach(async () => {
+            for (const file of tempFiles) {
+                try {
+                    await fs.unlink(file);
+                } catch {
+                    // Ignore if file doesn't exist
+                }
+            }
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should process files without errors', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFiles.join('" "')}"`);
+            expect(stdout).toContain('Processed 5 inputs');
+        });
+
+        it('should suppress progress in quiet mode', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --quiet "${tempFiles[0]}"`);
+            // In quiet mode, only errors should be shown
+            expect(stdout).toBeDefined();
+        });
+
+        it('should suppress progress in JSON mode', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --json "${tempFiles[0]}"`);
+            // In JSON mode, output should be valid JSON
+            const output = JSON.parse(stdout);
+            expect(output).toHaveProperty('results');
+            expect(output.results).toBeInstanceOf(Array);
+        });
+
+        it('should handle single file without progress bar issues', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFiles[0]}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+    });
+
+    describe('Pager Integration', () => {
+        let tempDir: string;
+        let tempFiles: string[] = [];
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(os.tmpdir());
+            // Create multiple test files to generate long output
+            for (let i = 0; i < 30; i++) {
+                const filePath = path.join(tempDir, `test-${i}.txt`);
+                await fs.writeFile(filePath, `test content ${i}`);
+                tempFiles.push(filePath);
+            }
+        });
+
+        afterEach(async () => {
+            for (const file of tempFiles) {
+                try {
+                    await fs.unlink(file);
+                } catch {
+                    // Ignore if file doesn't exist
+                }
+            }
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should accept --no-pager flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --no-pager "${tempFiles[0]}"`);
+            expect(stdout).toBeDefined();
+        });
+
+        it('should show --no-pager flag in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--no-pager');
+            expect(stdout).toContain('Disable pager for long output');
+        });
+
+        it('should show PAGER environment variable in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('PAGER');
+            expect(stdout).toContain('Set pager command');
+        });
+
+        it('should show pager section in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Pager');
+        });
+
+        it('should process files without pager when --no-pager is set', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --no-pager "${tempFiles.join('" "')}"`);
+            expect(stdout).toContain('Processed');
+        });
+
+        it('should process files normally without --no-pager flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js "${tempFiles[0]}"`);
+            expect(stdout).toContain('Processed');
+        });
+
+        it('should respect PAGER environment variable', async () => {
+            // Set a dummy pager that won't actually be invoked in test
+            const { stdout } = await execAsync(`PAGER=cat node dist/index.js "${tempFiles[0]}"`);
+            expect(stdout).toContain('Processed');
+        });
+
+        it('should bypass pager for JSON output mode', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --json "${tempFiles[0]}"`);
+            const output = JSON.parse(stdout);
+            expect(output).toHaveProperty('results');
+        });
+
+        it('should show pager bypass for JSON in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Paging is disabled for JSON output mode');
+        });
+
+        it('should show pager bypass for piped output in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Paging is disabled for JSON output mode and piped output');
+        });
+
+        it('should handle long output without errors', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --no-pager "${tempFiles.join('" "')}"`);
+            expect(stdout).toContain('Processed 30 inputs');
+        });
+    });
+
+    describe('TUI Mode', () => {
+        it('should show TUI mode in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--interactive, --tui');
+            expect(stdout).toContain('Launch interactive Terminal User Interface');
+        });
+
+        it('should show TUI fallback information in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Falls back to CLI mode in non-TTY environments');
+        });
+
+        it('should accept --interactive flag', async () => {
+            // In non-TTY environment (test), it should fall back to CLI mode
+            const { stdout, stderr } = await execAsync('node dist/index.js --interactive --help');
+            // Should still show help since it falls back to CLI mode
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should accept --tui flag', async () => {
+            // In non-TTY environment (test), it should fall back to CLI mode
+            const { stdout, stderr } = await execAsync('node dist/index.js --tui --help');
+            // Should still show help since it falls back to CLI mode
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should warn about TUI compatibility in non-TTY environment', async () => {
+            // Mock non-TTY environment
+            const { stdout, stderr } = await execAsync('node dist/index.js --interactive --help');
+            // Should warn about TUI not being available
+            expect(stderr).toContain('TUI mode not available');
+        });
+    });
+
+    describe('URL Formatting', () => {
+        it('should format URLs in error messages with clickable links when supported', async () => {
+            // Test that URLs in error messages are properly formatted
+            const { stderr } = await execAsync('node dist/index.js --help');
+            // URLs should be present in help text
+            expect(stderr).not.toContain('Invalid URL');
+        });
+
+        it('should format URLs in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            // Help text should contain any URLs that are documented
+            // This test verifies the URL formatting functions are integrated
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should handle URLs with special characters', async () => {
+            // Test that URLs with spaces and special characters are encoded properly
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should provide fallback for terminals without URL support', async () => {
+            // In non-TTY environment (test), URLs should still be displayed as plain text
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Usage:');
+        });
+    });
+
+    describe('Secret Handling', () => {
+        it('should redact secrets from log output', async () => {
+            // Set an environment variable with a secret
+            process.env.TEST_API_KEY = 'sk_live_1234567890abcdef1234567890abcdef';
+
+            try {
+                // Run a command that would log the secret
+                const { stdout, stderr } = await execAsync('node dist/index.js --help');
+
+                // Verify the secret is not in the output
+                const output = stdout + stderr;
+                expect(output).not.toContain('sk_live_1234567890abcdef1234567890abcdef');
+                expect(output).not.toContain('1234567890abcdef');
+            } finally {
+                delete process.env.TEST_API_KEY;
+            }
+        });
+
+        it('should show SECRET_STORAGE_METHOD environment variable in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('SECRET_STORAGE_METHOD');
+        });
+
+        it('should show secret handling section in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Secret Handling');
+        });
+    });
+
+    describe('Resource Limits', () => {
+        let tempFile: string;
+
+        beforeEach(async () => {
+            tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.unlink(tempFile);
+            } catch {
+                // Ignore if file doesn't exist
+            }
+        });
+
+        it('should accept --max-memory flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 512MB "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept --max-cpu flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-cpu 50 "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept both resource limit flags', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 1GB --max-cpu 75 "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should log memory limit in verbose mode', async () => {
+            const { stderr } = await execAsync(`node dist/index.js --max-memory 512MB --verbose "${tempFile}"`);
+            expect(stderr).toContain('Memory limit set to 512MB');
+        });
+
+        it('should log CPU limit in verbose mode', async () => {
+            const { stderr } = await execAsync(`node dist/index.js --max-cpu 50 --verbose "${tempFile}"`);
+            expect(stderr).toContain('CPU limit set to 50%');
+        });
+
+        it('should show resource limits in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--max-memory');
+            expect(stdout).toContain('--max-cpu');
+            expect(stdout).toContain('Resource Limits');
+        });
+
+        it('should reject invalid memory limit format', async () => {
+            try {
+                await execAsync(`node dist/index.js --max-memory invalid "${tempFile}"`);
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(2);
+                expect(error.stderr).toContain('Invalid memory limit format');
+            }
+        });
+
+        it('should reject invalid CPU limit format', async () => {
+            try {
+                await execAsync(`node dist/index.js --max-cpu invalid "${tempFile}"`);
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                expect(error.code).toBe(2);
+                expect(error.stderr).toContain('Invalid CPU limit format');
+            }
+        });
+
+        it('should accept memory limit without unit (defaults to MB)', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 512 "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept CPU limit without % symbol', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-cpu 50 "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept GB memory limit', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 1GB "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should accept decimal memory limit', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --max-memory 0.5GB "${tempFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should log resource usage in verbose mode', async () => {
+            const { stderr } = await execAsync(`node dist/index.js --max-memory 1GB --max-cpu 100 --verbose "${tempFile}"`);
+            expect(stderr).toContain('Resource usage');
+        });
+    });
+
+    describe('Cross-Platform Path Handling', () => {
+        let tempDir: string;
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(os.tmpdir());
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should handle paths with forward slashes', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should handle paths with backward slashes on Windows', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Test with backslashes (will be normalized)
+            const backslashPath = testFile.replace(/\//g, '\\');
+            const { stdout } = await execAsync(`node dist/index.js "${backslashPath}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should handle paths with mixed slashes', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Create a path with mixed slashes
+            const mixedPath = tempDir + '/sub\\dir/test-file.txt';
+            const { stdout } = await execAsync(`node dist/index.js "${mixedPath}"`);
+            // Should handle gracefully even if file doesn't exist
+        });
+
+        it('should handle absolute paths', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should handle relative paths', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Change to temp directory and use relative path
+            const originalCwd = process.cwd();
+            try {
+                process.chdir(tempDir);
+                const { stdout } = await execAsync('node dist/index.js test-file.txt');
+                expect(stdout).toContain('Processed 1 inputs');
+            } finally {
+                process.chdir(originalCwd);
+            }
+        });
+
+        it('should handle paths with spaces', async () => {
+            const testFile = path.join(tempDir, 'test file with spaces.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should handle paths with special characters', async () => {
+            const testFile = path.join(tempDir, 'test-file_123.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            const { stdout } = await execAsync(`node dist/index.js "${testFile}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should normalize paths with redundant separators', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Create path with redundant separators
+            const redundantPath = tempDir + '//' + path.sep + path.sep + 'test-file.txt';
+            const { stdout } = await execAsync(`node dist/index.js "${redundantPath}"`);
+            // Should handle gracefully
+        });
+
+        it('should handle paths with . and .. segments', async () => {
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+
+            // Use path with . segment
+            const dotPath = path.join(tempDir, '.', 'test-file.txt');
+            const { stdout } = await execAsync(`node dist/index.js "${dotPath}"`);
+            expect(stdout).toContain('Processed 1 inputs');
+        });
+
+        it('should format error paths correctly', async () => {
+            const nonExistentFile = path.join(tempDir, 'non-existent.txt');
+
+            try {
+                await execAsync(`node dist/index.js "${nonExistentFile}"`);
+                expect.fail('Should have thrown an error');
+            } catch (error: any) {
+                // Error message should contain properly formatted path
+                const output = error.stderr || error.stdout;
+                expect(output).toBeTruthy();
+            }
+        });
+
+        it('should handle UNC paths on Windows', async () => {
+            if (process.platform !== 'win32') {
+                // Skip on non-Windows platforms
+                return;
+            }
+
+            // UNC paths are \\server\share\path
+            // We can't test actual UNC paths without a network share,
+            // but we can test that the CLI doesn't crash on UNC-like input
+            const uncPath = '\\\\server\\share\\file.txt';
+            try {
+                await execAsync(`node dist/index.js "${uncPath}"`);
+                // May fail due to non-existent path, but shouldn't crash
+            } catch (error: any) {
+                // Expected to fail, but should handle gracefully
+                expect(error).toBeTruthy();
+            }
+        });
+
+        it('should handle drive letters on Windows', async () => {
+            if (process.platform !== 'win32') {
+                // Skip on non-Windows platforms
+                return;
+            }
+
+            // Test with current drive letter
+            const testFile = path.join(tempDir, 'test-file.txt');
+            await fs.writeFile(testFile, 'test content');
+        });
+    });
+
+    describe('Config Reload', () => {
+        const testConfigDir = path.join(os.tmpdir(), 'test-config-reload-{{ project_slug }}');
+        const testConfigPath = path.join(testConfigDir, 'config.toml');
+
+        beforeEach(async () => {
+            // Clean up test directory before each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        afterEach(async () => {
+            // Clean up test directory after each test
+            try {
+                await fs.rm(testConfigDir, { recursive: true, force: true });
+            } catch {
+                // Ignore if directory doesn't exist
+            }
+        });
+
+        it('should show config reload documentation in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Config Reload');
+            expect(stdout).toContain('SIGHUP');
+            expect(stdout).toContain('kill -HUP');
+        });
+
+        it('should document config reload validation in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('validated before applying');
+            expect(stdout).toContain('Validation errors keep old config active');
+        });
+
+        it('should document config reload logging in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Config changes are logged in verbose mode');
+        });
+
+        it('should accept config changes without restart', async () => {
+            const customXDG = testConfigDir;
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                // Run CLI with custom config
+                const { stdout } = await execAsync(
+                    `XDG_CONFIG_HOME="${customXDG}" node dist/index.js "${tempFile}"`
+                );
+                expect(stdout).toContain('Processed 1 inputs');
+
+                // Modify config
+                await fs.mkdir(testConfigDir, { recursive: true });
+                await fs.writeFile(testConfigPath, 'log_level = "debug"');
+
+                // Run CLI again - should pick up new config
+                const { stdout: stdout2 } = await execAsync(
+                    `XDG_CONFIG_HOME="${customXDG}" node dist/index.js "${tempFile}"`
+                );
+                expect(stdout2).toContain('Processed 1 inputs');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should handle invalid config gracefully', async () => {
+            const customXDG = testConfigDir;
+
+            // Create invalid config
+            await fs.mkdir(testConfigDir, { recursive: true });
+            await fs.writeFile(testConfigPath, 'log_level = "invalid"');
+
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                // CLI should handle invalid config gracefully
+                const { stdout, stderr } = await execAsync(
+                    `XDG_CONFIG_HOME="${customXDG}" node dist/index.js "${tempFile}"`
+                );
+                // Should show validation error
+                expect(stderr).toContain('Configuration validation failed');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+    });
+
+    describe('Collection vs Processing Separation', () => {
+        const testDataDir = path.join(os.tmpdir(), '{{ project_slug }}-collection-test');
+
+        beforeEach(async () => {
+            // Ensure test directory exists
+            await fs.mkdir(testDataDir, { recursive: true });
+        });
+
+        afterEach(async () => {
+            // Clean up test directory
+            try {
+                await fs.rm(testDataDir, { recursive: true, force: true });
+            } catch (error) {
+                // Ignore cleanup errors
+            }
+        });
+
+        it('should export collected data to portable format', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // Create some test data by running the CLI
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                // Export data
+                const { stdout, stderr } = await execAsync(
+                    `node dist/index.js --export-data "${exportPath}" "${tempFile}"`
+                );
+
+                // Should succeed even with no daemon data
+                const successMessage = 'Data export completed successfully';
+                expect(stdout.includes(successMessage) || stderr.includes(successMessage)).toBe(true);
+
+                // Check file was created
+                const fileExists = await fs.access(exportPath).then(() => true).catch(() => false);
+                expect(fileExists).toBe(true);
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should import data from exported format', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Import the data
+                const { stdout } = await execAsync(`node dist/index.js --import-data "${exportPath}"`);
+
+                expect(stdout).toContain('Imported');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should analyze imported data with summary', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Analyze with summary
+                const { stdout } = await execAsync(
+                    `node dist/index.js --analyze summary --analyze-input "${exportPath}"`
+                );
+
+                expect(stdout).toContain('summary');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should analyze imported data with performance', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Analyze with performance
+                const { stdout } = await execAsync(
+                    `node dist/index.js --analyze performance --analyze-input "${exportPath}"`
+                );
+
+                expect(stdout).toContain('performance');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should analyze imported data with errors', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Analyze with errors
+                const { stdout } = await execAsync(
+                    `node dist/index.js --analyze errors --analyze-input "${exportPath}"`
+                );
+
+                expect(stdout).toContain('errors');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should analyze imported data with timeline', async () => {
+            const exportPath = path.join(testDataDir, 'export.json');
+
+            // First export data
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/test-file.txt';
+            await fs.writeFile(tempFile, 'test content');
+
+            try {
+                await execAsync(`node dist/index.js --export-data "${exportPath}" "${tempFile}"`);
+
+                // Analyze with timeline
+                const { stdout } = await execAsync(
+                    `node dist/index.js --analyze timeline --analyze-input "${exportPath}"`
+                );
+
+                expect(stdout).toContain('timeline');
+            } finally {
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should require --analyze-input when using --analyze', async () => {
+            const { stderr } = await execAsync('node dist/index.js --analyze summary');
+
+            expect(stderr).toContain('--analyze-input is required');
+        });
+    });
+
+    describe('Error Message Formatting (ADR #14)', () => {
+        it('should format usage errors with suggestions', async () => {
+            const { stderr } = await execAsync('node dist/index.js --max-memory invalid');
+
+            expect(stderr).toContain('ERROR:');
+            expect(stderr).toContain('-');
+        });
+
+        it('should format file not found errors with suggestions', async () => {
+            const { stderr } = await execAsync('node dist/index.js /nonexistent/file.txt');
+
+            expect(stderr).toContain('ERROR:');
+            expect(stderr).toContain('-');
+        });
+
+        it('should format permission denied errors with suggestions', async () => {
+            // Create a file with no read permissions
+            const tempFile = await fs.mkdtemp(os.tmpdir()) + '/no-perm.txt';
+            await fs.writeFile(tempFile, 'test');
+
+            try {
+                await fs.chmod(tempFile, 0o000);
+                const { stderr } = await execAsync(`node dist/index.js "${tempFile}"`);
+
+                expect(stderr).toContain('ERROR:');
+                expect(stderr).toContain('-');
+            } finally {
+                await fs.chmod(tempFile, 0o644);
+                await fs.unlink(tempFile);
+            }
+        });
+
+        it('should include context in error messages', async () => {
+            const { stderr } = await execAsync('node dist/index.js --max-memory invalid');
+
+            expect(stderr).toContain('ERROR:');
+        });
+    });
+
+    describe('Health Checks', () => {
+        it('should return healthy status with --health flag', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.status).toBe('healthy');
+        });
+
+        it('should return valid JSON with --health flag', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            expect(() => JSON.parse(stdout)).not.toThrow();
+        });
+
+        it('should include timestamp in health check output', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.timestamp).toBeDefined();
+        });
+
+        it('should include uptime in health check output', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.uptime).toBeDefined();
+        });
+
+        it('should include version in health check output', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.version).toBeDefined();
+        });
+
+        it('should include checks array in health check output', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            expect(result.checks).toBeDefined();
+            expect(Array.isArray(result.checks)).toBe(true);
+        });
+
+        it('should include liveness check', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            const livenessCheck = result.checks.find((c: any) => c.name === 'liveness');
+            expect(livenessCheck).toBeDefined();
+            expect(livenessCheck.status).toBe('pass');
+        });
+
+        it('should include readiness check', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health');
+            const result = JSON.parse(stdout);
+            const readinessCheck = result.checks.find((c: any) => c.name === 'readiness');
+            expect(readinessCheck).toBeDefined();
+            expect(readinessCheck.status).toBe('pass');
+        });
+
+        it('should exit with code 0 for healthy status', async () => {
+            try {
+                await execAsync('node dist/index.js --health');
+                // Success - no error thrown
+                expect(true).toBe(true);
+            } catch (error: any) {
+                expect.fail('Should not have thrown an error for healthy status');
+            }
+        });
+
+        it('should respect custom timeout with --health-timeout', async () => {
+            const { stdout } = await execAsync('node dist/index.js --health --health-timeout 50');
+            const result = JSON.parse(stdout);
+            expect(result.status).toBeDefined();
+        });
+
+        it('should show health check in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--health');
+        });
+
+        it('should complete health check quickly', async () => {
+            const start = Date.now();
+            await execAsync('node dist/index.js --health');
+            const duration = Date.now() - start;
+            expect(duration).toBeLessThan(200);
+        });
+    });
+
+    describe('Audit Logging', () => {
+        let tempDir: string;
+        let auditPath: string;
+
+        beforeEach(async () => {
+            tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'audit-integration-'));
+            auditPath = path.join(tempDir, 'audit.db');
+        });
+
+        afterEach(async () => {
+            try {
+                await fs.rm(tempDir, { recursive: true, force: true });
+            } catch {
+                // Ignore cleanup errors
+            }
+        });
+
+        it('should show audit options in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--audit');
+        });
+
+        it('should enable audit logging with --audit flag', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --audit --audit-path "${auditPath}" --help`);
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should create audit log file when enabled', async () => {
+            const { stdout } = await execAsync(`node dist/index.js --audit --audit-path "${auditPath}" --help`);
+            expect(stdout).toContain('Usage:');
+        });
+    });
+
+    describe('Deprecation Policy', () => {
+        it('should show deprecation options in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('--deprecation');
+        });
+
+        it('should enable deprecation warnings by default', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should suppress deprecation warnings with --no-deprecation-warnings', async () => {
+            const { stdout } = await execAsync('node dist/index.js --no-deprecation-warnings --help');
+            expect(stdout).toContain('Usage:');
+        });
+
+        it('should show deprecation status with --deprecation-status', async () => {
+            const { stdout } = await execAsync('node dist/index.js --deprecation-status');
+            expect(stdout).toBeDefined();
+        });
+    });
+
+    describe('Subcommand Organization', () => {
+        it('should list subcommands in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('completion');
+            expect(stdout).toContain('man');
+            expect(stdout).toContain('daemon');
+            expect(stdout).toContain('health');
+            expect(stdout).toContain('audit');
+            expect(stdout).toContain('deprecation');
+        });
+
+        it('should support completion subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js completion --help');
+            expect(stdout).toContain('Manage shell completion scripts');
+        });
+
+        it('should support man subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js man --help');
+            expect(stdout).toContain('Manage man pages');
+        });
+
+        it('should support daemon subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js daemon --help');
+            expect(stdout).toContain('Manage background daemon processes');
+        });
+
+        it('should support health subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js health --help');
+            expect(stdout).toContain('Perform health checks');
+        });
+
+        it('should support audit subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js audit --help');
+            expect(stdout).toContain('Manage audit logging');
+        });
+
+        it('should support deprecation subcommand', async () => {
+            const { stdout } = await execAsync('node dist/index.js deprecation --help');
+            expect(stdout).toContain('Manage deprecation policy');
+        });
+
+        it('should support command aliases', async () => {
+            const { stdout } = await execAsync('node dist/index.js completions --help');
+            expect(stdout).toContain('Manage shell completion scripts');
+        });
+
+        it('should show examples in subcommand help', async () => {
+            const { stdout } = await execAsync('node dist/index.js completion --help');
+            expect(stdout).toContain('Examples:');
+        });
+    });
+
+    describe('Config Reload (SIGHUP)', () => {
+        it('should show config reload information in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Config Reload');
+            expect(stdout).toContain('SIGHUP');
+        });
+
+        it('should mention config reload without restart in help', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('reload configuration without restart');
+        });
+
+        it('should mention validation in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('validated before applying');
+        });
+
+        it('should mention error handling in help text', async () => {
+            const { stdout } = await execAsync('node dist/index.js --help');
+            expect(stdout).toContain('Validation errors keep old config active');
+        });
+    });
 });

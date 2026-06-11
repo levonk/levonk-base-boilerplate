@@ -1,0 +1,342 @@
+# vim: set ft=python :
+"""Input validation for CLI operations.
+
+This module provides utilities for validating required flags and inputs
+before calling dependencies, ensuring early failure with clear error messages.
+"""
+
+from typing import Any, Dict, List, Optional, Set
+
+
+class ValidationError(Exception):
+    """Raised when input validation fails."""
+    pass
+
+
+class MissingRequiredError(ValidationError):
+    """Raised when a required field is missing."""
+    pass
+
+
+class InvalidValueError(ValidationError):
+    """Raised when a value fails validation."""
+    pass
+
+
+def validate_required(
+    params: Dict[str, Any],
+    required_fields: List[str],
+    context: Optional[Dict[str, Any]] = None
+) -> None:
+    """Validate that all required fields are present in params.
+    
+    Args:
+        params: Dictionary of parameters to validate
+        required_fields: List of required field names
+        context: Optional context for error messages
+        
+    Raises:
+        MissingRequiredError: If any required field is missing
+    """
+    missing = [field for field in required_fields if field not in params or params[field] is None]
+    
+    if missing:
+        raise MissingRequiredError(
+            f"Missing required fields: {', '.join(missing)}",
+            missing,
+            context
+        )
+
+
+def validate_type(
+    value: Any,
+    expected_type: type,
+    field_name: str
+) -> None:
+    """Validate that a value is of the expected type.
+    
+    Args:
+        value: The value to validate
+        expected_type: The expected type
+        field_name: Name of the field being validated
+        
+    Raises:
+        InvalidValueError: If the value is not of the expected type
+    """
+    if not isinstance(value, expected_type):
+        raise InvalidValueError(
+            f"Field '{field_name}' must be of type {expected_type.__name__}, got {type(value).__name__}",
+            field_name,
+            value,
+            expected_type
+        )
+
+
+def validate_in_range(
+    value: int,
+    min_val: Optional[int] = None,
+    max_val: Optional[int] = None,
+    field_name: str = "value"
+) -> None:
+    """Validate that a numeric value is within the specified range.
+    
+    Args:
+        value: The value to validate
+        min_val: Optional minimum value (inclusive)
+        max_val: Optional maximum value (inclusive)
+        field_name: Name of the field being validated
+        
+    Raises:
+        InvalidValueError: If the value is outside the range
+    """
+    if min_val is not None and value < min_val:
+        raise InvalidValueError(
+            f"Field '{field_name}' must be at least {min_val}, got {value}",
+            field_name,
+            value,
+            f"range [{min_val}, {max_val}]"
+        )
+    
+    if max_val is not None and value > max_val:
+        raise InvalidValueError(
+            f"Field '{field_name}' must be at most {max_val}, got {value}",
+            field_name,
+            value,
+            f"range [{min_val}, {max_val}]"
+        )
+
+
+def validate_in_set(
+    value: Any,
+    allowed_values: Set[Any],
+    field_name: str = "value"
+) -> None:
+    """Validate that a value is in the allowed set.
+    
+    Args:
+        value: The value to validate
+        allowed_values: Set of allowed values
+        field_name: Name of the field being validated
+        
+    Raises:
+        InvalidValueError: If the value is not in the allowed set
+    """
+    if value not in allowed_values:
+        raise InvalidValueError(
+            f"Field '{field_name}' must be one of {sorted(allowed_values)}, got {value}",
+            field_name,
+            value,
+            allowed_values
+        )
+
+
+def validate_file_exists(
+    file_path: str,
+    field_name: str = "file_path"
+) -> None:
+    """Validate that a file exists.
+    
+    Args:
+        file_path: Path to the file
+        field_name: Name of the field being validated
+        
+    Raises:
+        InvalidValueError: If the file does not exist
+    """
+    from pathlib import Path
+    
+    if not Path(file_path).exists():
+        raise InvalidValueError(
+            f"File does not exist: {file_path}",
+            field_name,
+            file_path,
+            "existing file path"
+        )
+
+
+def validate_file_readable(
+    file_path: str,
+    field_name: str = "file_path"
+) -> None:
+    """Validate that a file is readable.
+    
+    Args:
+        file_path: Path to the file
+        field_name: Name of the field being validated
+        
+    Raises:
+        InvalidValueError: If the file is not readable
+    """
+    from pathlib import Path
+    
+    path = Path(file_path)
+    if not path.exists():
+        raise InvalidValueError(
+            f"File does not exist: {file_path}",
+            field_name,
+            file_path,
+            "existing file path"
+        )
+    
+    if not os.access(file_path, os.R_OK):
+        raise InvalidValueError(
+            f"File is not readable: {file_path}",
+            field_name,
+            file_path,
+            "readable file"
+        )
+
+
+def validate_url(
+    url: str,
+    field_name: str = "url"
+) -> None:
+    """Validate that a string is a valid URL.
+    
+    Args:
+        url: The URL to validate
+        field_name: Name of the field being validated
+        
+    Raises:
+        InvalidValueError: If the URL is invalid
+    """
+    from urllib.parse import urlparse
+    
+    try:
+        result = urlparse(url)
+        if not all([result.scheme, result.netloc]):
+            raise InvalidValueError(
+                f"Invalid URL: {url}",
+                field_name,
+                url,
+                "valid URL with scheme and netloc"
+            )
+    except Exception as e:
+        raise InvalidValueError(
+            f"Invalid URL: {url} - {str(e)}",
+            field_name,
+            url,
+            "valid URL"
+        )
+
+
+def validate_email(
+    email: str,
+    field_name: str = "email"
+) -> None:
+    """Validate that a string is a valid email address.
+    
+    Args:
+        email: The email to validate
+        field_name: Name of the field being validated
+        
+    Raises:
+        InvalidValueError: If the email is invalid
+    """
+    import re
+    
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(pattern, email):
+        raise InvalidValueError(
+            f"Invalid email address: {email}",
+            field_name,
+            email,
+            "valid email address"
+        )
+
+
+def validate_non_empty(
+    value: str,
+    field_name: str = "value"
+) -> None:
+    """Validate that a string is not empty.
+    
+    Args:
+        value: The string to validate
+        field_name: Name of the field being validated
+        
+    Raises:
+        InvalidValueError: If the string is empty
+    """
+    if not value or not value.strip():
+        raise InvalidValueError(
+            f"Field '{field_name}' cannot be empty",
+            field_name,
+            value,
+            "non-empty string"
+        )
+
+
+def validate_all(
+    params: Dict[str, Any],
+    validations: List[Dict[str, Any]]
+) -> List[ValidationError]:
+    """Run multiple validations and collect all errors.
+    
+    Args:
+        params: Dictionary of parameters to validate
+        validations: List of validation specifications, each containing:
+            - field: Field name to validate
+            - type: Optional type to check
+            - required: Whether the field is required
+            - min: Optional minimum value for numbers
+            - max: Optional maximum value for numbers
+            - allowed: Optional set of allowed values
+            - non_empty: Whether string must be non-empty
+            
+    Returns:
+        List of validation errors (empty if all pass)
+    """
+    errors = []
+    
+    for validation in validations:
+        field = validation.get("field")
+        value = params.get(field)
+        
+        # Check required
+        if validation.get("required", False) and (value is None or value == ""):
+            errors.append(MissingRequiredError(
+                f"Missing required field: {field}",
+                field,
+                {"params": params}
+            ))
+            continue
+        
+        # Skip other validations if field is missing and not required
+        if value is None:
+            continue
+        
+        # Check type
+        if "type" in validation:
+            try:
+                validate_type(value, validation["type"], field)
+            except InvalidValueError as e:
+                errors.append(e)
+        
+        # Check range
+        if "min" in validation or "max" in validation:
+            try:
+                validate_in_range(
+                    value,
+                    validation.get("min"),
+                    validation.get("max"),
+                    field
+                )
+            except InvalidValueError as e:
+                errors.append(e)
+        
+        # Check allowed values
+        if "allowed" in validation:
+            try:
+                validate_in_set(value, set(validation["allowed"]), field)
+            except InvalidValueError as e:
+                errors.append(e)
+        
+        # Check non-empty
+        if validation.get("non_empty", False) and isinstance(value, str):
+            try:
+                validate_non_empty(value, field)
+            except InvalidValueError as e:
+                errors.append(e)
+    
+    return errors

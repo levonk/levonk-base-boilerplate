@@ -1,0 +1,90 @@
+import { describe, it, expect, beforeAll } from 'vitest';
+import { exec } from 'child_process';
+import util from 'util';
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
+
+const execAsync = util.promisify(exec);
+
+describe('Performance Benchmarks', () => {
+    let tempDir: string;
+    let tempFiles: string[] = [];
+
+    beforeAll(async () => {
+        // Build the project before running performance tests
+        await execAsync('pnpm build');
+
+        // Create test directory and files for performance testing
+        tempDir = await fs.mkdtemp(os.tmpdir());
+        for (let i = 0; i < 100; i++) {
+            const filePath = path.join(tempDir, `test-${i}.txt`);
+            await fs.writeFile(filePath, `test content ${i}`.repeat(100));
+            tempFiles.push(filePath);
+        }
+    });
+
+    it('should process 100 files in under 5 seconds', async () => {
+        const start = Date.now();
+        const { stdout } = await execAsync(`node dist/index.js "${tempFiles.join('" "')}"`);
+        const duration = Date.now() - start;
+
+        expect(stdout).toContain('Processed 100 inputs');
+        expect(duration).toBeLessThan(5000); // 5 second threshold
+    });
+
+    it('should process single file in under 100ms', async () => {
+        const start = Date.now();
+        const { stdout } = await execAsync(`node dist/index.js "${tempFiles[0]}"`);
+        const duration = Date.now() - start;
+
+        expect(stdout).toContain('Processed 1 inputs');
+        expect(duration).toBeLessThan(100); // 100ms threshold
+    });
+
+    it('should handle large file efficiently', async () => {
+        const largeFile = path.join(tempDir, 'large.txt');
+        await fs.writeFile(largeFile, 'x'.repeat(10_000_000)); // 10MB file
+
+        const start = Date.now();
+        const { stdout } = await execAsync(`node dist/index.js "${largeFile}"`);
+        const duration = Date.now() - start;
+
+        expect(stdout).toContain('Processed 1 inputs');
+        expect(duration).toBeLessThan(2000); // 2 second threshold for 10MB file
+    });
+
+    it('should have acceptable memory footprint for batch processing', async () => {
+        const { stdout } = await execAsync(`node dist/index.js "${tempFiles.slice(0, 50).join('" "')}"`);
+        
+        // Memory check is implicit - if it completes without OOM, it passes
+        expect(stdout).toContain('Processed 50 inputs');
+    });
+
+    it('should have fast startup time', async () => {
+        const iterations = 10;
+        const times: number[] = [];
+
+        for (let i = 0; i < iterations; i++) {
+            const start = Date.now();
+            await execAsync('node dist/index.js --help');
+            times.push(Date.now() - start);
+        }
+
+        const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+        expect(avgTime).toBeLessThan(500); // Average startup under 500ms
+    });
+
+    it('should handle concurrent operations efficiently', async () => {
+        const promises = [];
+        for (let i = 0; i < 5; i++) {
+            promises.push(execAsync(`node dist/index.js "${tempFiles[i]}"`));
+        }
+
+        const start = Date.now();
+        await Promise.all(promises);
+        const duration = Date.now() - start;
+
+        expect(duration).toBeLessThan(1000); // 5 concurrent operations under 1 second
+    });
+});

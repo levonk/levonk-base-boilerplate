@@ -1,0 +1,96 @@
+package truncation
+
+import (
+	"strings"
+	"unicode"
+)
+
+// Truncator handles content truncation
+type Truncator struct {
+	config *Config
+}
+
+// NewTruncator creates a new truncator with the given config
+func NewTruncator(config *Config) *Truncator {
+	if config == nil {
+		config = DefaultConfig()
+	}
+	return &Truncator{config: config}
+}
+
+// Truncate truncates text to the specified limit with smart word boundary detection
+func (t *Truncator) Truncate(text string, fieldType FieldType) (string, *Metadata) {
+	// If truncation is disabled, return original text
+	if t.config.DisableTruncation {
+		return text, NewMetadata(len(text), len(text), len(text), fieldType)
+	}
+
+	limit := t.config.GetLimit(fieldType)
+	originalLength := len(text)
+
+	// If text is under the minimum threshold, don't truncate
+	if originalLength <= t.config.MinThreshold {
+		return text, NewMetadata(originalLength, originalLength, limit, fieldType)
+	}
+
+	// If text is under the limit, don't truncate
+	if originalLength <= limit {
+		return text, NewMetadata(originalLength, originalLength, limit, fieldType)
+	}
+
+	// Truncate with smart word boundary
+	truncated := t.smartTruncate(text, limit)
+	metadata := NewMetadata(originalLength, len(truncated), limit, fieldType)
+
+	return truncated, metadata
+}
+
+// smartTruncate truncates text at a word boundary if possible
+func (t *Truncator) smartTruncate(text string, limit int) string {
+	if len(text) <= limit {
+		return text
+	}
+
+	// Try to find a word boundary near the limit
+	truncated := text[:limit]
+	
+	// Find the last space or punctuation before the limit
+	lastSpace := strings.LastIndexFunc(truncated, func(r rune) bool {
+		return unicode.IsSpace(r) || r == ',' || r == '.' || r == ';' || r == ':' || r == '!' || r == '?'
+	})
+
+	if lastSpace > 0 && lastSpace < limit-3 {
+		// Truncate at the word boundary
+		truncated = text[:lastSpace]
+	}
+
+	// Add ellipsis if we truncated
+	if len(truncated) < len(text) {
+		truncated += "..."
+	}
+
+	return truncated
+}
+
+// TruncateField truncates a field value based on its field name
+func (t *Truncator) TruncateField(fieldName, value string) (string, *Metadata) {
+	fieldType := t.inferFieldType(fieldName)
+	return t.Truncate(value, fieldType)
+}
+
+// inferFieldType infers the field type from the field name
+func (t *Truncator) inferFieldType(fieldName string) FieldType {
+	lowerName := strings.ToLower(fieldName)
+	
+	if strings.Contains(lowerName, "description") || strings.Contains(lowerName, "desc") {
+		return FieldTypeDescription
+	}
+	if strings.Contains(lowerName, "body") {
+		return FieldTypeBody
+	}
+	if strings.Contains(lowerName, "log") {
+		return FieldTypeLog
+	}
+	
+	return FieldTypeGeneric
+}

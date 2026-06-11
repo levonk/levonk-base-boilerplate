@@ -1,0 +1,312 @@
+package idempotency
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"{{ project_slug }}/internal/errors"
+)
+
+// Logger interface for idempotency operations
+type Logger interface {
+	Info(format string, args ...interface{})
+	Debug(format string, args ...interface{})
+}
+
+// State represents the current state of a resource
+type State struct {
+	Exists    bool
+	Value     interface{}
+	Metadata  map[string]interface{}
+}
+
+// OperationResult represents the result of an idempotent operation
+type OperationResult struct {
+	ActionPerformed bool
+	Skipped         bool
+	Message         string
+}
+
+// Handler provides idempotent operation handling
+type Handler struct {
+	logger Logger
+}
+
+// NewHandler creates a new idempotency handler
+func NewHandler(logger Logger) *Handler {
+	return &Handler{
+		logger: logger,
+	}
+}
+
+// IdempotentOperation executes an operation idempotently
+func (h *Handler) IdempotentOperation(
+	ctx context.Context,
+	checkState func() (State, error),
+	isDesiredState func(State) bool,
+	applyChange func() error,
+	skipMessage func(State) string,
+	successMessage func() string,
+) (*OperationResult, error) {
+	// Check current state
+	state, err := checkState()
+	if err != nil {
+		return nil, errors.WrapError(err, errors.ErrorTypeExecution, "Failed to check state", "Check permissions and system state")
+	}
+
+	// If already in desired state, skip with success
+	if isDesiredState(state) {
+		msg := skipMessage(state)
+		h.logger.Info(msg)
+		return &OperationResult{
+			ActionPerformed: false,
+			Skipped:         true,
+			Message:         msg,
+		}, nil // Exit code 0
+	}
+
+	// Apply change
+	if err := applyChange(); err != nil {
+		return nil, errors.WrapError(err, errors.ErrorTypeExecution, "Failed to apply change", "Check permissions and system state")
+	}
+
+	msg := successMessage()
+	h.logger.Info(msg)
+	return &OperationResult{
+		ActionPerformed: true,
+		Skipped:         false,
+		Message:         msg,
+	}, nil // Exit code 0
+}
+
+// State Checking Functions
+
+// CheckFileExists checks if a file exists at the given path
+func CheckFileExists(path string) (State, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return State{Exists: false}, nil
+		}
+		return State{}, err
+	}
+	return State{
+		Exists: true,
+		Value:  path,
+		Metadata: map[string]interface{}{
+			"size":         info.Size(),
+			"mode":         info.Mode(),
+			"modified":     info.ModTime(),
+			"is_directory": info.IsDir(),
+		},
+	}, nil
+}
+
+// CheckDirectoryExists checks if a directory exists at the given path
+func CheckDirectoryExists(path string) (State, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return State{Exists: false}, nil
+		}
+		return State{}, err
+	}
+	if !info.IsDir() {
+		return State{}, fmt.Errorf("path exists but is not a directory: %s", path)
+	}
+	return State{
+		Exists: true,
+		Value:  path,
+		Metadata: map[string]interface{}{
+			"size":     info.Size(),
+			"mode":     info.Mode(),
+			"modified": info.ModTime(),
+		},
+	}, nil
+}
+
+// CheckFileContains checks if a file contains a specific string
+func CheckFileContains(path, content string) (State, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return State{Exists: false}, nil
+		}
+		return State{}, err
+	}
+	contains := strings.Contains(string(data), content)
+	return State{
+		Exists: true,
+		Value:  contains,
+		Metadata: map[string]interface{}{
+			"contains": contains,
+			"path":     path,
+		},
+	}, nil
+}
+
+// CheckProcessRunning checks if a process with the given PID is running
+func CheckProcessRunning(pid int) (State, error) {
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return State{Exists: false}, nil
+	}
+	// Send signal 0 to check if process exists
+	err = process.Signal(os.Signal(nil))
+	if err != nil {
+		return State{Exists: false}, nil
+	}
+	return State{
+		Exists: true,
+		Value:  pid,
+		Metadata: map[string]interface{}{
+			"pid": pid,
+		},
+	}, nil
+}
+
+// CheckConfigFileExists checks if the config file exists at the standard location
+func CheckConfigFileExists(configPath string) (State, error) {
+	return CheckFileExists(configPath)
+}
+
+// CheckCompletionsInstalled checks if shell completions are installed
+func CheckCompletionsInstalled(shellConfigPath, completionScript string) (State, error) {
+	state, err := CheckFileContains(shellConfigPath, completionScript)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return State{Exists: false}, nil
+		}
+		return State{}, err
+	}
+	return state, nil
+}
+
+// Helper Functions for Common Idempotency Patterns
+
+// IsFileExists returns true if the state represents an existing file
+func IsFileExists(state State) bool {
+	return state.Exists
+}
+
+// IsDirectoryExists returns true if the state represents an existing directory
+func IsDirectoryExists(state State) bool {
+	return state.Exists
+}
+
+// IsFileContains returns true if the file contains the expected content
+func IsFileContains(state State) bool {
+	contains, ok := state.Value.(bool)
+	return ok && contains
+}
+
+// IsProcessRunning returns true if the process is running
+func IsProcessRunning(state State) bool {
+	return state.Exists
+}
+
+// SkipMessageFileExists returns a skip message for file existence
+func SkipMessageFileExists(state State) string {
+	return fmt.Sprintf("File already exists: %s", state.Value)
+}
+
+// SkipMessageDirectoryExists returns a skip message for directory existence
+func SkipMessageDirectoryExists(state State) string {
+	return fmt.Sprintf("Directory already exists: %s", state.Value)
+}
+
+// SkipMessageFileContains returns a skip message for file content
+func SkipMessageFileContains(state State) string {
+	return fmt.Sprintf("Completions already installed in %s", state.Metadata["path"])
+}
+
+// SkipMessageProcessRunning returns a skip message for running process
+func SkipMessageProcessRunning(state State) string {
+	return fmt.Sprintf("Process already running (PID: %v)", state.Value)
+}
+
+// SuccessMessageFileCreated returns a success message for file creation
+func SuccessMessageFileCreated(path string) func() string {
+	return func() string {
+		return fmt.Sprintf("File created: %s", path)
+	}
+}
+
+// SuccessMessageDirectoryCreated returns a success message for directory creation
+func SuccessMessageDirectoryCreated(path string) func() string {
+	return func() string {
+		return fmt.Sprintf("Directory created: %s", path)
+	}
+}
+
+// SuccessMessageCompletionsInstalled returns a success message for completions installation
+func SuccessMessageCompletionsInstalled(path string) func() string {
+	return func() string {
+		return fmt.Sprintf("Completions installed to %s", path)
+	}
+}
+
+// SuccessMessageProcessStarted returns a success message for process start
+func SuccessMessageProcessStarted(pid int) func() string {
+	return func() string {
+		return fmt.Sprintf("Process started (PID: %d)", pid)
+	}
+}
+
+// EnsureDirectory creates a directory idempotently
+func (h *Handler) EnsureDirectory(ctx context.Context, path string) (*OperationResult, error) {
+	return h.IdempotentOperation(
+		ctx,
+		func() (State, error) { return CheckDirectoryExists(path) },
+		IsDirectoryExists,
+		func() error {
+			return os.MkdirAll(path, 0755)
+		},
+		SkipMessageDirectoryExists,
+		SuccessMessageDirectoryCreated(path),
+	)
+}
+
+// EnsureFileExists creates a file with content idempotently
+func (h *Handler) EnsureFileExists(ctx context.Context, path string, content []byte, perm os.FileMode) (*OperationResult, error) {
+	return h.IdempotentOperation(
+		ctx,
+		func() (State, error) { return CheckFileExists(path) },
+		IsFileExists,
+		func() error {
+			// Ensure parent directory exists
+			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+				return err
+			}
+			return os.WriteFile(path, content, perm)
+		},
+		SkipMessageFileExists,
+		SuccessMessageFileCreated(path),
+	)
+}
+
+// EnsureFileContains ensures a file contains specific content idempotently
+func (h *Handler) EnsureFileContains(ctx context.Context, path, content string) (*OperationResult, error) {
+	return h.IdempotentOperation(
+		ctx,
+		func() (State, error) { return CheckFileContains(path, content) },
+		IsFileContains,
+		func() error {
+			// Read existing content
+			existing, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			// Append if not already present
+			if !strings.Contains(string(existing), content) {
+				return os.WriteFile(path, append(existing, []byte(content+"\n")...), 0644)
+			}
+			return nil
+		},
+		SkipMessageFileContains,
+		SuccessMessageCompletionsInstalled(path),
+	)
+}

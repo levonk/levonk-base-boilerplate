@@ -7,26 +7,261 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"syscall"
+	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"{{ project_slug }}/internal/content"
+	"{{ project_slug }}/internal/formatting"
+	"{{ project_slug }}/internal/prompts"
+	"{{ project_slug }}/internal/skill"
+	"{{ project_slug }}/internal/suggestions"
 )
 
 var (
 	cfgFile string
 	jsonOutput bool
+	toonFlag bool
+	formatFlag string
+	fieldsFlag string
 	quiet bool
 	verbose bool
-	noColor bool
+	debug bool
+	colorMode string
+	installFlag bool
+	uninstallFlag bool
+	manFlag bool
+	dryRun bool
+	force bool
+	noPager bool
+	interactiveFlag bool
+	tuiFlag bool
+	daemonFlag bool
+	noDaemonFlag bool
+	listJobsFlag bool
+	cancelJobFlag string
+	urlFormat string
+	healthCheckFlag bool
+	privacyFlag bool
+	auditExportFile string
+	promptSuppressor *prompts.PromptSuppressor
+	encryptionKey string
+	auditExportSince string
+	auditExportTypes string
+	humanModeFlag bool
+	fullFlag bool
 	logger *Logger
+	terminal *Terminal
+	deprecationManager *DeprecationManager
+	daemonManager *DaemonManager
 	version = "1.0.0"
 
 	rootCmd = &cobra.Command{
 		Use:   "{{ project_slug }} [inputs...]",
 		Short: "{{ description }}",
 		Long: `{{ description }}
+
+Mode Selection:
+  The CLI operates in two modes: agent (default) and human (interactive).
+
+  Agent Mode:
+    - Default for non-interactive environments
+    - Automatically detected when no TTY or agent session is present
+    - Optimized for automation and AI agent integration
+    - Can be forced with MYTOOL_MODE=agent environment variable
+    - Default output format: TOON (token-efficient for LLM contexts)
+
+  Human Mode:
+    - Interactive mode for human users
+    - Automatically detected when TTY is present and no agent session
+    - Can be forced with --human or --interactive flags
+    - Can be forced with MYTOOL_MODE=human environment variable
+    - Can be set in config file with mode: human
+    - Default output format: JSON (human-readable)
+
+Content-First Behavior:
+  Running the CLI with no arguments shows the most relevant live content instead of a usage manual.
+  This enables agents to see actual state immediately and act without a second call.
+
+  No-Args Output:
+    - Shows state summary with working directory, git status, and project type
+    - Includes contextual suggestions based on detected environment
+    - Displays pre-computed aggregates when available
+    - Uses TOON format in agent mode, human-readable format in human mode
+    - Detailed help remains available via --help flag
+
+Contextual Suggestions:
+  The CLI provides contextual suggestions to help discover capabilities organically.
+
+  Suggestion Behavior:
+    - 2-4 relevant suggestions included in output
+    - Suggestions are context-aware based on current state
+    - Suggestions are actionable (complete commands)
+    - Suggestions carry forward disambiguating flags
+    - Suggestions are ranked by relevance
+    - Formatted as structured `help[]` array in TOON output
+    - Smart suggestions based on detected environment (git, project type, etc.)
+
+  Mode Precedence (highest to lowest):
+    1. CLI flags (--human, --interactive)
+    2. Environment variables (MYTOOL_MODE)
+    3. Config file setting
+    4. Auto-detection based on environment
+
+Output Format Selection:
+  The CLI supports multiple output formats for different use cases:
+
+  Format Options:
+    --toon           Output in TOON format (Token-Oriented Object Notation)
+                     Token-efficient (~40% savings over JSON) for LLM contexts
+    --format=toon    Explicitly select TOON format
+    --format=json    Explicitly select JSON format
+    --format=human   Explicitly select human-readable format
+    --json           Alias for --format=json
+
+  Format Precedence (highest to lowest):
+    1. --toon flag
+    2. --format flag
+    3. --json flag
+    4. Mode-based default (TOON for agent, JSON for human)
+
+  TOON Format:
+    - Compact, indentation-based notation
+    - Explicit array headers with length and fields
+    - Optimized for token efficiency in LLM prompts
+    - Human-readable while being machine-parseable
+    - See https://toonformat.dev for specification
+
+Field Selection:
+  The CLI supports field selection to control which fields are included in output:
+
+  Field Selection Options:
+    --fields=id,title,status  Comma-separated list of fields to include
+                              If not specified, uses schema defaults (3-4 fields)
+                              Long-form content (body, description) excluded by default
+
+  Field Selection Examples:
+    --fields=id,title,status      Include only id, title, and status fields
+    --fields=id,description      Include id and description (explicit long-form)
+    --fields=all                 Include all available fields (if supported)
+
+  Benefits:
+    - Reduces token consumption in agent mode
+    - Allows agents to request specific fields when needed
+    - Improves readability by excluding verbose fields
+
+Content Truncation:
+  The CLI automatically truncates large text fields to reduce token consumption:
+
+  Truncation Behavior:
+    - Description fields: truncated to 500 characters by default
+    - Body fields: truncated to 1000 characters by default
+    - Log fields: truncated to 1500 characters by default
+    - Smart truncation at word boundaries when possible
+
+Error Format:
+  The CLI outputs errors in structured format (TOON or JSON) to stdout for programmatic parsing:
+
+  Error Output:
+    - Errors go to stdout in the same format as normal output (TOON or JSON)
+    - Diagnostics (debug logs, progress) go to stderr
+    - Enables agents to parse and act on failures programmatically
+
+Prompt Behavior:
+  The CLI automatically suppresses interactive prompts in non-interactive environments:
+
+  Prompt Suppression Rules:
+    - Agent mode: All prompts suppressed (uses safe default: no)
+    - Human mode: Prompts allowed for interactive use
+    - --force flag: Bypasses all confirmation prompts (returns yes)
+    - --quiet flag: Suppresses prompts with safe default (no)
+
+  Flag-Based Alternatives:
+    All operations that would prompt in human mode can be completed via flags:
+    - --force: Bypass confirmation prompts for destructive operations
+    - --encryption-key: Provide encryption key directly (32 characters)
+    - --quiet: Suppress all prompts with safe defaults
+
+  Error Handling:
+    - Missing required values in agent mode fail immediately with clear error
+    - Error messages reference available flags for completion
+    - No interactive prompts in agent mode (non-interactive environment)
+
+  Error Structure (TOON):
+    error[type:config,message:Configuration file not found,suggestion:Run '{{ project_slug }} config init',exit_code:3]
+
+  Error Structure (JSON):
+    {
+      "error": {
+        "type": "config",
+        "message": "Configuration file not found",
+        "suggestion": "Run '{{ project_slug }} config init'",
+        "exit_code": 3
+      }
+    }
+
+  Error Types:
+    - general: General errors (exit code 1)
+    - config: Configuration errors (exit code 3)
+    - file: File operation errors (exit code 4)
+    - network: Network errors (exit code 1)
+    - permission: Permission errors (exit code 1)
+    - validation: Validation errors (exit code 2)
+    - execution: Execution errors (exit code 1)
+    - platform: Platform errors (exit code 1)
+
+  Error Suggestions:
+    - Always reference CLI commands, not underlying tools
+    - Provide actionable next steps
+    - Context-aware based on error type and message
+    - Ellipsis (...) appended to truncated content
+
+  Truncation Options:
+    --full                      Disable truncation and show full content for all fields
+                                Overrides config file truncation settings
+
+  Configuration:
+    truncation:
+      disable: false            Disable truncation globally
+      limits:
+        description: 500        Truncation limit for description fields
+        body: 1000              Truncation limit for body fields
+        log: 1500               Truncation limit for log fields
+        generic: 1000           Truncation limit for generic text fields
+      min_threshold: 200        Minimum length before truncation is considered
+
+  Benefits:
+    - Reduces token consumption in agent mode
+    - Provides escape hatch via --full flag for complete content
+    - Configurable limits per field type
+
+Idempotent Operations:
+  The CLI supports idempotent operations for state-changing commands:
+
+  Idempotent Behavior:
+    - Install commands: Skip if already installed (exit code 0)
+    - Uninstall commands: Skip if not installed (exit code 0)
+    - Config initialization: Skip if config file exists (exit code 0)
+    - Daemon start: Skip if already running (exit code 0)
+    - Daemon stop: Skip if not running (exit code 0)
+    - Job cancellation: Skip if job not found or already completed (exit code 0)
+
+  Exit Code Behavior:
+    - Idempotent no-ops always return exit code 0 (success)
+    - Non-zero exit codes only for actual failures
+    - Descriptive messages when operations are skipped
+
+  Benefits:
+    - Safe to repeat commands without causing errors
+    - Ideal for automation and CI/CD pipelines
+    - Clear feedback when operations are skipped
 
 Examples:
   {{ project_slug }} file.txt
@@ -36,17 +271,142 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
+			// Determine the operation mode
+			// Get mode from config file if available
+			configMode := ""
+			if viper.IsSet("mode") {
+				configMode = viper.GetString("mode")
+			}
+
+			// Determine mode based on precedence chain
+			mode := DetermineMode(humanModeFlag, configMode)
+
+			// Add mode to context for use by other features
+			ctx = context.WithValue(ctx, "mode", mode)
+
+			// Use global prompt suppressor if initialized, otherwise create local one
+			if promptSuppressor == nil {
+				// Convert main.Mode to prompts.Mode
+				var promptsMode prompts.Mode
+				if mode == ModeAgent {
+					promptsMode = prompts.ModeAgent
+				} else {
+					promptsMode = prompts.ModeHuman
+				}
+				promptSuppressor = prompts.NewPromptSuppressor(promptsMode, force, quiet, logger)
+			} else {
+				// Update suppressor with current flag values
+				var promptsMode prompts.Mode
+				if mode == ModeAgent {
+					promptsMode = prompts.ModeAgent
+				} else {
+					promptsMode = prompts.ModeHuman
+				}
+				promptSuppressor.SetMode(promptsMode)
+				promptSuppressor.SetForce(force)
+				promptSuppressor.SetQuiet(quiet)
+			}
+			ctx = context.WithValue(ctx, "promptSuppressor", promptSuppressor)
+
+			// In agent mode, validate required values that would otherwise be prompted
+			if promptSuppressor.IsAgentMode() {
+				// Validate encryption key if secret operations are needed
+				if encryptionKey == "" && viper.GetString("encryption_key") == "" {
+					// Only error if actually trying to use secret operations
+					// This is checked at the point of use in secrets.go
+				}
+			}
+
+			// Handle --health-check flag
+			if healthCheckFlag {
+				return RunHealthCheck(cmd)
+			}
+
+			// Handle --audit-export flag
+			if auditExportFile != "" {
+				return RunAuditExport(ctx)
+			}
+
+			// Handle --list-jobs flag
+			if listJobsFlag {
+				return RunListJobsCommand()
+			}
+
+			// Handle --cancel-job flag
+			if cancelJobFlag != "" {
+				return RunCancelJobCommand(cancelJobFlag)
+			}
+
+			// Handle --install flag
+			if installFlag {
+				return RunInstall(cmd)
+			}
+
+			// Handle --uninstall flag
+			if uninstallFlag {
+				return RunUninstall(cmd)
+			}
+
+			// Handle --man flag
+			if manFlag {
+				return RunGenMan(cmd)
+			}
+
 			// Handle --usage flag
 			usage, _ := cmd.Flags().GetBool("usage")
 			if usage {
 				return cmd.Usage()
 			}
 
+			// Handle TUI mode
+			if interactiveFlag || tuiFlag {
+				modifiedArgs, err := RunTUI(args)
+				if err != nil {
+					return fmt.Errorf("TUI error: %w", err)
+				}
+				args = modifiedArgs
+			}
+
 			// Initialize logger
 			logger = NewLogger("main")
 			logger.SetQuiet(quiet)
 			logger.SetVerbose(verbose)
-			logger.SetNoColor(noColor)
+			logger.SetDebug(debug)
+			logger.SetColorMode(colorMode)
+			logger.SetPrivacyMode(privacyFlag)
+
+			// Initialize daemon manager
+			daemonManager = NewDaemonManager(logger)
+
+			// Handle daemon flags
+			if daemonFlag {
+				if !daemonManager.IsPlatformSupported() {
+					return WrapError(fmt.Errorf("daemon mode not supported on %s", runtime.GOOS), ErrorTypePlatform, "Daemon not supported", "Daemon mode is only supported on Linux, macOS, and Windows")
+				}
+				if err := daemonManager.StartDaemon(); err != nil {
+					return WrapError(err, ErrorTypeExecution, "Failed to start daemon", "Check system permissions and daemon configuration")
+				}
+				logger.Info("Daemon started in background")
+				return nil
+			}
+
+			if noDaemonFlag {
+				logger.Debug("Daemon mode explicitly disabled")
+			}
+
+			// Initialize terminal size detection
+			terminal = NewTerminal()
+			if !quiet {
+				logger.Debug("Terminal size detected: %dx%d", terminal.GetWidth(), terminal.GetHeight())
+			}
+
+			// Log dry-run mode and add to context
+			if dryRun {
+				logger.Info("Dry-run mode enabled - no changes will be executed")
+				ctx = context.WithValue(ctx, "dry-run", true)
+			} else {
+				ctx = context.WithValue(ctx, "dry-run", false)
+			}
 
 			if !quiet {
 				logger.Info("Using config file: %s", viper.ConfigFileUsed())
@@ -60,7 +420,9 @@ Examples:
 				if !isatty.IsTerminal(os.Stdin.Fd()) {
 					readStdin = true
 				} else {
-					return cmd.Help()
+					// Content-first no-args behavior: show state summary instead of help
+					// Detailed help remains available via --help flag
+					return runContentFirst(ctx, cmd, mode, toonFlag, formatFlag, jsonOutput, fullFlag)
 				}
 			} else {
 				for _, arg := range args {
@@ -98,37 +460,149 @@ Examples:
 
 			// Process Stdin
 			if readStdin {
+				DryRunFileOp(ctx, "read", "stdin")
 				logger.Info("Processing stdin...")
 				content, err := io.ReadAll(os.Stdin)
 				if err != nil {
-					logger.Error("Error reading stdin: %v", err)
-					return err
+					return WrapError(err, ErrorTypeFile, "Failed to read from stdin", "Ensure stdin is properly connected")
 				}
-				results = append(results, processContent(string(content), "stdin"))
+				results = append(results, processContent(ctx, string(content), "stdin"))
 			}
 
 			// Process Files
-			for _, file := range filesToProcess {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				default:
-					logger.Info("Processing %s...", file)
-					content, err := os.ReadFile(file)
-					if err != nil {
-						logger.Error("Error reading %s: %v", file, err)
-						continue
+			if len(filesToProcess) > 0 && !quiet {
+				// Calculate total size for progress bar
+				var totalSize int64
+				for _, file := range filesToProcess {
+					if info, err := os.Stat(file); err == nil {
+						totalSize += info.Size()
 					}
-					results = append(results, processContent(string(content), file))
+				}
+
+				// Create progress bar
+				bar := NewProgressBar(ProgressConfig{
+					Total:      totalSize,
+					Description: "Processing files",
+					Quiet:      quiet,
+				})
+
+				if bar != nil {
+					bar.RenderBlank()
+				}
+
+				for _, file := range filesToProcess {
+					select {
+					case <-ctx.Done():
+						if bar != nil {
+							bar.Finish()
+						}
+						return ctx.Err()
+					default:
+						DryRunFileOp(ctx, "read", file)
+						if !quiet {
+							logger.Info("Processing %s...", file)
+						}
+
+						// Read file with progress tracking
+						var content []byte
+						var err error
+
+						if bar != nil {
+							fileInfo, _ := os.Stat(file)
+							_ = NewProgressReader(nil, bar, fileInfo.Size())
+							// Actually read the file
+							content, err = os.ReadFile(file)
+							if err == nil {
+								bar.Add64(int64(len(content)))
+							}
+						} else {
+							content, err = os.ReadFile(file)
+						}
+
+						if err != nil {
+							logger.ErrorApp(WrapError(err, ErrorTypeFile, fmt.Sprintf("Failed to read file '%s' with progress bar", file), "Check file permissions and ensure the file exists"))
+							continue
+						}
+						results = append(results, processContent(ctx, string(content), file))
+					}
+				}
+
+				if bar != nil {
+					bar.Finish()
+				}
+			} else {
+				// Process files without progress bar (quiet mode or no files)
+				for _, file := range filesToProcess {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					default:
+						DryRunFileOp(ctx, "read", file)
+						logger.Info("Processing %s...", file)
+						content, err := os.ReadFile(file)
+						if err != nil {
+							logger.ErrorApp(WrapError(err, ErrorTypeFile, fmt.Sprintf("Failed to read file '%s' without progress bar", file), "Check file permissions and ensure the file exists"))
+							continue
+						}
+						results = append(results, processContent(ctx, string(content), file))
+					}
+				}
+			}
+
+			// Check for destructive operations and prompt for confirmation
+			// Use prompt suppressor to determine if prompts should be shown
+			if suppressor, ok := ctx.Value("promptSuppressor").(*prompts.PromptSuppressor); ok {
+				if !suppressor.ShouldSuppress() {
+					// Example: If we were deleting files, we would prompt here
+					// This is a placeholder for when delete/overwrite operations are added
+					// if hasDeleteOperations {
+					// 	if !PromptForDelete(target, force, quiet, mode, suppressor) {
+					// 		logger.Info("Operation cancelled by user")
+					// 		return nil
+					// 	}
+					// }
 				}
 			}
 
 			// Output Strategy
-			if jsonOutput {
+			formatterMode := formatting.Mode(mode)
+			formatter := formatting.NewFormatter(formatterMode, toonFlag, formatFlag, jsonOutput, fullFlag)
+			outputFormat := formatter.DetermineFormat()
+
+			if outputFormat == formatting.FormatTOON {
+				// Use TOON formatter
+				for _, result := range results {
+					formatted, err := formatter.FormatValue(result)
+					if err != nil {
+						logger.Error("Failed to format output: %v", err)
+						continue
+					}
+					fmt.Println(formatted)
+				}
+			} else if jsonOutput {
 				enc := json.NewEncoder(os.Stdout)
 				enc.SetIndent("", "  ")
 				return enc.Encode(results)
 			} else {
+				// Count lines in output to determine if pager is needed
+				outputLines := 1 // Start with 1 for the summary line
+				for _, result := range results {
+					if jsonBytes, err := json.MarshalIndent(result, "", "  "); err == nil {
+						outputLines += len(strings.Split(string(jsonBytes), "\n"))
+					}
+				}
+
+				// Use pager if output is long and --no-pager is not set
+				pager := NewPager(noPager)
+				if pager.ShouldUsePager(outputLines) {
+					if err := pager.Start(); err != nil {
+						logger.Warn("Failed to start pager: %v", err)
+					} else {
+						defer pager.Close()
+						logger.Debug("Using pager: %s", GetPagerCommand())
+					}
+				}
+
 				fmt.Printf("Processed %d inputs.\n", len(results))
 			}
 
@@ -137,8 +611,9 @@ Examples:
 	}
 )
 
-func processContent(content string, source string) map[string]interface{} {
+func processContent(ctx context.Context, content string, source string) map[string]interface{} {
 	// Dummy logic
+	DryRunLog(ctx, "Would process content from %s (length: %d)", source, len(content))
 	return map[string]interface{}{
 		"source": source,
 		"length": len(content),
@@ -146,38 +621,374 @@ func processContent(content string, source string) map[string]interface{} {
 	}
 }
 
+// runContentFirst implements content-first no-args behavior
+// Shows the most relevant live content instead of usage manual
+func runContentFirst(ctx context.Context, cmd *cobra.Command, mode Mode, toonFlag bool, formatFlag string, jsonOutput bool, fullFlag bool) error {
+	// Detect context
+	selector := content.NewSelector(ctx)
+	contentCtx, err := selector.DetectContext()
+	if err != nil {
+		logger.Error("Failed to detect context: %v", err)
+		return cmd.Help()
+	}
+
+	// Select appropriate content type
+	contentType := selector.SelectContent(contentCtx)
+
+	// Generate state summary
+	generator := content.NewGenerator(ctx)
+	summary, err := generator.GenerateSummary(contentCtx)
+	if err != nil {
+		logger.Error("Failed to generate summary: %v", err)
+		return cmd.Help()
+	}
+
+	// Generate contextual suggestions
+	suggestionEngine := suggestions.NewEngine(ctx, 4)
+	suggestionEngine.AddRule(suggestions.NewDefaultRule(10))
+	suggestionEngine.AddRule(suggestions.NewContextualRule(5))
+
+	suggestionCtx := &suggestions.Context{
+		Command:     "root",
+		WorkingDir:  contentCtx.WorkingDir,
+		IsGitRepo:   contentCtx.IsGitRepo,
+		IsProjectDir: contentCtx.IsProjectDir,
+		ProjectType:  contentCtx.ProjectType,
+		OutputState: "summary",
+		Flags:       map[string]string{},
+	}
+
+	suggestionList := suggestionEngine.Generate(suggestionCtx)
+
+	// Determine output format based on mode
+	formatterMode := formatting.Mode(mode)
+	formatter := formatting.NewFormatter(formatterMode, toonFlag, formatFlag, jsonOutput, fullFlag)
+	outputFormat := formatter.DetermineFormat()
+
+	// Format and output the summary
+	var formatStr string
+	switch outputFormat {
+	case formatting.FormatTOON:
+		formatStr = "toon"
+	case formatting.FormatJSON:
+		formatStr = "json"
+	case formatting.FormatHuman:
+		formatStr = "human"
+	default:
+		formatStr = "human"
+	}
+
+	output, err := generator.FormatSummary(summary, formatStr)
+	if err != nil {
+		logger.Error("Failed to format summary: %v", err)
+		return cmd.Help()
+	}
+
+	fmt.Println(output)
+
+	// Format and output suggestions
+	if len(suggestionList) > 0 {
+		suggestionOutput, err := suggestionEngine.FormatSuggestions(suggestionList, formatStr)
+		if err != nil {
+			logger.Error("Failed to format suggestions: %v", err)
+		} else {
+			fmt.Println(suggestionOutput)
+		}
+	}
+
+	// Add a hint about --help for detailed usage
+	if !quiet {
+		fmt.Fprintf(os.Stderr, "\nRun '%s --help' for detailed usage information\n", cmd.Name())
+	}
+
+	return nil
+}
+
+// RunAuditExport exports audit log to a file
+func RunAuditExport(ctx context.Context) error {
+	// Get audit configuration
+	auditEnabled := viper.GetBool("audit.enabled")
+	if !auditEnabled {
+		return fmt.Errorf("audit logging is not enabled")
+	}
+
+	// Get audit database path
+	auditPath, err := GetDefaultAuditPath()
+	if err != nil {
+		return WrapError(err, ErrorTypeConfig, "Failed to get audit path", "Check user config directory")
+	}
+
+	// Initialize audit logger
+	retentionDays := viper.GetInt("audit.retention_days")
+	auditLogger, err := NewAuditLogger(auditPath, retentionDays, logger)
+	if err != nil {
+		return WrapError(err, ErrorTypeConfig, "Failed to initialize audit logger", "Check audit database permissions")
+	}
+	defer auditLogger.Close()
+
+	// Parse filters
+	var since time.Time
+	if auditExportSince != "" {
+		since, err = time.Parse("2006-01-02", auditExportSince)
+		if err != nil {
+			return WrapError(err, ErrorTypeConfig, "Invalid date format for --audit-since", "Use YYYY-MM-DD format")
+		}
+	}
+
+	var eventTypes []string
+	if auditExportTypes != "" {
+		eventTypes = strings.Split(auditExportTypes, ",")
+		for i := range eventTypes {
+			eventTypes[i] = strings.TrimSpace(eventTypes[i])
+		}
+	}
+
+	// Export events
+	if err := auditLogger.ExportEvents(ctx, auditExportFile, eventTypes, since); err != nil {
+		return WrapError(err, ErrorTypeFile, "Failed to export audit events", "Check output file path and permissions")
+	}
+
+	logger.Info("Audit log exported to %s", auditExportFile)
+	return nil
+}
+
+// processWithNetworkProgress is a placeholder for network operations with progress tracking
+// This function demonstrates how to use progress bars for network operations
+// Example usage:
+//
+//	func downloadFile(ctx context.Context, url string, quiet bool) ([]byte, error) {
+//		resp, err := http.Get(url)
+//		if err != nil {
+//			return nil, err
+//		}
+//		defer resp.Body.Close()
+//
+//		if quiet {
+//			return io.ReadAll(resp.Body)
+//		}
+//
+//		bar := NewProgressBar(ProgressConfig{
+//			Total:      resp.ContentLength,
+//			Description: "Downloading",
+//			Quiet:      quiet,
+//		})
+//
+//		if bar != nil {
+//			bar.RenderBlank()
+//			defer bar.Finish()
+//		}
+//
+//		reader := NewProgressReader(resp.Body, bar, resp.ContentLength)
+//		return io.ReadAll(reader)
+//	}
+func processWithNetworkProgress(ctx context.Context, url string, quiet bool) ([]byte, error) {
+	// Placeholder for actual network operation implementation
+	// This would typically use http.Client or similar
+	return nil, nil
+}
+
+// GetURLFormat determines the URL format based on the url-format flag and terminal capabilities
+func GetURLFormat() URLFormat {
+	switch urlFormat {
+	case "plain":
+		return FormatPlain
+	case "terminal":
+		return FormatTerminal
+	case "auto":
+		// Auto-detect: use terminal linking if stdout is a terminal
+		if isatty.IsTerminal(os.Stdout.Fd()) {
+			return FormatTerminal
+		}
+		return FormatPlain
+	default:
+		return FormatPlain
+	}
+}
+
+// FormatOutputURL formats a URL for output based on the current configuration
+func FormatOutputURL(rawURL string) string {
+	format := GetURLFormat()
+	return FormatURL(rawURL, format)
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
-	
+
 	// Persistent flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/{{ project_slug }}/config.yaml)")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output results as JSON")
+	rootCmd.PersistentFlags().BoolVar(&toonFlag, "toon", false, "Output results in TOON format (token-efficient)")
+	rootCmd.PersistentFlags().StringVar(&formatFlag, "format", "", "Output format: toon, json, human (default: auto-detect based on mode)")
+	rootCmd.PersistentFlags().StringVar(&fieldsFlag, "fields", "", "Comma-separated list of fields to include in output (default: schema defaults)")
+	rootCmd.PersistentFlags().BoolVar(&fullFlag, "full", false, "Disable truncation and show full content for all fields")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
-	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
-	
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging with stack traces")
+	rootCmd.PersistentFlags().StringVar(&colorMode, "color", "auto", "Color output: auto, always, never")
+
 	// Local flags
 	rootCmd.Flags().Bool("usage", false, "Show usage information")
-	
+	rootCmd.Flags().BoolVar(&installFlag, "install", false, "Install shell completions and initialize config")
+	rootCmd.Flags().BoolVar(&uninstallFlag, "uninstall", false, "Remove shell completions and config files")
+	rootCmd.Flags().BoolVar(&manFlag, "man", false, "Generate and display man page")
+	rootCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview changes without executing them")
+	rootCmd.Flags().BoolVarP(&force, "force", "f", false, "Bypass confirmation prompts for destructive operations")
+	rootCmd.Flags().BoolVar(&noPager, "no-pager", false, "Disable automatic paging for long output")
+	rootCmd.Flags().BoolVar(&humanModeFlag, "human", false, "Force human mode (interactive)")
+	rootCmd.Flags().BoolVar(&interactiveFlag, "interactive", false, "Force human mode (alias for --human)")
+	rootCmd.Flags().BoolVar(&tuiFlag, "tui", false, "Launch TUI mode (alias for --interactive)")
+	rootCmd.Flags().BoolVar(&daemonFlag, "daemon", false, "Pre-launch daemon in background")
+	rootCmd.Flags().BoolVar(&noDaemonFlag, "no-daemon", false, "Force synchronous operation (disable daemon)")
+	rootCmd.Flags().BoolVar(&listJobsFlag, "list-jobs", false, "List background jobs")
+	rootCmd.Flags().StringVar(&cancelJobFlag, "cancel-job", "", "Cancel a background job by ID")
+	rootCmd.Flags().StringVar(&urlFormat, "url-format", "auto", "URL format: auto, plain, terminal")
+	rootCmd.Flags().BoolVar(&healthCheckFlag, "health-check", false, "Run health check and exit")
+	rootCmd.Flags().BoolVar(&privacyFlag, "privacy", false, "Enable privacy mode to ignore sensitive identifiers")
+	rootCmd.Flags().StringVar(&auditExportFile, "audit-export", "", "Export audit log to specified file")
+	rootCmd.Flags().StringVar(&auditExportSince, "audit-since", "", "Export audit events since this date (YYYY-MM-DD)")
+	rootCmd.Flags().StringVar(&auditExportTypes, "audit-types", "", "Comma-separated list of event types to export")
+	rootCmd.Flags().StringVar(&encryptionKey, "encryption-key", "", "Encryption key for secret storage (32 characters, required in agent mode)")
+
 	viper.BindPFlag("author", rootCmd.PersistentFlags().Lookup("author"))
 }
 
 func initConfig() {
+	var configPath string
+
 	if cfgFile != "" {
+		// User explicitly specified a config file
 		viper.SetConfigFile(cfgFile)
+		configPath = cfgFile
 	} else {
-		configDir, _ := os.UserConfigDir()
-		viper.AddConfigPath(configDir + "/{{ project_slug }}")
-		viper.SetConfigName("config")
+		// Use full precedence chain
+		configPaths, err := GetConfigPrecedence()
+		if err != nil {
+			logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to get config precedence", "Check config directory permissions"))
+		}
+
+		// Add all config paths to viper (in order of precedence)
+		for _, path := range configPaths {
+			configDir := filepath.Dir(path)
+			viper.AddConfigPath(configDir)
+			viper.SetConfigName("config")
+			configPath = path
+		}
+
+		// If no config files found, use default user config path
+		if len(configPaths) == 0 {
+			configDir, _ := os.UserConfigDir()
+			viper.AddConfigPath(configDir + "/{{ project_slug }}")
+			viper.SetConfigName("config")
+			configPath = configDir + "/{{ project_slug }}/config.yaml"
+		}
 	}
+
+	// Initialize config file if it doesn't exist (first run)
+	if err := InitConfigIfNeeded(configPath); err != nil {
+		logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to initialize config file", "Check config directory permissions and disk space"))
+	}
+
+	// Check for legacy format and run migration if needed
+	if !IsFirstRun(configPath) {
+		migrationManager := NewMigrationManager(configPath, logger)
+
+		// Check for legacy format and show deprecation warning
+		if migrationManager.CheckLegacyFormat() {
+			// Legacy format detected, run migration
+			if err := migrationManager.Migrate(); err != nil {
+				logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to migrate config file", "Check backup file and manually migrate if needed"))
+			}
+		}
+	}
+
+	// Set environment variable prefix
 	viper.SetEnvPrefix("{{ project_slug | upper | replace('-', '_') }}")
 	viper.AutomaticEnv()
-	viper.ReadInConfig()
+
+	// Read config file (will use the highest priority one found)
+	if err := viper.ReadInConfig(); err != nil {
+		// Config file not found is not an error - we'll use defaults
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			logger.ErrorApp(WrapError(err, ErrorTypeConfig, "Failed to read config file", "Check config file syntax and permissions"))
+		}
+	} else {
+		// Validate the loaded configuration
+		config := viper.AllSettings()
+		validationErrors := ValidateConfig(config, configPath)
+		if len(validationErrors) > 0 {
+			errMsg := fmt.Sprintf("Configuration validation failed with %d error(s)", len(validationErrors))
+			suggestion := "Review the configuration file and fix the validation errors"
+			validationErr := NewValidationError(errMsg)
+			validationErr.Suggestion = suggestion
+			logger.ErrorApp(validationErr)
+			for _, validationErr := range validationErrors {
+				logger.Error("  - %s", validationErr.Error())
+			}
+			os.Exit(ExitConfigError)
+		}
+	}
+
+	// Set hardcoded defaults
+	defaults := GetHardcodedDefaults()
+	for key, value := range defaults {
+		viper.SetDefault(key, value)
+	}
+
+	// Determine the operation mode
+	configMode := viper.GetString("mode")
+	mode := DetermineMode(humanModeFlag, configMode)
+
+	// Initialize prompt suppressor with detected mode
+	var promptsMode prompts.Mode
+	if mode == ModeAgent {
+		promptsMode = prompts.ModeAgent
+	} else {
+		promptsMode = prompts.ModeHuman
+	}
+	promptSuppressor = prompts.NewPromptSuppressor(promptsMode, force, quiet, logger)
+	logger.Debug("Prompt suppressor initialized: mode=%s, force=%v, quiet=%v", mode, force, quiet)
+
+	// Initialize deprecation manager and load policies from config
+	deprecationManager = NewDeprecationManager(logger)
+	deprecationManager.SetQuietMode(quiet)
+
+	// Validate deprecation configuration
+	if err := deprecationManager.ValidateConfig(); err != nil {
+		logger.Error("Deprecation configuration validation failed: %v", err)
+	}
+
+	// Load deprecation policies from config
+	if err := deprecationManager.LoadFromConfig(); err != nil {
+		logger.Error("Failed to load deprecation policies: %v", err)
+	}
 }
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
+
+	// Set up SIGHUP handler for config reload
+	hupChan := make(chan os.Signal, 1)
+	signal.Notify(hupChan, syscall.SIGHUP)
+	go func() {
+		for range hupChan {
+			// Reload config on SIGHUP
+			configPath := viper.ConfigFileUsed()
+			if configPath != "" {
+				if logger == nil {
+					logger = NewLogger("main")
+				}
+				if err := ReloadConfig(configPath, logger); err != nil {
+					logger.Error("Config reload failed: %v", err)
+				}
+			} else {
+				if logger == nil {
+					logger = NewLogger("main")
+				}
+				logger.Warn("No config file loaded, cannot reload")
+			}
+		}
+	}()
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		os.Exit(1)

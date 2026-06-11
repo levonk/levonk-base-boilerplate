@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-go-aix/prd.md"
 phase: 3
 parallel_id: 1
 branch: "feature/current/20260708-cli-go-aix/story-03-001-structured-errors"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-002"]
@@ -27,31 +27,33 @@ Implement structured error formatting with errors going to stdout in the same fo
 
 ## Sub-Tasks
 
-- [ ] Design structured error format specification
-- [ ] Implement error formatting function with structured output
-- [ ] Add actionable suggestion generation for common errors
-- [ ] Implement error validation before calling dependencies
-- [ ] Implement error translation to extract actionable meaning
-- [ ] Add error output channel separation (stdout for errors, stderr for diagnostics)
-- [ ] Update all error paths to use structured error format
-- [ ] Ensure raw dependency output never leaks through
-- [ ] Add suggestion references to CLI commands (not underlying tools)
-- [ ] Integrate structured errors into TOON output
-- [ ] Integrate structured errors into JSON output
-- [ ] Write unit tests for error formatting
-- [ ] Write unit tests for suggestion generation
-- [ ] Write integration tests for error output formatting
-- [ ] Write tests for error channel separation
-- [ ] Update CLI help text to document error format
+- [~] Design structured error format specification
+- [~] Implement error formatting function with structured output
+- [x] Add actionable suggestion generation for common errors
+- [~] Implement error validation before calling dependencies
+- [x] Implement error translation to extract actionable meaning
+- [x] Add error output channel separation (stdout for errors, stderr for diagnostics)
+- [x] Update all error paths to use structured error format
+- [x] Ensure raw dependency output never leaks through
+- [x] Add suggestion references to CLI commands (not underlying tools)
+- [x] Integrate structured errors into TOON output
+- [x] Integrate structured errors into JSON output
+- [x] Write unit tests for error formatting
+- [x] Write unit tests for suggestion generation
+- [x] Write integration tests for error output formatting
+- [x] Write tests for error channel separation
+- [x] Update CLI help text to document error format
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/errors/formatter.go` — Error formatting logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/errors/formatter_test.go` — Tests for error formatting (new file)
-- `boilerplate/apps/cli/go/core/files/internal/errors/suggestions.go` — Suggestion generation logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/errors/suggestions_test.go` — Tests for suggestions (new file)
-- `boilerplate/apps/cli/go/core/files/internal/errors/validator.go` — Error validation logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/errors/validator_test.go` — Tests for error validation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/errors/structured_format.md` — Structured error format specification (new file)
+- `boilerplate/apps/cli/go/core/files/internal/errors/formatter.go.jinja` — Error formatting logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/errors/formatter_test.go.jinja` — Tests for error formatting (new file)
+- `boilerplate/apps/cli/go/core/files/internal/errors/suggestions.go.jinja` — Suggestion generation logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/errors/suggestions_test.go.jinja` — Tests for suggestions (new file)
+- `boilerplate/apps/cli/go/core/files/internal/errors/validator.go.jinja` — Error validation logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/errors/validator_test.go.jinja` — Tests for error validation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/errors/translator.go.jinja` — Error translation logic (new file)
 - `boilerplate/apps/cli/go/core/files/internal/output/channels.go` — Output channel separation (new file)
 - `boilerplate/apps/cli/go/core/files/cli/commands/*.go` — Update error handling in all commands
 - `boilerplate/apps/cli/go/core/files/cli/commands/*_test.go` — Update error handling tests

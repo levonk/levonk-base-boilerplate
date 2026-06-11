@@ -1,0 +1,298 @@
+# vim: set ft=python :
+"""Error translation and sanitization for CLI operations.
+
+This module provides utilities for translating raw errors from dependencies
+into actionable, user-friendly error messages without leaking dependency
+names or raw output.
+"""
+
+import re
+import os
+from typing import Any, Dict, Optional, List
+from pathlib import Path
+
+
+class ErrorTranslationError(Exception):
+    """Raised when error translation fails."""
+    pass
+
+
+# Patterns to sanitize - dependency names, internal paths, etc.
+SANITIZATION_PATTERNS = [
+    # Remove dependency names from error messages
+    (r'(pip|npm|yarn|cargo|poetry|pipenv|conda)\s*', ''),
+    (r'(python|node|rust|go|java)\s*', ''),
+    (r'(requests|urllib|httpx|aiohttp)\s*', ''),
+    (r'(click|typer|argparse)\s*', ''),
+    
+    # Remove internal implementation details
+    (r'at 0x[0-9a-fA-F]+', '<address>'),
+    (r'File ".*?/site-packages/.*?"', '<internal>'),
+    (r'File ".*?/lib/python.*?"', '<internal>'),
+    (r'File ".*?/node_modules/.*?"', '<internal>'),
+    
+    # Remove stack traces
+    (r'Traceback \(most recent call last\):', ''),
+    (r'\s+File ".*?", line \d+', ''),
+    (r'\s+\^\s*', ''),
+    
+    # Remove raw error codes that might leak implementation
+    (r'Error code:?\s*\d+', 'Error code: <code>'),
+]
+
+
+def sanitize_error_message(message: str) -> str:
+    """Sanitize an error message to remove dependency names and raw output.
+    
+    Args:
+        message: The raw error message
+        
+    Returns:
+        Sanitized error message
+    """
+    sanitized = message
+    
+    # Apply all sanitization patterns
+    for pattern, replacement in SANITIZATION_PATTERNS:
+        sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+    
+    # Clean up extra whitespace
+    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+    
+    return sanitized
+
+
+def extract_actionable_suggestion(error: Exception, context: Optional[Dict[str, Any]] = None) -> str:
+    """Extract an actionable suggestion from an exception.
+    
+    Args:
+        error: The exception to analyze
+        context: Optional context about the operation
+        
+    Returns:
+        Actionable suggestion string
+    """
+    error_type = type(error).__name__
+    error_message = str(error)
+    
+    # Common error patterns and their suggestions
+    suggestions = {
+        'FileNotFoundError': 'Check the file path and ensure the file exists',
+        'PermissionError': 'Check file permissions or run with appropriate privileges',
+        'ValueError': 'Check the value you provided and ensure it is valid',
+        'TypeError': 'Check the type of the value you provided',
+        'KeyError': 'Check that the required key exists in the configuration',
+        'AttributeError': 'Check that the required attribute is available',
+        'ImportError': 'Ensure all required dependencies are installed',
+        'ModuleNotFoundError': 'Ensure the required module is installed',
+        'ConnectionError': 'Check your network connection',
+        'TimeoutError': 'The operation timed out - try again or increase timeout',
+        'ValidationError': 'Check the validation requirements and provide valid input',
+        'MissingRequiredError': 'Provide all required fields or flags',
+    }
+    
+    # Check for specific error types
+    if error_type in suggestions:
+        return suggestions[error_type]
+    
+    # Check for common patterns in error messages
+    if 'not found' in error_message.lower():
+        return 'Check that the required resource exists'
+    
+    if 'permission' in error_message.lower():
+        return 'Check permissions or run with appropriate privileges'
+    
+    if 'invalid' in error_message.lower():
+        return 'Check the value you provided and ensure it is valid'
+    
+    if 'timeout' in error_message.lower():
+        return 'The operation timed out - try again or increase timeout'
+    
+    if 'connection' in error_message.lower():
+        return 'Check your network connection'
+    
+    if 'required' in error_message.lower():
+        return 'Provide all required fields or flags'
+    
+    # Default suggestion
+    return 'Check the error details and try again'
+
+
+def translate_error(
+    error: Exception,
+    context: Optional[Dict[str, Any]] = None,
+    include_original: bool = False
+) -> Dict[str, Any]:
+    """Translate a raw exception into a structured error.
+    
+    This function extracts actionable meaning from the error while
+    sanitizing the message to remove dependency names and raw output.
+    
+    Args:
+        error: The exception to translate
+        context: Optional context about the operation
+        include_original: Whether to include the original sanitized message
+        
+    Returns:
+        Structured error dictionary
+    """
+    error_type = type(error).__name__
+    raw_message = str(error)
+    
+    # Sanitize the error message
+    sanitized_message = sanitize_error_message(raw_message)
+    
+    # Extract actionable suggestion
+    suggestion = extract_actionable_suggestion(error, context)
+    
+    # Build structured error
+    result = {
+        "error": True,
+        "error_type": error_type,
+        "description": sanitized_message,
+        "suggestion": suggestion
+    }
+    
+    if include_original and sanitized_message != raw_message:
+        result["original_message"] = sanitized_message
+    
+    if context:
+        # Sanitize context as well
+        sanitized_context = {}
+        for key, value in context.items():
+            if isinstance(value, str):
+                sanitized_context[key] = sanitize_error_message(value)
+            else:
+                sanitized_context[key] = value
+        result["context"] = sanitized_context
+    
+    return result
+
+
+def translate_subprocess_error(
+    returncode: int,
+    stdout: str,
+    stderr: str,
+    command: List[str],
+    context: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Translate a subprocess error into a structured error.
+    
+    This function handles errors from external commands, sanitizing
+    the output to avoid leaking dependency names or raw output.
+    
+    Args:
+        returncode: The exit code from the subprocess
+        stdout: Standard output from the subprocess
+        stderr: Standard error from the subprocess
+        command: The command that was executed
+        context: Optional context about the operation
+        
+    Returns:
+        Structured error dictionary
+    """
+    # Sanitize command to avoid leaking dependency names
+    sanitized_command = [sanitize_error_message(arg) for arg in command]
+    
+    # Sanitize output
+    sanitized_stdout = sanitize_error_message(stdout) if stdout else ""
+    sanitized_stderr = sanitize_error_message(stderr) if stderr else ""
+    
+    # Determine error type based on return code
+    if returncode == 1:
+        error_type = "COMMAND_FAILED"
+        description = "Command execution failed"
+        suggestion = "Check the command and try again"
+    elif returncode == 2:
+        error_type = "USAGE_ERROR"
+        description = "Invalid command usage"
+        suggestion = "Check the command arguments and flags"
+    elif returncode == 127:
+        error_type = "COMMAND_NOT_FOUND"
+        description = "Command not found"
+        suggestion = "Ensure the required tool is installed"
+    else:
+        error_type = "UNKNOWN_ERROR"
+        description = f"Command failed with exit code {returncode}"
+        suggestion = "Check the error details and try again"
+    
+    # Build structured error
+    result = {
+        "error": True,
+        "error_type": error_type,
+        "description": description,
+        "suggestion": suggestion,
+        "returncode": returncode
+    }
+    
+    # Include sanitized output if available and useful
+    if sanitized_stderr:
+        result["error_details"] = sanitized_stderr
+    
+    if context:
+        sanitized_context = {}
+        for key, value in context.items():
+            if isinstance(value, str):
+                sanitized_context[key] = sanitize_error_message(value)
+            else:
+                sanitized_context[key] = value
+        result["context"] = sanitized_context
+    
+    return result
+
+
+def sanitize_dependency_name(name: str) -> str:
+    """Sanitize a dependency name to avoid leaking implementation details.
+    
+    Args:
+        name: The dependency name to sanitize
+        
+    Returns:
+        Sanitized name
+    """
+    # Map common dependencies to generic names
+    dependency_map = {
+        'pip': 'package manager',
+        'npm': 'package manager',
+        'yarn': 'package manager',
+        'cargo': 'package manager',
+        'poetry': 'package manager',
+        'pipenv': 'package manager',
+        'conda': 'package manager',
+        'python': 'runtime',
+        'node': 'runtime',
+        'rust': 'runtime',
+        'go': 'runtime',
+        'java': 'runtime',
+        'requests': 'HTTP library',
+        'urllib': 'HTTP library',
+        'httpx': 'HTTP library',
+        'aiohttp': 'HTTP library',
+        'click': 'CLI framework',
+        'typer': 'CLI framework',
+        'argparse': 'CLI framework',
+    }
+    
+    lower_name = name.lower()
+    for dep, generic in dependency_map.items():
+        if dep in lower_name:
+            return generic
+    
+    return name
+
+
+def sanitize_path(path: str) -> str:
+    """Sanitize a file path to avoid leaking internal implementation details.
+    
+    Args:
+        path: The path to sanitize
+        
+    Returns:
+        Sanitized path
+    """
+    # Remove site-packages and other internal paths
+    sanitized = re.sub(r'.*?/site-packages/', '<internal>/', path)
+    sanitized = re.sub(r'.*?/lib/python\d\.\d/', '<internal>/', sanitized)
+    sanitized = re.sub(r'.*?/node_modules/', '<internal>/', sanitized)
+    
+    return sanitized

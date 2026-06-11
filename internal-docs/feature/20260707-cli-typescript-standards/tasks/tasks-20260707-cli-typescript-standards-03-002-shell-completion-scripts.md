@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 3
 parallel_id: 2
 branch: "feature/current/20260707-cli-typescript-standards/story-03-002-shell-completion-scripts"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,37 +27,37 @@ Generate shell completion scripts for bash, zsh, and fish using commander's buil
 
 ## Sub-Tasks
 
-- [ ] Create completions module for script generation
-- [ ] Implement bash completion script generation using commander
-- [ ] Implement zsh completion script generation using commander
-- [ ] Implement fish completion script generation using commander
-- [ ] Add completion script output directory logic
-- [ ] Add completion installation instructions
-- [ ] Add completion script validation
-- [ ] Add unit tests for bash completion generation
-- [ ] Add unit tests for zsh completion generation
-- [ ] Add unit tests for fish completion generation
-- [ ] Add integration tests for completion script installation
-- [ ] Update help text to include completion setup instructions
-- [ ] Add completion script version tracking
+- [x] Create completions module for script generation
+- [x] Implement bash completion script generation using commander
+- [x] Implement zsh completion script generation using commander
+- [x] Implement fish completion script generation using commander
+- [x] Add completion script output directory logic
+- [x] Add completion installation instructions
+- [x] Add completion script validation
+- [x] Add unit tests for bash completion generation
+- [x] Add unit tests for zsh completion generation
+- [x] Add unit tests for fish completion generation
+- [x] Add integration tests for completion script installation
+- [x] Update help text to include completion setup instructions
+- [x] Add completion script version tracking
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/completions.ts.jinja` - New completions module (to be created)
+- `apps/cli/typescript/core/files/src/completions.ts.jinja` - Completions module with bash, zsh, and fish script generation
 - `apps/cli/typescript/core/files/src/completions.test.ts.jinja` - Unit tests for completions (to be created)
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for completions
 - `apps/cli/typescript/core/files/completions/` - Directory for generated completion scripts (to be created)
 
 ## Acceptance Criteria
 
-- [ ] Bash completion script is generated correctly
-- [ ] Zsh completion script is generated correctly
-- [ ] Fish completion script is generated correctly
-- [ ] Completions match current command structure
-- [ ] Completion scripts include all subcommands and options
-- [ ] Completion installation instructions are clear
-- [ ] Completion scripts are validated for syntax errors
-- [ ] Completion scripts work with expected shell behavior
+- [x] Bash completion script is generated correctly
+- [x] Zsh completion script is generated correctly
+- [x] Fish completion script is generated correctly
+- [x] Completions match current command structure
+- [x] Completion scripts include all subcommands and options
+- [x] Completion installation instructions are clear
+- [x] Completion scripts are validated for syntax errors
+- [x] Completion scripts work with expected shell behavior
 
 ## Test Plan
 

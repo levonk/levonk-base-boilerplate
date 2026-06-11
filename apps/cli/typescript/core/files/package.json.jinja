@@ -1,7 +1,7 @@
 {
   "name": "{{ project_slug }}",
   "version": "1.0.0",
-  "description": "{{ description }}",
+  "description": "{{ description }} - A production-ready TypeScript CLI tool following CLI Tool Standards ADR compliance",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -15,49 +15,49 @@
     "lint": "eslint src/**/*.ts",
     "preinstall": "npx -y only-allow pnpm"
   },
+  "keywords": [
+    "cli",
+    "typescript",
+    "command-line",
+    "tool",
+    "automation"
+  ],
+  "author": "{{ author_name }}",
+  "license": "{{ license }}",
+  "homepage": "{{ homepage }}",
+  "repository": {
+    "type": "git",
+    "url": "{{ repository_url }}"
+  },
+  "bugs": {
+    "url": "{{ issues_url }}"
+  },
   "dependencies": {
+    "@iarna/toml": "^2.2.5",
     "chalk": "^5.3.0",
+    "cli-progress": "^3.12.0",
     "commander": "^11.0.0",
     "glob": "^10.0.0",
-    "supports-color": "^9.4.0"
+    "ink": "^4.4.1",
+    "ink-select-input": "^5.0.0",
+    "ink-text-input": "^5.0.0",
+    "react": "^18.2.0",
+    "supports-color": "^9.4.0",
+    "zod": "^3.22.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
-    "@nx/esbuild": "^19.0.0",
-    "@nx/js": "^19.0.0",
+    "@types/cli-progress": "^3.11.0",
     "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
-    "fallow": "^9.0.0",
-    "modern-errors": "^9.0.0",
-    "modern-errors-beautiful": "^9.0.0",
-    "modern-errors-bugs": "^9.0.0",
-    "modern-errors-clean": "^9.0.0",
-    "modern-errors-cli": "^9.0.0",
-    "modern-errors-process": "^9.0.0",
-    "modern-errors-serialize": "^9.0.0",
-    "modern-errors-winston": "^9.0.0",
-    "nx": "^19.0.0",
-    "skillman": "*",
-    "skills-detector": "*",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.0",
-    "vitest": "^1.0.0"
-  },
-  "packageManager": "pnpm@*",
-  "devEngines": {
-    "runtime": {
-      "name": "node",
-      "version": "*"
-    },
-    "packageManager": {
-      "name": "pnpm",
-      "version": "*"
-    }
+    "vitest": ">=4.1.0"
   },
   "engines": {
-    "node": "*",
-    "pnpm: "*"
+    "node": "*"
   }
 }

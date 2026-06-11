@@ -27,18 +27,18 @@ Implement the full configuration precedence chain as specified in the ADR: CLI a
 
 ## Sub-Tasks
 
-- [ ] Add viper or koanf dependency to go.mod — `core/files/go.mod.jinja`
-- [ ] Add local project config path detection — `core/files/config.go.jinja`
-- [ ] Add system/enterprise config path detection — `core/files/config.go.jinja`
-- [ ] Implement config precedence loading logic using viper or koanf — `core/files/config.go.jinja`
-- [ ] Add hardcoded defaults for all settings — `core/files/config.go.jinja`
-- [ ] Update initConfig to use full precedence chain — `core/files/main.go.jinja`
-- [ ] Test CLI args override env vars — `core/files/config_test.go.jinja`
-- [ ] Test env vars override local config — `core/files/config_test.go.jinja`
-- [ ] Test local config overrides user config — `core/files/config_test.go.jinja`
-- [ ] Test user config overrides system config — `core/files/config_test.go.jinja`
-- [ ] Test system config overrides defaults — `core/files/config_test.go.jinja`
-- [ ] Test full precedence chain end-to-end — `core/files/config_test.go.jinja`
+- [x] Add viper or koanf dependency to go.mod — `core/files/go.mod.jinja`
+- [x] Add local project config path detection — `core/files/config.go.jinja`
+- [x] Add system/enterprise config path detection — `core/files/config.go.jinja`
+- [x] Implement config precedence loading logic using viper or koanf — `core/files/config.go.jinja`
+- [x] Add hardcoded defaults for all settings — `core/files/config.go.jinja`
+- [x] Update initConfig to use full precedence chain — `core/files/main.go.jinja`
+- [x] Test CLI args override env vars — `core/files/config_test.go.jinja`
+- [x] Test env vars override local config — `core/files/config_test.go.jinja`
+- [x] Test local config overrides user config — `core/files/config_test.go.jinja`
+- [x] Test user config overrides system config — `core/files/config_test.go.jinja`
+- [x] Test system config overrides defaults — `core/files/config_test.go.jinja`
+- [x] Test full precedence chain end-to-end — `core/files/config_test.go.jinja`
 
 ## Relevant Files
 
@@ -48,13 +48,13 @@ Implement the full configuration precedence chain as specified in the ADR: CLI a
 
 ## Acceptance Criteria
 
-- [ ] CLI args take highest precedence
-- [ ] Environment variables override config files
-- [ ] Local project config (`.config/{project_slug}/config.yaml`) is supported
-- [ ] User config (XDG) is supported
-- [ ] System/enterprise config (`/etc/{project_slug}/config.yaml`) is supported
-- [ ] Hardcoded defaults are used when no config exists
-- [ ] Precedence chain is correctly implemented in order
+- [x] CLI args take highest precedence
+- [x] Environment variables override config files
+- [x] Local project config (`.config/{project_slug}/config.yaml`) is supported
+- [x] User config (XDG) is supported
+- [x] System/enterprise config (`/etc/{project_slug}/config.yaml`) is supported
+- [x] Hardcoded defaults are used when no config exists
+- [x] Precedence chain is correctly implemented in order
 
 ## Test Plan
 

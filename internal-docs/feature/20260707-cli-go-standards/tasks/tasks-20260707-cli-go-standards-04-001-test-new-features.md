@@ -27,29 +27,29 @@ Implement comprehensive test coverage for all new CLI features added in Phases 1
 
 ## Sub-Tasks
 
-- [ ] Test config file initialization — `core/files/config_test.go.jinja`
-- [ ] Test install/uninstall flag — `core/files/install_test.go.jinja`
-- [ ] Test color control (auto/always/never) — `core/files/logger_test.go.jinja`
-- [ ] Test NO_COLOR env var precedence — `core/files/logger_test.go.jinja`
-- [ ] Test debug flag behavior — `core/files/logger_test.go.jinja`
-- [ ] Test shell completion generation — `core/files/completion_test.go.jinja`
-- [ ] Test config precedence chain — `core/files/config_test.go.jinja`
-- [ ] Test config validation — `core/files/config_test.go.jinja`
-- [ ] Test dry-run mode — `core/files/dryrun_test.go.jinja`
-- [ ] Test confirmation prompts — `core/files/prompt_test.go.jinja`
-- [ ] Test progress indicators — `core/files/progress_test.go.jinja`
-- [ ] Test error message formatting — `core/files/errors_test.go.jinja`
-- [ ] Test man page generation — `core/files/docs_test.go.jinja`
-- [ ] Test pager integration — `core/files/pager_test.go.jinja`
-- [ ] Test terminal size awareness — `core/files/terminal_test.go.jinja`
-- [ ] Test TUI mode — `core/files/tui_test.go.jinja`
-- [ ] Test daemon process support — `core/files/daemon_test.go.jinja`
-- [ ] Test file reference formatting — `core/files/refs_test.go.jinja`
-- [ ] Test URL formatting — `core/files/urls_test.go.jinja`
-- [ ] Test credential/secret handling — `core/files/secrets_test.go.jinja`
-- [ ] Test config auto-migration — `core/files/migration_test.go.jinja`
-- [ ] Run test coverage analysis — `Makefile.jinja`
-- [ ] Ensure 90%+ coverage for new code — All test files
+- [x] Test config file initialization — `core/files/config_test.go.jinja`
+- [x] Test install/uninstall flag — `core/files/install_test.go.jinja`
+- [x] Test color control (auto/always/never) — `core/files/logger_test.go.jinja`
+- [x] Test NO_COLOR env var precedence — `core/files/logger_test.go.jinja`
+- [x] Test debug flag behavior — `core/files/logger_test.go.jinja`
+- [x] Test shell completion generation — `core/files/completion_test.go.jinja`
+- [x] Test config precedence chain — `core/files/config_test.go.jinja`
+- [x] Test config validation — `core/files/config_test.go.jinja`
+- [x] Test dry-run mode — `core/files/dryrun_test.go.jinja`
+- [x] Test confirmation prompts — `core/files/prompt_test.go.jinja`
+- [x] Test progress indicators — `core/files/progress_test.go.jinja`
+- [x] Test error message formatting — `core/files/errors_test.go.jinja`
+- [x] Test man page generation — `core/files/docs_test.go.jinja`
+- [x] Test pager integration — `core/files/pager_test.go.jinja`
+- [x] Test terminal size awareness — `core/files/terminal_test.go.jinja`
+- [x] Test TUI mode — `core/files/tui_test.go.jinja`
+- [x] Test daemon process support — `core/files/daemon_test.go.jinja`
+- [x] Test file reference formatting — `core/files/refs_test.go.jinja`
+- [x] Test URL formatting — `core/files/urls_test.go.jinja`
+- [x] Test credential/secret handling — `core/files/secrets_test.go.jinja`
+- [x] Test config auto-migration — `core/files/migration_test.go.jinja`
+- [x] Run test coverage analysis — `Makefile.jinja`
+- [x] Ensure 90%+ coverage for new code — All test files
 
 ## Relevant Files
 
@@ -74,11 +74,11 @@ Implement comprehensive test coverage for all new CLI features added in Phases 1
 
 ## Acceptance Criteria
 
-- [ ] All new features have unit tests
-- [ ] All new features have integration tests
-- [ ] Test coverage is 90%+ for new code
-- [ ] All tests pass consistently
-- [ ] Tests are maintainable and clear
+- [x] All new features have unit tests
+- [x] All new features have integration tests
+- [x] Test coverage is 90%+ for new code
+- [x] All tests pass consistently
+- [x] Tests are maintainable and clear
 
 ## Test Plan
 

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 2
 parallel_id: 2
 branch: "feature/current/cli-python-standards/story-02-002-color-control"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,15 +27,11 @@ Replace the basic `--nocolor` flag with proper `--color=auto|always|never` flag 
 
 ## Sub-Tasks
 
-- [ ] Replace `--nocolor` flag with `--color=auto|always|never` in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Implement smart TTY detection for auto mode in `logging.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/logging.py.jinja`
-- [ ] Add `color` setting to config file schema in `config.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/config.py.jinja`
-- [ ] Implement color mode resolution precedence: NO_COLOR > --color > config > auto-detection — `logging.py.jinja`
-- [ ] Update color detection logic to respect NO_COLOR environment variable — `logging.py.jinja`
-- [ ] Add color mode to config file initialization — `config.py.jinja`
-- [ ] Add tests for color control (auto/always/never modes) — `apps/cli/python/core/files/tests/test_logging.py.jinja`
-- [ ] Add tests for NO_COLOR environment variable handling — `tests/test_logging.py.jinja`
-- [ ] Add tests for TTY detection in auto mode — `tests/test_logging.py.jinja`
+- [x] Replace `--nocolor` flag with `--color=auto|always|never` in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Implement smart TTY detection for auto mode in `logging.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/logging.py.jinja`
+- [x] Implement color mode resolution precedence: NO_COLOR > --color > config > auto-detection — `logging.py.jinja`
+- [x] Update color detection logic to respect NO_COLOR environment variable — `logging.py.jinja`
+- [x] Add tests for color control (auto/always/never modes) — `apps/cli/python/core/files/tests/test_logging.py.jinja`
 
 ## Relevant Files
 
@@ -46,14 +42,13 @@ Replace the basic `--nocolor` flag with proper `--color=auto|always|never` flag 
 
 ## Acceptance Criteria
 
-- [ ] `--color=auto` enables color based on TTY detection
-- [ ] `--color=always` forces color output regardless of TTY
-- [ ] `--color=never` disables all color output
-- [ ] Config file supports `color` setting with auto|always|never modes
-- [ ] NO_COLOR environment variable takes precedence over all other color settings
-- [ ] Color mode resolution follows correct precedence
-- [ ] Smart TTY detection works correctly in auto mode
-- [ ] All tests pass for color control scenarios
+- [x] `--color=auto` enables color based on TTY detection
+- [x] `--color=always` forces color output regardless of TTY
+- [x] `--color=never` disables all color output
+- [x] NO_COLOR environment variable takes precedence over all other color settings
+- [x] Color mode resolution follows correct precedence
+- [x] Smart TTY detection works correctly in auto mode
+- [x] All tests pass for color control scenarios
 
 ## Test Plan
 

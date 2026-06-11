@@ -94,7 +94,6 @@ docs/build/
 *.sln.docstates
 
 # PowerShell Module Cache
-$HOME\Documents\WindowsPowerShell\Modules\{{package_name}}/
 
 # PowerShell Script Analysis
 ScriptAnalysisResults.xml

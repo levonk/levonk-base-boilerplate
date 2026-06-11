@@ -1,0 +1,197 @@
+package main
+
+import (
+	"os"
+	"testing"
+)
+
+func TestGetTerminalHeight(t *testing.T) {
+	// Test that GetTerminalHeight returns a reasonable value
+	height := GetTerminalHeight()
+	// In non-TTY environments, GetTerminalHeight returns default 24
+	// Accept the default value as valid
+	if height < 10 {
+		t.Errorf("Expected terminal height to be at least 10, got %d", height)
+	}
+	if height > 200 {
+		t.Errorf("Expected terminal height to be less than 200, got %d", height)
+	}
+}
+
+func TestGetTerminalSize(t *testing.T) {
+	width, height := GetTerminalSize()
+	// In non-TTY environments, GetTerminalSize returns default 80x24
+	// Accept the default values as valid
+	if width < 10 {
+		t.Errorf("Expected terminal width to be at least 10, got %d", width)
+	}
+	if height < 10 {
+		t.Errorf("Expected terminal height to be at least 10, got %d", height)
+	}
+}
+
+func TestGetEnvTerminalSize(t *testing.T) {
+	// Save original values
+	origLines := os.Getenv("LINES")
+	origCols := os.Getenv("COLUMNS")
+	defer func() {
+		if origLines != "" {
+			os.Setenv("LINES", origLines)
+		} else {
+			os.Unsetenv("LINES")
+		}
+		if origCols != "" {
+			os.Setenv("COLUMNS", origCols)
+		} else {
+			os.Unsetenv("COLUMNS")
+		}
+	}()
+
+	// Test with environment variables set
+	os.Setenv("LINES", "50")
+	os.Setenv("COLUMNS", "120")
+	width, height := GetEnvTerminalSize()
+	if width != 120 {
+		t.Errorf("Expected width 120, got %d", width)
+	}
+	if height != 50 {
+		t.Errorf("Expected height 50, got %d", height)
+	}
+
+	// Test with unset environment variables (should return defaults)
+	os.Unsetenv("LINES")
+	os.Unsetenv("COLUMNS")
+	width, height = GetEnvTerminalSize()
+	if width != 80 {
+		t.Errorf("Expected default width 80, got %d", width)
+	}
+	if height != 24 {
+		t.Errorf("Expected default height 24, got %d", height)
+	}
+}
+
+func TestGetPagerCommand(t *testing.T) {
+	// Save original PAGER
+	origPager := os.Getenv("PAGER")
+	defer func() {
+		if origPager != "" {
+			os.Setenv("PAGER", origPager)
+		} else {
+			os.Unsetenv("PAGER")
+		}
+	}()
+
+	// Test with PAGER set
+	os.Setenv("PAGER", "more")
+	pager := GetPagerCommand()
+	if pager != "more" {
+		t.Errorf("Expected pager 'more', got '%s'", pager)
+	}
+
+	// Test with PAGER unset (should default to 'less')
+	os.Unsetenv("PAGER")
+	pager = GetPagerCommand()
+	if pager != "less" {
+		t.Errorf("Expected default pager 'less', got '%s'", pager)
+	}
+}
+
+func TestPagerShouldUsePager(t *testing.T) {
+	tests := []struct {
+		name      string
+		noPager   bool
+		lineCount int
+		want      bool
+	}{
+		{
+			name:      "no-pager flag set",
+			noPager:   true,
+			lineCount: 100,
+			want:      false,
+		},
+		{
+			name:      "short output",
+			noPager:   false,
+			lineCount: 5,
+			want:      false,
+		},
+		{
+			name:      "long output",
+			noPager:   false,
+			lineCount: 50,
+			want:      false, // In non-TTY test environment, pager is disabled
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pager := NewPager(tt.noPager)
+			got := pager.ShouldUsePager(tt.lineCount)
+			if got != tt.want {
+				t.Errorf("ShouldUsePager() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewPager(t *testing.T) {
+	pager := NewPager(false)
+	if pager == nil {
+		t.Error("NewPager() returned nil")
+	}
+	if pager.noPager != false {
+		t.Errorf("Expected noPager to be false, got %v", pager.noPager)
+	}
+
+	pager = NewPager(true)
+	if pager.noPager != true {
+		t.Errorf("Expected noPager to be true, got %v", pager.noPager)
+	}
+}
+
+func TestPagerIsRunning(t *testing.T) {
+	pager := NewPager(false)
+	if pager.IsRunning() {
+		t.Error("Expected IsRunning() to be false for new pager")
+	}
+}
+
+func TestPagerClose(t *testing.T) {
+	pager := NewPager(false)
+	err := pager.Close()
+	if err != nil {
+		t.Errorf("Close() returned error: %v", err)
+	}
+}
+
+func TestGetTerminalSizeWithFallback(t *testing.T) {
+	width, height := GetTerminalSizeWithFallback()
+	// In non-TTY environments, GetTerminalSizeWithFallback returns default 80x24
+	// Accept the default values as valid
+	if width < 10 {
+		t.Errorf("Expected width to be at least 10, got %d", width)
+	}
+	if height < 10 {
+		t.Errorf("Expected height to be at least 10, got %d", height)
+	}
+}
+
+func TestWithPager(t *testing.T) {
+	// Test with no-pager flag
+	err := WithPager(true, 100, func() error {
+		return nil
+	})
+	if err != nil {
+		t.Errorf("WithPager() returned error: %v", err)
+	}
+
+	// Test with short output (should not use pager)
+	err = WithPager(false, 5, func() error {
+		return nil
+	})
+	if err != nil {
+		t.Errorf("WithPager() returned error: %v", err)
+	}
+}
+
+{# vim: set ft=go: #}

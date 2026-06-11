@@ -1,0 +1,23 @@
+# vim: set ft=python :
+"""Operations module for CLI operations.
+
+This module provides utilities for managing idempotent operations.
+"""
+
+from {{project_slug}}.operations.registry import (
+    OperationType,
+    Operation,
+    OperationRegistry,
+    register_operation,
+    get_operation,
+    get_registry,
+)
+
+__all__ = [
+    "OperationType",
+    "Operation",
+    "OperationRegistry",
+    "register_operation",
+    "get_operation",
+    "get_registry",
+]

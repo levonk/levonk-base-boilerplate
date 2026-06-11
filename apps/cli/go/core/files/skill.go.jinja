@@ -1,0 +1,72 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+
+	"{{ project_slug }}/internal/skill"
+)
+
+var (
+	generateSkillFlag bool
+	checkSkillFlag    bool
+	skillFile         string
+)
+
+// skillCmd represents the skill command
+var skillCmd = &cobra.Command{
+	Use:   "skill",
+	Short: "Manage agent skill documentation",
+	Long: `Manage agent skill documentation for discoverability via agentskills.io.
+
+The skill command generates and validates SKILL.md files that document the CLI
+for AI agents. This enables agents to discover and understand the CLI's capabilities
+through the agentskills.io platform.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if generateSkillFlag {
+			return runGenerateSkill()
+		}
+		if checkSkillFlag {
+			return runCheckSkill()
+		}
+		return cmd.Help()
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(skillCmd)
+
+	skillCmd.Flags().BoolVar(&generateSkillFlag, "generate", false, "Generate SKILL.md file")
+	skillCmd.Flags().BoolVar(&checkSkillFlag, "check", false, "Check if SKILL.md is up to date")
+	skillCmd.Flags().StringVar(&skillFile, "file", "SKILL.md", "Path to SKILL.md file")
+}
+
+// runGenerateSkill generates the SKILL.md file
+func runGenerateSkill() error {
+	generator := skill.NewGenerator("{{ project_name }}", "{{ project_slug }}", "{{ description }}", version, rootCmd)
+
+	if err := generator.GenerateToFile(skillFile); err != nil {
+		return fmt.Errorf("failed to generate skill file: %w", err)
+	}
+
+	fmt.Printf("Generated skill file: %s\n", skillFile)
+	return nil
+}
+
+// runCheckSkill checks if the SKILL.md file is up to date
+func runCheckSkill() error {
+	validator := skill.NewValidator("{{ project_name }}", "{{ project_slug }}", "{{ description }}", version, rootCmd)
+
+	if err := validator.CheckSkill(skillFile); err != nil {
+		if skill.IsStaleSkill(err) {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return fmt.Errorf("skill validation failed: %w", err)
+	}
+
+	fmt.Printf("Skill file is up to date: %s\n", skillFile)
+	return nil
+}

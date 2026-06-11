@@ -1,0 +1,121 @@
+import process from 'process';
+import readline from 'readline';
+import { createLogger, type Logger } from './logger.js';
+
+export interface PromptOptions {
+  force?: boolean;
+  logger?: Logger;
+  verbose?: boolean;
+}
+
+export interface ConfirmationResult {
+  confirmed: boolean;
+  method: 'tty' | 'env' | 'force';
+}
+
+/**
+ * Environment variable to bypass confirmation prompts in non-TTY environments
+ */
+const CONFIRM_BYPASS_ENV = 'CONFIRM_BYPASS';
+
+/**
+ * Prompt user for confirmation before destructive operations
+ * 
+ * @param action - Description of the action being performed (e.g., "delete file")
+ * @param target - Target of the action (e.g., file path, resource name)
+ * @param options - Prompt options
+ * @returns Confirmation result with method used
+ */
+export async function confirmAction(
+  action: string,
+  target: string,
+  options: PromptOptions = {}
+): Promise<ConfirmationResult> {
+  const { force = false, logger, verbose = false } = options;
+
+  // If force flag is set, bypass confirmation
+  if (force) {
+    if (verbose && logger) {
+      logger.debug(`[CONFIRM] Bypassing confirmation for ${action} on ${target} due to --force flag`);
+    }
+    return { confirmed: true, method: 'force' };
+  }
+
+  // Check environment variable for non-TTY environments
+  if (process.env[CONFIRM_BYPASS_ENV] === 'true' || process.env[CONFIRM_BYPASS_ENV] === '1') {
+    if (verbose && logger) {
+      logger.debug(`[CONFIRM] Bypassing confirmation for ${action} on ${target} due to ${CONFIRM_BYPASS_ENV} environment variable`);
+    }
+    return { confirmed: true, method: 'env' };
+  }
+
+  // If not a TTY, we can't prompt - default to false for safety
+  if (!process.stdin.isTTY) {
+    if (verbose && logger) {
+      logger.debug(`[CONFIRM] Not a TTY environment, declining confirmation for ${action} on ${target}`);
+    }
+    return { confirmed: false, method: 'env' };
+  }
+
+  // Interactive prompt for TTY environments
+  const promptText = `Are you sure you want to ${action} "${target}"? [y/N]: `;
+  const response = await readLine(promptText);
+
+  const confirmed = isYesResponse(response);
+
+  if (verbose && logger) {
+    logger.debug(`[CONFIRM] User ${confirmed ? 'confirmed' : 'declined'} ${action} on ${target}`);
+  }
+
+  return { confirmed, method: 'tty' };
+}
+
+/**
+ * Read a line from stdin
+ */
+function readLine(prompt: string): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    rl.question(prompt, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+/**
+ * Check if response is a "yes" response (case-insensitive)
+ */
+function isYesResponse(response: string): boolean {
+  const normalized = response.toLowerCase();
+  return normalized === 'y' || normalized === 'yes';
+}
+
+/**
+ * Confirm delete operation
+ */
+export async function confirmDelete(target: string, options: PromptOptions = {}): Promise<ConfirmationResult> {
+  return confirmAction('delete', target, options);
+}
+
+/**
+ * Confirm overwrite operation
+ */
+export async function confirmOverwrite(target: string, options: PromptOptions = {}): Promise<ConfirmationResult> {
+  return confirmAction('overwrite', target, options);
+}
+
+/**
+ * Generic destructive operation confirmation
+ */
+export async function confirmDestructive(
+  action: string,
+  target: string,
+  options: PromptOptions = {}
+): Promise<ConfirmationResult> {
+  return confirmAction(action, target, options);
+}

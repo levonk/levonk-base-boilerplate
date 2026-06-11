@@ -1,0 +1,259 @@
+package prompts
+
+import (
+	"testing"
+)
+
+// mockLogger is a simple mock for testing
+type mockLogger struct {
+	debugCalls []string
+}
+
+func (m *mockLogger) Debug(format string, args ...interface{}) {
+	m.debugCalls = append(m.debugCalls, format)
+}
+
+func TestNewPromptSuppressor(t *testing.T) {
+	logger := &mockLogger{}
+
+	ps := NewPromptSuppressor(ModeAgent, false, false, logger)
+
+	if ps.mode != ModeAgent {
+		t.Errorf("NewPromptSuppressor() mode = %v, want %v", ps.mode, ModeAgent)
+	}
+	if ps.force != false {
+		t.Errorf("NewPromptSuppressor() force = %v, want false", ps.force)
+	}
+	if ps.quiet != false {
+		t.Errorf("NewPromptSuppressor() quiet = %v, want false", ps.quiet)
+	}
+}
+
+func TestShouldSuppress(t *testing.T) {
+	logger := &mockLogger{}
+
+	tests := []struct {
+		name     string
+		mode     Mode
+		force    bool
+		quiet    bool
+		expected bool
+	}{
+		{"agent mode suppresses", ModeAgent, false, false, true},
+		{"human mode allows", ModeHuman, false, false, false},
+		{"force flag suppresses", ModeHuman, true, false, true},
+		{"quiet flag suppresses", ModeHuman, false, true, true},
+		{"force in agent mode", ModeAgent, true, false, true},
+		{"quiet in agent mode", ModeAgent, false, true, true},
+		{"both force and quiet", ModeHuman, true, true, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ps := NewPromptSuppressor(tt.mode, tt.force, tt.quiet, logger)
+			result := ps.ShouldSuppress()
+			if result != tt.expected {
+				t.Errorf("ShouldSuppress() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestShouldPrompt(t *testing.T) {
+	logger := &mockLogger{}
+
+	tests := []struct {
+		name     string
+		mode     Mode
+		force    bool
+		quiet    bool
+		expected bool
+	}{
+		{"agent mode no prompt", ModeAgent, false, false, false},
+		{"human mode allows prompt", ModeHuman, false, false, true},
+		{"force flag no prompt", ModeHuman, true, false, false},
+		{"quiet flag no prompt", ModeHuman, false, true, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ps := NewPromptSuppressor(tt.mode, tt.force, tt.quiet, logger)
+			result := ps.ShouldPrompt()
+			if result != tt.expected {
+				t.Errorf("ShouldPrompt() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetPromptResult(t *testing.T) {
+	logger := &mockLogger{}
+
+	tests := []struct {
+		name     string
+		mode     Mode
+		force    bool
+		quiet    bool
+		expected bool
+	}{
+		{"force returns true", ModeHuman, true, false, true},
+		{"force in agent mode returns true", ModeAgent, true, false, true},
+		{"quiet returns false (safe default)", ModeHuman, false, true, false},
+		{"agent mode returns false (safe default)", ModeAgent, false, false, false},
+		{"human mode without flags returns false", ModeHuman, false, false, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ps := NewPromptSuppressor(tt.mode, tt.force, tt.quiet, logger)
+			result := ps.GetPromptResult()
+			if result != tt.expected {
+				t.Errorf("GetPromptResult() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestRequireValue(t *testing.T) {
+	logger := &mockLogger{}
+
+	tests := []struct {
+		name      string
+		value     string
+		fieldName string
+		mode      Mode
+		wantErr   bool
+	}{
+		{"valid value passes", "test-value", "field", ModeAgent, false},
+		{"empty value fails", "", "field", ModeAgent, true},
+		{"empty value in human mode fails", "", "field", ModeHuman, true},
+		{"non-empty value in human mode passes", "value", "field", ModeHuman, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ps := NewPromptSuppressor(tt.mode, false, false, logger)
+			err := ps.RequireValue(tt.value, tt.fieldName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RequireValue() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestGetPromptExplanation(t *testing.T) {
+	logger := &mockLogger{}
+
+	tests := []struct {
+		name     string
+		mode     Mode
+		force    bool
+		quiet    bool
+		expected string
+	}{
+		{"force explanation", ModeHuman, true, false, "Prompts bypassed via --force flag"},
+		{"quiet explanation", ModeHuman, false, true, "Prompts suppressed via --quiet flag (using safe default: no)"},
+		{"agent mode explanation", ModeAgent, false, false, "Prompts suppressed in agent mode (non-interactive environment)"},
+		{"human mode explanation", ModeHuman, false, false, "Prompts allowed in human mode"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ps := NewPromptSuppressor(tt.mode, tt.force, tt.quiet, logger)
+			result := ps.GetPromptExplanation()
+			if result != tt.expected {
+				t.Errorf("GetPromptExplanation() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestValidateMode(t *testing.T) {
+	logger := &mockLogger{}
+
+	tests := []struct {
+		name    string
+		mode    Mode
+		force   bool
+		quiet   bool
+		wantErr bool
+	}{
+		{"valid agent mode", ModeAgent, false, false, false},
+		{"valid human mode", ModeHuman, false, false, false},
+		{"agent mode with force", ModeAgent, true, false, false},
+		{"agent mode with quiet", ModeAgent, false, true, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ps := NewPromptSuppressor(tt.mode, tt.force, tt.quiet, logger)
+			err := ps.ValidateMode()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateMode() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestIsAgentMode(t *testing.T) {
+	logger := &mockLogger{}
+
+	psAgent := NewPromptSuppressor(ModeAgent, false, false, logger)
+	if !psAgent.IsAgentMode() {
+		t.Error("IsAgentMode() should return true for agent mode")
+	}
+
+	psHuman := NewPromptSuppressor(ModeHuman, false, false, logger)
+	if psHuman.IsAgentMode() {
+		t.Error("IsAgentMode() should return false for human mode")
+	}
+}
+
+func TestIsHumanMode(t *testing.T) {
+	logger := &mockLogger{}
+
+	psHuman := NewPromptSuppressor(ModeHuman, false, false, logger)
+	if !psHuman.IsHumanMode() {
+		t.Error("IsHumanMode() should return true for human mode")
+	}
+
+	psAgent := NewPromptSuppressor(ModeAgent, false, false, logger)
+	if psAgent.IsHumanMode() {
+		t.Error("IsHumanMode() should return false for agent mode")
+	}
+}
+
+func TestSetMode(t *testing.T) {
+	logger := &mockLogger{}
+
+	ps := NewPromptSuppressor(ModeAgent, false, false, logger)
+	ps.SetMode(ModeHuman)
+
+	if ps.mode != ModeHuman {
+		t.Errorf("SetMode() did not update mode, got %v, want %v", ps.mode, ModeHuman)
+	}
+}
+
+func TestSetForce(t *testing.T) {
+	logger := &mockLogger{}
+
+	ps := NewPromptSuppressor(ModeHuman, false, false, logger)
+	ps.SetForce(true)
+
+	if ps.force != true {
+		t.Errorf("SetForce() did not update force, got %v, want true", ps.force)
+	}
+}
+
+func TestSetQuiet(t *testing.T) {
+	logger := &mockLogger{}
+
+	ps := NewPromptSuppressor(ModeHuman, false, false, logger)
+	ps.SetQuiet(true)
+
+	if ps.quiet != true {
+		t.Errorf("SetQuiet() did not update quiet, got %v, want true", ps.quiet)
+	}
+}
+
+{# vim: set ft=go: #}

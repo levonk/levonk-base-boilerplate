@@ -1,0 +1,160 @@
+# vim: set ft=python :
+import os
+import warnings
+from typing import Optional
+from {{ project_slug }}.logging import get_logger
+
+logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
+
+
+class SecurityManager:
+    """Manages secure credential storage and retrieval."""
+
+    def __init__(self):
+        self.keyring_available = self._check_keyring_available()
+        if not self.keyring_available:
+            self._warn_insecure_storage()
+
+    def _check_keyring_available(self) -> bool:
+        """Check if keyring is available."""
+        try:
+            import keyring
+            return True
+        except ImportError:
+            return False
+
+    def _warn_insecure_storage(self):
+        """Warn about insecure storage when keyring is unavailable."""
+        warnings.warn(
+            "Keyring module not available. Credentials will be stored in plain text. "
+            "This is insecure. Install keyring for secure credential storage.",
+            UserWarning
+        )
+        logger.warn("Keyring not available - using insecure storage", module="security")
+
+    def store_credential(self, service: str, username: str, password: str) -> bool:
+        """
+        Store a credential securely.
+
+        Args:
+            service: Service name (e.g., "github", "api")
+            username: Username or identifier
+            password: Password or secret
+
+        Returns:
+            True if stored successfully, False otherwise
+        """
+        if self.keyring_available:
+            try:
+                import keyring
+                keyring.set_password(service, username, password)
+                logger.info(f"Credential stored for {service}/{username}", module="security")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to store credential: {e}", module="security")
+                return False
+        else:
+            # Fallback: store in environment variable (less secure)
+            env_var = f"{service.upper()}_{username.upper()}_PASSWORD"
+            os.environ[env_var] = password
+            logger.warn(f"Credential stored in environment variable {env_var} (insecure)", module="security")
+            return True
+
+    def get_credential(self, service: str, username: str) -> Optional[str]:
+        """
+        Retrieve a credential.
+
+        Args:
+            service: Service name
+            username: Username or identifier
+
+        Returns:
+            Password if found, None otherwise
+        """
+        if self.keyring_available:
+            try:
+                import keyring
+                password = keyring.get_password(service, username)
+                if password:
+                    logger.info(f"Credential retrieved for {service}/{username}", module="security")
+                return password
+            except Exception as e:
+                logger.error(f"Failed to retrieve credential: {e}", module="security")
+                return None
+        else:
+            # Fallback: check environment variable
+            env_var = f"{service.upper()}_{username.upper()}_PASSWORD"
+            password = os.environ.get(env_var)
+            if password:
+                logger.warn(f"Credential retrieved from environment variable {env_var} (insecure)", module="security")
+            return password
+
+    def delete_credential(self, service: str, username: str) -> bool:
+        """
+        Delete a credential.
+
+        Args:
+            service: Service name
+            username: Username or identifier
+
+        Returns:
+            True if deleted successfully, False otherwise
+        """
+        if self.keyring_available:
+            try:
+                import keyring
+                keyring.delete_password(service, username)
+                logger.info(f"Credential deleted for {service}/{username}", module="security")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to delete credential: {e}", module="security")
+                return False
+        else:
+            # Fallback: delete from environment variable
+            env_var = f"{service.upper()}_{username.upper()}_PASSWORD"
+            if env_var in os.environ:
+                del os.environ[env_var]
+                logger.warn(f"Credential deleted from environment variable {env_var} (insecure)", module="security")
+                return True
+            return False
+
+
+def get_security_manager() -> SecurityManager:
+    """Get or create the security manager instance."""
+    return SecurityManager()
+
+
+def mask_sensitive_data(data: str, mask_char: str = "*") -> str:
+    """
+    Mask sensitive data for logging.
+
+    Args:
+        data: Data to mask
+        mask_char: Character to use for masking
+
+    Returns:
+        Masked data
+    """
+    if not data:
+        return data
+    if len(data) <= 4:
+        return mask_char * len(data)
+    return data[:2] + mask_char * (len(data) - 4) + data[-2:]
+
+
+def is_sensitive_key(key: str) -> bool:
+    """
+    Check if a key name suggests sensitive data.
+
+    Args:
+        key: Key name to check
+
+    Returns:
+        True if key suggests sensitive data
+    """
+    sensitive_keywords = [
+        "password", "passwd", "pwd", "secret", "token", "key", "api_key",
+        "apikey", "auth", "credential", "private", "access_key", "secret_key"
+    ]
+    key_lower = key.lower()
+    return any(keyword in key_lower for keyword in sensitive_keywords)

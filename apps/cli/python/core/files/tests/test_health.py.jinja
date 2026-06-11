@@ -1,0 +1,42 @@
+# vim: set ft=python :
+from typer.testing import CliRunner
+from {{ project_slug }}.__main__ import app
+from {{ project_slug }}.health import HealthChecker, perform_health_check
+import pytest
+
+runner = CliRunner()
+
+
+def test_health_checker_creation():
+    """Test health checker can be created."""
+    checker = HealthChecker()
+    assert checker is not None
+    assert checker.healthy is True
+
+
+def test_check_health():
+    """Test health check returns True."""
+    checker = HealthChecker()
+    is_healthy = checker.check_health()
+    assert is_healthy is True
+
+
+def test_get_health_status():
+    """Test health status retrieval."""
+    checker = HealthChecker()
+    status = checker.get_health_status()
+    assert status is not None
+    assert "status" in status
+    assert "last_check" in status
+
+
+def test_perform_health_check():
+    """Test perform_health_check returns 0 for healthy."""
+    exit_code = perform_health_check()
+    assert exit_code == 0
+
+
+def test_health_check_command():
+    """Test health-check command works."""
+    result = runner.invoke(app, ["health-check"])
+    assert result.exit_code == 0

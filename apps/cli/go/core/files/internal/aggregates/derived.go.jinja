@@ -1,0 +1,159 @@
+package aggregates
+
+import (
+	"fmt"
+	"strings"
+)
+
+// DerivedField represents a computed derived status field
+type DerivedField struct {
+	Name  string
+	Value string
+}
+
+// DerivedStatus computes lightweight derived status fields for detail views
+type DerivedStatus struct {
+	fields []DerivedField
+}
+
+// NewDerivedStatus creates a new DerivedStatus instance
+func NewDerivedStatus() *DerivedStatus {
+	return &DerivedStatus{
+		fields: make([]DerivedField, 0),
+	}
+}
+
+// AddField adds a derived field
+func (d *DerivedStatus) AddField(name, value string) {
+	d.fields = append(d.fields, DerivedField{
+		Name:  name,
+		Value: value,
+	})
+}
+
+// GetFields returns all derived fields
+func (d *DerivedStatus) GetFields() []DerivedField {
+	return d.fields
+}
+
+// Format returns a formatted string of all derived fields
+func (d *DerivedStatus) Format() string {
+	if len(d.fields) == 0 {
+		return ""
+	}
+
+	parts := make([]string, len(d.fields))
+	for i, field := range d.fields {
+		parts[i] = fmt.Sprintf("%s: %s", field.Name, field.Value)
+	}
+	return strings.Join(parts, ", ")
+}
+
+// ComputeTestStatus computes a test status summary (e.g., "3/3 passed")
+func ComputeTestStatus(data map[string]interface{}) string {
+	total, ok := data["total"].(float64)
+	if !ok {
+		return ""
+	}
+
+	passed, ok := data["passed"].(float64)
+	if !ok {
+		return ""
+	}
+
+	return fmt.Sprintf("%.0f/%.0f passed", passed, total)
+}
+
+// ComputeCommentCount computes a comment count summary (e.g., "7 comments")
+func ComputeCommentCount(data map[string]interface{}) string {
+	count, ok := data["comment_count"].(float64)
+	if !ok {
+		return ""
+	}
+
+	if count == 1 {
+		return "1 comment"
+	}
+	return fmt.Sprintf("%.0f comments", count)
+}
+
+// ComputeTaskStatus computes a task status summary (e.g., "5/10 completed")
+func ComputeTaskStatus(data map[string]interface{}) string {
+	total, ok := data["total_tasks"].(float64)
+	if !ok {
+		return ""
+	}
+
+	completed, ok := data["completed_tasks"].(float64)
+	if !ok {
+		return ""
+	}
+
+	return fmt.Sprintf("%.0f/%.0f completed", completed, total)
+}
+
+// ComputeBuildStatus computes a build status summary
+func ComputeBuildStatus(data map[string]interface{}) string {
+	status, ok := data["status"].(string)
+	if !ok {
+		return ""
+	}
+
+	switch strings.ToLower(status) {
+	case "success", "passed":
+		return "✓ passed"
+	case "failure", "failed":
+		return "✗ failed"
+	case "running":
+		return "⟳ running"
+	case "pending":
+		return "○ pending"
+	default:
+		return status
+	}
+}
+
+// ComputeHealthStatus computes a health status summary
+func ComputeHealthStatus(data map[string]interface{}) string {
+	healthy, ok := data["healthy"].(bool)
+	if !ok {
+		return ""
+	}
+
+	if healthy {
+		return "healthy"
+	}
+	return "unhealthy"
+}
+
+// ComputeSummary computes a general summary field from common data patterns
+func ComputeSummary(data map[string]interface{}) *DerivedStatus {
+	ds := NewDerivedStatus()
+
+	// Try to compute test status
+	if testStatus := ComputeTestStatus(data); testStatus != "" {
+		ds.AddField("tests", testStatus)
+	}
+
+	// Try to compute comment count
+	if commentCount := ComputeCommentCount(data); commentCount != "" {
+		ds.AddField("comments", commentCount)
+	}
+
+	// Try to compute task status
+	if taskStatus := ComputeTaskStatus(data); taskStatus != "" {
+		ds.AddField("tasks", taskStatus)
+	}
+
+	// Try to compute build status
+	if buildStatus := ComputeBuildStatus(data); buildStatus != "" {
+		ds.AddField("build", buildStatus)
+	}
+
+	// Try to compute health status
+	if healthStatus := ComputeHealthStatus(data); healthStatus != "" {
+		ds.AddField("health", healthStatus)
+	}
+
+	return ds
+}

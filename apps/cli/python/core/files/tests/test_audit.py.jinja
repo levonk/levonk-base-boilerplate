@@ -1,0 +1,99 @@
+# vim: set ft=python :
+import tempfile
+from pathlib import Path
+from {{ project_slug }}.audit import AuditLogger, get_audit_logger
+import pytest
+
+
+def test_audit_logger_creation():
+    """Test audit logger can be created."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "audit.db"
+        logger = AuditLogger(db_path=db_path)
+        assert logger is not None
+        assert db_path.exists()
+
+
+def test_audit_log():
+    """Test logging an audit event."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "audit.db"
+        logger = AuditLogger(db_path=db_path)
+        
+        logger.log(action="test_action", resource="test_resource", user="test_user")
+        
+        count = logger.get_log_count()
+        assert count == 1
+
+
+def test_auto_prune():
+    """Test auto-prune of old audit logs."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "audit.db"
+        # Set retention to 0 days to prune everything
+        logger = AuditLogger(db_path=db_path, retention_days=0)
+        
+        logger.log(action="test_action", resource="test_resource")
+        
+        # Re-initialize to trigger auto-prune
+        logger2 = AuditLogger(db_path=db_path, retention_days=0)
+        
+        count = logger2.get_log_count()
+        assert count == 0
+
+
+def test_export_json():
+    """Test exporting audit logs to JSON."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "audit.db"
+        export_path = Path(tmpdir) / "export.json"
+        
+        logger = AuditLogger(db_path=db_path)
+        logger.log(action="test_action", resource="test_resource")
+        
+        logger.export(export_path, format="json")
+        
+        assert export_path.exists()
+        
+        import json
+        with open(export_path) as f:
+            data = json.load(f)
+        
+        assert len(data) == 1
+        assert data[0]["action"] == "test_action"
+
+
+def test_export_csv():
+    """Test exporting audit logs to CSV."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "audit.db"
+        export_path = Path(tmpdir) / "export.csv"
+        
+        logger = AuditLogger(db_path=db_path)
+        logger.log(action="test_action", resource="test_resource")
+        
+        logger.export(export_path, format="csv")
+        
+        assert export_path.exists()
+
+
+def test_get_log_count():
+    """Test getting log count."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "audit.db"
+        logger = AuditLogger(db_path=db_path)
+        
+        assert logger.get_log_count() == 0
+        
+        logger.log(action="test1")
+        logger.log(action="test2")
+        
+        assert logger.get_log_count() == 2
+
+
+def test_get_audit_logger():
+    """Test get_audit_logger function."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "audit.db"
+        logger = get_audit_logger(db_path=db_path)
+        assert logger is not None

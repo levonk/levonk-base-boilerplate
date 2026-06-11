@@ -1,0 +1,160 @@
+# vim: set ft=python :
+"""Skill generator for creating installable agent skills.
+
+This module generates SKILL.md files from CLI help and examples,
+stripping live state and converting to non-interactive form.
+"""
+
+from typing import Dict, Any, List
+import re
+
+
+def strip_live_state(text: str) -> str:
+    """Strip live state from text (static only).
+    
+    Args:
+        text: Text potentially containing live state
+        
+    Returns:
+        Text with live state removed
+    """
+    # Remove file paths that look like user-specific
+    text = re.sub(r'/Users/[^/\s]+', '/home/user', text)
+    text = re.sub(r'/home/[^/\s]+', '/home/user', text)
+    
+    # Remove timestamps
+    text = re.sub(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', '[timestamp]', text)
+    text = re.sub(r'\d{4}-\d{2}-\d{2}', '[date]', text)
+    
+    # Remove process IDs
+    text = re.sub(r'\b\d{5,}\b', '[pid]', text)
+    
+    return text
+
+
+def rewrite_to_non_interactive(text: str) -> str:
+    """Rewrite command examples to non-interactive form.
+    
+    Args:
+        text: Text with potentially interactive examples
+        
+    Returns:
+        Text with non-interactive examples
+    """
+    # Replace interactive prompts with flags
+    text = re.sub(r'\[y/N\]', '--yes', text)
+    text = re.sub(r'\[Y/n\]', '--yes', text)
+    
+    # Add --force flag where prompts might appear
+    text = re.sub(r'(prompted for input)', 'use --force flag', text)
+    
+    return text
+
+
+def generate_skill_frontmatter(name: str, description: str) -> str:
+    """Generate trigger-shaped frontmatter for skill.
+    
+    Args:
+        name: Skill name
+        description: Skill description
+        
+    Returns:
+        YAML frontmatter string
+    """
+    return f"""---
+name: {name}
+description: {description}
+triggers:
+  - "{name} help"
+  - "{name} --help"
+  - "how do I use {name}"
+examples:
+  - "{name} file.txt"
+  - "{name} --json"
+---
+"""
+
+
+def generate_skill_content(
+    name: str,
+    description: str,
+    help_text: str,
+    examples: List[str]
+) -> str:
+    """Generate complete SKILL.md content.
+    
+    Args:
+        name: Skill name
+        description: Skill description
+        help_text: CLI help text
+        examples: List of command examples
+        
+    Returns:
+        Complete SKILL.md content
+    """
+    # Generate frontmatter
+    frontmatter = generate_skill_frontmatter(name, description)
+    
+    # Process help text
+    processed_help = strip_live_state(help_text)
+    processed_help = rewrite_to_non_interactive(processed_help)
+    
+    # Process examples
+    processed_examples = []
+    for example in examples:
+        processed = strip_live_state(example)
+        processed = rewrite_to_non_interactive(processed)
+        processed_examples.append(processed)
+    
+    # Build content
+    content = frontmatter + "\n"
+    content += "# " + name + "\n\n"
+    content += description + "\n\n"
+    content += "## Usage\n\n"
+    content += "```\n"
+    content += processed_help + "\n"
+    content += "```\n\n"
+    content += "## Examples\n\n"
+    
+    for example in processed_examples:
+        content += "```bash\n"
+        content += example + "\n"
+        content += "```\n\n"
+    
+    return content
+
+
+def generate_skill_from_cli(name: str, description: str) -> str:
+    """Generate skill content by extracting from CLI.
+    
+    Args:
+        name: Skill name
+        description: Skill description
+        
+    Returns:
+        Complete SKILL.md content
+    """
+    # In a real implementation, this would extract help text from typer
+    # For now, we'll generate a template
+    help_text = f"""
+{description}
+
+Options:
+  --help          Show this message and exit
+  --version       Show version and exit
+  --json          Output results as JSON
+  --toon          Output results in TOON format
+  --quiet         Suppress all log output
+  --verbose       Enable verbose logging
+  --debug         Enable detailed debugging output
+"""
+    
+    examples = [
+        f"{name} file.txt",
+        f"{name} **/*.txt",
+        f"cat file.txt | {name} -",
+        f"{name} --json file.txt",
+        f"{name} --toon file.txt",
+    ]
+    
+    return generate_skill_content(name, description, help_text, examples)

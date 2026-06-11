@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Development environment for boilerplate scaffolding",
   "packages": [
-    "copier"
+    "copier@latest"
   ],
   "shell": {
     "init_hook": []

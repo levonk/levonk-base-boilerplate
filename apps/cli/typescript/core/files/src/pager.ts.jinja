@@ -1,0 +1,125 @@
+import process from 'process';
+import { execSync } from 'child_process';
+
+export interface PagerOptions {
+  enabled?: boolean;
+  pager?: string;
+  terminalHeight?: number;
+  isJsonOutput?: boolean;
+  isPipedOutput?: boolean;
+}
+
+export class Pager {
+  private options: PagerOptions;
+  private defaultPager: string = 'less';
+
+  constructor(options: PagerOptions = {}) {
+    this.options = {
+      enabled: true,
+      pager: process.env.PAGER || this.defaultPager,
+      terminalHeight: this.detectTerminalHeight(),
+      isJsonOutput: false,
+      isPipedOutput: this.detectPipedOutput(),
+      ...options,
+    };
+  }
+
+  private detectTerminalHeight(): number {
+    try {
+      const rows = process.stdout.rows;
+      if (rows && rows > 0) {
+        return rows;
+      }
+      
+      // Fallback to stty or tput commands
+      try {
+        const sttyOutput = execSync('stty size', { encoding: 'utf-8' });
+        const height = parseInt(sttyOutput.split(' ')[0], 10);
+        if (height > 0) return height;
+      } catch {
+        // stty failed, try tput
+      }
+
+      try {
+        const tputOutput = execSync('tput lines', { encoding: 'utf-8' });
+        const height = parseInt(tputOutput.trim(), 10);
+        if (height > 0) return height;
+      } catch {
+        // tput failed
+      }
+
+      // Default fallback
+      return 24;
+    } catch {
+      return 24;
+    }
+  }
+
+  private detectPipedOutput(): boolean {
+    return !process.stdout.isTTY;
+  }
+
+  private shouldUsePager(output: string): boolean {
+    // Disabled by option
+    if (!this.options.enabled) {
+      return false;
+    }
+
+    // Don't page JSON output
+    if (this.options.isJsonOutput) {
+      return false;
+    }
+
+    // Don't page piped output
+    if (this.options.isPipedOutput) {
+      return false;
+    }
+
+    // Check if output exceeds terminal height
+    const outputLines = output.split('\n').length;
+    return outputLines > this.options.terminalHeight!;
+  }
+
+  private invokePager(output: string): void {
+    try {
+      const pager = this.options.pager || this.defaultPager;
+      process.stdout.write(output);
+      execSync(pager, { stdio: 'inherit' });
+    } catch (error) {
+      // If pager fails, just output directly
+      process.stdout.write(output);
+    }
+  }
+
+  public page(output: string): void {
+    if (this.shouldUsePager(output)) {
+      this.invokePager(output);
+    } else {
+      process.stdout.write(output);
+    }
+  }
+
+  public setEnabled(enabled: boolean): void {
+    this.options.enabled = enabled;
+  }
+
+  public setJsonOutput(isJson: boolean): void {
+    this.options.isJsonOutput = isJson;
+  }
+
+  public setPagedOutput(isPiped: boolean): void {
+    this.options.isPipedOutput = isPiped;
+  }
+
+  public getTerminalHeight(): number {
+    return this.options.terminalHeight!;
+  }
+
+  public getPager(): string {
+    return this.options.pager || this.defaultPager;
+  }
+}
+
+export function createPager(options: PagerOptions = {}): Pager {
+  return new Pager(options);
+}

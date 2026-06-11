@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 8
 parallel_id: 5
 branch: "feature/current/20260707-cli-typescript-standards/story-08-005-legacy-deprecation-policy"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,38 +27,39 @@ Implement legacy deprecation policy with clear end-of-support dates (minimum 6 m
 
 ## Sub-Tasks
 
-- [ ] Create deprecation module for managing legacy features
-- [ ] Implement deprecation warning system
-- [ ] Add end-of-support date tracking
-- [ ] Implement deprecation warning logging to stderr
-- [ ] Add deprecation configuration
-- [ ] Implement legacy feature detection
-- [ ] Add deprecation status reporting
-- [ ] Implement legacy support removal logic
-- [ ] Add unit tests for deprecation warnings
-- [ ] Add unit tests for end-of-support enforcement
-- [ ] Add integration tests for deprecation workflow
-- [ ] Update help text to document deprecation policy
-- [ ] Add deprecation policy documentation
+- [x] Create deprecation module for managing legacy features
+- [x] Implement deprecation warning system
+- [x] Add end-of-support date tracking
+- [x] Implement deprecation warning logging to stderr
+- [x] Add deprecation configuration
+- [x] Implement legacy feature detection
+- [x] Add deprecation status reporting
+- [x] Implement legacy support removal logic
+- [x] Add unit tests for deprecation warnings
+- [x] Add unit tests for end-of-support enforcement
+- [x] Add integration tests for deprecation workflow
+- [x] Update help text to document deprecation policy
+- [x] Add deprecation policy documentation
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/deprecation.ts.jinja` - New deprecation module (to be created)
+- `apps/cli/typescript/core/files/src/deprecation.ts.jinja` - New deprecation module
 - `apps/cli/typescript/core/files/src/config.ts.jinja` - Config with deprecation settings
 - `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with deprecation checks
-- `apps/cli/typescript/core/files/src/deprecation.test.ts.jinja` - Unit tests for deprecation (to be created)
+- `apps/cli/typescript/core/files/src/deprecation.test.ts.jinja` - Unit tests for deprecation
 - `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for deprecation
+- `apps/cli/typescript/core/files/docs/deprecation-policy.md.jinja` - Deprecation policy documentation
 
 ## Acceptance Criteria
 
-- [ ] Deprecation warnings are logged to stderr
-- [ ] End-of-support dates are clearly specified
-- [ ] Minimum 6-month deprecation period is enforced
-- [ ] Legacy features are detected correctly
-- [ ] Deprecation status is reported
-- [ ] Legacy support is removed after specified date
-- [ ] Deprecation timeline is documented
-- [ ] Deprecation warnings are user-friendly
+- [x] Deprecation warnings are logged to stderr
+- [x] End-of-support dates are clearly specified
+- [x] Minimum 6-month deprecation period is enforced
+- [x] Legacy features are detected correctly
+- [x] Deprecation status is reported
+- [x] Legacy support is removed after specified date
+- [x] Deprecation timeline is documented
+- [x] Deprecation warnings are user-friendly
 
 ## Test Plan
 

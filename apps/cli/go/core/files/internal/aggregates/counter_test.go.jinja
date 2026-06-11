@@ -1,0 +1,169 @@
+package aggregates
+
+import (
+	"testing"
+)
+
+func TestNewCounter(t *testing.T) {
+	c := NewCounter()
+	if c == nil {
+		t.Fatal("NewCounter returned nil")
+	}
+	if c.ComputedCount != 0 {
+		t.Errorf("Expected ComputedCount to be 0, got %d", c.ComputedCount)
+	}
+	if c.CurrentCount != 0 {
+		t.Errorf("Expected CurrentCount to be 0, got %d", c.CurrentCount)
+	}
+	if c.HasTotal {
+		t.Error("Expected HasTotal to be false")
+	}
+}
+
+func TestCountFromSlice(t *testing.T) {
+	c := NewCounter()
+
+	// Test with slice of maps
+	data := []map[string]interface{}{
+		{ "id": 1, "name": "item1"},
+		{ "id": 2, "name": "item2"},
+		{ "id": 3, "name": "item3"},
+	}
+
+	err := c.CountFromSlice(data)
+	if err != nil {
+		t.Fatalf("CountFromSlice failed: %v", err)
+	}
+
+	if c.CurrentCount != 3 {
+		t.Errorf("Expected CurrentCount to be 3, got %d", c.CurrentCount)
+	}
+
+	if !c.HasTotal {
+		t.Error("Expected HasTotal to be true after counting")
+	}
+
+	if c.ComputedCount != 3 {
+		t.Errorf("Expected ComputedCount to be 3, got %d", c.ComputedCount)
+	}
+}
+
+func TestCountFromSliceWithTotal(t *testing.T) {
+	c := NewCounter()
+	c.SetTotal(100) // Simulate backend providing total
+
+	data := []map[string]interface{}{
+		{ "id": 1, "name": "item1"},
+		{ "id": 2, "name": "item2"},
+	}
+
+	err := c.CountFromSlice(data)
+	if err != nil {
+		t.Fatalf("CountFromSlice failed: %v", err)
+	}
+
+	if c.CurrentCount != 2 {
+		t.Errorf("Expected CurrentCount to be 2, got %d", c.CurrentCount)
+	}
+
+	if c.ComputedCount != 100 {
+		t.Errorf("Expected ComputedCount to remain 100, got %d", c.ComputedCount)
+	}
+}
+
+func TestCountFromSliceInterface(t *testing.T) {
+	c := NewCounter()
+
+	data := []interface{}{"item1", "item2", "item3", "item4"}
+
+	err := c.CountFromSlice(data)
+	if err != nil {
+		t.Fatalf("CountFromSlice failed: %v", err)
+	}
+
+	if c.CurrentCount != 4 {
+		t.Errorf("Expected CurrentCount to be 4, got %d", c.CurrentCount)
+	}
+}
+
+func TestCountFromSliceUnsupportedType(t *testing.T) {
+	c := NewCounter()
+
+	err := c.CountFromSlice("not a slice")
+	if err == nil {
+		t.Error("Expected error for unsupported type, got nil")
+	}
+}
+
+func TestSetTotal(t *testing.T) {
+	c := NewCounter()
+	c.SetTotal(50)
+
+	if c.ComputedCount != 50 {
+		t.Errorf("Expected ComputedCount to be 50, got %d", c.ComputedCount)
+	}
+
+	if !c.HasTotal {
+		t.Error("Expected HasTotal to be true after SetTotal")
+	}
+}
+
+func TestFormatCount(t *testing.T) {
+	c := NewCounter()
+	c.CurrentCount = 30
+	c.ComputedCount = 847
+	c.HasTotal = true
+
+	expected := "count: 30 of 847 total"
+	actual := c.FormatCount()
+
+	if actual != expected {
+		t.Errorf("Expected format '%s', got '%s'", expected, actual)
+	}
+}
+
+func TestFormatCountNoTotal(t *testing.T) {
+	c := NewCounter()
+	c.CurrentCount = 30
+	c.HasTotal = false
+
+	expected := "count: 30"
+	actual := c.FormatCount()
+
+	if actual != expected {
+		t.Errorf("Expected format '%s', got '%s'", expected, actual)
+	}
+}
+
+func TestGetTotal(t *testing.T) {
+	c := NewCounter()
+	c.SetTotal(100)
+
+	if c.GetTotal() != 100 {
+		t.Errorf("Expected GetTotal to return 100, got %d", c.GetTotal())
+	}
+}
+
+func TestGetCurrent(t *testing.T) {
+	c := NewCounter()
+	data := []map[string]interface{}{ { "id": 1}, { "id": 2}}
+	c.CountFromSlice(data)
+
+	if c.GetCurrent() != 2 {
+		t.Errorf("Expected GetCurrent to return 2, got %d", c.GetCurrent())
+	}
+}
+
+func TestHasTotalCount(t *testing.T) {
+	c := NewCounter()
+
+	if c.HasTotalCount() {
+		t.Error("Expected HasTotalCount to be false initially")
+	}
+
+	c.SetTotal(100)
+
+	if !c.HasTotalCount() {
+		t.Error("Expected HasTotalCount to be true after SetTotal")
+	}
+}

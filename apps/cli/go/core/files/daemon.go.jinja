@@ -1,0 +1,421 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os/exec"
+	"runtime"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/kardianos/service"
+	"github.com/spf13/viper"
+
+	"{{ project_slug }}/internal/idempotency"
+)
+
+// DaemonManager manages daemon process lifecycle and job queue
+type DaemonManager struct {
+	service service.Service
+	logger  *Logger
+	config  *DaemonConfig
+	jobQueue *JobQueue
+	mu      sync.RWMutex
+	running bool
+}
+
+// DaemonConfig holds daemon configuration
+type DaemonConfig struct {
+	Enabled       bool   `mapstructure:"enabled"`
+	NoisyBehavior bool   `mapstructure:"noisy_behavior"`
+	JobDir        string `mapstructure:"job_dir"`
+	MaxJobs       int    `mapstructure:"max_jobs"`
+}
+
+// Job represents a background job
+type Job struct {
+	ID        string                 `json:"id"`
+	Command   string                 `json:"command"`
+	Args      []string               `json:"args"`
+	Status    string                 `json:"status"` // pending, running, completed, failed, cancelled
+	CreatedAt time.Time              `json:"created_at"`
+	StartedAt *time.Time             `json:"started_at,omitempty"`
+	CompletedAt *time.Time           `json:"completed_at,omitempty"`
+	Error     string                 `json:"error,omitempty"`
+	Result    map[string]interface{} `json:"result,omitempty"`
+	Metadata  map[string]interface{} `json:"metadata,omitempty"`
+}
+
+// JobQueue manages background jobs
+type JobQueue struct {
+	jobs map[string]*Job
+	mu   sync.RWMutex
+}
+
+// NewDaemonManager creates a new daemon manager
+func NewDaemonManager(logger *Logger) *DaemonManager {
+	maxJobs := viper.GetInt("daemon.max_jobs")
+	if maxJobs <= 0 {
+		maxJobs = 10 // Default value
+	}
+
+	return &DaemonManager{
+		logger:  logger,
+		jobQueue: NewJobQueue(),
+		config: &DaemonConfig{
+			Enabled:       viper.GetBool("daemon.enabled"),
+			NoisyBehavior: viper.GetBool("daemon.noisy_behavior"),
+			JobDir:        viper.GetString("daemon.job_dir"),
+			MaxJobs:       maxJobs,
+		},
+	}
+}
+
+// NewJobQueue creates a new job queue
+func NewJobQueue() *JobQueue {
+	return &JobQueue{
+		jobs: make(map[string]*Job),
+	}
+}
+
+// IsPlatformSupported checks if daemon mode is supported on current platform
+func (dm *DaemonManager) IsPlatformSupported() bool {
+	switch runtime.GOOS {
+	case "linux", "darwin", "windows":
+		return true
+	default:
+		return false
+	}
+}
+
+// StartDaemon starts the daemon process (idempotent)
+func (dm *DaemonManager) StartDaemon() error {
+	if !dm.IsPlatformSupported() {
+		return fmt.Errorf("daemon mode is not supported on %s", runtime.GOOS)
+	}
+
+	handler := idempotency.NewHandler(dm.logger)
+	ctx := context.Background()
+
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) {
+			return idempotency.State{Exists: dm.running, Value: "daemon"}, nil
+		},
+		func(state idempotency.State) bool { return state.Exists },
+		func() error {
+			// Configure service
+			svcConfig := &service.Config{
+				Name:        "{{ project_name }}",
+				DisplayName: "{{ project_name }} Daemon",
+				Description: "{{ description }}",
+			}
+
+			var err error
+			dm.service, err = service.New(dm, svcConfig)
+			if err != nil {
+				return fmt.Errorf("failed to create service: %w", err)
+			}
+
+			// Start service
+			err = dm.service.Run()
+			if err != nil {
+				return fmt.Errorf("failed to start service: %w", err)
+			}
+
+			dm.running = true
+			return nil
+		},
+		func(state idempotency.State) string {
+			return "Daemon is already running"
+		},
+		func() string {
+			return "Daemon started successfully"
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// StopDaemon stops the daemon process (idempotent)
+func (dm *DaemonManager) StopDaemon() error {
+	handler := idempotency.NewHandler(dm.logger)
+	ctx := context.Background()
+
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) {
+			return idempotency.State{Exists: !dm.running, Value: "daemon"}, nil
+		},
+		func(state idempotency.State) bool { return state.Exists },
+		func() error {
+			if dm.service != nil {
+				err := dm.service.Stop()
+				if err != nil {
+					return fmt.Errorf("failed to stop service: %w", err)
+				}
+			}
+
+			dm.running = false
+			return nil
+		},
+		func(state idempotency.State) string {
+			return "Daemon is not running, nothing to stop"
+		},
+		func() string {
+			return "Daemon stopped successfully"
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// AutoSpawnDaemon automatically spawns daemon on first async operation
+func (dm *DaemonManager) AutoSpawnDaemon() error {
+	if !dm.config.Enabled {
+		if dm.config.NoisyBehavior {
+			dm.logger.Debug("Daemon auto-spawn disabled by config")
+		}
+		return nil
+	}
+
+	if dm.running {
+		return nil
+	}
+
+	dm.logger.Info("Auto-spawning daemon for async operation")
+	return dm.StartDaemon()
+}
+
+// CreateJob creates a new background job
+func (dm *DaemonManager) CreateJob(command string, args []string) (*Job, error) {
+	if !dm.running {
+		if err := dm.AutoSpawnDaemon(); err != nil {
+			return nil, fmt.Errorf("failed to auto-spawn daemon: %w", err)
+		}
+	}
+
+	job := &Job{
+		ID:        uuid.New().String(),
+		Command:   command,
+		Args:      args,
+		Status:    "pending",
+		CreatedAt: time.Now(),
+		Metadata:  make(map[string]interface{}),
+	}
+
+	dm.jobQueue.mu.Lock()
+	defer dm.jobQueue.mu.Unlock()
+
+	if len(dm.jobQueue.jobs) >= dm.config.MaxJobs {
+		return nil, fmt.Errorf("maximum job limit (%d) reached", dm.config.MaxJobs)
+	}
+
+	dm.jobQueue.jobs[job.ID] = job
+	dm.logger.Info("Created job %s: %s %v", job.ID, command, args)
+
+	return job, nil
+}
+
+// ExecuteJob executes a job in the background
+func (dm *DaemonManager) ExecuteJob(ctx context.Context, jobID string) error {
+	dm.jobQueue.mu.Lock()
+	job, exists := dm.jobQueue.jobs[jobID]
+	if !exists {
+		dm.jobQueue.mu.Unlock()
+		return fmt.Errorf("job %s not found", jobID)
+	}
+
+	job.Status = "running"
+	now := time.Now()
+	job.StartedAt = &now
+	dm.jobQueue.mu.Unlock()
+
+	dm.logger.Info("Executing job %s", jobID)
+
+	// Execute command
+	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
+	output, err := cmd.CombinedOutput()
+
+	dm.jobQueue.mu.Lock()
+	defer dm.jobQueue.mu.Unlock()
+
+	completedAt := time.Now()
+	job.CompletedAt = &completedAt
+
+	if err != nil {
+		job.Status = "failed"
+		job.Error = err.Error()
+		dm.logger.Error("Job %s failed: %v", jobID, err)
+		return err
+	}
+
+	job.Status = "completed"
+	job.Result = map[string]interface{}{
+		"output": string(output),
+	}
+	dm.logger.Info("Job %s completed successfully", jobID)
+
+	return nil
+}
+
+// CancelJob cancels a running job (idempotent)
+func (dm *DaemonManager) CancelJob(jobID string) error {
+	handler := idempotency.NewHandler(dm.logger)
+	ctx := context.Background()
+
+	dm.jobQueue.mu.Lock()
+	defer dm.jobQueue.mu.Unlock()
+
+	job, exists := dm.jobQueue.jobs[jobID]
+	if !exists {
+		// Job not found - this is a no-op, return success
+		dm.logger.Info("Job %s not found or already completed", jobID)
+		return nil
+	}
+
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) {
+			isCancellable := job.Status == "running" || job.Status == "pending"
+			return idempotency.State{Exists: !isCancellable, Value: job.Status}, nil
+		},
+		func(state idempotency.State) bool { return state.Exists },
+		func() error {
+			job.Status = "cancelled"
+			completedAt := time.Now()
+			job.CompletedAt = &completedAt
+			return nil
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Job %s cannot be cancelled (status: %s)", jobID, state.Value)
+		},
+		func() string {
+			return fmt.Sprintf("Job %s cancelled successfully", jobID)
+		},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ListJobs returns all jobs
+func (dm *DaemonManager) ListJobs() []*Job {
+	dm.jobQueue.mu.RLock()
+	defer dm.jobQueue.mu.RUnlock()
+
+	jobs := make([]*Job, 0, len(dm.jobQueue.jobs))
+	for _, job := range dm.jobQueue.jobs {
+		jobs = append(jobs, job)
+	}
+	return jobs
+}
+
+// GetJob returns a specific job
+func (dm *DaemonManager) GetJob(jobID string) (*Job, error) {
+	dm.jobQueue.mu.RLock()
+	defer dm.jobQueue.mu.RUnlock()
+
+	job, exists := dm.jobQueue.jobs[jobID]
+	if !exists {
+		return nil, fmt.Errorf("job %s not found", jobID)
+	}
+	return job, nil
+}
+
+// CleanupCompletedJobs removes completed jobs older than specified duration
+func (dm *DaemonManager) CleanupCompletedJobs(maxAge time.Duration) {
+	dm.jobQueue.mu.Lock()
+	defer dm.jobQueue.mu.Unlock()
+
+	cutoff := time.Now().Add(-maxAge)
+	for id, job := range dm.jobQueue.jobs {
+		if (job.Status == "completed" || job.Status == "failed" || job.Status == "cancelled") &&
+			job.CompletedAt != nil && job.CompletedAt.Before(cutoff) {
+			delete(dm.jobQueue.jobs, id)
+			dm.logger.Debug("Cleaned up job %s", id)
+		}
+	}
+}
+
+// service.Service interface implementation
+func (dm *DaemonManager) Start(s service.Service) error {
+	dm.logger.Info("Starting daemon service...")
+	dm.running = true
+
+	// Start job cleanup routine
+	go dm.cleanupRoutine()
+
+	return nil
+}
+
+func (dm *DaemonManager) Stop(s service.Service) error {
+	dm.logger.Info("Stopping daemon service...")
+	dm.running = false
+	return nil
+}
+
+func (dm *DaemonManager) cleanupRoutine() {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if !dm.running {
+			return
+		}
+		// Clean up jobs older than 24 hours
+		dm.CleanupCompletedJobs(24 * time.Hour)
+	}
+}
+
+// RunListJobsCommand executes the --list-jobs command
+func RunListJobsCommand() error {
+	logger := NewLogger("daemon")
+	dm := NewDaemonManager(logger)
+
+	jobs := dm.ListJobs()
+
+	if len(jobs) == 0 {
+		logger.Info("No background jobs found")
+		return nil
+	}
+
+	logger.Info("Background jobs (%d):", len(jobs))
+	for _, job := range jobs {
+		status := job.Status
+		if job.StartedAt != nil {
+			status += fmt.Sprintf(" (started: %s)", job.StartedAt.Format(time.RFC3339))
+		}
+		if job.CompletedAt != nil {
+			status += fmt.Sprintf(" (completed: %s)", job.CompletedAt.Format(time.RFC3339))
+		}
+		logger.Info("  %s: %s %v - %s", job.ID, job.Command, job.Args, status)
+	}
+
+	return nil
+}
+
+// RunCancelJobCommand executes the --cancel-job command
+func RunCancelJobCommand(jobID string) error {
+	logger := NewLogger("daemon")
+	dm := NewDaemonManager(logger)
+
+	if err := dm.CancelJob(jobID); err != nil {
+		return WrapError(err, ErrorTypeExecution, fmt.Sprintf("Failed to cancel job %s", jobID), "Check job ID and status")
+	}
+
+	logger.Info("Job %s cancelled successfully", jobID)
+	return nil
+}

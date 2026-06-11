@@ -1,0 +1,457 @@
+# vim: set ft=python :
+"""
+Tests for configuration management module.
+"""
+import pytest
+import tempfile
+from pathlib import Path
+{% if include_advanced_config %}
+from {{ project_slug }}.config import ConfigManager, ConfigModel, ConfigSource
+{% endif %}
+
+
+{% if include_advanced_config %}
+class TestConfigModel:
+    """Test ConfigModel validation."""
+
+    def test_default_config(self):
+        """Test default configuration values."""
+        config = ConfigModel()
+        assert config.version == 1
+        assert config.mode == "agent"
+        assert config.default_format == "toon"
+        assert config.truncation_limit == 1000
+        assert config.fields_default == []
+        assert config.log_level == "info"
+        assert config.color == "auto"
+        assert config.output_format == "text"
+        assert config.quiet is False
+        assert config.max_concurrent == 4
+        assert config.timeout == 30
+        assert config.experimental is False
+
+    def test_invalid_log_level(self):
+        """Test validation rejects invalid log level."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(log_level="invalid")
+        assert "Invalid log_level" in str(exc_info.value)
+
+    def test_invalid_color(self):
+        """Test validation rejects invalid color mode."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(color="invalid")
+        assert "Invalid color mode" in str(exc_info.value)
+
+    def test_invalid_output_format(self):
+        """Test validation rejects invalid output format."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(output_format="invalid")
+        assert "Invalid output_format" in str(exc_info.value)
+
+    def test_invalid_max_concurrent(self):
+        """Test validation rejects zero max_concurrent."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(max_concurrent=0)
+        assert "max_concurrent must be greater than 0" in str(exc_info.value)
+
+    def test_invalid_timeout(self):
+        """Test validation rejects zero timeout."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(timeout=0)
+        assert "timeout must be greater than 0" in str(exc_info.value)
+
+    def test_invalid_mode(self):
+        """Test validation rejects invalid mode."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(mode="invalid")
+        assert "Invalid mode" in str(exc_info.value)
+
+    def test_invalid_default_format(self):
+        """Test validation rejects invalid default_format."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(default_format="invalid")
+        assert "Invalid default_format" in str(exc_info.value)
+
+    def test_invalid_truncation_limit(self):
+        """Test validation rejects zero truncation_limit."""
+        with pytest.raises(ValueError) as exc_info:
+            ConfigModel(truncation_limit=0)
+        assert "truncation_limit must be greater than 0" in str(exc_info.value)
+
+
+class TestConfigManager:
+    """Test ConfigManager functionality."""
+
+    def test_config_manager_creation(self):
+        """Test ConfigManager can be created."""
+        manager = ConfigManager()
+        assert manager.config is not None
+        assert isinstance(manager.config, ConfigModel)
+
+    def test_load_defaults(self):
+        """Test loading default configuration."""
+        manager = ConfigManager()
+        manager._load_defaults()
+        assert manager.config.log_level == "info"
+        assert manager.config.color == "auto"
+
+    def test_load_environment(self):
+        """Test loading configuration from environment variables."""
+        import os
+
+        # Set environment variables
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"] = "debug"
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_COLOR"] = "never"
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_QUIET"] = "true"
+
+        try:
+            manager = ConfigManager()
+            manager._load_environment()
+            assert manager.config.log_level == "debug"
+            assert manager.config.color == "never"
+            assert manager.config.quiet is True
+        finally:
+            # Clean up
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"]
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_COLOR"]
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_QUIET"]
+
+    def test_load_agent_mode_environment(self):
+        """Test loading agent mode settings from environment variables."""
+        import os
+
+        # Set agent mode environment variables
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_MODE"] = "human"
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_DEFAULT_FORMAT"] = "json"
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_TRUNCATION_LIMIT"] = "500"
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_FIELDS_DEFAULT"] = "id,name,status"
+
+        try:
+            manager = ConfigManager()
+            manager._load_environment()
+            assert manager.config.mode == "human"
+            assert manager.config.default_format == "json"
+            assert manager.config.truncation_limit == 500
+            assert manager.config.fields_default == ["id", "name", "status"]
+        finally:
+            # Clean up
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_MODE"]
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_DEFAULT_FORMAT"]
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_TRUNCATION_LIMIT"]
+            del os.environ["{{ project_slug | upper | replace('-', '_') }}_FIELDS_DEFAULT"]
+
+    def test_parse_toml_config(self):
+        """Test parsing TOML configuration."""
+        toml_content = """
+version = 1
+log_level = "debug"
+color = "never"
+output_format = "json"
+quiet = true
+max_concurrent = 8
+timeout = 60
+experimental = true
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
+            f.write(toml_content)
+            temp_path = Path(f.name)
+
+        try:
+            manager = ConfigManager()
+            config = manager._parse_config(toml_content, temp_path)
+            assert config.log_level == "debug"
+            assert config.color == "never"
+            assert config.output_format == "json"
+            assert config.quiet is True
+            assert config.max_concurrent == 8
+            assert config.timeout == 60
+            assert config.experimental is True
+        finally:
+            temp_path.unlink()
+
+    def test_parse_toml_config_with_agent_mode(self):
+        """Test parsing TOML configuration with agent mode settings."""
+        toml_content = """
+version = 1
+mode = "human"
+default_format = "json"
+truncation_limit = 500
+fields_default = ["id", "name", "status"]
+log_level = "debug"
+color = "never"
+"""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
+            f.write(toml_content)
+            temp_path = Path(f.name)
+
+        try:
+            manager = ConfigManager()
+            config = manager._parse_config(toml_content, temp_path)
+            assert config.mode == "human"
+            assert config.default_format == "json"
+            assert config.truncation_limit == 500
+            assert config.fields_default == ["id", "name", "status"]
+            assert config.log_level == "debug"
+            assert config.color == "never"
+        finally:
+            temp_path.unlink()
+
+    def test_parse_invalid_toml(self):
+        """Test parsing invalid TOML raises error."""
+        invalid_toml = "invalid [ toml content"
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as f:
+            f.write(invalid_toml)
+            temp_path = Path(f.name)
+
+        try:
+            manager = ConfigManager()
+            with pytest.raises(ValueError):
+                manager._parse_config(invalid_toml, temp_path)
+        finally:
+            temp_path.unlink()
+
+    def test_merge_config(self):
+        """Test configuration merging with precedence."""
+        manager = ConfigManager()
+        new_config = ConfigModel(log_level="debug", color="never")
+        manager._merge_config(new_config, ConfigSource.USER)
+        assert manager.config.log_level == "debug"
+        assert manager.config.color == "never"
+        # Default values should remain
+        assert manager.config.output_format == "text"
+
+    def test_validate_config(self):
+        """Test configuration validation."""
+        manager = ConfigManager()
+        errors = manager.validate()
+        assert len(errors) == 0
+
+    def test_validate_invalid_config(self):
+        """Test validation of invalid configuration."""
+        manager = ConfigManager()
+        manager.config.log_level = "invalid"
+        errors = manager.validate()
+        assert len(errors) > 0
+        assert "log_level" in errors[0]
+
+    def test_write_config_to_file(self):
+        """Test writing configuration to file."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+            config = ConfigModel()
+
+            manager = ConfigManager()
+            manager._write_config_to_file(config, config_path)
+
+            assert config_path.exists()
+            content = config_path.read_text()
+            assert "{{ project_name }}" in content
+            assert "version = 1" in content
+            assert "log_level" in content
+
+    def test_initialize_config(self):
+        """Test config file initialization."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Mock user_config_dir to use temp directory
+            import platformdirs
+            original_user_config_dir = platformdirs.user_config_dir
+            platformdirs.user_config_dir = lambda appname: temp_dir
+
+            try:
+                manager = ConfigManager()
+                config_path = manager.initialize_config()
+
+                assert config_path.exists()
+                assert config_path.name == "config.toml"
+                content = config_path.read_text()
+                assert "version = 1" in content
+            finally:
+                platformdirs.user_config_dir = original_user_config_dir
+
+    def test_migrate_config(self):
+        """Test configuration migration with backup."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+
+            # Write old version config
+            old_content = """
+version = 0
+log_level = "debug"
+"""
+            config_path.write_text(old_content)
+
+            old_config = ConfigModel(version=0, log_level="debug")
+            manager = ConfigManager()
+            manager._migrate_config(config_path, old_config)
+
+            # Check backup was created
+            backup_path = config_path.with_suffix(".toml.bak")
+            assert backup_path.exists()
+
+            # Check new config has updated version
+            new_content = config_path.read_text()
+            assert "version = 1" in new_content
+
+            # Clean up
+            backup_path.unlink()
+
+    def test_migrate_config_agent_mode(self):
+        """Test configuration migration adds agent mode settings."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+
+            # Write old version config without agent mode settings
+            old_content = """
+version = 0
+log_level = "debug"
+color = "never"
+"""
+            config_path.write_text(old_content)
+
+            old_config = ConfigModel(version=0, log_level="debug", color="never")
+            manager = ConfigManager()
+            manager._migrate_config(config_path, old_config)
+
+            # Check backup was created
+            backup_path = config_path.with_suffix(".toml.bak")
+            assert backup_path.exists()
+
+            # Check new config has agent mode settings with defaults
+            new_content = config_path.read_text()
+            assert "version = 1" in new_content
+            assert "mode = \"agent\"" in new_content
+            assert "default_format = \"toon\"" in new_content
+            assert "truncation_limit = 1000" in new_content
+
+            # Clean up
+            backup_path.unlink()
+
+    def test_load_from_file(self):
+        """Test loading configuration from file."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "config.toml"
+            config_content = """
+version = 1
+log_level = "debug"
+color = "never"
+"""
+            config_path.write_text(config_content)
+
+            manager = ConfigManager()
+            manager._load_from_file(config_path, ConfigSource.USER)
+
+            assert manager.config.log_level == "debug"
+            assert manager.config.color == "never"
+            assert len(manager.sources) == 1
+            assert manager.sources[0] == (ConfigSource.USER, config_path)
+{% endif %}
+
+
+class TestConfigIntegration:
+    """Integration tests for configuration."""
+
+    {% if include_advanced_config %}
+    def test_full_config_load(self):
+        """Test full configuration loading from all sources."""
+        import os
+
+        # Set environment variable
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"] = "debug"
+
+        try:
+            manager = ConfigManager()
+            manager.load()
+
+            # Should have loaded defaults and environment
+            assert manager.config.log_level == "debug"
+            assert manager.config.version == 1
+        finally:
+            if "{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL" in os.environ:
+                del os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"]
+    {% endif %}
+
+    def test_config_precedence(self):
+        """Test configuration precedence order."""
+        {% if include_advanced_config %}
+        import os
+
+        # Set environment variable
+        os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"] = "warn"
+
+        try:
+            manager = ConfigManager()
+            manager._load_defaults()  # log_level = "info"
+            manager._load_environment()  # log_level = "warn"
+
+            # Environment should override defaults
+            assert manager.config.log_level == "warn"
+        finally:
+            if "{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL" in os.environ:
+                del os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"]
+        {% else %}
+        # Skip test if advanced config not enabled
+        pytest.skip("Advanced config not enabled")
+        {% endif %}
+
+    def test_full_config_precedence_chain(self):
+        """Test full precedence: CLI args > env vars > local > user > defaults."""
+        {% if include_advanced_config %}
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create user config
+            user_config_path = Path(temp_dir) / "user_config.toml"
+            user_config_path.write_text("""
+version = 1
+log_level = "debug"
+color = "never"
+""")
+
+            # Create local config
+            local_config_path = Path(temp_dir) / "local_config.toml"
+            local_config_path.write_text("""
+version = 1
+log_level = "info"
+color = "always"
+""")
+
+            # Set environment variable
+            os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"] = "warn"
+
+            try:
+                # Initialize logger before creating ConfigManager
+                from {{ project_slug }}.logging import configure_logging, get_logger
+                configure_logging(name="{{ project_slug }}", quiet=True)
+
+                manager = ConfigManager()
+                manager._load_defaults()  # log_level = "info", color = "auto"
+
+                # Load user config (should override defaults)
+                manager._load_from_file(user_config_path, ConfigSource.USER)
+                assert manager.config.log_level == "debug"
+                assert manager.config.color == "never"
+
+                # Load local config (should override user)
+                manager._load_from_file(local_config_path, ConfigSource.LOCAL)
+                assert manager.config.log_level == "info"
+                assert manager.config.color == "always"
+
+                # Load environment (should override local)
+                manager._load_environment()
+                assert manager.config.log_level == "warn"
+                assert manager.config.color == "always"  # Not set in env, stays from local
+
+                # Simulate CLI arg (should override env)
+                # CLI sets both log_level and color to override all previous sources
+                manager._merge_config(ConfigModel(log_level="error", color="always"), ConfigSource.COMMAND_LINE)
+                assert manager.config.log_level == "error"
+                assert manager.config.color == "always"
+
+            finally:
+                if "{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL" in os.environ:
+                    del os.environ["{{ project_slug | upper | replace('-', '_') }}_LOG_LEVEL"]
+        {% else %}
+        # Skip test if advanced config not enabled
+        pytest.skip("Advanced config not enabled")
+        {% endif %}

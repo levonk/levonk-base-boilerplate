@@ -1,0 +1,305 @@
+package session
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+)
+
+// SessionMetadata represents metadata captured during a session
+type SessionMetadata struct {
+	SessionID    string            `json:"session_id"`
+	StartTime    time.Time         `json:"start_time"`
+	EndTime      time.Time         `json:"end_time,omitempty"`
+	WorkingDir   string            `json:"working_dir"`
+	ProjectType  string            `json:"project_type"`
+	Commands     []CommandRecord   `json:"commands"`
+	FilesTouched []string          `json:"files_touched"`
+	SpecsReferenced []string       `json:"specs_referenced"`
+	ExitCode     int               `json:"exit_code,omitempty"`
+	Duration     string            `json:"duration,omitempty"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
+}
+
+// CommandRecord represents a command executed during the session
+type CommandRecord struct {
+	Command   string    `json:"command"`
+	Timestamp time.Time `json:"timestamp"`
+	ExitCode  int       `json:"exit_code,omitempty"`
+	Duration  string    `json:"duration,omitempty"`
+}
+
+// MetadataStore handles session metadata storage
+type MetadataStore struct {
+	cacheDir string
+}
+
+// NewMetadataStore creates a new metadata store
+func NewMetadataStore() (*MetadataStore, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	cacheDir := filepath.Join(homeDir, ".cache", "{{ project_slug }}", "sessions")
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create cache directory: %w", err)
+	}
+
+	return &MetadataStore{cacheDir: cacheDir}, nil
+}
+
+// StartSession starts a new session and returns its ID
+func (ms *MetadataStore) StartSession(workingDir, projectType string) (string, error) {
+	sessionID := generateSessionID()
+
+	metadata := &SessionMetadata{
+		SessionID:    sessionID,
+		StartTime:    time.Now(),
+		WorkingDir:   workingDir,
+		ProjectType:  projectType,
+		Commands:     []CommandRecord{},
+		FilesTouched: []string{},
+		SpecsReferenced: []string{},
+		Metadata:     make(map[string]string),
+	}
+
+	if err := ms.SaveMetadata(metadata); err != nil {
+		return "", fmt.Errorf("failed to save session metadata: %w", err)
+	}
+
+	return sessionID, nil
+}
+
+// EndSession marks a session as ended
+func (ms *MetadataStore) EndSession(sessionID string, exitCode int) error {
+	metadata, err := ms.LoadMetadata(sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to load session metadata: %w", err)
+	}
+
+	metadata.EndTime = time.Now()
+	metadata.ExitCode = exitCode
+	metadata.Duration = metadata.EndTime.Sub(metadata.StartTime).String()
+
+	return ms.SaveMetadata(metadata)
+}
+
+// RecordCommand records a command execution in the session
+func (ms *MetadataStore) RecordCommand(sessionID, command string, exitCode int, duration time.Duration) error {
+	metadata, err := ms.LoadMetadata(sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to load session metadata: %w", err)
+	}
+
+	record := CommandRecord{
+		Command:   command,
+		Timestamp: time.Now(),
+		ExitCode:  exitCode,
+		Duration:  duration.String(),
+	}
+
+	metadata.Commands = append(metadata.Commands, record)
+
+	return ms.SaveMetadata(metadata)
+}
+
+// RecordFileTouch records a file that was touched during the session
+func (ms *MetadataStore) RecordFileTouch(sessionID, filePath string) error {
+	metadata, err := ms.LoadMetadata(sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to load session metadata: %w", err)
+	}
+
+	// Avoid duplicates
+	for _, existing := range metadata.FilesTouched {
+		if existing == filePath {
+			return nil
+		}
+	}
+
+	metadata.FilesTouched = append(metadata.FilesTouched, filePath)
+
+	return ms.SaveMetadata(metadata)
+}
+
+// RecordSpecReference records a spec that was referenced during the session
+func (ms *MetadataStore) RecordSpecReference(sessionID, specPath string) error {
+	metadata, err := ms.LoadMetadata(sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to load session metadata: %w", err)
+	}
+
+	// Avoid duplicates
+	for _, existing := range metadata.SpecsReferenced {
+		if existing == specPath {
+			return nil
+		}
+	}
+
+	metadata.SpecsReferenced = append(metadata.SpecsReferenced, specPath)
+
+	return ms.SaveMetadata(metadata)
+}
+
+// AddMetadata adds custom metadata to the session
+func (ms *MetadataStore) AddMetadata(sessionID, key, value string) error {
+	metadata, err := ms.LoadMetadata(sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to load session metadata: %w", err)
+	}
+
+	if metadata.Metadata == nil {
+		metadata.Metadata = make(map[string]string)
+	}
+
+	metadata.Metadata[key] = value
+
+	return ms.SaveMetadata(metadata)
+}
+
+// LoadMetadata loads session metadata from storage
+func (ms *MetadataStore) LoadMetadata(sessionID string) (*SessionMetadata, error) {
+	metadataPath := ms.getMetadataPath(sessionID)
+
+	data, err := os.ReadFile(metadataPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var metadata SessionMetadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+	}
+
+	return &metadata, nil
+}
+
+// SaveMetadata saves session metadata to storage
+func (ms *MetadataStore) SaveMetadata(metadata *SessionMetadata) error {
+	metadataPath := ms.getMetadataPath(metadata.SessionID)
+
+	data, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata: %w", err)
+	}
+
+	return os.WriteFile(metadataPath, data, 0644)
+}
+
+// ListSessions lists all sessions in the cache
+func (ms *MetadataStore) ListSessions() ([]SessionMetadata, error) {
+	entries, err := os.ReadDir(ms.cacheDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var sessions []SessionMetadata
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		sessionID := entry.Name()
+		metadata, err := ms.LoadMetadata(sessionID)
+		if err != nil {
+			continue
+		}
+
+		sessions = append(sessions, *metadata)
+	}
+
+	return sessions, nil
+}
+
+// CleanupOldSessions removes sessions older than the specified duration
+func (ms *MetadataStore) CleanupOldSessions(maxAge time.Duration) error {
+	sessions, err := ms.ListSessions()
+	if err != nil {
+		return err
+	}
+
+	cutoff := time.Now().Add(-maxAge)
+	removed := 0
+
+	for _, session := range sessions {
+		if session.StartTime.Before(cutoff) {
+			metadataPath := ms.getMetadataPath(session.SessionID)
+			if err := os.Remove(metadataPath); err == nil {
+				removed++
+			}
+		}
+	}
+
+	return nil
+}
+
+// getMetadataPath returns the file path for session metadata
+func (ms *MetadataStore) getMetadataPath(sessionID string) string {
+	return filepath.Join(ms.cacheDir, sessionID+".json")
+}
+
+// generateSessionID generates a unique session ID
+func generateSessionID() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
+}
+
+// GetActiveSession returns the most recent active session
+func (ms *MetadataStore) GetActiveSession() (*SessionMetadata, error) {
+	sessions, err := ms.ListSessions()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(sessions) == 0 {
+		return nil, fmt.Errorf("no sessions found")
+	}
+
+	// Find the most recent session without an end time
+	var recent *SessionMetadata
+	for i := range sessions {
+		if sessions[i].EndTime.IsZero() {
+			if recent == nil || sessions[i].StartTime.After(recent.StartTime) {
+				recent = &sessions[i]
+			}
+		}
+	}
+
+	if recent == nil {
+		// No active session, return the most recent completed session
+		for i := range sessions {
+			if recent == nil || sessions[i].StartTime.After(recent.StartTime) {
+				recent = &sessions[i]
+			}
+		}
+	}
+
+	return recent, nil
+}
+
+// GetSessionSummary returns a summary of the session
+func (ms *MetadataStore) GetSessionSummary(sessionID string) (string, error) {
+	metadata, err := ms.LoadMetadata(sessionID)
+	if err != nil {
+		return "", err
+	}
+
+	summary := fmt.Sprintf("Session: %s\n", metadata.SessionID)
+	summary += fmt.Sprintf("Working Dir: %s\n", metadata.WorkingDir)
+	summary += fmt.Sprintf("Project Type: %s\n", metadata.ProjectType)
+	summary += fmt.Sprintf("Start Time: %s\n", metadata.StartTime.Format(time.RFC3339))
+
+	if !metadata.EndTime.IsZero() {
+		summary += fmt.Sprintf("End Time: %s\n", metadata.EndTime.Format(time.RFC3339))
+		summary += fmt.Sprintf("Duration: %s\n", metadata.Duration)
+		summary += fmt.Sprintf("Exit Code: %d\n", metadata.ExitCode)
+	}
+
+	summary += fmt.Sprintf("Commands Executed: %d\n", len(metadata.Commands))
+	summary += fmt.Sprintf("Files Touched: %d\n", len(metadata.FilesTouched))
+	summary += fmt.Sprintf("Specs Referenced: %d\n", len(metadata.SpecsReferenced))
+
+	return summary, nil
+}

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 6
 parallel_id: 4
 branch: "feature/current/20260707-cli-typescript-standards/story-06-004-signal-based-config-reload"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["02-002", "06-001"]
@@ -27,37 +27,37 @@ Support SIGHUP to reload config files without restart. Validate new config befor
 
 ## Sub-Tasks
 
-- [ ] Implement SIGHUP signal handler
-- [ ] Add config reload logic
-- [ ] Implement new config validation before applying
-- [ ] Add config reload event logging
-- [ ] Implement graceful error handling (keep old config active)
-- [ ] Add config reload status reporting
-- [ ] Implement config diff logging
-- [ ] Add unit tests for signal handling
-- [ ] Add unit tests for config reload logic
-- [ ] Add unit tests for validation error handling
-- [ ] Add integration tests for SIGHUP workflow
-- [ ] Update help text to document config reload
-- [ ] Add config reload documentation
+- [x] Implement SIGHUP signal handler
+- [x] Add config reload logic
+- [x] Implement new config validation before applying
+- [x] Add config reload event logging
+- [x] Implement graceful error handling (keep old config active)
+- [x] Add config reload status reporting
+- [x] Implement config diff logging
+- [x] Add unit tests for signal handling
+- [x] Add unit tests for config reload logic
+- [x] Add unit tests for validation error handling
+- [x] Add integration tests for SIGHUP workflow
+- [x] Update help text to document config reload
+- [x] Add config reload documentation
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config module with reload logic
-- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with signal handling
-- `apps/cli/typescript/core/files/src/config.test.ts.jinja` - Unit tests for config reload
-- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for signals
+- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config module with reload logic (added reloadConfig function and ConfigReloadResult interface)
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with signal handling (added SIGHUP handler and global state)
+- `apps/cli/typescript/core/files/src/config.test.ts.jinja` - Unit tests for config reload (added reloadConfig test suite)
+- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for signals (added Config Reload test suite)
 
 ## Acceptance Criteria
 
-- [ ] SIGHUP signal triggers config reload
-- [ ] New config is validated before applying
-- [ ] Config reload events are logged
-- [ ] Validation errors keep old config active
-- [ ] Config reload status is reported
-- [ ] Config diff is logged in verbose mode
-- [ ] Reload works without process restart
-- [ ] Signal handling is platform-appropriate
+- [x] SIGHUP signal triggers config reload
+- [x] New config is validated before applying
+- [x] Config reload events are logged
+- [x] Validation errors keep old config active
+- [x] Config reload status is reported
+- [x] Config diff is logged in verbose mode
+- [x] Reload works without process restart
+- [x] Signal handling is platform-appropriate
 
 ## Test Plan
 

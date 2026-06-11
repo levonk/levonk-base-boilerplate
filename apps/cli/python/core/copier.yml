@@ -1,5 +1,6 @@
-project_name:
 _subdirectory: files
+
+project_name:
   type: str
   help: What is the project name?
   default: "my-cli-tool"
@@ -73,4 +74,29 @@ include_sqlite:
 include_development:
   type: bool
   help: Include development environment variables?
+  default: false
+
+include_advanced_config:
+  type: bool
+  help: Include advanced config features (validation, migration, precedence)?
+  default: true
+
+include_tui:
+  type: bool
+  help: Include TUI (Terminal User Interface) mode with textual library?
+  default: false
+
+include_health_check:
+  type: bool
+  help: Include health check mechanism for container orchestration?
+  default: false
+
+include_privacy:
+  type: bool
+  help: Include privacy mode with anonymous lists?
+  default: false
+
+include_audit:
+  type: bool
+  help: Include audit logging with retention?
   default: false

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 4
 parallel_id: 4
 branch: "feature/current/cli-python-standards/story-04-004-security-resources"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001"]
@@ -27,20 +27,20 @@ Implement secure credential handling and resource management. Add `--max-memory`
 
 ## Sub-Tasks
 
-- [ ] Add keyring dependency to `pyproject.toml.jinja` — `apps/cli/python/core/files/pyproject.toml.jinja`
-- [ ] Create `security.py.jinja` template file with security utilities — `apps/cli/python/core/files/{{project_slug}}/security.py.jinja`
-- [ ] Implement secure credential storage using keyring — `security.py.jinja`
-- [ ] Add credential retrieval from keyring — `security.py.jinja`
-- [ ] Ensure no logging of secrets or credentials throughout the CLI — `__main__.py.jinja`, `logging.py.jinja`
-- [ ] Add clear warnings about insecure config methods — `security.py.jinja`
-- [ ] Create `resource.py.jinja` template file with resource management — `apps/cli/python/core/files/{{project_slug}}/resource.py.jinja`
-- [ ] Add `--max-memory` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
-- [ ] Add `--max-cpu` flag to main command — `__main__.py.jinja`
-- [ ] Implement memory usage monitoring and limiting — `resource.py.jinja`
-- [ ] Implement CPU usage monitoring and limiting — `resource.py.jinja`
-- [ ] Add resource monitoring for daemon processes — `resource.py.jinja`
-- [ ] Add tests for security (no secret logging) — `apps/cli/python/core/files/tests/test_security.py.jinja`
-- [ ] Add tests for resource limits — `tests/test_security.py.jinja`
+- [x] Add keyring dependency to `pyproject.toml.jinja` — `apps/cli/python/core/files/pyproject.toml.jinja`
+- [x] Create `security.py.jinja` template file with security utilities — `apps/cli/python/core/files/{{project_slug}}/security.py.jinja`
+- [x] Implement secure credential storage using keyring — `security.py.jinja`
+- [x] Add credential retrieval from keyring — `security.py.jinja`
+- [x] Ensure no logging of secrets or credentials throughout the CLI — `__main__.py.jinja`, `logging.py.jinja`
+- [x] Add clear warnings about insecure config methods — `security.py.jinja`
+- [x] Create `resource.py.jinja` template file with resource management — `apps/cli/python/core/files/{{project_slug}}/resource.py.jinja`
+- [x] Add `--max-memory` flag to main command in `__main__.py.jinja` — `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja`
+- [x] Add `--max-cpu` flag to main command — `__main__.py.jinja`
+- [x] Implement memory usage monitoring and limiting — `resource.py.jinja`
+- [x] Implement CPU usage monitoring and limiting — `resource.py.jinja`
+- [x] Add resource monitoring for daemon processes — `resource.py.jinja`
+- [x] Add tests for security (no secret logging) — `apps/cli/python/core/files/tests/test_security.py.jinja`
+- [x] Add tests for resource limits — `tests/test_security.py.jinja`
 
 ## Relevant Files
 
@@ -53,16 +53,16 @@ Implement secure credential handling and resource management. Add `--max-memory`
 
 ## Acceptance Criteria
 
-- [ ] Secure credential storage implemented using keyring
-- [ ] Credentials retrieved from keyring when available
-- [ ] No secrets or credentials logged anywhere in the CLI
-- [ ] Clear warnings provided about insecure config methods
-- [ ] `--max-memory` flag implemented and enforced
-- [ ] `--max-cpu` flag implemented and enforced
-- [ ] Memory usage monitoring implemented
-- [ ] CPU usage monitoring implemented
-- [ ] Resource monitoring for daemon processes implemented
-- [ ] All tests pass for security and resource scenarios
+- [x] Secure credential storage implemented using keyring
+- [x] Credentials retrieved from keyring when available
+- [x] No secrets or credentials logged anywhere in the CLI
+- [x] Clear warnings provided about insecure config methods
+- [x] `--max-memory` flag implemented and enforced
+- [x] `--max-cpu` flag implemented and enforced
+- [x] Memory usage monitoring implemented
+- [x] CPU usage monitoring implemented
+- [x] Resource monitoring for daemon processes implemented
+- [x] All tests pass for security and resource scenarios
 
 ## Test Plan
 

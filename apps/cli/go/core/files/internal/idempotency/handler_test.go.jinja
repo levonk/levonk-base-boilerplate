@@ -1,0 +1,454 @@
+package idempotency
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+// MockLogger for testing
+type MockLogger struct {
+	messages []string
+}
+
+func (m *MockLogger) Info(format string, args ...interface{}) {
+	m.messages = append(m.messages, format)
+}
+
+func (m *MockLogger) Debug(format string, args ...interface{}) {
+	m.messages = append(m.messages, format)
+}
+
+func TestCheckFileExists(t *testing.T) {
+	// Test with existing file
+	tmpDir := t.TempDir()
+	existingFile := filepath.Join(tmpDir, "existing.txt")
+	os.WriteFile(existingFile, []byte("test"), 0644)
+
+	state, err := CheckFileExists(existingFile)
+	if err != nil {
+		t.Fatalf("CheckFileExists failed: %v", err)
+	}
+	if !state.Exists {
+		t.Error("Expected file to exist")
+	}
+
+	// Test with non-existing file
+	nonExisting := filepath.Join(tmpDir, "non-existing.txt")
+	state, err = CheckFileExists(nonExisting)
+	if err != nil {
+		t.Fatalf("CheckFileExists failed: %v", err)
+	}
+	if state.Exists {
+		t.Error("Expected file to not exist")
+	}
+}
+
+func TestCheckDirectoryExists(t *testing.T) {
+	// Test with existing directory
+	tmpDir := t.TempDir()
+
+	state, err := CheckDirectoryExists(tmpDir)
+	if err != nil {
+		t.Fatalf("CheckDirectoryExists failed: %v", err)
+	}
+	if !state.Exists {
+		t.Error("Expected directory to exist")
+	}
+
+	// Test with non-existing directory
+	nonExisting := filepath.Join(tmpDir, "non-existing")
+	state, err = CheckDirectoryExists(nonExisting)
+	if err != nil {
+		t.Fatalf("CheckDirectoryExists failed: %v", err)
+	}
+	if state.Exists {
+		t.Error("Expected directory to not exist")
+	}
+
+	// Test with file instead of directory
+	filePath := filepath.Join(tmpDir, "file.txt")
+	os.WriteFile(filePath, []byte("test"), 0644)
+	state, err = CheckDirectoryExists(filePath)
+	if err == nil {
+		t.Error("Expected error for file path")
+	}
+}
+
+func TestCheckFileContains(t *testing.T) {
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "test.txt")
+	content := "test content"
+	os.WriteFile(filePath, []byte(content), 0644)
+
+	// Test with existing content
+	state, err := CheckFileContains(filePath, "test")
+	if err != nil {
+		t.Fatalf("CheckFileContains failed: %v", err)
+	}
+	if !state.Exists {
+		t.Error("Expected file to exist")
+	}
+	contains, ok := state.Value.(bool)
+	if !ok || !contains {
+		t.Error("Expected file to contain content")
+	}
+
+	// Test with non-existing content
+	state, err = CheckFileContains(filePath, "non-existing")
+	if err != nil {
+		t.Fatalf("CheckFileContains failed: %v", err)
+	}
+	contains, ok = state.Value.(bool)
+	if !ok || contains {
+		t.Error("Expected file to not contain content")
+	}
+
+	// Test with non-existing file
+	nonExisting := filepath.Join(tmpDir, "non-existing.txt")
+	state, err = CheckFileContains(nonExisting, "test")
+	if err != nil {
+		t.Fatalf("CheckFileContains failed: %v", err)
+	}
+	if state.Exists {
+		t.Error("Expected file to not exist")
+	}
+}
+
+func TestIdempotentOperation_Skip(t *testing.T) {
+	logger := &MockLogger{}
+	handler := NewHandler(logger)
+	ctx := context.Background()
+
+	checkCalled := false
+	applyCalled := false
+
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (State, error) {
+			checkCalled = true
+			return State{Exists: true, Value: "test"}, nil
+		},
+		func(State) bool { return true },
+		func() error {
+			applyCalled = true
+			return nil
+		},
+		func(State) string { return "Already exists" },
+		func() string { return "Created" },
+	)
+
+	if err != nil {
+		t.Fatalf("IdempotentOperation failed: %v", err)
+	}
+	if !checkCalled {
+		t.Error("Expected checkState to be called")
+	}
+	if applyCalled {
+		t.Error("Expected applyChange to not be called when state is desired")
+	}
+	if !result.Skipped {
+		t.Error("Expected operation to be skipped")
+	}
+	if result.ActionPerformed {
+		t.Error("Expected ActionPerformed to be false")
+	}
+	if len(logger.messages) == 0 {
+		t.Error("Expected logger message")
+	}
+}
+
+func TestIdempotentOperation_Apply(t *testing.T) {
+	logger := &MockLogger{}
+	handler := NewHandler(logger)
+	ctx := context.Background()
+
+	checkCalled := false
+	applyCalled := false
+
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (State, error) {
+			checkCalled = true
+			return State{Exists: false}, nil
+		},
+		func(State) bool { return false },
+		func() error {
+			applyCalled = true
+			return nil
+		},
+		func(State) string { return "Already exists" },
+		func() string { return "Created" },
+	)
+
+	if err != nil {
+		t.Fatalf("IdempotentOperation failed: %v", err)
+	}
+	if !checkCalled {
+		t.Error("Expected checkState to be called")
+	}
+	if !applyCalled {
+		t.Error("Expected applyChange to be called when state is not desired")
+	}
+	if result.Skipped {
+		t.Error("Expected operation to not be skipped")
+	}
+	if !result.ActionPerformed {
+		t.Error("Expected ActionPerformed to be true")
+	}
+}
+
+func TestIdempotentOperation_CheckError(t *testing.T) {
+	logger := &MockLogger{}
+	handler := NewHandler(logger)
+	ctx := context.Background()
+
+	_, err := handler.IdempotentOperation(
+		ctx,
+		func() (State, error) {
+			return State{}, os.ErrNotExist
+		},
+		func(State) bool { return false },
+		func() error { return nil },
+		func(State) string { return "Skip" },
+		func() string { return "Success" },
+	)
+
+	if err == nil {
+		t.Error("Expected error from checkState failure")
+	}
+}
+
+func TestIdempotentOperation_ApplyError(t *testing.T) {
+	logger := &MockLogger{}
+	handler := NewHandler(logger)
+	ctx := context.Background()
+
+	_, err := handler.IdempotentOperation(
+		ctx,
+		func() (State, error) {
+			return State{Exists: false}, nil
+		},
+		func(State) bool { return false },
+		func() error { return os.ErrPermission },
+		func(State) string { return "Skip" },
+		func() string { return "Success" },
+	)
+
+	if err == nil {
+		t.Error("Expected error from applyChange failure")
+	}
+}
+
+func TestEnsureDirectory(t *testing.T) {
+	logger := &MockLogger{}
+	handler := NewHandler(logger)
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+	newDir := filepath.Join(tmpDir, "newdir")
+
+	// First call should create directory
+	result, err := handler.EnsureDirectory(ctx, newDir)
+	if err != nil {
+		t.Fatalf("EnsureDirectory failed: %v", err)
+	}
+	if result.Skipped {
+		t.Error("Expected directory to be created on first call")
+	}
+	if !result.ActionPerformed {
+		t.Error("Expected ActionPerformed to be true")
+	}
+
+	// Second call should skip
+	result, err = handler.EnsureDirectory(ctx, newDir)
+	if err != nil {
+		t.Fatalf("EnsureDirectory failed: %v", err)
+	}
+	if !result.Skipped {
+		t.Error("Expected directory creation to be skipped on second call")
+	}
+	if result.ActionPerformed {
+		t.Error("Expected ActionPerformed to be false on skip")
+	}
+}
+
+func TestEnsureFileExists(t *testing.T) {
+	logger := &MockLogger{}
+	handler := NewHandler(logger)
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+	newFile := filepath.Join(tmpDir, "newfile.txt")
+	content := []byte("test content")
+
+	// First call should create file
+	result, err := handler.EnsureFileExists(ctx, newFile, content, 0644)
+	if err != nil {
+		t.Fatalf("EnsureFileExists failed: %v", err)
+	}
+	if result.Skipped {
+		t.Error("Expected file to be created on first call")
+	}
+
+	// Verify file content
+	data, err := os.ReadFile(newFile)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	if string(data) != string(content) {
+		t.Error("File content mismatch")
+	}
+
+	// Second call should skip
+	result, err = handler.EnsureFileExists(ctx, newFile, content, 0644)
+	if err != nil {
+		t.Fatalf("EnsureFileExists failed: %v", err)
+	}
+	if !result.Skipped {
+		t.Error("Expected file creation to be skipped on second call")
+	}
+}
+
+func TestEnsureFileContains(t *testing.T) {
+	logger := &MockLogger{}
+	handler := NewHandler(logger)
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+	filePath := filepath.Join(tmpDir, "test.txt")
+	content := "completion script"
+
+	// Create file without content
+	os.WriteFile(filePath, []byte("initial content\n"), 0644)
+
+	// First call should add content
+	result, err := handler.EnsureFileContains(ctx, filePath, content)
+	if err != nil {
+		t.Fatalf("EnsureFileContains failed: %v", err)
+	}
+	if result.Skipped {
+		t.Error("Expected content to be added on first call")
+	}
+
+	// Verify content was added
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read file: %v", err)
+	}
+	fileContent := string(data)
+	if !contains(fileContent, content) {
+		t.Error("Expected file to contain content")
+	}
+
+	// Second call should skip
+	result, err = handler.EnsureFileContains(ctx, filePath, content)
+	if err != nil {
+		t.Fatalf("EnsureFileContains failed: %v", err)
+	}
+	if !result.Skipped {
+		t.Error("Expected content addition to be skipped on second call")
+	}
+}
+
+func TestHelperFunctions(t *testing.T) {
+	// Test IsFileExists
+	if !IsFileExists(State{Exists: true}) {
+		t.Error("IsFileExists should return true for existing state")
+	}
+	if IsFileExists(State{Exists: false}) {
+		t.Error("IsFileExists should return false for non-existing state")
+	}
+
+	// Test IsDirectoryExists
+	if !IsDirectoryExists(State{Exists: true}) {
+		t.Error("IsDirectoryExists should return true for existing state")
+	}
+	if IsDirectoryExists(State{Exists: false}) {
+		t.Error("IsDirectoryExists should return false for non-existing state")
+	}
+
+	// Test IsFileContains
+	if !IsFileContains(State{Value: true}) {
+		t.Error("IsFileContains should return true for true value")
+	}
+	if IsFileContains(State{Value: false}) {
+		t.Error("IsFileContains should return false for false value")
+	}
+	if IsFileContains(State{Value: "string"}) {
+		t.Error("IsFileContains should return false for non-bool value")
+	}
+
+	// Test IsProcessRunning
+	if !IsProcessRunning(State{Exists: true}) {
+		t.Error("IsProcessRunning should return true for existing state")
+	}
+	if IsProcessRunning(State{Exists: false}) {
+		t.Error("IsProcessRunning should return false for non-existing state")
+	}
+}
+
+func TestSkipMessages(t *testing.T) {
+	state := State{Value: "/path/to/file"}
+
+	msg := SkipMessageFileExists(state)
+	if msg != "File already exists: /path/to/file" {
+		t.Errorf("Unexpected skip message: %s", msg)
+	}
+
+	msg = SkipMessageDirectoryExists(state)
+	if msg != "Directory already exists: /path/to/file" {
+		t.Errorf("Unexpected skip message: %s", msg)
+	}
+
+	stateWithMetadata := State{
+		Value: true,
+		Metadata: map[string]interface{}{
+			"path": "/path/to/config",
+		},
+	}
+	msg = SkipMessageFileContains(stateWithMetadata)
+	if msg != "Completions already installed in /path/to/config" {
+		t.Errorf("Unexpected skip message: %s", msg)
+	}
+
+	stateWithPID := State{Value: 1234}
+	msg = SkipMessageProcessRunning(stateWithPID)
+	if msg != "Process already running (PID: 1234)" {
+		t.Errorf("Unexpected skip message: %s", msg)
+	}
+}
+
+func TestSuccessMessages(t *testing.T) {
+	msg := SuccessMessageFileCreated("/path/to/file")()
+	if msg != "File created: /path/to/file" {
+		t.Errorf("Unexpected success message: %s", msg)
+	}
+
+	msg = SuccessMessageDirectoryCreated("/path/to/dir")()
+	if msg != "Directory created: /path/to/dir" {
+		t.Errorf("Unexpected success message: %s", msg)
+	}
+
+	msg = SuccessMessageCompletionsInstalled("/path/to/config")()
+	if msg != "Completions installed to /path/to/config" {
+		t.Errorf("Unexpected success message: %s", msg)
+	}
+
+	msg = SuccessMessageProcessStarted(1234)()
+	if msg != "Process started (PID: 1234)" {
+		t.Errorf("Unexpected success message: %s", msg)
+	}
+}
+
+// Helper function to check if string contains substring
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && findSubstring(s, substr))
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

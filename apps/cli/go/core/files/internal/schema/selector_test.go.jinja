@@ -1,0 +1,323 @@
+package schema
+
+import (
+	"testing"
+)
+
+func TestNewSelector(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	selector := NewSelector(s)
+
+	if selector.schema != s {
+		t.Error("Expected selector to have the provided schema")
+	}
+
+	if !selector.useDefaults {
+		t.Error("Expected selector to use defaults by default")
+	}
+}
+
+func TestSelectorWithFields(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	selector := NewSelector(s)
+	selector.WithFields([]string{"id", "title"})
+
+	if selector.useDefaults {
+		t.Error("Expected selector to not use defaults after WithFields")
+	}
+
+	if len(selector.fieldNames) != 2 {
+		t.Errorf("Expected 2 field names, got %d", len(selector.fieldNames))
+	}
+}
+
+func TestSelectorWithDefaults(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	selector := NewSelector(s)
+	selector.WithFields([]string{"id", "title"})
+	selector.WithDefaults()
+
+	if !selector.useDefaults {
+		t.Error("Expected selector to use defaults after WithDefaults")
+	}
+
+	if len(selector.fieldNames) != 0 {
+		t.Error("Expected field names to be cleared after WithDefaults")
+	}
+}
+
+func TestSelectorSelectFields(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	t.Run("with defaults", func(t *testing.T) {
+		selector := NewSelector(s)
+		fields, err := selector.SelectFields()
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		if len(fields) != 3 {
+			t.Errorf("Expected 3 default fields, got %d", len(fields))
+		}
+	})
+
+	t.Run("with custom fields", func(t *testing.T) {
+		selector := NewSelector(s)
+		selector.WithFields([]string{"id", "title"})
+		fields, err := selector.SelectFields()
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		if len(fields) != 2 {
+			t.Errorf("Expected 2 custom fields, got %d", len(fields))
+		}
+
+		if fields[0] != "id" || fields[1] != "title" {
+			t.Error("Expected fields to be 'id' and 'title'")
+		}
+	})
+
+	t.Run("with invalid field", func(t *testing.T) {
+		selector := NewSelector(s)
+		selector.WithFields([]string{"id", "nonexistent"})
+		_, err := selector.SelectFields()
+
+		if err == nil {
+			t.Error("Expected error for invalid field")
+		}
+	})
+
+	t.Run("empty field names uses defaults", func(t *testing.T) {
+		selector := NewSelector(s)
+		selector.WithFields([]string{})
+		fields, err := selector.SelectFields()
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		if len(fields) != 3 {
+			t.Errorf("Expected 3 default fields, got %d", len(fields))
+		}
+	})
+}
+
+func TestSelectorApply(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.AddField("description", FieldTypeString, "Description", false, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	data := map[string]interface{}{
+		"id":          "123",
+		"title":       "Test",
+		"status":      "active",
+		"description": "A test item",
+	}
+
+	t.Run("with defaults", func(t *testing.T) {
+		selector := NewSelector(s)
+		result, err := selector.Apply(data)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		if len(result) != 3 {
+			t.Errorf("Expected 3 fields in result, got %d", len(result))
+		}
+
+		if _, ok := result["description"]; ok {
+			t.Error("Expected description to not be in result")
+		}
+	})
+
+	t.Run("with custom fields", func(t *testing.T) {
+		selector := NewSelector(s)
+		selector.WithFields([]string{"id", "description"})
+		result, err := selector.Apply(data)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		if len(result) != 2 {
+			t.Errorf("Expected 2 fields in result, got %d", len(result))
+		}
+
+		if result["id"] != "123" {
+			t.Errorf("Expected id '123', got '%v'", result["id"])
+		}
+
+		if result["description"] != "A test item" {
+			t.Errorf("Expected description 'A test item', got '%v'", result["description"])
+		}
+	})
+}
+
+func TestSelectorApplyToSlice(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.AddField("description", FieldTypeString, "Description", false, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	data := []map[string]interface{}{
+		{
+			"id":          "123",
+			"title":       "Test 1",
+			"status":      "active",
+			"description": "First item",
+		},
+		{
+			"id":          "456",
+			"title":       "Test 2",
+			"status":      "inactive",
+			"description": "Second item",
+		},
+	}
+
+	selector := NewSelector(s)
+	result, err := selector.ApplyToSlice(data)
+
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 items in result, got %d", len(result))
+	}
+
+	for i, item := range result {
+		if len(item) != 3 {
+			t.Errorf("Expected 3 fields in item %d, got %d", i, len(item))
+		}
+
+		if _, ok := item["description"]; ok {
+			t.Errorf("Expected description to not be in item %d", i)
+		}
+	}
+}
+
+func TestSelectorApplyWithLimit(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	data := []map[string]interface{}{
+		{"id": "1", "title": "Test 1", "status": "active"},
+		{"id": "2", "title": "Test 2", "status": "active"},
+		{"id": "3", "title": "Test 3", "status": "active"},
+		{"id": "4", "title": "Test 4", "status": "active"},
+		{"id": "5", "title": "Test 5", "status": "active"},
+	}
+
+	selector := NewSelector(s)
+
+	t.Run("with limit", func(t *testing.T) {
+		result, err := selector.ApplyWithLimit(data, 3)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		if len(result) != 3 {
+			t.Errorf("Expected 3 items in result, got %d", len(result))
+		}
+	})
+
+	t.Run("with limit zero uses schema default", func(t *testing.T) {
+		result, err := selector.ApplyWithLimit(data, 0)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		// Data has 5 items, schema default is 100, so all 5 items should be returned
+		if len(result) != 5 {
+			t.Errorf("Expected 5 items (data length, within schema default of 100), got %d", len(result))
+		}
+	})
+
+	t.Run("with limit greater than data length", func(t *testing.T) {
+		result, err := selector.ApplyWithLimit(data, 10)
+
+		if err != nil {
+			t.Errorf("Expected no error, got: %v", err)
+		}
+
+		if len(result) != 5 {
+			t.Errorf("Expected 5 items (data length), got %d", len(result))
+		}
+	})
+}
+
+func TestSelectorGetSelectedFields(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.AddField("title", FieldTypeString, "Title", true, nil)
+	s.AddField("status", FieldTypeString, "Status", true, nil)
+	s.SetDefaultFields("id", "title", "status")
+
+	selector := NewSelector(s)
+	fields, err := selector.GetSelectedFields()
+
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+
+	if len(fields) != 3 {
+		t.Errorf("Expected 3 fields, got %d", len(fields))
+	}
+}
+
+func TestSelectorIsUsingDefaults(t *testing.T) {
+	s := NewSchema("test-command")
+	s.AddField("id", FieldTypeString, "ID", true, nil)
+	s.SetDefaultFields("id")
+
+	selector := NewSelector(s)
+
+	if !selector.IsUsingDefaults() {
+		t.Error("Expected selector to be using defaults initially")
+	}
+
+	selector.WithFields([]string{"id"})
+
+	if selector.IsUsingDefaults() {
+		t.Error("Expected selector to not be using defaults after WithFields")
+	}
+
+	selector.WithDefaults()
+
+	if !selector.IsUsingDefaults() {
+		t.Error("Expected selector to be using defaults after WithDefaults")
+	}
+}

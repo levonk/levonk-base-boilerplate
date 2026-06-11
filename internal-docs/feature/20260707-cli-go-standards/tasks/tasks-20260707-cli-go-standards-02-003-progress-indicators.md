@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 2
 parallel_id: 3
 branch: "feature/current/20260707-cli-go-standards/story-02-003-progress-indicators"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-003"]
@@ -27,14 +27,14 @@ Show progress bars or spinners for long-running operations using a Go progress b
 
 ## Sub-Tasks
 
-- [ ] Add schollz/progressbar or bubbletea dependency to go.mod — `core/files/go.mod.jinja`
-- [ ] Create progress wrapper utility — `core/files/progress.go.jinja`
-- [ ] Implement progress bar for file processing — `core/files/main.go.jinja`
-- [ ] Implement progress bar for network operations — `core/files/main.go.jinja`
-- [ ] Add quiet mode check to progress display — `core/files/progress.go.jinja`
-- [ ] Test progress bar displays correctly — `core/files/progress_test.go.jinja`
-- [ ] Test progress respects --quiet flag — `core/files/progress_test.go.jinja`
-- [ ] Test progress bar updates accurately — `core/files/progress_test.go.jinja`
+- [x] Add schollz/progressbar or bubbletea dependency to go.mod — `core/files/go.mod.jinja`
+- [x] Create progress wrapper utility — `core/files/progress.go.jinja`
+- [x] Implement progress bar for file processing — `core/files/main.go.jinja`
+- [x] Implement progress bar for network operations — `core/files/main.go.jinja`
+- [x] Add quiet mode check to progress display — `core/files/progress.go.jinja`
+- [x] Test progress bar displays correctly — `core/files/progress_test.go.jinja`
+- [x] Test progress respects --quiet flag — `core/files/progress_test.go.jinja`
+- [x] Test progress bar updates accurately — `core/files/progress_test.go.jinja`
 
 ## Relevant Files
 
@@ -45,12 +45,12 @@ Show progress bars or spinners for long-running operations using a Go progress b
 
 ## Acceptance Criteria
 
-- [ ] Progress bars show for long-running operations
-- [ ] Progress bars respect --quiet flag
-- [ ] Progress bars update accurately
-- [ ] Progress bars work for file processing
-- [ ] Progress bars work for network operations
-- [ ] Progress bars are visually clear
+- [x] Progress bars show for long-running operations
+- [x] Progress bars respect --quiet flag
+- [x] Progress bars update accurately
+- [x] Progress bars work for file processing
+- [x] Progress bars work for network operations
+- [x] Progress bars are visually clear
 
 ## Test Plan
 

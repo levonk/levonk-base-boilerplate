@@ -27,18 +27,18 @@ Implement content-first no-args behavior. Running CLI with no arguments shows mo
 
 ## Sub-Tasks
 
-- [ ] Identify no-args invocation in CLI — `cli/main.py`
-- [ ] Redesign no-args to show state summary — `cli/noargs.py`
-- [ ] Show most relevant live content for current directory — `output/noargs.py`
-- [ ] Move detailed help to `--help` flag only — `cli/help.py`
-- [ ] Apply content-first to agent mode — `cli/noargs.py`
-- [ ] Apply content-first to human mode — `cli/noargs.py`
-- [ ] Show different content based on current directory/context — `output/noargs.py`
-- [ ] Format output in TOON for agent mode — `output/noargs.py`
-- [ ] Format output in human-readable for human mode — `output/noargs.py`
-- [ ] Test no-args output in agent mode — `tests/test_noargs.py`
-- [ ] Test no-args output in human mode — `tests/test_noargs.py`
-- [ ] Test context-aware content display — `tests/test_noargs.py`
+- [x] Identify no-args invocation in CLI — `cli/main.py`
+- [x] Redesign no-args to show state summary — `cli/noargs.py`
+- [x] Show most relevant live content for current directory — `output/noargs.py`
+- [x] Move detailed help to `--help` flag only — `cli/help.py`
+- [x] Apply content-first to agent mode — `cli/noargs.py`
+- [x] Apply content-first to human mode — `cli/noargs.py`
+- [x] Show different content based on current directory/context — `output/noargs.py`
+- [x] Format output in TOON for agent mode — `output/noargs.py`
+- [x] Format output in human-readable for human mode — `output/noargs.py`
+- [x] Test no-args output in agent mode — `tests/test_noargs.py`
+- [x] Test no-args output in human mode — `tests/test_noargs.py`
+- [x] Test context-aware content display — `tests/test_noargs.py`
 
 ## Relevant Files
 
@@ -50,16 +50,16 @@ Implement content-first no-args behavior. Running CLI with no arguments shows mo
 
 ## Acceptance Criteria
 
-- [ ] No-args shows most relevant live content
-- [ ] No-args does not show usage manual
-- [ ] Agent sees actual state and can act immediately
-- [ ] Detailed help available via `--help` flag
-- [ ] Content-first applies to agent mode
-- [ ] Content-first applies to human mode
-- [ ] Content varies based on directory/context
-- [ ] Output in TOON for agent mode
-- [ ] Output in human-readable for human mode
-- [ ] All tests pass
+- [x] No-args shows most relevant live content
+- [x] No-args does not show usage manual
+- [x] Agent sees actual state and can act immediately
+- [x] Detailed help available via `--help` flag
+- [x] Content-first applies to agent mode
+- [x] Content-first applies to human mode
+- [x] Content varies based on directory/context
+- [x] Output in TOON for agent mode
+- [x] Output in human-readable for human mode
+- [x] All tests pass
 
 ## Test Plan
 

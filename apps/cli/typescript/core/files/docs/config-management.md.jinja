@@ -1,0 +1,260 @@
+# Configuration Management
+
+This document describes how to configure {{ project_name }} and manage configuration changes at runtime.
+
+## Configuration File Locations
+
+{{ project_name }} searches for configuration files in the following order (highest to lowest precedence):
+
+1. **CLI Arguments** - Command-line flags override all other sources
+2. **Environment Variables** - `{{ PROJECT_SLUG }}_*` environment variables
+3. **Local Project Config** - `./.{{ project_slug }}/config.toml` (in current working directory)
+4. **User Config** - `~/.config/{{ project_slug }}/config.toml` (XDG config home)
+5. **System Config** - `/etc/{{ project_slug }}/config.toml` (system-wide)
+6. **Hardcoded Defaults** - Built-in default values
+
+### Environment Variables
+
+Environment variables use the `{{ PROJECT_SLUG }}_` prefix:
+
+- `{{ PROJECT_SLUG }}_LOG_LEVEL` - Log level (`debug`, `info`, `warn`, `error`)
+- `{{ PROJECT_SLUG }}_QUIET` - Suppress all output except errors (`true`/`false`)
+- `{{ PROJECT_SLUG }}_VERBOSE` - Enable verbose output (`true`/`false`)
+- `{{ PROJECT_SLUG }}_DEBUG` - Enable debug mode (`true`/`false`)
+- `{{ PROJECT_SLUG }}_COLOR` - Color mode (`auto`, `always`, `never`)
+- `{{ PROJECT_SLUG }}_LOG_FORMAT` - Log format (`text`, `json`)
+- `{{ PROJECT_SLUG }}_JSON` - Output results as JSON (`true`/`false`)
+- `{{ PROJECT_SLUG }}_CONFIG` - Custom config file path
+
+## Configuration File Format
+
+Configuration files use TOML format. Here's an example:
+
+```toml
+# Log level: error, warn, info, debug
+log_level = "info"
+
+# Suppress all output except errors
+quiet = false
+
+# Enable verbose output with extra details
+verbose = false
+
+# Debug mode (enables debug-level logging)
+debug = false
+
+# Color mode: auto, always, never
+color = "auto"
+
+# Log format: text or json
+log_format = "text"
+
+# Output results as JSON
+json = false
+
+# File reference format: vscode, standard, auto
+file_ref_format = "auto"
+```
+
+## Configuration Precedence
+
+Higher precedence sources override lower precedence sources. This allows you to:
+
+- Override system defaults with user config
+- Override user config with project-specific config
+- Override config files with environment variables
+- Override everything with CLI arguments
+
+### Example Precedence Chain
+
+If you have:
+
+1. System config: `log_level = "info"`
+2. User config: `log_level = "warn"`
+3. Project config: `log_level = "debug"`
+4. Environment: `{{ PROJECT_SLUG }}_LOG_LEVEL=error`
+5. CLI argument: `--log-level fatal`
+
+The final value will be `fatal` (from CLI argument).
+
+## Runtime Configuration Reload
+
+{{ project_name }} supports runtime configuration reload without restart using the SIGHUP signal.
+
+### How to Reload Configuration
+
+On Unix-like systems (Linux, macOS):
+
+```bash
+# Find the process ID
+pgrep {{ project_slug }}
+
+# Send SIGHUP to reload config
+kill -HUP <pid>
+```
+
+### What Happens During Reload
+
+1. **Signal Received** - The process receives the SIGHUP signal
+2. **Config Reloaded** - Configuration is reloaded from all sources
+3. **Validation** - New configuration is validated against the schema
+4. **Apply or Reject** - If valid, new config is applied; if invalid, old config is kept
+5. **Logging** - Reload events and config changes are logged
+
+### Validation on Reload
+
+Configuration is validated before applying:
+
+- **Valid Config** - New configuration is applied immediately
+- **Invalid Config** - Old configuration remains active, error is logged
+- **Validation Errors** - Detailed error messages are logged with line numbers
+
+### Config Diff Logging
+
+In verbose mode, configuration changes are logged:
+
+```bash
+# Enable verbose mode to see config changes
+{{ project_slug }} --verbose
+```
+
+Example output:
+```
+[config] Received SIGHUP signal, reloading configuration...
+[config] Successfully reloaded config from ~/.config/{{ project_slug }}/config.toml
+[config] Config changes:
+[config]   log_level: "info" -> "debug"
+[config]   verbose: false -> true
+```
+
+### Error Handling
+
+If configuration reload fails:
+
+```
+[config] Received SIGHUP signal, reloading configuration...
+[config] Configuration reload failed: Config validation failed: log_level (line 3): Invalid value
+[config] Keeping previous configuration active
+```
+
+The old configuration remains active, ensuring the process continues to work correctly.
+
+### Platform Considerations
+
+- **Unix/Linux/macOS** - SIGHUP signal is fully supported
+- **Windows** - Signal handling may differ; consider restarting the process
+
+## Configuration Validation
+
+{{ project_name }} validates configuration against a schema to ensure correctness.
+
+### Validation Rules
+
+- `log_level` must be one of: `error`, `warn`, `info`, `debug`
+- `color` must be one of: `auto`, `always`, `never`
+- `log_format` must be one of: `text`, `json`
+- `file_ref_format` must be one of: `vscode`, `standard`, `auto`
+- Boolean values (`quiet`, `verbose`, `debug`, `json`) must be `true` or `false`
+
+### Validation Error Messages
+
+Validation errors include:
+- The field path (e.g., `log_level`)
+- The line number in the config file
+- A descriptive error message
+- Suggestions for valid values
+
+Example:
+```
+Configuration validation failed:
+  log_level (line 3): Invalid value
+  Suggestion: Must be one of: error, warn, info, debug
+```
+
+## Configuration Migration
+
+{{ project_name }} automatically migrates legacy configuration files to the current format.
+
+### Migration Process
+
+1. **Detection** - Legacy config is detected on load
+2. **Backup** - Original config is backed up with `.bak` suffix
+3. **Migration** - Config is migrated to current format
+4. **Validation** - Migrated config is validated
+5. **Save** - Migrated config is saved to disk
+
+### Legacy Config Warning
+
+When a legacy config is migrated, a warning is displayed:
+
+```
+[config] WARNING: Your config file uses a legacy format and has been automatically migrated to version 1.
+[config] The original config has been backed up with a .bak suffix.
+[config] This legacy format will be deprecated in a future release.
+```
+
+## Best Practices
+
+### Security
+
+- Set restrictive permissions on config files: `chmod 600 ~/.config/{{ project_slug }}/config.toml`
+- Never store secrets in config files (use keyring or environment variables)
+- Never commit config files with secrets to version control
+
+### Organization
+
+- Use system config for organization-wide defaults
+- Use user config for personal preferences
+- Use project config for project-specific settings
+- Use environment variables for CI/CD and automation
+- Use CLI arguments for one-time overrides
+
+### Version Control
+
+- Commit project config (`.{{ project_slug }}/config.toml`) to version control
+- Add user config to `.gitignore`
+- Document required configuration in README
+- Provide example config files
+
+### Validation
+
+- Always validate config after manual edits
+- Use `--verbose` flag to see config loading details
+- Check validation errors for line numbers and suggestions
+- Test config changes in development first
+
+## Troubleshooting
+
+### Config Not Loading
+
+1. Check config file location with `--verbose` flag
+2. Verify config file syntax is valid TOML
+3. Check file permissions
+4. Look for validation errors in output
+
+### Config Changes Not Applied
+
+1. Verify config file path is correct
+2. Check config precedence (CLI args override config files)
+3. Use `--verbose` to see which source is providing each value
+4. Check for environment variable overrides
+
+### Validation Errors
+
+1. Check error message for field name and line number
+2. Verify value matches allowed values
+3. Check for typos in field names
+4. Review schema documentation for valid values
+
+### Reload Not Working
+
+1. Verify process is running: `pgrep {{ project_slug }}`
+2. Check process logs for reload errors
+3. Verify config file is valid
+4. On Windows, consider restarting the process
+
+## Additional Resources
+
+- [TOML Specification](https://toml.io/en/)
+- [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
+- [Security Best Practices](./security-best-practices.md)

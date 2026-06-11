@@ -1,0 +1,176 @@
+# vim: set ft=python :
+import sqlite3
+import json
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Optional, List, Dict, Any
+from {{ project_slug }}.logging import get_logger
+
+audit_logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
+
+
+class AuditLogger:
+    """Append-only audit logging using SQLite."""
+
+    def __init__(self, db_path: Optional[Path] = None, retention_days: int = 30):
+        """
+        Initialize audit logger.
+
+        Args:
+            db_path: Path to SQLite database (defaults to ~/.{{ project_slug }}/audit.db)
+            retention_days: Number of days to retain audit logs
+        """
+        if db_path is None:
+            db_path = Path.home() / ".{{ project_slug }}" / "audit.db"
+
+        self.db_path = db_path
+        self.retention_days = retention_days
+        self._initialize_db()
+        self._auto_prune()
+
+    def _initialize_db(self):
+        """Initialize SQLite database with audit log schema."""
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Create audit log table with append-only design
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT NOT NULL,
+                action TEXT NOT NULL,
+                resource TEXT,
+                user TEXT,
+                details TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        # Create index on timestamp for efficient pruning
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_timestamp
+            ON audit_log(timestamp)
+        """)
+
+        conn.commit()
+        conn.close()
+
+        audit_logger.info(f"Audit log initialized at {self.db_path}", module="audit")
+
+    def _auto_prune(self):
+        """Auto-prune old audit logs based on retention period."""
+        cutoff_date = (datetime.now() - timedelta(days=self.retention_days)).isoformat()
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "DELETE FROM audit_log WHERE timestamp < ?",
+            (cutoff_date,)
+        )
+
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+
+        if deleted_count > 0:
+            audit_logger.info(f"Auto-pruned {deleted_count} old audit log entries", module="audit")
+
+    def log(self, action: str, resource: Optional[str] = None,
+            user: Optional[str] = None, details: Optional[Dict[str, Any]] = None):
+        """
+        Log an audit event.
+
+        Args:
+            action: Action performed
+            resource: Resource affected
+            user: User who performed the action
+            details: Additional details as dictionary
+        """
+        timestamp = datetime.now().isoformat()
+        details_json = json.dumps(details) if details else None
+
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO audit_log (timestamp, action, resource, user, details)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (timestamp, action, resource, user, details_json)
+        )
+
+        conn.commit()
+        conn.close()
+
+        audit_logger.debug(f"Audit log: {action} on {resource}", module="audit")
+
+    def export(self, output_path: Path, format: str = "json"):
+        """
+        Export audit logs to external file.
+
+        Args:
+            output_path: Path to export file
+            format: Export format (json or csv)
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM audit_log ORDER BY timestamp DESC")
+        rows = cursor.fetchall()
+
+        conn.close()
+
+        if format == "json":
+            data = []
+            for row in rows:
+                data.append({
+                    "id": row[0],
+                    "timestamp": row[1],
+                    "action": row[2],
+                    "resource": row[3],
+                    "user": row[4],
+                    "details": json.loads(row[5]) if row[5] else None,
+                    "created_at": row[6]
+                })
+
+            with open(output_path, 'w') as f:
+                json.dump(data, f, indent=2)
+
+        elif format == "csv":
+            import csv
+            with open(output_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["id", "timestamp", "action", "resource", "user", "details", "created_at"])
+                for row in rows:
+                    writer.writerow(row)
+
+        audit_logger.info(f"Exported {len(rows)} audit log entries to {output_path}", module="audit")
+
+    def get_log_count(self) -> int:
+        """Get total number of audit log entries."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM audit_log")
+        count = cursor.fetchone()[0]
+
+        conn.close()
+        return count
+
+
+def get_audit_logger(db_path: Optional[Path] = None, retention_days: int = 30) -> AuditLogger:
+    """
+    Get or create an audit logger instance.
+
+    Args:
+        db_path: Path to SQLite database
+        retention_days: Number of days to retain audit logs
+
+    Returns:
+        AuditLogger instance
+    """
+    return AuditLogger(db_path, retention_days)

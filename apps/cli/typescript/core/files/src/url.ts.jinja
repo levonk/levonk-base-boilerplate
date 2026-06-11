@@ -1,0 +1,178 @@
+import process from 'process';
+
+export interface URLOptions {
+  /** Whether to use OSC 8 escape sequences for clickable links */
+  clickable?: boolean;
+  /** Whether to encode special characters in URLs */
+  encode?: boolean;
+  /** Fallback text for terminals without URL support */
+  fallbackText?: string;
+}
+
+/**
+ * Detects if the current terminal supports OSC 8 escape sequences for clickable URLs
+ */
+export function supportsClickableURLs(): boolean {
+  // Check if stdout is a TTY
+  if (!process.stdout.isTTY) {
+    return false;
+  }
+
+  // Check for common terminal environment variables
+  const term = process.env.TERM || '';
+  const termProgram = process.env.TERM_PROGRAM || '';
+
+  // Most modern terminals support OSC 8
+  // List of known supporting terminals
+  const supportedTerminals = [
+    'xterm',
+    'xterm-256color',
+    'screen',
+    'tmux',
+    'iTerm.app',
+    'vscode',
+    'Hyper',
+    'alacritty',
+    'kitty',
+    'wezterm',
+  ];
+
+  // Check if terminal is in the supported list
+  const isSupported = supportedTerminals.some((t) =>
+    term.includes(t) || termProgram.includes(t)
+  );
+
+  return isSupported;
+}
+
+/**
+ * Validates and normalizes a URL
+ * Ensures the URL uses HTTP/HTTPS protocol
+ */
+export function normalizeURL(url: string): string {
+  // Trim whitespace
+  let normalized = url.trim();
+
+  // Track if original had a trailing slash
+  const hadTrailingSlash = normalized.endsWith('/');
+
+  // Add protocol if missing (default to https)
+  if (!normalized.match(/^https?:\/\//)) {
+    normalized = `https://${normalized}`;
+  }
+
+  try {
+    const urlObj = new URL(normalized);
+    let result = urlObj.toString();
+
+    // Remove trailing slash if original didn't have one and path is empty
+    if (!hadTrailingSlash && urlObj.pathname === '/') {
+      result = result.replace(/\/$/, '');
+    }
+
+    return result;
+  } catch (error) {
+    throw new Error(`Invalid URL: ${url}`);
+  }
+}
+
+/**
+ * Encodes special characters in a URL component
+ * Uses encodeURIComponent for proper encoding
+ */
+export function encodeURLComponent(component: string): string {
+  return encodeURIComponent(component);
+}
+
+/**
+ * Formats a URL for terminal output with optional clickable support
+ * Uses OSC 8 escape sequences for terminals that support it
+ */
+export function formatURL(url: string, options: URLOptions = {}): string {
+  const {
+    clickable = true,
+    encode = false,
+    fallbackText = url,
+  } = options;
+
+  // Normalize the URL
+  let formattedURL = normalizeURL(url);
+
+  // Encode if requested
+  if (encode) {
+    try {
+      const urlObj = new URL(formattedURL);
+      // Encode path and query parameters separately
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      const encodedPath = '/' + pathParts.map(p => encodeURLComponent(p)).join('/');
+      const encodedSearch = urlObj.search ? '?' + urlObj.search.substring(1).split('&').map(param => {
+        const [key, ...valueParts] = param.split('=');
+        const value = valueParts.join('=');
+        return `${encodeURLComponent(key)}${value ? '=' + encodeURLComponent(value) : ''}`;
+      }).join('&') : '';
+      formattedURL = `${urlObj.protocol}//${urlObj.host}${encodedPath}${encodedSearch}`;
+    } catch (error) {
+      // If encoding fails, use the normalized URL
+    }
+  }
+
+  // Check if we should use clickable URLs
+  if (clickable && supportsClickableURLs()) {
+    // OSC 8 escape sequence format: \x1b]8;;url\x1b\\text\x1b]8;;\x1b\\
+    const oscStart = '\x1b]8;;';
+    const oscEnd = '\x1b\\';
+    return `${oscStart}${formattedURL}${oscEnd}${fallbackText}${oscStart}${oscEnd}`;
+  }
+
+  // Fallback: return the URL as plain text
+  return fallbackText || formattedURL;
+}
+
+/**
+ * Formats a URL for error messages
+ * Ensures URLs are properly formatted and clickable when supported
+ */
+export function formatErrorURL(url: string): string {
+  return formatURL(url, {
+    clickable: true,
+    encode: false,
+    fallbackText: url,
+  });
+}
+
+/**
+ * Formats a URL for help text
+ * Uses clickable URLs with the URL as the display text
+ */
+export function formatHelpURL(url: string): string {
+  return formatURL(url, {
+    clickable: true,
+    encode: false,
+    fallbackText: url,
+  });
+}
+
+/**
+ * Formats a URL for log output
+ * Respects the log format and terminal capabilities
+ */
+export function formatLogURL(url: string, useColor: boolean = true): string {
+  return formatURL(url, {
+    clickable: useColor,
+    encode: false,
+    fallbackText: url,
+  });
+}
+
+/**
+ * Validates a URL string
+ * Returns true if the URL is valid, false otherwise
+ */
+export function isValidURL(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}

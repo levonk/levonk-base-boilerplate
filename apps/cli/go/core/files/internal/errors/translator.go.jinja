@@ -1,0 +1,409 @@
+package errors
+
+import (
+	"fmt"
+	"strings"
+)
+
+// Translator translates dependency errors into structured CLI errors
+type Translator struct {
+	projectSlug string
+	suggestionGenerator *SuggestionGenerator
+}
+
+// NewTranslator creates a new error translator
+func NewTranslator(projectSlug string) *Translator {
+	return &Translator{
+		projectSlug: projectSlug,
+		suggestionGenerator: NewSuggestionGenerator(projectSlug),
+	}
+}
+
+// Translate translates a raw error into a structured error
+func (t *Translator) Translate(err error) *StructuredError {
+	if err == nil {
+		return nil
+	}
+
+	// If it's already a StructuredError, return it as-is
+	if structuredErr, ok := err.(*StructuredError); ok {
+		return structuredErr
+	}
+
+	errorMsg := err.Error()
+	lowerMsg := strings.ToLower(errorMsg)
+
+	// Translate based on error patterns
+	if t.isFileError(lowerMsg) {
+		return t.translateFileError(errorMsg, lowerMsg)
+	}
+	if t.isNetworkError(lowerMsg) {
+		return t.translateNetworkError(errorMsg, lowerMsg)
+	}
+	if t.isPermissionError(lowerMsg) {
+		return t.translatePermissionError(errorMsg, lowerMsg)
+	}
+	if t.isConfigError(lowerMsg) {
+		return t.translateConfigError(errorMsg, lowerMsg)
+	}
+	if t.isValidationError(lowerMsg) {
+		return t.translateValidationError(errorMsg, lowerMsg)
+	}
+	if t.isExecutionError(lowerMsg) {
+		return t.translateExecutionError(errorMsg, lowerMsg)
+	}
+
+	// Default to general error
+	return t.translateGeneralError(errorMsg)
+}
+
+// isFileError checks if the error is a file-related error
+func (t *Translator) isFileError(msg string) bool {
+	filePatterns := []string{
+		"no such file or directory",
+		"file not found",
+		"cannot find the file specified",
+		"enoent",
+		"is a directory",
+		"not a directory",
+	}
+	for _, pattern := range filePatterns {
+		if strings.Contains(msg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// isNetworkError checks if the error is a network-related error
+func (t *Translator) isNetworkError(msg string) bool {
+	networkPatterns := []string{
+		"connection refused",
+		"connection timed out",
+		"network unreachable",
+		"no such host",
+		"timeout",
+		"dns",
+		"tls",
+		"ssl",
+		"certificate",
+		"http",
+		"https",
+	}
+	for _, pattern := range networkPatterns {
+		if strings.Contains(msg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// isPermissionError checks if the error is a permission-related error
+func (t *Translator) isPermissionError(msg string) bool {
+	permissionPatterns := []string{
+		"permission denied",
+		"access denied",
+		"operation not permitted",
+		"eacces",
+		"eperm",
+	}
+	for _, pattern := range permissionPatterns {
+		if strings.Contains(msg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// isConfigError checks if the error is a configuration-related error
+func (t *Translator) isConfigError(msg string) bool {
+	configPatterns := []string{
+		"config",
+		"configuration",
+		"yaml",
+		"toml",
+		"json",
+		"settings",
+	}
+	for _, pattern := range configPatterns {
+		if strings.Contains(msg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// isValidationError checks if the error is a validation-related error
+func (t *Translator) isValidationError(msg string) bool {
+	validationPatterns := []string{
+		"invalid",
+		"malformed",
+		"required",
+		"missing",
+		"must be",
+		"cannot be",
+	}
+	for _, pattern := range validationPatterns {
+		if strings.Contains(msg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// isExecutionError checks if the error is an execution-related error
+func (t *Translator) isExecutionError(msg string) bool {
+	executionPatterns := []string{
+		"command not found",
+		"executable",
+		"signal",
+		"killed",
+		"memory",
+		"oom",
+		"disk",
+	}
+	for _, pattern := range executionPatterns {
+		if strings.Contains(msg, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// translateFileError translates a file error into a structured error
+func (t *Translator) translateFileError(originalMsg string, lowerMsg string) *StructuredError {
+	var message string
+	var suggestion string
+
+	if strings.Contains(lowerMsg, "permission") || strings.Contains(lowerMsg, "denied") {
+		message = "File access denied"
+		suggestion = "Check file permissions and ensure you have read/write access"
+	} else if strings.Contains(lowerMsg, "not found") || strings.Contains(lowerMsg, "no such file") {
+		message = "File not found"
+		suggestion = "Verify the file path and ensure the file exists"
+	} else if strings.Contains(lowerMsg, "is a directory") {
+		message = "Expected a file but found a directory"
+		suggestion = "Provide a file path, not a directory"
+	} else if strings.Contains(lowerMsg, "not a directory") {
+		message = "Expected a directory but found a file"
+		suggestion = "Provide a directory path, not a file"
+	} else {
+		message = "File operation failed"
+		suggestion = "Check the file path and ensure it exists and is accessible"
+	}
+
+	return WrapStructuredError(
+		fmt.Errorf(originalMsg),
+		ErrorTypeFile,
+		message,
+		suggestion,
+	)
+}
+
+// translateNetworkError translates a network error into a structured error
+func (t *Translator) translateNetworkError(originalMsg string, lowerMsg string) *StructuredError {
+	var message string
+	var suggestion string
+
+	if strings.Contains(lowerMsg, "connection refused") {
+		message = "Connection refused"
+		suggestion = "Check your network connection and ensure the service is running"
+	} else if strings.Contains(lowerMsg, "timeout") {
+		message = "Connection timeout"
+		suggestion = "The request timed out. Check your network connection and try again"
+	} else if strings.Contains(lowerMsg, "dns") || strings.Contains(lowerMsg, "resolve") {
+		message = "DNS resolution failed"
+		suggestion = "Check your DNS configuration and network connectivity"
+	} else if strings.Contains(lowerMsg, "401") || strings.Contains(lowerMsg, "unauthorized") {
+		message = "Authentication required"
+		suggestion = t.formatCommand("auth login", "to authenticate")
+	} else if strings.Contains(lowerMsg, "403") || strings.Contains(lowerMsg, "forbidden") {
+		message = "Access forbidden"
+		suggestion = "You don't have permission to access this resource"
+	} else if strings.Contains(lowerMsg, "404") || strings.Contains(lowerMsg, "not found") {
+		message = "Resource not found"
+		suggestion = "The requested resource was not found. Verify the URL"
+	} else if strings.Contains(lowerMsg, "500") || strings.Contains(lowerMsg, "502") || strings.Contains(lowerMsg, "503") {
+		message = "Service error"
+		suggestion = "The service is experiencing issues. Try again later"
+	} else {
+		message = "Network error"
+		suggestion = "Check your network connection and ensure the URL is correct"
+	}
+
+	return WrapStructuredError(
+		fmt.Errorf(originalMsg),
+		ErrorTypeNetwork,
+		message,
+		suggestion,
+	)
+}
+
+// translatePermissionError translates a permission error into a structured error
+func (t *Translator) translatePermissionError(originalMsg string, lowerMsg string) *StructuredError {
+	var message string
+	var suggestion string
+
+	if strings.Contains(lowerMsg, "file") || strings.Contains(lowerMsg, "directory") {
+		message = "Permission denied"
+		suggestion = "Check file/directory ownership and permissions"
+	} else if strings.Contains(lowerMsg, "executable") {
+		message = "Execute permission denied"
+		suggestion = "Ensure the file has execute permissions"
+	} else {
+		message = "Permission denied"
+		suggestion = "Run with appropriate permissions or check file/directory ownership"
+	}
+
+	return WrapStructuredError(
+		fmt.Errorf(originalMsg),
+		ErrorTypePermission,
+		message,
+		suggestion,
+	)
+}
+
+// translateConfigError translates a config error into a structured error
+func (t *Translator) translateConfigError(originalMsg string, lowerMsg string) *StructuredError {
+	var message string
+	var suggestion string
+
+	if strings.Contains(lowerMsg, "not found") || strings.Contains(lowerMsg, "no such file") {
+		message = "Configuration file not found"
+		suggestion = t.formatCommand("config init", "to create a configuration file")
+	} else if strings.Contains(lowerMsg, "invalid") || strings.Contains(lowerMsg, "malformed") {
+		message = "Invalid configuration"
+		suggestion = t.formatCommand("config validate", "to check your configuration file")
+	} else if strings.Contains(lowerMsg, "permission") {
+		message = "Cannot access configuration file"
+		suggestion = t.formatCommand("config init", "with appropriate permissions")
+	} else {
+		message = "Configuration error"
+		suggestion = t.formatCommand("config init", "to create or reset your configuration file")
+	}
+
+	return WrapStructuredError(
+		fmt.Errorf(originalMsg),
+		ErrorTypeConfig,
+		message,
+		suggestion,
+	)
+}
+
+// translateValidationError translates a validation error into a structured error
+func (t *Translator) translateValidationError(originalMsg string, lowerMsg string) *StructuredError {
+	var message string
+	var suggestion string
+
+	if strings.Contains(lowerMsg, "flag") || strings.Contains(lowerMsg, "option") {
+		message = "Invalid option"
+		suggestion = t.formatCommand("--help", "to see available options")
+	} else if strings.Contains(lowerMsg, "argument") || strings.Contains(lowerMsg, "parameter") {
+		message = "Invalid argument"
+		suggestion = t.formatCommand("--help", "to see required arguments")
+	} else if strings.Contains(lowerMsg, "format") {
+		message = "Invalid format"
+		suggestion = "Review the input values and ensure they meet the required format"
+	} else if strings.Contains(lowerMsg, "required") {
+		message = "Required value missing"
+		suggestion = "Provide all required arguments and options"
+	} else {
+		message = "Validation error"
+		suggestion = t.formatCommand("--help", "to see correct usage")
+	}
+
+	return WrapStructuredError(
+		fmt.Errorf(originalMsg),
+		ErrorTypeValidation,
+		message,
+		suggestion,
+	)
+}
+
+// translateExecutionError translates an execution error into a structured error
+func (t *Translator) translateExecutionError(originalMsg string, lowerMsg string) *StructuredError {
+	var message string
+	var suggestion string
+
+	if strings.Contains(lowerMsg, "command not found") || strings.Contains(lowerMsg, "executable") {
+		message = "Command not found"
+		suggestion = "Ensure the required command or tool is installed and in your PATH"
+	} else if strings.Contains(lowerMsg, "signal") || strings.Contains(lowerMsg, "killed") {
+		message = "Process terminated"
+		suggestion = "The process was terminated. Check system resources and try again"
+	} else if strings.Contains(lowerMsg, "memory") || strings.Contains(lowerMsg, "oom") {
+		message = "Out of memory"
+		suggestion = "The process ran out of memory. Try with a smaller dataset or increase available memory"
+	} else if strings.Contains(lowerMsg, "disk") || strings.Contains(lowerMsg, "space") {
+		message = "Disk space error"
+		suggestion = "Check available disk space and free up space if needed"
+	} else {
+		message = "Execution error"
+		suggestion = "Check system resources and ensure dependencies are installed"
+	}
+
+	return WrapStructuredError(
+		fmt.Errorf(originalMsg),
+		ErrorTypeExecution,
+		message,
+		suggestion,
+	)
+}
+
+// translateGeneralError translates a general error into a structured error
+func (t *Translator) translateGeneralError(originalMsg string) *StructuredError {
+	return WrapStructuredError(
+		fmt.Errorf(originalMsg),
+		ErrorTypeGeneral,
+		"An error occurred",
+		"Review the error details and try again",
+	)
+}
+
+// formatCommand formats a CLI command suggestion
+func (t *Translator) formatCommand(command string, action string) string {
+	if t.projectSlug != "" {
+		return fmt.Sprintf("Run `%s %s` %s", t.projectSlug, command, action)
+	}
+	return fmt.Sprintf("Run `%s` %s", command, action)
+}
+
+// SanitizeError removes sensitive information from error messages
+func (t *Translator) SanitizeError(err error) string {
+	if err == nil {
+		return ""
+	}
+
+	msg := err.Error()
+
+	// Remove sensitive patterns
+	sensitivePatterns := []string{
+		"password",
+		"token",
+		"secret",
+		"api_key",
+		"private_key",
+	}
+
+	for _, pattern := range sensitivePatterns {
+		if strings.Contains(strings.ToLower(msg), pattern) {
+			// Replace with placeholder
+			msg = strings.ReplaceAll(msg, msg, "[REDACTED]")
+			break
+		}
+	}
+
+	return msg
+}
+
+// WrapAndExit translates an error, formats it, and exits
+func (t *Translator) WrapAndExit(err error, formatType FormatType) {
+	translated := t.Translate(err)
+	if translated == nil {
+		// Fallback for nil translation
+		translated = t.translateGeneralError(err.Error())
+	}
+
+	formatter := NewFormatter(t.projectSlug)
+	formatter.PrintAndExit(translated, formatType)
+}

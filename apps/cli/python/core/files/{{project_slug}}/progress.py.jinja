@@ -1,0 +1,54 @@
+# vim: set ft=python :
+from contextlib import contextmanager
+from typing import Optional, Iterator
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
+
+
+@contextmanager
+def progress_bar(description: str, quiet: bool = False) -> Iterator[Optional[Progress]]:
+    """Context manager for a progress bar using rich.progress.
+    
+    Args:
+        description: Description of the operation
+        quiet: If True, suppress progress output
+        
+    Yields:
+        Progress object or None if quiet
+    """
+    if quiet:
+        yield None
+        return
+    
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeRemainingColumn(),
+        expand=True,
+    ) as progress:
+        task = progress.add_task(description, total=100)
+        yield progress
+
+
+@contextmanager
+def spinner(description: str, quiet: bool = False) -> Iterator[Optional[Progress]]:
+    """Context manager for a spinner for indeterminate operations.
+    
+    Args:
+        description: Description of the operation
+        quiet: If True, suppress spinner output
+        
+    Yields:
+        Progress object or None if quiet
+    """
+    if quiet:
+        yield None
+        return
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        expand=True,
+    ) as progress:
+        task = progress.add_task(description)
+        yield progress

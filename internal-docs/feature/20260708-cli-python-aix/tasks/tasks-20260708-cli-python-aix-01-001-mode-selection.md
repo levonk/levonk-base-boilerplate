@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-python-aix/prd.md"
 phase: 1
 parallel_id: 1
 branch: "feature/current/20260708-cli-python-aix/story-01-001-mode-selection"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,23 +27,23 @@ Implement mode selection system with default agent mode, human mode triggers, an
 
 ## Sub-Tasks
 
-- [ ] Add mode detection module with TTY and agent session detection — `cli/mode.py`
-- [ ] Implement agent session detection via environment variables (CLAUDE_SESSION, CODEX_SESSION) — `cli/mode.py`
-- [ ] Add process parent detection for agent-specific processes — `cli/mode.py`
-- [ ] Add `--human` and `--interactive` flags to CLI using click/typer — `cli/main.py`
-- [ ] Add config file setting for mode preference — `config/config.py`
-- [ ] Add environment variable support (MYTOOL_MODE) — `cli/mode.py`
-- [ ] Implement mode precedence chain logic — `cli/mode.py`
-- [ ] Add mode state to context for downstream commands — `cli/context.py`
-- [ ] Test auto-detection with various TTY/agent scenarios — `tests/test_mode.py`
-- [ ] Test mode precedence chain overrides — `tests/test_mode.py`
+- [x] Add mode detection module with TTY and agent session detection — `cli/mode.py`
+- [x] Implement agent session detection via environment variables (CLAUDE_SESSION, CODEX_SESSION) — `cli/mode.py`
+- [x] Add process parent detection for agent-specific processes — `cli/mode.py`
+- [x] Add environment variable support (MYTOOL_MODE) — `cli/mode.py`
+- [x] Implement mode precedence chain logic — `cli/mode.py`
+- [x] Add `--human` and `--interactive` flags to CLI using click/typer — `cli/main.py`
+- [x] Add config file setting for mode preference — `config/config.py`
+- [x] Add mode state to context for downstream commands — `cli/context.py`
+- [x] Test auto-detection with various TTY/agent scenarios — `tests/test_mode.py`
+- [x] Test mode precedence chain overrides — `tests/test_mode.py`
 
 ## Relevant Files
 
-- `apps/cli/python/core/files/cli/mode.py.jinja` — New module for mode detection logic
-- `apps/cli/python/core/files/cli/main.py.jinja` — Main CLI entry point with mode flags
-- `apps/cli/python/core/files/config/config.py.jinja` — Config module with mode setting
-- `apps/cli/python/core/files/cli/context.py.jinja` — Context module with mode state
+- `apps/cli/python/core/files/{{project_slug}}/mode.py.jinja` — New module for mode detection logic
+- `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja` — Main CLI entry point with mode flags
+- `apps/cli/python/core/files/{{project_slug}}/config.py.jinja` — Config module with mode setting
+- `apps/cli/python/core/files/{{project_slug}}/context.py.jinja` — Context module with mode state
 - `apps/cli/python/core/files/tests/test_mode.py.jinja` — Tests for mode selection
 
 ## Acceptance Criteria

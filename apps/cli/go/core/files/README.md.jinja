@@ -1,0 +1,134 @@
+# {{ project_name }}
+
+{{ description }}
+
+## Installation
+
+```bash
+go install
+```
+
+## Usage
+
+```bash
+{{ project_slug }} [inputs...]
+```
+
+## AI Agent Integration
+
+This CLI supports two integration methods for AI agents. **You only need one** - choose based on your use case.
+
+### Option 1: Session Hooks (Recommended for Custom Integrations)
+
+Session hooks provide bidirectional communication with the CLI, enabling rich context sharing and state management. This is ideal for custom agent integrations that need deep integration with the CLI.
+
+**Benefits:**
+- Bidirectional communication
+- Rich context sharing
+- State management
+- Custom integration flexibility
+
+**Use when:**
+- You need custom agent integration
+- You require bidirectional communication
+- You need state management
+- You're building a custom agent framework
+
+See session hook documentation for implementation details.
+
+### Option 2: Agent Skills (Recommended for Standard Discovery)
+
+Agent skills enable discovery via [agentskills.io](https://agentskills.io). This provides static documentation for agent understanding without runtime integration.
+
+**Benefits:**
+- Standard discovery mechanism
+- No runtime integration required
+- Simple to implement
+- Ideal for agents that support skill discovery
+
+**Use when:**
+- You want standard discovery
+- You don't need runtime integration
+- You're using agents that support skill discovery
+- You want simple documentation-based integration
+
+#### Generating SKILL.md
+
+To generate the skill documentation:
+
+```bash
+{{ project_slug }} skill --generate
+```
+
+This creates a `SKILL.md` file in the current directory with comprehensive documentation for AI agents.
+
+#### Validating SKILL.md
+
+To check if the skill file is up to date:
+
+```bash
+{{ project_slug }} skill --check
+```
+
+This command is used in CI/CD pipelines to ensure the skill file stays synchronized with the CLI.
+
+#### CI/CD Integration
+
+The boilerplate includes a GitHub Actions workflow (`.github/workflows/skill-check.yml`) that automatically validates the skill file on every push and pull request. The workflow will fail if the committed skill file is stale.
+
+To update a stale skill file:
+
+```bash
+{{ project_slug }} skill --generate
+git add SKILL.md
+git commit -m "Update skill file"
+```
+
+## Choosing Between Hook and Skill
+
+| Feature | Session Hooks | Agent Skills |
+|---------|--------------|--------------|
+| Bidirectional Communication | ✅ | ❌ |
+| State Management | ✅ | ❌ |
+| Standard Discovery | ❌ | ✅ |
+| Runtime Integration | ✅ | ❌ |
+| Documentation-Based | ❌ | ✅ |
+| Implementation Complexity | Higher | Lower |
+
+**Recommendation:** Start with Agent Skills for simple use cases. Use Session Hooks only if you need bidirectional communication or state management.
+
+## Configuration
+
+The CLI supports configuration via:
+
+1. **Config file:** `$HOME/.config/{{ project_slug }}/config.yaml`
+2. **Environment variables:** `{{ project_slug | upper | replace('-', '_') }}_*`
+3. **Command-line flags:** See `{{ project_slug }} --help`
+
+## Output Formats
+
+The CLI supports multiple output formats:
+
+- **TOON:** Token-efficient format for LLM contexts (default in agent mode)
+- **JSON:** Human-readable structured output (default in human mode)
+- **Human:** Plain text output
+
+See `{{ project_slug }} --help` for details on format selection and field options.
+
+## Development
+
+### Running Tests
+
+```bash
+go test ./...
+```
+
+### Building
+
+```bash
+go build -o {{ project_slug }} main.go
+```
+
+## License
+
+[Your License Here]

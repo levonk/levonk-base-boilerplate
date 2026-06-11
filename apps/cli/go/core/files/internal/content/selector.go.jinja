@@ -1,0 +1,155 @@
+package content
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// ContentType represents the type of content to display
+type ContentType string
+
+const (
+	// ContentTypeState shows current state summary
+	ContentTypeState ContentType = "state"
+	// ContentTypeContext shows context-aware information
+	ContentTypeContext ContentType = "context"
+	// ContentTypeAggregates shows pre-computed aggregates
+	ContentTypeAggregates ContentType = "aggregates"
+	// ContentTypeHelp shows help information
+	ContentTypeHelp ContentType = "help"
+)
+
+// Context represents the execution context for content selection
+type Context struct {
+	// Current working directory
+	WorkingDir string
+	// Whether we're in a git repository
+	IsGitRepo bool
+	// Whether we're in a project directory
+	IsProjectDir bool
+	// Project type if detected
+	ProjectType string
+	// Available files in current directory
+	Files []string
+}
+
+// Selector selects the most relevant content based on context
+type Selector struct {
+	ctx context.Context
+}
+
+// NewSelector creates a new content selector
+func NewSelector(ctx context.Context) *Selector {
+	return &Selector{
+		ctx: ctx,
+	}
+}
+
+// DetectContext analyzes the current directory to determine context
+func (s *Selector) DetectContext() (*Context, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	ctx := &Context{
+		WorkingDir: wd,
+	}
+
+	// Check if we're in a git repository
+	_, err = os.Stat(filepath.Join(wd, ".git"))
+	ctx.IsGitRepo = err == nil
+
+	// Check for project indicators
+	projectFiles := []string{
+		"package.json", "go.mod", "Cargo.toml", "pom.xml",
+		"requirements.txt", "pyproject.toml", "setup.py",
+		"composer.json", "Gemfile", "build.gradle",
+		".project", ".csproj", "sln",
+	}
+
+	for _, file := range projectFiles {
+		if _, err := os.Stat(filepath.Join(wd, file)); err == nil {
+			ctx.IsProjectDir = true
+			ctx.ProjectType = detectProjectType(file)
+			break
+		}
+	}
+
+	// List files in current directory
+	entries, err := os.ReadDir(wd)
+	if err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() && !strings.HasPrefix(entry.Name(), ".") {
+				ctx.Files = append(ctx.Files, entry.Name())
+			}
+		}
+	}
+
+	return ctx, nil
+}
+
+// detectProjectType determines the project type from a project file
+func detectProjectType(filename string) string {
+	switch filename {
+	case "package.json":
+		return "nodejs"
+	case "go.mod":
+		return "go"
+	case "Cargo.toml":
+		return "rust"
+	case "pom.xml":
+		return "java"
+	case "requirements.txt", "pyproject.toml", "setup.py":
+		return "python"
+	case "composer.json":
+		return "php"
+	case "Gemfile":
+		return "ruby"
+	case "build.gradle":
+		return "gradle"
+	case ".project", ".csproj", "sln":
+		return "dotnet"
+	default:
+		return "unknown"
+	}
+}
+
+// SelectContent determines the most relevant content type for the current context
+func (s *Selector) SelectContent(ctx *Context) ContentType {
+	// Priority: state > context > aggregates > help
+
+	// If in a project directory, show state summary
+	if ctx.IsProjectDir {
+		return ContentTypeState
+	}
+
+	// If in a git repository, show context
+	if ctx.IsGitRepo {
+		return ContentTypeContext
+	}
+
+	// Default to help if no specific context detected
+	return ContentTypeHelp
+}
+
+// GetContentDescription returns a human-readable description of the selected content
+func (s *Selector) GetContentDescription(contentType ContentType) string {
+	switch contentType {
+	case ContentTypeState:
+		return "Current state summary"
+	case ContentTypeContext:
+		return "Context-aware information"
+	case ContentTypeAggregates:
+		return "Pre-computed aggregates"
+	case ContentTypeHelp:
+		return "Usage information"
+	default:
+		return "Unknown content type"
+	}
+}
+
+{# vim: set ft=go: #}

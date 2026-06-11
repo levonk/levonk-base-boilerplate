@@ -1,0 +1,243 @@
+#!/usr/bin/env node
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { getDaemonManager, resetDaemonManager, type DaemonConfig, type Job } from './daemon.js';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+
+describe('DaemonManager', () => {
+  const stateDir = join(homedir(), '.{{ project_slug }}', 'daemon');
+  const pidFile = join(stateDir, 'daemon.pid');
+  const jobsFile = join(stateDir, 'jobs.json');
+
+  beforeEach(() => {
+    resetDaemonManager();
+    // Clean up test files
+    if (existsSync(pidFile)) {
+      unlinkSync(pidFile);
+    }
+    if (existsSync(jobsFile)) {
+      unlinkSync(jobsFile);
+    }
+  });
+
+  afterEach(() => {
+    resetDaemonManager();
+    // Clean up test files
+    if (existsSync(pidFile)) {
+      unlinkSync(pidFile);
+    }
+    if (existsSync(jobsFile)) {
+      unlinkSync(jobsFile);
+    }
+  });
+
+  describe('initialization', () => {
+    it('should create daemon manager with default config', () => {
+      const daemon = getDaemonManager();
+      expect(daemon).toBeDefined();
+    });
+
+    it('should create daemon manager with custom config', () => {
+      const config: Partial<DaemonConfig> = {
+        enabled: false,
+        autoSpawn: false,
+        platformFallback: 'error',
+      };
+      const daemon = getDaemonManager(config);
+      expect(daemon).toBeDefined();
+    });
+
+    it('should return singleton instance', () => {
+      const daemon1 = getDaemonManager();
+      const daemon2 = getDaemonManager();
+      expect(daemon1).toBe(daemon2);
+    });
+  });
+
+  describe('isRunning', () => {
+    it('should return false when PID file does not exist', () => {
+      const daemon = getDaemonManager();
+      expect(daemon.isRunning()).toBe(false);
+    });
+
+    it('should return false when PID file exists but process is dead', () => {
+      // Create a stale PID file with a non-existent PID
+      writeFileSync(pidFile, '999999');
+      const daemon = getDaemonManager();
+      expect(daemon.isRunning()).toBe(false);
+    });
+
+    it('should clean up stale PID file', () => {
+      writeFileSync(pidFile, '999999');
+      const daemon = getDaemonManager();
+      daemon.isRunning();
+      expect(existsSync(pidFile)).toBe(false);
+    });
+  });
+
+  describe('job management', () => {
+    it('should create a job with unique ID', async () => {
+      const daemon = getDaemonManager();
+      const job1 = await daemon.createJob('test-command', ['arg1', 'arg2']);
+      const job2 = await daemon.createJob('test-command', ['arg1', 'arg2']);
+      
+      expect(job1.id).toBeDefined();
+      expect(job2.id).toBeDefined();
+      expect(job1.id).not.toBe(job2.id);
+      expect(job1.command).toBe('test-command');
+      expect(job1.args).toEqual(['arg1', 'arg2']);
+      expect(job1.status).toBe('pending');
+    });
+
+    it('should retrieve a job by ID', async () => {
+      const daemon = getDaemonManager();
+      const job = await daemon.createJob('test-command', ['arg1']);
+      
+      const retrieved = daemon.getJob(job.id);
+      expect(retrieved).toEqual(job);
+    });
+
+    it('should return undefined for non-existent job', () => {
+      const daemon = getDaemonManager();
+      const retrieved = daemon.getJob('non-existent-id');
+      expect(retrieved).toBeUndefined();
+    });
+
+    it('should list all jobs', async () => {
+      const daemon = getDaemonManager();
+      const job1 = await daemon.createJob('command1', ['arg1']);
+      const job2 = await daemon.createJob('command2', ['arg2']);
+      
+      const jobs = daemon.listJobs();
+      expect(jobs).toHaveLength(2);
+      expect(jobs).toContainEqual(job1);
+      expect(jobs).toContainEqual(job2);
+    });
+
+    it('should cancel a pending job', async () => {
+      const daemon = getDaemonManager();
+      const job = await daemon.createJob('test-command', ['arg1']);
+      
+      const cancelled = await daemon.cancelJob(job.id);
+      expect(cancelled).toBe(true);
+      
+      const updated = daemon.getJob(job.id);
+      expect(updated?.status).toBe('cancelled');
+      expect(updated?.endTime).toBeDefined();
+    });
+
+    it('should cancel a running job', async () => {
+      const daemon = getDaemonManager();
+      const job = await daemon.createJob('test-command', ['arg1']);
+      (job as any).status = 'running';
+      
+      const cancelled = await daemon.cancelJob(job.id);
+      expect(cancelled).toBe(true);
+      
+      const updated = daemon.getJob(job.id);
+      expect(updated?.status).toBe('cancelled');
+    });
+
+    it('should not cancel a completed job', async () => {
+      const daemon = getDaemonManager();
+      const job = await daemon.createJob('test-command', ['arg1']);
+      (job as any).status = 'completed';
+      
+      const cancelled = await daemon.cancelJob(job.id);
+      expect(cancelled).toBe(false);
+    });
+
+    it('should not cancel a non-existent job', async () => {
+      const daemon = getDaemonManager();
+      const cancelled = await daemon.cancelJob('non-existent-id');
+      expect(cancelled).toBe(false);
+    });
+
+    it('should update job progress', async () => {
+      const daemon = getDaemonManager();
+      const job = await daemon.createJob('test-command', ['arg1']);
+      
+      daemon.updateJobProgress(job.id, 50);
+      const updated = daemon.getJob(job.id);
+      expect(updated?.progress).toBe(50);
+    });
+
+    it('should complete a job', async () => {
+      const daemon = getDaemonManager();
+      const job = await daemon.createJob('test-command', ['arg1']);
+      const result = { success: true };
+      
+      daemon.completeJob(job.id, result);
+      const updated = daemon.getJob(job.id);
+      expect(updated?.status).toBe('completed');
+      expect(updated?.endTime).toBeDefined();
+      expect(updated?.result).toEqual(result);
+      expect(updated?.progress).toBe(100);
+    });
+
+    it('should fail a job', async () => {
+      const daemon = getDaemonManager();
+      const job = await daemon.createJob('test-command', ['arg1']);
+      const error = 'Test error';
+      
+      daemon.failJob(job.id, error);
+      const updated = daemon.getJob(job.id);
+      expect(updated?.status).toBe('failed');
+      expect(updated?.endTime).toBeDefined();
+      expect(updated?.error).toBe(error);
+    });
+  });
+
+  describe('job persistence', () => {
+    it('should save jobs to disk', async () => {
+      const daemon = getDaemonManager();
+      await daemon.createJob('test-command', ['arg1']);
+      
+      expect(existsSync(jobsFile)).toBe(true);
+    });
+
+    it('should load jobs from disk on initialization', async () => {
+      // Create a job with first daemon instance
+      const daemon1 = getDaemonManager();
+      const job = await daemon1.createJob('test-command', ['arg1']);
+      
+      // Reset and create new daemon instance
+      resetDaemonManager();
+      const daemon2 = getDaemonManager();
+      
+      const retrieved = daemon2.getJob(job.id);
+      expect(retrieved).toEqual(job);
+    });
+  });
+
+  describe('platform detection', () => {
+    it('should detect platform support', () => {
+      const daemon = getDaemonManager();
+      // The implementation checks for win32
+      const isSupported = daemon.isRunning(); // This indirectly checks platform
+      expect(isSupported).toBeDefined();
+    });
+  });
+
+  describe('shutdown', () => {
+    it('should cleanup resources on shutdown', async () => {
+      const daemon = getDaemonManager();
+      await daemon.shutdown();
+      
+      // Verify cleanup
+      expect(existsSync(pidFile)).toBe(false);
+    });
+
+    it('should cancel running jobs on shutdown', async () => {
+      const daemon = getDaemonManager();
+      const job = await daemon.createJob('test-command', ['arg1']);
+      (job as any).status = 'running';
+      
+      await daemon.shutdown();
+      
+      const updated = daemon.getJob(job.id);
+      expect(updated?.status).toBe('cancelled');
+    });
+  });
+});

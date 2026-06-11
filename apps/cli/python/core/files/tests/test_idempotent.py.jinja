@@ -1,0 +1,157 @@
+# vim: set ft=python :
+"""Tests for idempotent mutation logic."""
+
+import pytest
+from {{project_slug}}.errors.idempotent import (
+    check_state_exists,
+    ensure_idempotent_create,
+    ensure_idempotent_update,
+    ensure_idempotent_delete,
+    is_noop,
+    handle_idempotent_result,
+    StateAlreadyExistsError,
+    StateNotFoundError,
+)
+
+
+def test_check_state_exists_match():
+    """Test state check when states match."""
+    current = {"status": "active"}
+    desired = {"status": "active"}
+    assert check_state_exists(current, desired) is True
+
+
+def test_check_state_exists_no_match():
+    """Test state check when states don't match."""
+    current = {"status": "inactive"}
+    desired = {"status": "active"}
+    assert check_state_exists(current, desired) is False
+
+
+def test_ensure_idempotent_create_noop():
+    """Test idempotent create when state already exists."""
+    current = {"status": "active"}
+    desired = {"status": "active"}
+    
+    def create_func():
+        raise Exception("Should not be called")
+    
+    result = ensure_idempotent_create(create_func, current, desired)
+    assert result is None
+
+
+def test_ensure_idempotent_create_execute():
+    """Test idempotent create when state doesn't exist."""
+    current = {"status": "inactive"}
+    desired = {"status": "active"}
+    
+    def create_func():
+        return {"status": "active"}
+    
+    result = ensure_idempotent_create(create_func, current, desired)
+    assert result == {"status": "active"}
+
+
+def test_ensure_idempotent_update_noop():
+    """Test idempotent update when state already matches."""
+    current = {"status": "active"}
+    desired = {"status": "active"}
+    
+    def update_func():
+        raise Exception("Should not be called")
+    
+    result = ensure_idempotent_update(update_func, current, desired)
+    assert result is None
+
+
+def test_ensure_idempotent_update_execute():
+    """Test idempotent update when state doesn't match."""
+    current = {"status": "inactive"}
+    desired = {"status": "active"}
+    
+    def update_func():
+        return {"status": "active"}
+    
+    result = ensure_idempotent_update(update_func, current, desired)
+    assert result == {"status": "active"}
+
+
+def test_ensure_idempotent_delete_noop():
+    """Test idempotent delete when state doesn't exist."""
+    current = None
+    
+    def delete_func():
+        raise Exception("Should not be called")
+    
+    result = ensure_idempotent_delete(delete_func, current)
+    assert result is None
+
+
+def test_ensure_idempotent_delete_empty_dict():
+    """Test idempotent delete when state is empty dict."""
+    current = {}
+    
+    def delete_func():
+        raise Exception("Should not be called")
+    
+    result = ensure_idempotent_delete(delete_func, current)
+    assert result is None
+
+
+def test_ensure_idempotent_delete_execute():
+    """Test idempotent delete when state exists."""
+    current = {"status": "active"}
+    
+    def delete_func():
+        return True
+    
+    result = ensure_idempotent_delete(delete_func, current)
+    assert result is True
+
+
+def test_is_noop_true():
+    """Test is_noop with None result."""
+    assert is_noop(None) is True
+
+
+def test_is_noop_false():
+    """Test is_noop with non-None result."""
+    assert is_noop({"status": "active"}) is False
+    assert is_noop(True) is False
+    assert is_noop(0) is False
+
+
+def test_handle_idempotent_result_noop():
+    """Test handling idempotent no-op result."""
+    result = handle_idempotent_result(None, "create", "config")
+    
+    assert result["status"] == "noop"
+    assert result["operation"] == "create"
+    assert result["state"] == "config"
+    assert "already in desired state" in result["message"]
+
+
+def test_handle_idempotent_result_success():
+    """Test handling idempotent success result."""
+    result = handle_idempotent_result({"status": "active"}, "create", "config")
+    
+    assert result["status"] == "success"
+    assert result["operation"] == "create"
+    assert result["state"] == "config"
+    assert "completed successfully" in result["message"]
+
+
+def test_handle_idempotent_result_update():
+    """Test handling idempotent update result."""
+    result = handle_idempotent_result(None, "update", "config")
+    
+    assert result["status"] == "noop"
+    assert result["operation"] == "update"
+
+
+def test_handle_idempotent_result_delete():
+    """Test handling idempotent delete result."""
+    result = handle_idempotent_result({"deleted": True}, "delete", "config")
+    
+    assert result["status"] == "success"
+    assert result["operation"] == "delete"

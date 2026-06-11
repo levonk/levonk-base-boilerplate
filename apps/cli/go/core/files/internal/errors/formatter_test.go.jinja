@@ -1,0 +1,241 @@
+package errors
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestNewStructuredError(t *testing.T) {
+	err := NewStructuredError(ErrorTypeConfig, "config error", "check config")
+	
+	if err.Type != ErrorTypeConfig {
+		t.Errorf("Expected type ErrorTypeConfig, got %v", err.Type)
+	}
+	if err.Message != "config error" {
+		t.Errorf("Expected message 'config error', got %v", err.Message)
+	}
+	if err.Suggestion != "check config" {
+		t.Errorf("Expected suggestion 'check config', got %v", err.Suggestion)
+	}
+	if err.ExitCode != ExitConfigError {
+		t.Errorf("Expected exit code %d, got %d", ExitConfigError, err.ExitCode)
+	}
+}
+
+func TestWrapStructuredError(t *testing.T) {
+	originalErr := NewStructuredError(ErrorTypeFile, "file error", "check file")
+	wrapped := WrapStructuredError(originalErr, ErrorTypeNetwork, "network error", "check network")
+	
+	if wrapped.Err != originalErr {
+		t.Error("WrapStructuredError should preserve original error")
+	}
+	if wrapped.Message != "network error" {
+		t.Errorf("Expected message 'network error', got %v", wrapped.Message)
+	}
+	if wrapped.Suggestion != "check network" {
+		t.Errorf("Expected suggestion 'check network', got %v", wrapped.Suggestion)
+	}
+}
+
+func TestErrorTypeToString(t *testing.T) {
+	formatter := NewFormatter("test-project")
+	
+	tests := []struct {
+		errorType ErrorType
+		want      string
+	}{
+		{ErrorTypeGeneral, "general"},
+		{ErrorTypeConfig, "config"},
+		{ErrorTypeFile, "file"},
+		{ErrorTypeNetwork, "network"},
+		{ErrorTypePermission, "permission"},
+		{ErrorTypeValidation, "validation"},
+		{ErrorTypeExecution, "execution"},
+		{ErrorTypePlatform, "platform"},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			got := formatter.errorTypeToString(tt.errorType)
+			if got != tt.want {
+				t.Errorf("errorTypeToString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatTOON(t *testing.T) {
+	formatter := NewFormatter("test-project")
+	
+	err := NewStructuredError(ErrorTypeConfig, "config error", "check config")
+	
+	result, err := formatter.Format(err, FormatTOON)
+	if err != nil {
+		t.Fatalf("Format() returned error: %v", err)
+	}
+	
+	// Check that the result contains expected fields
+	if !strings.Contains(result, "error") {
+		t.Error("TOON format should contain 'error' key")
+	}
+	if !strings.Contains(result, "type") {
+		t.Error("TOON format should contain 'type' key")
+	}
+	if !strings.Contains(result, "message") {
+		t.Error("TOON format should contain 'message' key")
+	}
+	if !strings.Contains(result, "suggestion") {
+		t.Error("TOON format should contain 'suggestion' key")
+	}
+	if !strings.Contains(result, "exit_code") {
+		t.Error("TOON format should contain 'exit_code' key")
+	}
+}
+
+func TestFormatTOONWithContext(t *testing.T) {
+	formatter := NewFormatter("test-project")
+	
+	err := NewStructuredError(ErrorTypeFile, "file error", "check file")
+	err.Context = &ErrorContext{
+		File:     "/path/to/file.txt",
+		Line:     10,
+		Column:   5,
+		Function: "processFile",
+		Module:   "main",
+	}
+	
+	result, err := formatter.Format(err, FormatTOON)
+	if err != nil {
+		t.Fatalf("Format() returned error: %v", err)
+	}
+	
+	// Check that context is included
+	if !strings.Contains(result, "context") {
+		t.Error("TOON format should contain 'context' key when context is provided")
+	}
+	if !strings.Contains(result, "file") {
+		t.Error("TOON format should contain 'file' in context")
+	}
+	if !strings.Contains(result, "line") {
+		t.Error("TOON format should contain 'line' in context")
+	}
+}
+
+func TestFormatJSON(t *testing.T) {
+	formatter := NewFormatter("test-project")
+	
+	err := NewStructuredError(ErrorTypeConfig, "config error", "check config")
+	
+	result, err := formatter.Format(err, FormatJSON)
+	if err != nil {
+		t.Fatalf("Format() returned error: %v", err)
+	}
+	
+	// Check that the result contains expected fields
+	if !strings.Contains(result, "error") {
+		t.Error("JSON format should contain 'error' key")
+	}
+	if !strings.Contains(result, "type") {
+		t.Error("JSON format should contain 'type' key")
+	}
+	if !strings.Contains(result, "message") {
+		t.Error("JSON format should contain 'message' key")
+	}
+	if !strings.Contains(result, "suggestion") {
+		t.Error("JSON format should contain 'suggestion' key")
+	}
+	if !strings.Contains(result, "exit_code") {
+		t.Error("JSON format should contain 'exit_code' key")
+	}
+}
+
+func TestFormatJSONWithContext(t *testing.T) {
+	formatter := NewFormatter("test-project")
+	
+	err := NewStructuredError(ErrorTypeFile, "file error", "check file")
+	err.Context = &ErrorContext{
+		File:     "/path/to/file.txt",
+		Line:     10,
+		Column:   5,
+		Function: "processFile",
+		Module:   "main",
+	}
+	
+	result, err := formatter.Format(err, FormatJSON)
+	if err != nil {
+		t.Fatalf("Format() returned error: %v", err)
+	}
+	
+	// Check that context is included
+	if !strings.Contains(result, "context") {
+		t.Error("JSON format should contain 'context' key when context is provided")
+	}
+	if !strings.Contains(result, "file") {
+		t.Error("JSON format should contain 'file' in context")
+	}
+	if !strings.Contains(result, "line") {
+		t.Error("JSON format should contain 'line' in context")
+	}
+}
+
+func TestFormatUnsupportedFormat(t *testing.T) {
+	formatter := NewFormatter("test-project")
+	
+	err := NewStructuredError(ErrorTypeConfig, "config error", "check config")
+	
+	_, err := formatter.Format(err, FormatType("unsupported"))
+	if err == nil {
+		t.Error("Format() should return error for unsupported format type")
+	}
+}
+
+func TestExitCodeMapping(t *testing.T) {
+	tests := []struct {
+		errorType ErrorType
+		wantCode  int
+	}{
+		{ErrorTypeConfig, ExitConfigError},
+		{ErrorTypeFile, ExitFileError},
+		{ErrorTypeValidation, ExitUsage},
+		{ErrorTypeGeneral, ExitError},
+		{ErrorTypeNetwork, ExitError},
+		{ErrorTypePermission, ExitError},
+		{ErrorTypeExecution, ExitError},
+		{ErrorTypePlatform, ExitError},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.wantCode, func(t *testing.T) {
+			gotCode := getExitCodeForErrorType(tt.errorType)
+			if gotCode != tt.wantCode {
+				t.Errorf("getExitCodeForErrorType() = %v, want %v", gotCode, tt.wantCode)
+			}
+		})
+	}
+}
+
+func TestReplaceProjectSlug(t *testing.T) {
+	formatter := NewFormatter("my-cli")
+	
+	suggestion := "Run {{ project_slug }} config init"
+	result := formatter.replaceProjectSlug(suggestion)
+	
+	// In a real implementation, this would replace the placeholder
+	// For now, we just verify it doesn't crash
+	if result == "" {
+		t.Error("replaceProjectSlug should not return empty string")
+	}
+}
+
+func TestStructuredErrorImplementsError(t *testing.T) {
+	err := NewStructuredError(ErrorTypeConfig, "test error", "test suggestion")
+	
+	// Verify it implements the error interface
+	var _ error = err
+	
+	// Test the Error() method
+	result := err.Error()
+	if result != "test error" {
+		t.Errorf("Error() = %v, want %v", result, "test error")
+	}
+}

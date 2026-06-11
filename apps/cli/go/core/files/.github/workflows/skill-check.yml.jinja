@@ -1,0 +1,24 @@
+name: Skill Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  skill-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build CLI
+        run: go build -o {{ project_slug }} main.go
+
+      - name: Check skill file
+        run: ./{{ project_slug }} skill --check

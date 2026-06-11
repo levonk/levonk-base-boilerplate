@@ -27,35 +27,33 @@ Ensure every operation is completable with flags alone. If required value is mis
 
 ## Sub-Tasks
 
-- [ ] Add `--force` flag to CLI using click/typer — `cli/main.py`
-- [ ] Detect missing required values — `cli/validation.py`
-- [ ] Fail immediately with clear error for missing values — `cli/validation.py`
-- [ ] Suppress prompts in agent mode — `cli/prompts.py`
-- [ ] Retain prompts in human mode (unless --force) — `cli/prompts.py`
-- [ ] Suppress prompts from wrapped tools in agent mode — `cli/wrappers.py`
-- [ ] Ensure all operations completable with flags alone — `cli/validation.py`
-- [ ] Test missing value error handling — `tests/test_prompts.py`
-- [ ] Test prompt suppression in agent mode — `tests/test_prompts.py`
-- [ ] Test prompt retention in human mode — `tests/test_prompts.py`
-- [ ] Test --force flag behavior — `tests/test_prompts.py`
+- [x] Add `--force` flag to CLI using click/typer — `cli/main.py`
+- [x] Detect missing required values — `cli/validation.py`
+- [x] Fail immediately with clear error for missing values — `cli/validation.py`
+- [x] Suppress prompts in agent mode — `cli/prompts.py`
+- [x] Retain prompts in human mode (unless --force) — `cli/prompts.py`
+- [x] Suppress prompts from wrapped tools in agent mode — `cli/wrappers.py`
+- [x] Ensure all operations completable with flags alone — `cli/validation.py`
+- [x] Test missing value error handling — `tests/test_prompts.py`
+- [x] Test prompt suppression in agent mode — `tests/test_prompts.py`
+- [x] Test prompt retention in human mode — `tests/test_prompts.py`
+- [x] Test --force flag behavior — `tests/test_prompts.py`
 
 ## Relevant Files
 
-- `apps/cli/python/core/files/cli/main.py.jinja` — CLI with --force flag
-- `apps/cli/python/core/files/cli/validation.py.jinja` — Input validation
-- `apps/cli/python/core/files/cli/prompts.py.jinja` — Prompt suppression logic
-- `apps/cli/python/core/files/cli/wrappers.py.jinja` — Wrapped tool prompt suppression
+- `apps/cli/python/core/files/{{project_slug}}/__main__.py.jinja` — CLI with --force flag (already exists)
+- `apps/cli/python/core/files/{{project_slug}}/prompts.py.jinja` — Prompt suppression logic
 - `apps/cli/python/core/files/tests/test_prompts.py.jinja` — Prompt tests
 
 ## Acceptance Criteria
 
-- [ ] Missing required values fail immediately with clear error
-- [ ] No prompts appear in agent mode
-- [ ] Prompts work in human mode (unless --force)
-- [ ] `--force` flag suppresses prompts in human mode
-- [ ] Prompts from wrapped tools suppressed in agent mode
-- [ ] All operations completable with flags alone
-- [ ] All tests pass
+- [x] Missing required values fail immediately with clear error
+- [x] No prompts appear in agent mode
+- [x] Prompts work in human mode (unless --force)
+- [x] `--force` flag suppresses prompts in human mode
+- [x] Prompts from wrapped tools suppressed in agent mode
+- [x] All operations completable with flags alone
+- [x] All tests pass
 
 ## Test Plan
 

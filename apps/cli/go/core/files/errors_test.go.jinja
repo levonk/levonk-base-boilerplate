@@ -1,0 +1,330 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+)
+
+func TestErrorFormat(t *testing.T) {
+	tests := []struct {
+		name        string
+		errorType   ErrorType
+		message     string
+		suggestion  string
+		wantPrefix  string
+		wantSuggest bool
+	}{
+		{
+			name:        "error with suggestion",
+			errorType:   ErrorTypeGeneral,
+			message:     "test error",
+			suggestion:  "try again",
+			wantPrefix:  "ERROR: test error - try again",
+			wantSuggest: true,
+		},
+		{
+			name:        "error without suggestion",
+			errorType:   ErrorTypeGeneral,
+			message:     "test error",
+			suggestion:  "",
+			wantPrefix:  "ERROR: test error",
+			wantSuggest: false,
+		},
+		{
+			name:        "config error",
+			errorType:   ErrorTypeConfig,
+			message:     "config not found",
+			suggestion:  "check config file",
+			wantPrefix:  "ERROR: config not found - check config file",
+			wantSuggest: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := NewAppError(tt.errorType, tt.message, tt.suggestion)
+			result := err.Error()
+
+			if !strings.HasPrefix(result, tt.wantPrefix) {
+				t.Errorf("Error() prefix = %v, want %v", result, tt.wantPrefix)
+			}
+
+			if tt.wantSuggest && !strings.Contains(result, tt.suggestion) {
+				t.Errorf("Error() missing suggestion = %v, want %v", result, tt.suggestion)
+			}
+		})
+	}
+}
+
+func TestErrorContext(t *testing.T) {
+	err := NewAppError(ErrorTypeFile, "file error", "check file")
+	result := err.Error()
+
+	// Context should include file and line information
+	if err.Context == nil {
+		t.Error("Expected error context to be non-nil")
+	}
+
+	if err.Context != nil {
+		if err.Context.Reference == nil {
+			t.Error("Expected context reference to be set")
+		}
+		if err.Context.Reference != nil && err.Context.Reference.Path == "" {
+			t.Error("Expected context reference path to be set")
+		}
+		if err.Context.Reference != nil && err.Context.Reference.Line == 0 {
+			t.Error("Expected context reference line to be set")
+		}
+	}
+
+	// The formatted error should include context
+	if err.Context != nil && err.Context.Reference != nil && err.Context.Reference.Path != "" {
+		if !strings.Contains(result, "file:") {
+			t.Errorf("Error() should include file context, got %v", result)
+		}
+	}
+}
+
+func TestSuggestionGeneration(t *testing.T) {
+	tests := []struct {
+		name       string
+		errorType  ErrorType
+		message    string
+		wantInSugg string
+	}{
+		{
+			name:       "config error suggestion",
+			errorType:  ErrorTypeConfig,
+			message:    "config error",
+			wantInSugg: "config",
+		},
+		{
+			name:       "file error suggestion",
+			errorType:  ErrorTypeFile,
+			message:    "file not found",
+			wantInSugg: "file",
+		},
+		{
+			name:       "network error suggestion",
+			errorType:  ErrorTypeNetwork,
+			message:    "network error",
+			wantInSugg: "network",
+		},
+		{
+			name:       "permission error suggestion",
+			errorType:  ErrorTypePermission,
+			message:    "permission denied",
+			wantInSugg: "permission",
+		},
+		{
+			name:       "validation error suggestion",
+			errorType:  ErrorTypeValidation,
+			message:    "invalid input",
+			wantInSugg: "input",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := GetSuggestionForError(tt.errorType, tt.message)
+			if !strings.Contains(strings.ToLower(suggestion), tt.wantInSugg) {
+				t.Errorf("GetSuggestionForError() = %v, want to contain %v", suggestion, tt.wantInSugg)
+			}
+		})
+	}
+}
+
+func TestExitCodes(t *testing.T) {
+	tests := []struct {
+		name      string
+		errorType ErrorType
+		wantCode  int
+	}{
+		{
+			name:      "config error exit code",
+			errorType: ErrorTypeConfig,
+			wantCode:  ExitConfigError,
+		},
+		{
+			name:      "file error exit code",
+			errorType: ErrorTypeFile,
+			wantCode:  ExitFileError,
+		},
+		{
+			name:      "general error exit code",
+			errorType: ErrorTypeGeneral,
+			wantCode:  ExitError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotCode := getExitCodeForErrorType(tt.errorType)
+			if gotCode != tt.wantCode {
+				t.Errorf("getExitCodeForErrorType() = %v, want %v", gotCode, tt.wantCode)
+			}
+		})
+	}
+}
+
+func TestConvenienceConstructors(t *testing.T) {
+	tests := []struct {
+		name       string
+		constructor func(string) *AppError
+		message    string
+		wantType   ErrorType
+	}{
+		{
+			name:       "NewConfigError",
+			constructor: NewConfigError,
+			message:    "config error",
+			wantType:   ErrorTypeConfig,
+		},
+		{
+			name:       "NewFileError",
+			constructor: NewFileError,
+			message:    "file error",
+			wantType:   ErrorTypeFile,
+		},
+		{
+			name:       "NewNetworkError",
+			constructor: NewNetworkError,
+			message:    "network error",
+			wantType:   ErrorTypeNetwork,
+		},
+		{
+			name:       "NewPermissionError",
+			constructor: NewPermissionError,
+			message:    "permission error",
+			wantType:   ErrorTypePermission,
+		},
+		{
+			name:       "NewValidationError",
+			constructor: NewValidationError,
+			message:    "validation error",
+			wantType:   ErrorTypeValidation,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.constructor(tt.message)
+			if err.Type != tt.wantType {
+				t.Errorf("Constructor error type = %v, want %v", err.Type, tt.wantType)
+			}
+			if err.Message != tt.message {
+				t.Errorf("Constructor message = %v, want %v", err.Message, tt.message)
+			}
+			if err.Suggestion == "" {
+				t.Error("Constructor should auto-generate suggestion")
+			}
+		})
+	}
+}
+
+func TestWrapError(t *testing.T) {
+	originalErr := fmt.Errorf("original error")
+	wrapped := WrapError(originalErr, ErrorTypeFile, "wrapper message", "wrapper suggestion")
+
+	if wrapped.Err != originalErr {
+		t.Error("WrapError should preserve original error")
+	}
+
+	if wrapped.Message != "wrapper message" {
+		t.Errorf("WrapError message = %v, want %v", wrapped.Message, "wrapper message")
+	}
+
+	if wrapped.Suggestion != "wrapper suggestion" {
+		t.Errorf("WrapError suggestion = %v, want %v", wrapped.Suggestion, "wrapper suggestion")
+	}
+
+	result := wrapped.Error()
+	if !strings.Contains(result, "original error") {
+		t.Errorf("Wrapped error should contain original error, got %v", result)
+	}
+}
+
+func TestExitWithError(t *testing.T) {
+	// This test is tricky because ExitWithError calls os.Exit
+	// We'll test the logic by checking the error format before exit
+	tests := []struct {
+		name      string
+		err       error
+		wantInMsg string
+	}{
+		{
+			name:      "AppError exit",
+			err:       NewAppError(ErrorTypeConfig, "config error", "check config"),
+			wantInMsg: "config error",
+		},
+		{
+			name:      "standard error exit",
+			err:       fmt.Errorf("standard error"),
+			wantInMsg: "standard error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// We can't actually test os.Exit, but we can verify the error format
+			if appErr, ok := tt.err.(*AppError); ok {
+				result := appErr.Error()
+				if !strings.Contains(result, tt.wantInMsg) {
+					t.Errorf("Error message = %v, want to contain %v", result, tt.wantInMsg)
+				}
+			}
+		})
+	}
+}
+
+func TestModuleExtraction(t *testing.T) {
+	tests := []struct {
+		name     string
+		funcName string
+		wantMod  string
+	}{
+		{
+			name:     "simple function",
+			funcName: "main.processContent",
+			wantMod:  "main",
+		},
+		{
+			name:     "function with package",
+			funcName: "github.com/user/repo/module.processContent",
+			wantMod:  "module",
+		},
+		{
+			name:     "unknown function",
+			funcName: "",
+			wantMod:  "unknown",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotMod := extractModuleFromFunction(tt.funcName)
+			if gotMod != tt.wantMod {
+				t.Errorf("extractModuleFromFunction() = %v, want %v", gotMod, tt.wantMod)
+			}
+		})
+	}
+}
+
+func TestErrorTypeConstants(t *testing.T) {
+	// Verify exit code constants are set correctly
+	if ExitSuccess != 0 {
+		t.Errorf("ExitSuccess = %v, want 0", ExitSuccess)
+	}
+	if ExitError != 1 {
+		t.Errorf("ExitError = %v, want 1", ExitError)
+	}
+	if ExitUsage != 2 {
+		t.Errorf("ExitUsage = %v, want 2", ExitUsage)
+	}
+	if ExitInterrupt != 130 {
+		t.Errorf("ExitInterrupt = %v, want 130", ExitInterrupt)
+	}
+}
+
+{# vim: set ft=go: #}

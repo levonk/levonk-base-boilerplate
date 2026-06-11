@@ -1,0 +1,292 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createLogger } from './logger.js';
+import {
+    DryRunManager,
+    createDryRunManager,
+    initGlobalDryRunManager,
+    getGlobalDryRunManager,
+    isDryRunEnabled,
+    type DryRunOperation,
+} from './dry-run.js';
+
+describe('DryRunManager', () => {
+    let logger: any;
+    let manager: DryRunManager;
+
+    beforeEach(() => {
+        logger = createLogger({ quiet: true, module: 'test' });
+        manager = createDryRunManager(logger, false);
+    });
+
+    afterEach(() => {
+        // Reset global state
+        vi.unstubAllGlobals();
+    });
+
+    describe('isEnabled', () => {
+        it('should return false when disabled', () => {
+            expect(manager.isEnabled()).toBe(false);
+        });
+
+        it('should return true when enabled', () => {
+            manager.enable();
+            expect(manager.isEnabled()).toBe(true);
+        });
+    });
+
+    describe('enable/disable', () => {
+        it('should enable dry-run mode', () => {
+            manager.enable();
+            expect(manager.isEnabled()).toBe(true);
+        });
+
+        it('should disable dry-run mode', () => {
+            manager.enable();
+            manager.disable();
+            expect(manager.isEnabled()).toBe(false);
+        });
+    });
+
+    describe('logOperation', () => {
+        it('should log operations when dry-run is enabled', () => {
+            manager.enable();
+            const operation: DryRunOperation = {
+                type: 'file',
+                action: 'write',
+                target: '/tmp/test.txt',
+            };
+            manager.logOperation(operation);
+            expect(manager.getOperations()).toHaveLength(1);
+            expect(manager.getOperations()[0]).toEqual(operation);
+        });
+
+        it('should not log operations when dry-run is disabled', () => {
+            const operation: DryRunOperation = {
+                type: 'file',
+                action: 'write',
+                target: '/tmp/test.txt',
+            };
+            manager.logOperation(operation);
+            expect(manager.getOperations()).toHaveLength(0);
+        });
+    });
+
+    describe('getOperations', () => {
+        it('should return a copy of operations', () => {
+            manager.enable();
+            manager.logOperation({ type: 'file', action: 'write' });
+            const ops1 = manager.getOperations();
+            const ops2 = manager.getOperations();
+            expect(ops1).not.toBe(ops2);
+            expect(ops1).toEqual(ops2);
+        });
+    });
+
+    describe('clearOperations', () => {
+        it('should clear all operations', () => {
+            manager.enable();
+            manager.logOperation({ type: 'file', action: 'write' });
+            manager.logOperation({ type: 'file', action: 'delete' });
+            expect(manager.getOperations()).toHaveLength(2);
+            manager.clearOperations();
+            expect(manager.getOperations()).toHaveLength(0);
+        });
+    });
+
+    describe('getOperationCount', () => {
+        it('should return total operation count when no type specified', () => {
+            manager.enable();
+            manager.logOperation({ type: 'file', action: 'write' });
+            manager.logOperation({ type: 'network', action: 'GET' });
+            expect(manager.getOperationCount()).toBe(2);
+        });
+
+        it('should return operation count for specific type', () => {
+            manager.enable();
+            manager.logOperation({ type: 'file', action: 'write' });
+            manager.logOperation({ type: 'file', action: 'delete' });
+            manager.logOperation({ type: 'network', action: 'GET' });
+            expect(manager.getOperationCount('file')).toBe(2);
+            expect(manager.getOperationCount('network')).toBe(1);
+        });
+    });
+
+    describe('writeFile', () => {
+        it('should log but not write when dry-run is enabled', async () => {
+            manager.enable();
+            const writeSpy = vi.spyOn(require('fs').promises, 'writeFile');
+
+            await manager.writeFile('/tmp/test.txt', 'content');
+
+            expect(manager.getOperations()).toHaveLength(1);
+            expect(manager.getOperations()[0].type).toBe('file');
+            expect(manager.getOperations()[0].action).toBe('write');
+            expect(writeSpy).not.toHaveBeenCalled();
+        });
+
+        it('should write when dry-run is disabled', async () => {
+            const writeSpy = vi.spyOn(require('fs').promises, 'writeFile').mockResolvedValue(undefined);
+
+            await manager.writeFile('/tmp/test.txt', 'content');
+
+            expect(manager.getOperations()).toHaveLength(0);
+            expect(writeSpy).toHaveBeenCalledWith('/tmp/test.txt', 'content', 'utf-8');
+
+            writeSpy.mockRestore();
+        });
+    });
+
+    describe('deleteFile', () => {
+        it('should log but not delete when dry-run is enabled', async () => {
+            manager.enable();
+            const unlinkSpy = vi.spyOn(require('fs').promises, 'unlink');
+
+            await manager.deleteFile('/tmp/test.txt');
+
+            expect(manager.getOperations()).toHaveLength(1);
+            expect(manager.getOperations()[0].type).toBe('file');
+            expect(manager.getOperations()[0].action).toBe('delete');
+            expect(unlinkSpy).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('createDirectory', () => {
+        it('should log but not create when dry-run is enabled', async () => {
+            manager.enable();
+            const mkdirSpy = vi.spyOn(require('fs').promises, 'mkdir');
+
+            await manager.createDirectory('/tmp/test-dir');
+
+            expect(manager.getOperations()).toHaveLength(1);
+            expect(manager.getOperations()[0].type).toBe('file');
+            expect(manager.getOperations()[0].action).toBe('create-directory');
+            expect(mkdirSpy).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('networkRequest', () => {
+        it('should log and return dry-run response when enabled', async () => {
+            manager.enable();
+
+            const result = await manager.networkRequest('https://example.com', 'GET');
+
+            expect(manager.getOperations()).toHaveLength(1);
+            expect(manager.getOperations()[0].type).toBe('network');
+            expect(result).toEqual({ status: 'dry-run', url: 'https://example.com', method: 'GET' });
+        });
+
+        it('should throw error when dry-run is disabled', async () => {
+            await expect(manager.networkRequest('https://example.com', 'GET')).rejects.toThrow(
+                'Network requests not implemented in dry-run wrapper'
+            );
+        });
+    });
+
+    describe('setState', () => {
+        it('should log state change when dry-run is enabled', () => {
+            manager.enable();
+            manager.setState('key', 'value');
+
+            expect(manager.getOperations()).toHaveLength(1);
+            expect(manager.getOperations()[0].type).toBe('state');
+            expect(manager.getOperations()[0].action).toBe('set');
+            expect(manager.getOperations()[0].target).toBe('key');
+        });
+    });
+
+    describe('setConfig', () => {
+        it('should log config change when dry-run is enabled', () => {
+            manager.enable();
+            manager.setConfig('key', 'value');
+
+            expect(manager.getOperations()).toHaveLength(1);
+            expect(manager.getOperations()[0].type).toBe('config');
+            expect(manager.getOperations()[0].action).toBe('set');
+            expect(manager.getOperations()[0].target).toBe('key');
+        });
+    });
+
+    describe('getSummary', () => {
+        it('should return summary of operations', () => {
+            manager.enable();
+            manager.logOperation({ type: 'file', action: 'write' });
+            manager.logOperation({ type: 'file', action: 'delete' });
+            manager.logOperation({ type: 'network', action: 'GET' });
+            manager.logOperation({ type: 'state', action: 'set' });
+            manager.logOperation({ type: 'config', action: 'set' });
+
+            const summary = manager.getSummary();
+
+            expect(summary).toContain('Total operations: 5');
+            expect(summary).toContain('File operations: 2');
+            expect(summary).toContain('Network operations: 1');
+            expect(summary).toContain('State changes: 1');
+            expect(summary).toContain('Config changes: 1');
+        });
+
+        it('should return empty summary when no operations', () => {
+            manager.enable();
+            const summary = manager.getSummary();
+
+            expect(summary).toContain('Total operations: 0');
+            expect(summary).toContain('File operations: 0');
+        });
+    });
+});
+
+describe('Global dry-run manager', () => {
+    let logger: any;
+
+    beforeEach(() => {
+        logger = createLogger({ quiet: true, module: 'test' });
+    });
+
+    afterEach(() => {
+        // Reset global state
+        vi.unstubAllGlobals();
+        // Reset global dry-run manager
+        const { initGlobalDryRunManager } = require('./dry-run.js');
+        initGlobalDryRunManager(logger, false);
+    });
+
+    describe('initGlobalDryRunManager', () => {
+        it('should initialize global manager', () => {
+            initGlobalDryRunManager(logger, true);
+            expect(isDryRunEnabled()).toBe(true);
+        });
+
+        it('should initialize with dry-run disabled', () => {
+            initGlobalDryRunManager(logger, false);
+            expect(isDryRunEnabled()).toBe(false);
+        });
+    });
+
+    describe('getGlobalDryRunManager', () => {
+        it('should return null when not initialized', () => {
+            expect(getGlobalDryRunManager()).toBeNull();
+        });
+
+        it('should return manager when initialized', () => {
+            initGlobalDryRunManager(logger, true);
+            const manager = getGlobalDryRunManager();
+            expect(manager).not.toBeNull();
+            expect(manager?.isEnabled()).toBe(true);
+        });
+    });
+
+    describe('isDryRunEnabled', () => {
+        it('should return false when not initialized', () => {
+            expect(isDryRunEnabled()).toBe(false);
+        });
+
+        it('should return true when initialized with enabled', () => {
+            initGlobalDryRunManager(logger, true);
+            expect(isDryRunEnabled()).toBe(true);
+        });
+
+        it('should return false when initialized with disabled', () => {
+            initGlobalDryRunManager(logger, false);
+            expect(isDryRunEnabled()).toBe(false);
+        });
+    });
+});

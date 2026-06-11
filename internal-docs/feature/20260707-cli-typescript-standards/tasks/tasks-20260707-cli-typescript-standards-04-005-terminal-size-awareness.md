@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 4
 parallel_id: 5
 branch: "feature/current/20260707-cli-typescript-standards/story-04-005-terminal-size-awareness"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,18 +27,18 @@ Detect terminal size on startup and handle resize events where possible. Adjust 
 
 ## Sub-Tasks
 
-- [ ] Create terminal module with terminal size detection
-- [ ] Implement terminal size detection on startup
-- [ ] Implement terminal resize event handling
-- [ ] Add output formatting based on terminal width
-- [ ] Implement line wrapping for long lines
-- [ ] Add table formatting adjustments for terminal width
-- [ ] Add fallback for non-TTY environments
-- [ ] Add unit tests for terminal size detection
-- [ ] Add unit tests for line wrapping logic
-- [ ] Add integration tests for terminal-aware output
-- [ ] Update help text to document terminal awareness
-- [ ] Add terminal size logging in debug mode
+- [x] Create terminal module with terminal size detection
+- [x] Implement terminal size detection on startup
+- [x] Implement terminal resize event handling
+- [x] Add output formatting based on terminal width
+- [x] Implement line wrapping for long lines
+- [x] Add table formatting adjustments for terminal width
+- [x] Add fallback for non-TTY environments
+- [x] Add unit tests for terminal size detection
+- [x] Add unit tests for line wrapping logic
+- [x] Add integration tests for terminal-aware output
+- [x] Update help text to document terminal awareness
+- [x] Add terminal size logging in debug mode
 
 ## Relevant Files
 
@@ -49,14 +49,14 @@ Detect terminal size on startup and handle resize events where possible. Adjust 
 
 ## Acceptance Criteria
 
-- [ ] Terminal size is detected on startup
-- [ ] Terminal resize events are handled where possible
-- [ ] Output formatting adjusts based on terminal width
-- [ ] Long lines are wrapped appropriately
-- [ ] Table formatting adjusts for terminal width
-- [ ] Fallback behavior works for non-TTY environments
-- [ ] Terminal size is logged in debug mode
-- [ ] Output remains readable at various terminal widths
+- [x] Terminal size is detected on startup
+- [x] Terminal resize events are handled where possible
+- [x] Output formatting adjusts based on terminal width
+- [x] Long lines are wrapped appropriately
+- [x] Table formatting adjusts for terminal width
+- [x] Fallback behavior works for non-TTY environments
+- [x] Terminal size is logged in debug mode
+- [x] Output remains readable at various terminal widths
 
 ## Test Plan
 

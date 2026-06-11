@@ -1,0 +1,141 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/spf13/cobra"
+)
+
+// HealthStatus represents the health check response
+type HealthStatus struct {
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"timestamp"`
+	Uptime    string    `json:"uptime"`
+	Version   string    `json:"version"`
+}
+
+var (
+	startTime = time.Now()
+	healthServer *http.Server
+)
+
+// RunHealthCheck execk and exits
+func RunHealthCheck(cmd *cobra.Command) error {
+	status := checkHealth()
+
+	// Output health status
+	if jsonOutput {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(status)
+	}
+
+	fmt.Printf("Health Status: %s\n", status.Status)
+	fmt.Printf("Version: %s\n", status.Version)
+	fmt.Printf("Uptime: %s\n", status.Uptime)
+	fmt.Printf("Timestamp: %s\n", status.Timestamp.Format(time.RFC3339))
+
+	if status.Status != "healthy" {
+		os.Exit(1)
+	}
+	return nil
+}
+
+// checkHealth performs the actual health check
+func checkHealth() HealthStatus {
+	// Health check should have no side effects and be fast (<100ms)
+	// This is a read-only check of the application state
+
+	uptime := time.Since(startTime)
+
+	return HealthStatus{
+		Status:    "healthy",
+		Timestamp: time.Now(),
+		Uptime:    uptime.String(),
+		Version:   version,
+	}
+}
+
+// StartHealthServer starts an HTTP server for health checks
+func StartHealthServer(port string) error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", healthHandler)
+	mux.HandleFunc("/healthz", healthHandler)
+
+	healthServer = &http.Server{
+		Addr:         ":" + port,
+		Handler:      mux,
+		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 1 * time.Second,
+	}
+
+	go func() {
+		if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			if logger != nil {
+				logger.Error("Health server error: %v", err)
+			}
+		}
+	}()
+
+	return nil
+}
+
+// StopHealthServer stops the health check HTTP server
+func StopHealthServer() error {
+	if healthServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		return healthServer.Shutdown(ctx)
+	}
+	return nil
+}
+
+// healthHandler handles HTTP health check requests
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	status := checkHealth()
+	elapsed := time.Since(start)
+
+	// Ensure response time is fast (<100ms)
+	if elapsed > 100*time.Millisecond {
+		status.Status = "degraded"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Response-Time", elapsed.String())
+
+	if status.Status == "healthy" {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}
+
+	enc := json.NewEncoder(w)
+	enc.Encode(status)
+}
+
+// SetupSignalHealthCheck sets up signal-based health check (SIGUSR1)
+func SetupSignalHealthCheck() {
+	sigusr1 := make(chan os.Signal, 1)
+	signal.Notify(sigusr1, syscall.SIGUSR1)
+
+	go func() {
+		for range sigusr1 {
+			status := checkHealth()
+			if logger != nil {
+				logger.Info("Health check (SIGUSR1): Status=%s, Uptime=%s", status.Status, status.Uptime)
+			} else {
+				fmt.Printf("Health check (SIGUSR1): Status=%s, Uptime=%s\n", status.Status, status.Uptime)
+			}
+		}
+	}()
+}
+
+{# vim: set ft=go: #}

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 8
 parallel_id: 4
 branch: "feature/current/20260707-cli-typescript-standards/story-08-004-audit-logging"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: ["02-001"]
@@ -27,44 +27,46 @@ Implement audit logging for sensitive operations. Include retention policy for a
 
 ## Sub-Tasks
 
-- [ ] Create audit logging module
-- [ ] Define sensitive operations requiring audit
-- [ ] Implement audit log format
-- [ ] Add audit log rotation support
-- [ ] Implement audit log retention policy
-- [ ] Add tamper-evident audit logs
-- [ ] Implement append-only audit log using SQLite or similar
-- [ ] Add auto-prune old data on startup
-- [ ] Implement audit log filtering
-- [ ] Add audit log export capability for external analysis
-- [ ] Add unit tests for audit logging
-- [ ] Add unit tests for log rotation
-- [ ] Add unit tests for append-only behavior
-- [ ] Add unit tests for auto-prune logic
-- [ ] Add integration tests for audit workflow
-- [ ] Update help text to document audit logging
-- [ ] Add audit logging configuration
+- [x] Create audit logging module
+- [x] Define sensitive operations requiring audit
+- [x] Implement audit log format
+- [x] Add audit log rotation support
+- [x] Implement audit log retention policy
+- [x] Add tamper-evident audit logs
+- [x] Implement append-only audit log using SQLite or similar
+- [x] Add auto-prune old data on startup
+- [x] Implement audit log filtering
+- [x] Add audit log export capability for external analysis
+- [x] Add unit tests for audit logging
+- [x] Add unit tests for log rotation
+- [x] Add unit tests for append-only behavior
+- [x] Add unit tests for auto-prune logic
+- [x] Add integration tests for audit workflow
+- [x] Update help text to document audit logging
+- [x] Add audit logging configuration
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/audit.ts.jinja` - New audit logging module (to be created)
-- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with audit integration
-- `apps/cli/typescript/core/files/src/audit.test.ts.jinja` - Unit tests for audit logging (to be created)
-- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for audit
+- `apps/cli/typescript/core/files/src/audit.ts.jinja` - New audit logging module with SQLite-based append-only storage
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with audit integration and CLI flags
+- `apps/cli/typescript/core/files/src/audit.test.ts.jinja` - Unit tests for audit logging
+- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for audit workflow
+- `apps/cli/typescript/core/files/src/config.ts.jinja` - Config schema updated with audit settings
+- `apps/cli/typescript/core/files/package.json.jinja` - Added better-sqlite3 dependency
 
 ## Acceptance Criteria
 
-- [ ] Sensitive operations are logged to audit log
-- [ ] Audit log format is consistent
-- [ ] Audit log rotation works correctly
-- [ ] Audit log retention policy is enforced
-- [ ] Audit logs are tamper-evident
-- [ ] Audit logs use append-only storage (SQLite or similar)
-- [ ] Old data is auto-pruned on startup
-- [ ] Audit logs can be filtered
-- [ ] Audit logs can be exported for external analysis
-- [ ] Audit logging is configurable
-- [ ] Audit logs are secure
+- [x] Sensitive operations are logged to audit log
+- [x] Audit log format is consistent
+- [x] Audit log rotation works correctly
+- [x] Audit log retention policy is enforced
+- [x] Audit logs are tamper-evident
+- [x] Audit logs use append-only storage (SQLite or similar)
+- [x] Old data is auto-pruned on startup
+- [x] Audit logs can be filtered
+- [x] Audit logs can be exported for external analysis
+- [x] Audit logging is configurable
+- [x] Audit logs are secure
 
 ## Test Plan
 

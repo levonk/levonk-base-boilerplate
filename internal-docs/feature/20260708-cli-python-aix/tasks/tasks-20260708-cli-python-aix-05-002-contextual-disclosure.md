@@ -27,21 +27,21 @@ Implement contextual disclosure with next steps suggestions. Include few next st
 
 ## Sub-Tasks
 
-- [ ] Implement suggestion engine for each command — `output/suggestions.py`
-- [ ] Generate contextual help based on current state — `output/suggestions.py`
-- [ ] Generate contextual help based on output — `output/suggestions.py`
-- [ ] Format suggestions as structured `help[]` array in TOON — `output/toon.py`
-- [ ] Include 2-4 suggestions maximum — `output/suggestions.py`
-- [ ] Rank suggestions by relevance — `output/suggestions.py`
-- [ ] Make suggestions context-aware (not generic) — `output/suggestions.py`
-- [ ] Ensure every suggestion is complete command — `output/suggestions.py`
-- [ ] Include disambiguating flags in suggestions — `output/suggestions.py`
-- [ ] Add suggestion logic for after open item → suggest closing — `output/suggestions.py`
-- [ ] Add suggestion logic for after empty list → suggest creating — `output/suggestions.py`
-- [ ] Add suggestion logic for after list → suggest viewing — `output/suggestions.py`
-- [ ] Test suggestion generation for all commands — `tests/test_suggestions.py`
-- [ ] Test suggestion relevance ranking — `tests/test_suggestions.py`
-- [ ] Test suggestion formatting in TOON — `tests/test_suggestions.py`
+- [x] Implement suggestion engine for each command — `output/suggestions.py`
+- [x] Generate contextual help based on current state — `output/suggestions.py`
+- [x] Generate contextual help based on output — `output/suggestions.py`
+- [x] Format suggestions as structured `help[]` array in TOON — `output/toon.py`
+- [x] Include 2-4 suggestions maximum — `output/suggestions.py`
+- [x] Rank suggestions by relevance — `output/suggestions.py`
+- [x] Make suggestions context-aware (not generic) — `output/suggestions.py`
+- [x] Ensure every suggestion is complete command — `output/suggestions.py`
+- [x] Include disambiguating flags in suggestions — `output/suggestions.py`
+- [x] Add suggestion logic for after open item → suggest closing — `output/suggestions.py`
+- [x] Add suggestion logic for after empty list → suggest creating — `output/suggestions.py`
+- [x] Add suggestion logic for after list → suggest viewing — `output/suggestions.py`
+- [x] Test suggestion generation for all commands — `tests/test_suggestions.py`
+- [x] Test suggestion relevance ranking — `tests/test_suggestions.py`
+- [x] Test suggestion formatting in TOON — `tests/test_suggestions.py`
 
 ## Relevant Files
 
@@ -51,16 +51,16 @@ Implement contextual disclosure with next steps suggestions. Include few next st
 
 ## Acceptance Criteria
 
-- [ ] Next steps included in output
-- [ ] Suggestions follow logically from current output
-- [ ] Suggestions are relevant (context-aware)
-- [ ] Suggestions are actionable (complete commands)
-- [ ] Suggestions are concise (2-4 maximum)
-- [ ] Suggestions ranked by relevance
-- [ ] Suggestions formatted as `help[]` array in TOON
-- [ ] Suggestions include disambiguating flags
-- [ ] Specific suggestion logic for common scenarios
-- [ ] All tests pass
+- [x] Next steps included in output
+- [x] Suggestions follow logically from current output
+- [x] Suggestions are relevant (context-aware)
+- [x] Suggestions are actionable (complete commands)
+- [x] Suggestions are concise (2-4 maximum)
+- [x] Suggestions ranked by relevance
+- [x] Suggestions formatted as `help[]` array in TOON
+- [x] Suggestions include disambiguating flags
+- [x] Specific suggestion logic for common scenarios
+- [x] All tests pass
 
 ## Test Plan
 

@@ -1,0 +1,512 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  registerDeprecatedFeature,
+  getDeprecatedFeature,
+  getAllDeprecatedFeatures,
+  isDeprecated,
+  isRemoved,
+  getDeprecationStatus,
+  getDaysRemaining,
+  logDeprecationWarning,
+  generateDeprecationReport,
+  checkLegacyFeatures,
+  removeDeprecatedFeature,
+  clearDeprecatedFeatures,
+  type DeprecatedFeature,
+  type DeprecationConfig,
+} from './deprecation.js';
+
+describe('deprecation', () => {
+  beforeEach(() => {
+    clearDeprecatedFeatures();
+  });
+
+  describe('registerDeprecatedFeature', () => {
+    it('should register a valid deprecated feature', () => {
+      const feature: DeprecatedFeature = {
+        id: 'old-flag',
+        name: 'Old Flag',
+        description: 'This flag is deprecated',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: '2024-12-31',
+        migrationPath: 'Use --new-flag instead',
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(getDeprecatedFeature('old-flag')).toEqual(feature);
+    });
+
+    it('should enforce minimum 6-month deprecation period', () => {
+      const feature: DeprecatedFeature = {
+        id: 'too-short',
+        name: 'Too Short',
+        description: 'Deprecation period too short',
+        announcedDate: '2024-06-01',
+        endOfSupportDate: '2024-08-01', // Only 2 months
+      };
+
+      expect(() => registerDeprecatedFeature(feature)).toThrow(
+        /less than 6 months from announcement/
+      );
+    });
+
+    it('should reject features with end-of-support in the past', () => {
+      const feature: DeprecatedFeature = {
+        id: 'past-date',
+        name: 'Past Date',
+        description: 'End of support in the past',
+        announcedDate: '2020-01-01',
+        endOfSupportDate: '2020-12-31',
+      };
+
+      expect(() => registerDeprecatedFeature(feature)).toThrow(
+        /is in the past/
+      );
+    });
+
+    it('should reject invalid date formats', () => {
+      const feature: DeprecatedFeature = {
+        id: 'invalid-date',
+        name: 'Invalid Date',
+        description: 'Invalid date format',
+        announcedDate: 'not-a-date',
+        endOfSupportDate: '2024-12-31',
+      };
+
+      expect(() => registerDeprecatedFeature(feature)).toThrow(
+        /Invalid date format/
+      );
+    });
+  });
+
+  describe('getDeprecatedFeature', () => {
+    it('should return undefined for non-existent feature', () => {
+      expect(getDeprecatedFeature('non-existent')).toBeUndefined();
+    });
+
+    it('should return the registered feature', () => {
+      const feature: DeprecatedFeature = {
+        id: 'test-feature',
+        name: 'Test Feature',
+        description: 'Test description',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: '2024-12-31',
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(getDeprecatedFeature('test-feature')).toEqual(feature);
+    });
+  });
+
+  describe('getAllDeprecatedFeatures', () => {
+    it('should return empty array when no features registered', () => {
+      expect(getAllDeprecatedFeatures()).toEqual([]);
+    });
+
+    it('should return all registered features', () => {
+      const feature1: DeprecatedFeature = {
+        id: 'feature-1',
+        name: 'Feature 1',
+        description: 'First feature',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: '2024-12-31',
+      };
+
+      const feature2: DeprecatedFeature = {
+        id: 'feature-2',
+        name: 'Feature 2',
+        description: 'Second feature',
+        announcedDate: '2024-02-01',
+        endOfSupportDate: '2025-02-01',
+      };
+
+      registerDeprecatedFeature(feature1);
+      registerDeprecatedFeature(feature2);
+
+      const features = getAllDeprecatedFeatures();
+      expect(features).toHaveLength(2);
+      expect(features).toContainEqual(feature1);
+      expect(features).toContainEqual(feature2);
+    });
+  });
+
+  describe('isDeprecated', () => {
+    it('should return false for non-existent feature', () => {
+      expect(isDeprecated('non-existent')).toBe(false);
+    });
+
+    it('should return true for feature in deprecation period', () => {
+      const feature: DeprecatedFeature = {
+        id: 'deprecated',
+        name: 'Deprecated Feature',
+        description: 'Currently deprecated',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(isDeprecated('deprecated')).toBe(true);
+    });
+
+    it('should return false for removed feature', () => {
+      const feature: DeprecatedFeature = {
+        id: 'removed',
+        name: 'Removed Feature',
+        description: 'Already removed',
+        announcedDate: '2020-01-01',
+        endOfSupportDate: '2020-12-31',
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(isDeprecated('removed')).toBe(false);
+    });
+  });
+
+  describe('isRemoved', () => {
+    it('should return false for non-existent feature', () => {
+      expect(isRemoved('non-existent')).toBe(false);
+    });
+
+    it('should return true for feature past end-of-support date', () => {
+      const feature: DeprecatedFeature = {
+        id: 'removed',
+        name: 'Removed Feature',
+        description: 'Already removed',
+        announcedDate: '2020-01-01',
+        endOfSupportDate: '2020-12-31',
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(isRemoved('removed')).toBe(true);
+    });
+
+    it('should return false for feature in deprecation period', () => {
+      const feature: DeprecatedFeature = {
+        id: 'deprecated',
+        name: 'Deprecated Feature',
+        description: 'Currently deprecated',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(isRemoved('deprecated')).toBe(false);
+    });
+  });
+
+  describe('getDeprecationStatus', () => {
+    it('should return active for non-existent feature', () => {
+      expect(getDeprecationStatus('non-existent')).toBe('active');
+    });
+
+    it('should return deprecated for feature in deprecation period', () => {
+      const feature: DeprecatedFeature = {
+        id: 'deprecated',
+        name: 'Deprecated Feature',
+        description: 'Currently deprecated',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(getDeprecationStatus('deprecated')).toBe('deprecated');
+    });
+
+    it('should return removed for feature past end-of-support date', () => {
+      const feature: DeprecatedFeature = {
+        id: 'removed',
+        name: 'Removed Feature',
+        description: 'Already removed',
+        announcedDate: '2020-01-01',
+        endOfSupportDate: '2020-12-31',
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(getDeprecationStatus('removed')).toBe('removed');
+    });
+  });
+
+  describe('getDaysRemaining', () => {
+    it('should return 0 for non-existent feature', () => {
+      expect(getDaysRemaining('non-existent')).toBe(0);
+    });
+
+    it('should return positive days for deprecated feature', () => {
+      const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const feature: DeprecatedFeature = {
+        id: 'deprecated',
+        name: 'Deprecated Feature',
+        description: 'Currently deprecated',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: futureDate.toISOString().split('T')[0],
+      };
+
+      registerDeprecatedFeature(feature);
+      const days = getDaysRemaining('deprecated');
+      expect(days).toBeGreaterThan(0);
+      expect(days).toBeLessThanOrEqual(31); // Should be around 30 days
+    });
+
+    it('should return 0 for removed feature', () => {
+      const feature: DeprecatedFeature = {
+        id: 'removed',
+        name: 'Removed Feature',
+        description: 'Already removed',
+        announcedDate: '2020-01-01',
+        endOfSupportDate: '2020-12-31',
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(getDaysRemaining('removed')).toBe(0);
+    });
+  });
+
+  describe('logDeprecationWarning', () => {
+    it('should write warning to stderr', () => {
+      const feature: DeprecatedFeature = {
+        id: 'warn-test',
+        name: 'Warning Test',
+        description: 'Test warning',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        migrationPath: 'Use new feature',
+      };
+
+      registerDeprecatedFeature(feature);
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      logDeprecationWarning('warn-test');
+
+      expect(stderrSpy).toHaveBeenCalled();
+      const calls = stderrSpy.mock.calls;
+      const warningMessage = calls.join('\n');
+      expect(warningMessage).toContain('DEPRECATION WARNING');
+      expect(warningMessage).toContain('Warning Test');
+      expect(warningMessage).toContain('Use new feature');
+
+      stderrSpy.mockRestore();
+    });
+
+    it('should not warn if warnings are disabled', () => {
+      const feature: DeprecatedFeature = {
+        id: 'disabled',
+        name: 'Disabled Warning',
+        description: 'Should not warn',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      registerDeprecatedFeature(feature);
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      const config: DeprecationConfig = { warnings_enabled: false };
+      logDeprecationWarning('disabled', config);
+
+      expect(stderrSpy).not.toHaveBeenCalled();
+
+      stderrSpy.mockRestore();
+    });
+
+    it('should not warn if warning is suppressed', () => {
+      const feature: DeprecatedFeature = {
+        id: 'suppressed',
+        name: 'Suppressed Warning',
+        description: 'Should not warn',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      registerDeprecatedFeature(feature);
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      const config: DeprecationConfig = { suppressed_warnings: ['suppressed'] };
+      logDeprecationWarning('suppressed', config);
+
+      expect(stderrSpy).not.toHaveBeenCalled();
+
+      stderrSpy.mockRestore();
+    });
+
+    it('should not warn for removed features', () => {
+      const feature: DeprecatedFeature = {
+        id: 'removed',
+        name: 'Removed Feature',
+        description: 'Already removed',
+        announcedDate: '2020-01-01',
+        endOfSupportDate: '2020-12-31',
+      };
+
+      registerDeprecatedFeature(feature);
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      logDeprecationWarning('removed');
+
+      expect(stderrSpy).not.toHaveBeenCalled();
+
+      stderrSpy.mockRestore();
+    });
+  });
+
+  describe('generateDeprecationReport', () => {
+    it('should generate empty report when no features', () => {
+      const report = generateDeprecationReport();
+
+      expect(report.total).toBe(0);
+      expect(report.deprecated).toBe(0);
+      expect(report.removed).toBe(0);
+      expect(report.features).toEqual([]);
+    });
+
+    it('should generate report with mixed statuses', () => {
+      const deprecatedFeature: DeprecatedFeature = {
+        id: 'deprecated',
+        name: 'Deprecated Feature',
+        description: 'Currently deprecated',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      const removedFeature: DeprecatedFeature = {
+        id: 'removed',
+        name: 'Removed Feature',
+        description: 'Already removed',
+        announcedDate: '2020-01-01',
+        endOfSupportDate: '2020-12-31',
+      };
+
+      registerDeprecatedFeature(deprecatedFeature);
+      registerDeprecatedFeature(removedFeature);
+
+      const report = generateDeprecationReport();
+
+      expect(report.total).toBe(2);
+      expect(report.deprecated).toBe(1);
+      expect(report.removed).toBe(1);
+      expect(report.features).toHaveLength(2);
+
+      const deprecatedReport = report.features.find((f) => f.id === 'deprecated');
+      expect(deprecatedReport?.status).toBe('deprecated');
+      expect(deprecatedReport?.daysRemaining).toBeGreaterThan(0);
+
+      const removedReport = report.features.find((f) => f.id === 'removed');
+      expect(removedReport?.status).toBe('removed');
+      expect(removedReport?.daysRemaining).toBeUndefined();
+    });
+  });
+
+  describe('checkLegacyFeatures', () => {
+    it('should log warnings for deprecated features', () => {
+      const feature: DeprecatedFeature = {
+        id: 'legacy-flag',
+        name: 'Legacy Flag',
+        description: 'Old flag',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      registerDeprecatedFeature(feature);
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      checkLegacyFeatures(['legacy-flag']);
+
+      expect(stderrSpy).toHaveBeenCalled();
+      const calls = stderrSpy.mock.calls;
+      const warningMessage = calls.join('\n');
+      expect(warningMessage).toContain('DEPRECATION WARNING');
+
+      stderrSpy.mockRestore();
+    });
+
+    it('should log error for removed features', () => {
+      const feature: DeprecatedFeature = {
+        id: 'removed-flag',
+        name: 'Removed Flag',
+        description: 'Removed flag',
+        announcedDate: '2020-01-01',
+        endOfSupportDate: '2020-12-31',
+      };
+
+      registerDeprecatedFeature(feature);
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      checkLegacyFeatures(['removed-flag']);
+
+      expect(stderrSpy).toHaveBeenCalled();
+      const calls = stderrSpy.mock.calls;
+      const errorMessage = calls.join('\n');
+      expect(errorMessage).toContain('ERROR');
+      expect(errorMessage).toContain('no longer available');
+
+      stderrSpy.mockRestore();
+    });
+
+    it('should not warn for active features', () => {
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+      checkLegacyFeatures(['active-flag']);
+
+      expect(stderrSpy).not.toHaveBeenCalled();
+
+      stderrSpy.mockRestore();
+    });
+  });
+
+  describe('removeDeprecatedFeature', () => {
+    it('should remove feature from registry', () => {
+      const feature: DeprecatedFeature = {
+        id: 'to-remove',
+        name: 'To Remove',
+        description: 'Will be removed',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      registerDeprecatedFeature(feature);
+      expect(getDeprecatedFeature('to-remove')).toBeDefined();
+
+      const result = removeDeprecatedFeature('to-remove');
+      expect(result).toBe(true);
+      expect(getDeprecatedFeature('to-remove')).toBeUndefined();
+    });
+
+    it('should return false for non-existent feature', () => {
+      const result = removeDeprecatedFeature('non-existent');
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('clearDeprecatedFeatures', () => {
+    it('should clear all features', () => {
+      const feature1: DeprecatedFeature = {
+        id: 'feature-1',
+        name: 'Feature 1',
+        description: 'First feature',
+        announcedDate: '2024-01-01',
+        endOfSupportDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      const feature2: DeprecatedFeature = {
+        id: 'feature-2',
+        name: 'Feature 2',
+        description: 'Second feature',
+        announcedDate: '2024-02-01',
+        endOfSupportDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      };
+
+      registerDeprecatedFeature(feature1);
+      registerDeprecatedFeature(feature2);
+
+      expect(getAllDeprecatedFeatures()).toHaveLength(2);
+
+      clearDeprecatedFeatures();
+
+      expect(getAllDeprecatedFeatures()).toHaveLength(0);
+    });
+  });
+});

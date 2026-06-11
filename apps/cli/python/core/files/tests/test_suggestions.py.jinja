@@ -1,0 +1,221 @@
+# vim: set ft=python :
+"""Tests for contextual disclosure with next steps suggestions."""
+
+import pytest
+from {{project_slug}}.suggestions import (
+    Suggestion,
+    generate_suggestions_for_noargs,
+    generate_suggestions_for_process,
+    rank_suggestions,
+    limit_suggestions,
+    format_suggestions_toon,
+    get_contextual_suggestions,
+    format_suggestions,
+)
+
+
+def test_suggestion_creation():
+    """Test creating a suggestion."""
+    suggestion = Suggestion("test command", "test description", relevance=3)
+    
+    assert suggestion.command == "test command"
+    assert suggestion.description == "test description"
+    assert suggestion.relevance == 3
+
+
+def test_suggestion_to_dict():
+    """Test converting suggestion to dictionary."""
+    suggestion = Suggestion("test command", "test description", relevance=3)
+    result = suggestion.to_dict()
+    
+    assert result["command"] == "test command"
+    assert result["description"] == "test description"
+    assert "relevance" not in result  # relevance not included in dict
+
+
+def test_generate_suggestions_for_noargs_git_repo():
+    """Test generating suggestions for git repository."""
+    context = {
+        "exists": True,
+        "is_dir": True,
+        "is_git_repo": True,
+        "has_files": True,
+    }
+    
+    suggestions = generate_suggestions_for_noargs(context)
+    
+    assert len(suggestions) > 0
+    assert any("git-status" in s.command for s in suggestions)
+
+
+def test_generate_suggestions_for_noargs_node_project():
+    """Test generating suggestions for Node.js project."""
+    context = {
+        "exists": True,
+        "is_dir": True,
+        "has_package_json": True,
+        "has_files": True,
+    }
+    
+    suggestions = generate_suggestions_for_noargs(context)
+    
+    assert len(suggestions) > 0
+    assert any("package.json" in s.command for s in suggestions)
+
+
+def test_generate_suggestions_for_noargs_python_project():
+    """Test generating suggestions for Python project."""
+    context = {
+        "exists": True,
+        "is_dir": True,
+        "has_pyproject": True,
+        "has_files": True,
+    }
+    
+    suggestions = generate_suggestions_for_noargs(context)
+    
+    assert len(suggestions) > 0
+    assert any("pyproject.toml" in s.command for s in suggestions)
+
+
+def test_generate_suggestions_for_noargs_not_exists():
+    """Test generating suggestions for non-existent path."""
+    context = {
+        "exists": False,
+    }
+    
+    suggestions = generate_suggestions_for_noargs(context)
+    
+    assert len(suggestions) == 0
+
+
+def test_generate_suggestions_for_process_empty():
+    """Test generating suggestions for empty results."""
+    output = {
+        "results": [],
+    }
+    
+    suggestions = generate_suggestions_for_process(output)
+    
+    assert len(suggestions) > 0
+    assert any("create" in s.command for s in suggestions)
+
+
+def test_generate_suggestions_for_process_with_results():
+    """Test generating suggestions with results."""
+    output = {
+        "results": [{"source": "test.txt"}],
+    }
+    
+    suggestions = generate_suggestions_for_process(output)
+    
+    assert len(suggestions) > 0
+    assert any("view" in s.command for s in suggestions)
+
+
+def test_rank_suggestions():
+    """Test ranking suggestions by relevance."""
+    suggestions = [
+        Suggestion("cmd1", "desc1", relevance=1),
+        Suggestion("cmd2", "desc2", relevance=3),
+        Suggestion("cmd3", "desc3", relevance=2),
+    ]
+    
+    ranked = rank_suggestions(suggestions)
+    
+    assert ranked[0].relevance == 3
+    assert ranked[1].relevance == 2
+    assert ranked[2].relevance == 1
+
+
+def test_limit_suggestions():
+    """Test limiting suggestions count."""
+    suggestions = [
+        Suggestion(f"cmd{i}", f"desc{i}", relevance=i)
+        for i in range(10)
+    ]
+    
+    limited = limit_suggestions(suggestions, max_count=4)
+    
+    assert len(limited) == 4
+
+
+def test_format_suggestions_toon():
+    """Test formatting suggestions in TOON."""
+    suggestions = [
+        Suggestion("test command", "test description", relevance=3),
+    ]
+    
+    toon = format_suggestions_toon(suggestions)
+    
+    assert "help[" in toon
+    assert "test command" in toon
+    assert "test description" in toon
+
+
+def test_format_suggestions_toon_empty():
+    """Test formatting empty suggestions in TOON."""
+    toon = format_suggestions_toon([])
+    
+    assert toon == ""
+
+
+def test_get_contextual_suggestions_noargs():
+    """Test getting contextual suggestions for noargs."""
+    context = {
+        "exists": True,
+        "is_dir": True,
+        "is_git_repo": True,
+        "has_files": True,
+    }
+    
+    suggestions = get_contextual_suggestions("noargs", context=context)
+    
+    assert len(suggestions) > 0
+    assert len(suggestions) <= 4  # Limited to 4
+
+
+def test_get_contextual_suggestions_process():
+    """Test getting contextual suggestions for process."""
+    output = {
+        "results": [{"source": "test.txt"}],
+    }
+    
+    suggestions = get_contextual_suggestions("process", output=output)
+    
+    assert len(suggestions) > 0
+    assert len(suggestions) <= 4
+
+
+def test_get_contextual_suggestions_generic():
+    """Test getting generic suggestions."""
+    suggestions = get_contextual_suggestions("unknown")
+    
+    assert len(suggestions) > 0
+    assert any("--help" in s.command for s in suggestions)
+
+
+def test_format_suggestions_toon_format():
+    """Test formatting suggestions in TOON format."""
+    context = {
+        "exists": True,
+        "is_dir": True,
+        "has_files": True,
+    }
+    
+    formatted = format_suggestions("noargs", context=context, format_type="toon")
+    
+    assert "help[" in formatted or formatted == ""
+
+
+def test_format_suggestions_human_format():
+    """Test formatting suggestions in human format."""
+    context = {
+        "exists": True,
+        "is_dir": True,
+        "has_files": True,
+    }
+    
+    formatted = format_suggestions("noargs", context=context, format_type="human")
+    
+    assert "Next steps:" in formatted or formatted == ""

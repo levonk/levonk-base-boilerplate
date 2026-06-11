@@ -1,0 +1,215 @@
+package aggregates
+
+import (
+	"testing"
+)
+
+func TestNewDerivedStatus(t *testing.T) {
+	ds := NewDerivedStatus()
+	if ds == nil {
+		t.Fatal("NewDerivedStatus returned nil")
+	}
+	if len(ds.GetFields()) != 0 {
+		t.Errorf("Expected empty fields, got %d", len(ds.GetFields()))
+	}
+}
+
+func TestAddField(t *testing.T) {
+	ds := NewDerivedStatus()
+	ds.AddField("status", "passed")
+
+	fields := ds.GetFields()
+	if len(fields) != 1 {
+		t.Fatalf("Expected 1 field, got %d", len(fields))
+	}
+
+	if fields[0].Name != "status" {
+		t.Errorf("Expected field name 'status', got '%s'", fields[0].Name)
+	}
+
+	if fields[0].Value != "passed" {
+		t.Errorf("Expected field value 'passed', got '%s'", fields[0].Value)
+	}
+}
+
+func TestFormat(t *testing.T) {
+	ds := NewDerivedStatus()
+	ds.AddField("tests", "3/3 passed")
+	ds.AddField("comments", "7 comments")
+
+	expected := "tests: 3/3 passed, comments: 7 comments"
+	actual := ds.Format()
+
+	if actual != expected {
+		t.Errorf("Expected format '%s', got '%s'", expected, actual)
+	}
+}
+
+func TestFormatEmpty(t *testing.T) {
+	ds := NewDerivedStatus()
+	if ds.Format() != "" {
+		t.Error("Expected empty string for no fields")
+	}
+}
+
+func TestComputeTestStatus(t *testing.T) {
+	data := map[string]interface{}{
+		"total":   float64(3),
+		"passed":  float64(3),
+	}
+
+	result := ComputeTestStatus(data)
+	expected := "3/3 passed"
+
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+}
+
+func TestComputeTestStatusMissingFields(t *testing.T) {
+	data := map[string]interface{}{
+		"total": float64(3),
+	}
+
+	result := ComputeTestStatus(data)
+	if result != "" {
+		t.Errorf("Expected empty string for missing passed field, got '%s'", result)
+	}
+}
+
+func TestComputeCommentCount(t *testing.T) {
+	data := map[string]interface{}{
+		"comment_count":  float64(7),
+	}
+
+	result := ComputeCommentCount(data)
+	expected := "7 comments"
+
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+}
+
+func TestComputeCommentCountSingle(t *testing.T) {
+	data := map[string]interface{}{
+		"comment_count":  float64(1),
+	}
+
+	result := ComputeCommentCount(data)
+	expected := "1 comment"
+
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+}
+
+func TestComputeTaskStatus(t *testing.T) {
+	data := map[string]interface{}{
+		"total_tasks":     float64(10),
+		"completed_tasks": float64(5),
+	}
+
+	result := ComputeTaskStatus(data)
+	expected := "5/10 completed"
+
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+}
+
+func TestComputeBuildStatus(t *testing.T) {
+	tests := []struct {
+		status   string
+		expected string
+	}{
+		{"success", "✓ passed"},
+		{"passed", "✓ passed"},
+		{"failure", "✗ failed"},
+		{"failed", "✗ failed"},
+		{"running", "⟳ running"},
+		{"pending", "○ pending"},
+		{"unknown", "unknown"},
+	}
+
+	for _, tt := range tests {
+		data := map[string]interface{}{
+			"status": tt.status,
+		}
+		result := ComputeBuildStatus(data)
+		if result != tt.expected {
+			t.Errorf("For status '%s', expected '%s', got '%s'", tt.status, tt.expected, result)
+		}
+	}
+}
+
+func TestComputeHealthStatus(t *testing.T) {
+	tests := []struct {
+		healthy  bool
+		expected string
+	}{
+		{true, "healthy"},
+		{false, "unhealthy"},
+	}
+
+	for _, tt := range tests {
+		data := map[string]interface{}{
+			"healthy": tt.healthy,
+		}
+		result := ComputeHealthStatus(data)
+		if result != tt.expected {
+			t.Errorf("For healthy=%v, expected '%s', got '%s'", tt.healthy, tt.expected, result)
+		}
+	}
+}
+
+func TestComputeSummary(t *testing.T) {
+	data := map[string]interface{}{
+		"total":          float64(3),
+		"passed":         float64(3),
+		"comment_count":  float64(7),
+		"total_tasks":    float64(10),
+		"completed_tasks": float64(5),
+		"status":         "success",
+		"healthy":        true,
+	}
+
+	ds := ComputeSummary(data)
+	fields := ds.GetFields()
+
+	if len(fields) != 5 {
+		t.Errorf("Expected 5 derived fields, got %d", len(fields))
+	}
+
+	// Check that all expected fields are present
+	fieldMap := make(map[string]string)
+	for _, field := range fields {
+		fieldMap[field.Name] = field.Value
+	}
+
+	expectedFields := map[string]string{
+		"tests":   "3/3 passed",
+		"comments": "7 comments",
+		"tasks":   "5/10 completed",
+		"build":   "✓ passed",
+		"health":  "healthy",
+	}
+
+	for name, expectedValue := range expectedFields {
+		if value, ok := fieldMap[name]; !ok {
+			t.Errorf("Expected field '%s' not found", name)
+		} else if value != expectedValue {
+			t.Errorf("Field '%s': expected '%s', got '%s'", name, expectedValue, value)
+		}
+	}
+}
+
+func TestComputeSummaryEmpty(t *testing.T) {
+	data := map[string]interface{}{
+		"unrelated":  "value",
+	}
+
+	ds := ComputeSummary(data)
+	if len(ds.GetFields()) != 0 {
+		t.Errorf("Expected no derived fields for empty data, got %d", len(ds.GetFields()))
+	}
+}

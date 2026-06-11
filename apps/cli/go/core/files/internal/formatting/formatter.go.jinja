@@ -1,0 +1,392 @@
+package formatting
+
+import (
+	"fmt"
+	"strings"
+
+	"{{ project_slug }}/internal/aggregates"
+	"{{ project_slug }}/internal/emptystate"
+	"{{ project_slug }}/internal/schema"
+	"{{ project_slug }}/internal/toon"
+	"{{ project_slug }}/internal/truncation"
+)
+
+// Format represents the output format type
+type Format string
+
+const (
+	// FormatTOON is the TOON (Token-Oriented Object Notation) format
+	FormatTOON Format = "toon"
+	// FormatJSON is the JSON format
+	FormatJSON Format = "json"
+	// FormatHuman is the human-readable format
+	FormatHuman Format = "human"
+)
+
+// Formatter handles output formatting based on mode and flags
+type Formatter struct {
+	mode          Mode
+	toonFlag      bool
+	formatFlag    string
+	jsonOutput    bool
+	schema        *schema.Schema
+	fieldSelector *schema.Selector
+	truncator     *truncation.Truncator
+	fullFlag      bool
+	counter       *aggregates.Counter
+	derivedStatus *aggregates.DerivedStatus
+	emptyDetector *emptystate.Detector
+	emptyFormatter *emptystate.Formatter
+	emptyContext  emptystate.Context
+}
+
+// Mode represents the CLI operation mode
+type Mode string
+
+const (
+	// ModeAgent is the agent mode (default for non-interactive environments)
+	ModeAgent Mode = "agent"
+	// ModeHuman is the human mode (interactive)
+	ModeHuman Mode = "human"
+)
+
+// NewFormatter creates a new formatter with the given configuration
+func NewFormatter(mode Mode, toonFlag bool, formatFlag string, jsonOutput bool, fullFlag bool) *Formatter {
+	config := truncation.DefaultConfig()
+	if fullFlag {
+		config.DisableTruncation = true
+	}
+	return &Formatter{
+		mode:           mode,
+		toonFlag:       toonFlag,
+		formatFlag:     formatFlag,
+		jsonOutput:     jsonOutput,
+		truncator:      truncation.NewTruncator(config),
+		fullFlag:       fullFlag,
+		counter:        aggregates.NewCounter(),
+		derivedStatus:  aggregates.NewDerivedStatus(),
+		emptyDetector:  emptystate.NewDetector(),
+		emptyFormatter: emptystate.NewFormatter(),
+		emptyContext:   emptystate.Context{},
+	}
+}
+
+// WithSchema sets the schema for field selection
+func (f *Formatter) WithSchema(s *schema.Schema) *Formatter {
+	f.schema = s
+	f.fieldSelector = schema.NewSelector(s)
+	return f
+}
+
+// WithFields sets custom field selection
+func (f *Formatter) WithFields(fieldNames []string) *Formatter {
+	if f.fieldSelector != nil {
+		f.fieldSelector.WithFields(fieldNames)
+	}
+	return f
+}
+
+// WithTotalCount sets the total count for list outputs
+func (f *Formatter) WithTotalCount(total int) *Formatter {
+	f.counter.SetTotal(total)
+	return f
+}
+
+// WithDerivedStatus computes derived status fields from data
+func (f *Formatter) WithDerivedStatus(data map[string]interface{}) *Formatter {
+	f.derivedStatus = aggregates.ComputeSummary(data)
+	return f
+}
+
+// WithEmptyContext sets the empty state context
+func (f *Formatter) WithEmptyContext(command string, resource string, filters map[string]string, scope string, totalCount int) *Formatter {
+	f.emptyContext = emptystate.Context{
+		Command:    command,
+		Resource:   resource,
+		Filters:    filters,
+		Scope:      scope,
+		TotalCount: totalCount,
+	}
+	return f
+}
+
+// DetermineFormat determines the output format based on mode and flags
+// Precedence (highest to lowest):
+// 1. --toon flag
+// 2. --format flag
+// 3. --json flag
+// 4. Mode-based default (TOON for agent, JSON/human for human)
+func (f *Formatter) DetermineFormat() Format {
+	// 1. --toon flag takes highest precedence
+	if f.toonFlag {
+		return FormatTOON
+	}
+
+	// 2. --format flag
+	if f.formatFlag != "" {
+		switch strings.ToLower(f.formatFlag) {
+		case "toon":
+			return FormatTOON
+		case "json":
+			return FormatJSON
+		case "human":
+			return FormatHuman
+		default:
+			// Invalid format, fall through to mode-based default
+		}
+	}
+
+	// 3. --json flag
+	if f.jsonOutput {
+		return FormatJSON
+	}
+
+	// 4. Mode-based default
+	if f.mode == ModeAgent {
+		return FormatTOON
+	}
+	return FormatJSON // Human mode defaults to JSON (could be human-readable)
+}
+
+// FormatValue formats a value according to the determined format
+func (f *Formatter) FormatValue(v interface{}) (string, error) {
+	// Check for empty state first
+	emptyState := f.emptyDetector.Detect(v, f.emptyContext)
+	if emptyState.IsEmpty {
+		format := f.DetermineFormat()
+		formatStr := string(format)
+		if formatStr == "" {
+			formatStr = "json" // Default to JSON for empty states
+		}
+		return f.emptyFormatter.Format(emptyState, formatStr)
+	}
+
+	format := f.DetermineFormat()
+
+	switch format {
+	case FormatTOON:
+		return f.formatTOON(v)
+	case FormatJSON:
+		return f.formatJSON(v)
+	case FormatHuman:
+		return f.formatHuman(v)
+	default:
+		return "", fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// formatTOON formats a value as TOON
+func (f *Formatter) formatTOON(v interface{}) (string, error) {
+	// Compute count for list outputs
+	switch val := v.(type) {
+	case []map[string]interface{}:
+		f.counter.CountFromSlice(val)
+	case []interface{}:
+		f.counter.CountFromSlice(val)
+	}
+
+	// Apply schema field selection and limits if configured
+	if f.fieldSelector != nil {
+		switch val := v.(type) {
+		case map[string]interface{}:
+			// Add derived status fields for detail views
+			filtered, err := f.fieldSelector.Apply(val)
+			if err != nil {
+				return "", err
+			}
+			// Add derived status fields to the filtered map
+			if len(f.derivedStatus.GetFields()) > 0 {
+				for _, field := range f.derivedStatus.GetFields() {
+					filtered[field.Name] = field.Value
+				}
+				v = filtered
+			} else {
+				v = filtered
+			}
+		case []map[string]interface{}:
+			// Apply limit if schema is configured
+			if f.schema != nil {
+				filtered, err := f.fieldSelector.ApplyWithLimit(val, f.schema.MaxItems)
+				if err != nil {
+					return "", err
+				}
+				v = filtered
+			} else {
+				filtered, err := f.fieldSelector.ApplyToSlice(val)
+				if err != nil {
+					return "", err
+				}
+				v = filtered
+			}
+		}
+	}
+
+	// Convert the value to a TOON Value
+	toonValue, err := f.convertToTOON(v)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode using TOON encoder
+	encoder := toon.NewEncoder(toon.DefaultEncoderOptions())
+	result, err := encoder.EncodeValue(toonValue)
+	if err != nil {
+		return "", err
+	}
+
+	// Append count information for list outputs
+	if f.counter.HasTotalCount() {
+		result = result + "\n" + f.counter.FormatCount()
+	}
+
+	return result, nil
+}
+
+// formatJSON formats a value as JSON
+func (f *Formatter) formatJSON(v interface{}) (string, error) {
+	// Compute count for list outputs
+	switch val := v.(type) {
+	case []map[string]interface{}:
+		f.counter.CountFromSlice(val)
+	case []interface{}:
+		f.counter.CountFromSlice(val)
+	}
+
+	// Apply schema field selection if configured
+	if f.fieldSelector != nil {
+		switch val := v.(type) {
+		case map[string]interface{}:
+			// Add derived status fields for detail views
+			filtered, err := f.fieldSelector.Apply(val)
+			if err != nil {
+				return "", err
+			}
+			// Add derived status fields to the filtered map
+			if len(f.derivedStatus.GetFields()) > 0 {
+				for _, field := range f.derivedStatus.GetFields() {
+					filtered[field.Name] = field.Value
+				}
+				v = filtered
+			} else {
+				v = filtered
+			}
+		case []map[string]interface{}:
+			filtered, err := f.fieldSelector.ApplyToSlice(val)
+			if err != nil {
+				return "", err
+			}
+			v = filtered
+		}
+	}
+
+	// Apply truncation to string values in the data structure
+	v = f.applyTruncation(v)
+
+	// Use standard JSON encoding
+	// This is a placeholder - actual implementation would use encoding/json
+	result := fmt.Sprintf("%#v", v)
+
+	// Append count information for list outputs
+	if f.counter.HasTotalCount() {
+		result = result + "\n" + f.counter.FormatCount()
+	}
+
+	return result, nil
+}
+
+// applyTruncation recursively applies truncation to string values in a data structure
+func (f *Formatter) applyTruncation(v interface{}) interface{} {
+	switch val := v.(type) {
+	case string:
+		truncated, _ := f.truncator.Truncate(val, truncation.FieldTypeGeneric)
+		return truncated
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, value := range val {
+			// Apply field-specific truncation for known field types
+			if strVal, ok := value.(string); ok {
+				truncated, _ := f.truncator.TruncateField(key, strVal)
+				result[key] = truncated
+			} else {
+				result[key] = f.applyTruncation(value)
+			}
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(val))
+		for i, item := range val {
+			result[i] = f.applyTruncation(item)
+		}
+		return result
+	case []map[string]interface{}:
+		result := make([]map[string]interface{}, len(val))
+		for i, item := range val {
+			result[i] = f.applyTruncation(item).(map[string]interface{})
+		}
+		return result
+	default:
+		return v
+	}
+}
+
+// formatHuman formats a value as human-readable
+func (f *Formatter) formatHuman(v interface{}) (string, error) {
+	// Use human-readable formatting
+	return fmt.Sprintf("%v", v), nil
+}
+
+// convertToTOON converts a Go value to a TOON Value
+func (f *Formatter) convertToTOON(v interface{}) (toon.Value, error) {
+	// This is a simplified conversion
+	// A full implementation would handle all Go types recursively
+	switch val := v.(type) {
+	case string:
+		// Apply truncation to string values
+		truncated, _ := f.truncator.Truncate(val, truncation.FieldTypeGeneric)
+		return toon.StringValue(truncated), nil
+	case int, int8, int16, int32, int64:
+		return toon.NumberValue(float64(val.(int64))), nil
+	case uint, uint8, uint16, uint32, uint64:
+		return toon.NumberValue(float64(val.(uint64))), nil
+	case float32, float64:
+		return toon.NumberValue(float64(val.(float64))), nil
+	case bool:
+		return toon.BoolValue(val), nil
+	case nil:
+		return toon.NullValue{}, nil
+	case map[string]interface{}:
+		// Convert map to TOON Object with field-aware truncation
+		fields := make(map[string]toon.Value)
+		for key, value := range val {
+			// Apply field-specific truncation for known field types
+			if strVal, ok := value.(string); ok {
+				truncated, _ := f.truncator.TruncateField(key, strVal)
+				value = truncated
+			}
+			toonValue, err := f.convertToTOON(value)
+			if err != nil {
+				return nil, err
+			}
+			fields[key] = toonValue
+		}
+		return toon.Object{Fields: fields}, nil
+	case []map[string]interface{}:
+		// Convert slice of maps to TOON Array
+		items := make([]toon.Value, len(val))
+		for i, item := range val {
+			toonValue, err := f.convertToTOON(item)
+			if err != nil {
+				return nil, err
+			}
+			items[i] = toonValue
+		}
+		return toon.Array{
+			Length:    len(val),
+			Delimiter: toon.DelimiterComma,
+			Items:     items,
+			IsTabular: false,
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported type for TOON conversion: %T", v)
+	}
+}

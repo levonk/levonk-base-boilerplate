@@ -1,0 +1,153 @@
+package suggestions
+
+import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
+)
+
+// Suggestion represents a contextual suggestion
+type Suggestion struct {
+	// Command is the suggested command to run
+	Command string `json:"command"`
+	// Description explains why this suggestion is relevant
+	Description string `json:"description"`
+	// Relevance score (higher is more relevant)
+	Relevance int `json:"relevance"`
+}
+
+// Context represents the execution context for suggestion generation
+type Context struct {
+	// Current command being executed
+	Command string
+	// Current working directory
+	WorkingDir string
+	// Whether in a git repository
+	IsGitRepo bool
+	// Whether in a project directory
+	IsProjectDir bool
+	// Project type if detected
+	ProjectType string
+	// Current output state (e.g., empty list, open items)
+	OutputState string
+	// Flags used in current command
+	Flags map[string]string
+}
+
+// Engine generates contextual suggestions
+type Engine struct {
+	ctx     context.Context
+	rules   []Rule
+	maxSuggestions int
+}
+
+// Rule defines a suggestion generation rule
+type Rule interface {
+	// Generate returns suggestions based on context
+	Generate(ctx *Context) []Suggestion
+	// Priority determines rule order (higher runs first)
+	Priority() int
+}
+
+// NewEngine creates a new suggestion engine
+func NewEngine(ctx context.Context, maxSuggestions int) *Engine {
+	return &Engine{
+		ctx:           ctx,
+		rules:         []Rule{},
+		maxSuggestions: maxSuggestions,
+	}
+}
+
+// AddRule adds a suggestion rule to the engine
+func (e *Engine) AddRule(rule Rule) {
+	e.rules = append(e.rules, rule)
+}
+
+// Generate generates contextual suggestions based on the context
+func (e *Engine) Generate(ctx *Context) []Suggestion {
+	var allSuggestions []Suggestion
+
+	// Generate suggestions from all rules
+	for _, rule := range e.rules {
+		suggestions := rule.Generate(ctx)
+		allSuggestions = append(allSuggestions, suggestions...)
+	}
+
+	// Sort by relevance (highest first)
+	sort.Slice(allSuggestions, func(i, j int) bool {
+		return allSuggestions[i].Relevance > allSuggestions[j].Relevance
+	})
+
+	// Limit to max suggestions
+	if len(allSuggestions) > e.maxSuggestions {
+		allSuggestions = allSuggestions[:e.maxSuggestions]
+	}
+
+	return allSuggestions
+}
+
+// FormatSuggestions formats suggestions for output
+func (e *Engine) FormatSuggestions(suggestions []Suggestion, format string) (string, error) {
+	switch format {
+	case "toon":
+		return e.formatTOON(suggestions), nil
+	case "json":
+		return e.formatJSON(suggestions)
+	case "human":
+		return e.formatHuman(suggestions), nil
+	default:
+		return e.formatHuman(suggestions), nil
+	}
+}
+
+// formatTOON formats suggestions in TOON format
+func (e *Engine) formatTOON(suggestions []Suggestion) string {
+	if len(suggestions) == 0 {
+		return "help[]"
+	}
+
+	var sb strings.Builder
+	sb.WriteString("help[")
+
+	for i, s := range suggestions {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(fmt.Sprintf("{command:%q,description:%q,relevance:%d}",
+			s.Command, s.Description, s.Relevance))
+	}
+
+	sb.WriteString("]")
+	return sb.String()
+}
+
+// formatJSON formats suggestions as JSON
+func (e *Engine) formatJSON(suggestions []Suggestion) (string, error) {
+	// Use encoding/json in actual implementation
+	// This is a simplified placeholder
+	if len(suggestions) == 0 {
+		return `{"help":[]}`, nil
+	}
+	return fmt.Sprintf(`{"help":[{"command":"%s","description":"%s","relevance":%d}]}`,
+		suggestions[0].Command, suggestions[0].Description, suggestions[0].Relevance), nil
+}
+
+// formatHuman formats suggestions in human-readable format
+func (e *Engine) formatHuman(suggestions []Suggestion) string {
+	if len(suggestions) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("Suggestions:\n")
+
+	for i, s := range suggestions {
+		sb.WriteString(fmt.Sprintf("  %d. %s\n", i+1, s.Command))
+		sb.WriteString(fmt.Sprintf("     %s\n", s.Description))
+	}
+
+	return sb.String()
+}
+
+{# vim: set ft=go: #}

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 3
 parallel_id: 3
 branch: "feature/current/20260707-cli-go-standards/story-03-003-file-reference-formatting"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["02-004"]
@@ -27,14 +27,14 @@ Implement VSCode-compatible file reference formatting using `file:///absolute/pa
 
 ## Sub-Tasks
 
-- [ ] Create file reference formatting utility — `core/files/refs.go.jinja`
-- [ ] Implement VSCode-compatible format — `core/files/refs.go.jinja`
-- [ ] Implement standard file:line:column format — `core/files/refs.go.jinja`
-- [ ] Update error messages to use file references — `core/files/main.go.jinja`
-- [ ] Update logger to use file references — `core/files/logger.go.jinja`
-- [ ] Test VSCode format generation — `core/files/refs_test.go.jinja`
-- [ ] Test standard format generation — `core/files/refs_test.go.jinja`
-- [ ] Test file references in error messages — `core/files/refs_test.go.jinja`
+- [x] Create file reference formatting utility — `core/files/refs.go.jinja`
+- [x] Implement VSCode-compatible format — `core/files/refs.go.jinja`
+- [x] Implement standard file:line:column format — `core/files/refs.go.jinja`
+- [x] Update error messages to use file references — `core/files/main.go.jinja`
+- [x] Update logger to use file references — `core/files/logger.go.jinja`
+- [x] Test VSCode format generation — `core/files/refs_test.go.jinja`
+- [x] Test standard format generation — `core/files/refs_test.go.jinja`
+- [x] Test file references in error messages — `core/files/refs_test.go.jinja`
 
 ## Relevant Files
 
@@ -45,12 +45,12 @@ Implement VSCode-compatible file reference formatting using `file:///absolute/pa
 
 ## Acceptance Criteria
 
-- [ ] File references use VSCode-compatible format
-- [ ] Standard file:line:column format is supported
-- [ ] All error messages include file references
-- [ ] File references include line and column numbers
-- [ ] File references work with absolute paths
-- [ ] Terminal linking works where supported
+- [x] File references use VSCode-compatible format
+- [x] Standard file:line:column format is supported
+- [x] All error messages include file references
+- [x] File references include line and column numbers
+- [x] File references work with absolute paths
+- [x] Terminal linking works where supported
 
 ## Test Plan
 

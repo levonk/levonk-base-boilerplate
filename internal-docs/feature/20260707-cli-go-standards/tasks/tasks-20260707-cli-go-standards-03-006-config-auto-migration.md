@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-go-standards/prd.md"
 phase: 3
 parallel_id: 6
 branch: "feature/current/20260707-cli-go-standards/story-03-006-config-auto-migration"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-007"]
@@ -27,39 +27,39 @@ Implement automatic config file migration when config schema evolves. Auto-migra
 
 ## Sub-Tasks
 
-- [ ] Create config migration system — `core/files/migration.go.jinja`
-- [ ] Define config versioning scheme — `core/files/migration.go.jinja`
-- [ ] Implement migration from legacy format — `core/files/migration.go.jinja`
-- [ ] Add backup creation with .bak suffix — `core/files/migration.go.jinja`
-- [ ] Implement migration logging — `core/files/migration.go.jinja`
-- [ ] Add migrated config validation — `core/files/migration.go.jinja`
-- [ ] Add legacy format support — `core/files/config.go.jinja`
-- [ ] Add deprecation warnings for legacy format — `core/files/migration.go.jinja`
-- [ ] Integrate migration into config loading — `core/files/main.go.jinja`
-- [ ] Test migration from legacy format — `core/files/migration_test.go.jinja`
-- [ ] Test backup creation — `core/files/migration_test.go.jinja`
-- [ ] Test migration logging — `core/files/migration_test.go.jinja`
-- [ ] Test migrated config validation — `core/files/migration_test.go.jinja`
-- [ ] Test legacy format support — `core/files/migration_test.go.jinja`
-- [ ] Test deprecation warnings — `core/files/migration_test.go.jinja`
+- [x] Create config migration system — `core/files/migration.go.jinja`
+- [x] Define config versioning scheme — `core/files/migration.go.jinja`
+- [x] Implement migration from legacy format — `core/files/migration.go.jinja`
+- [x] Add backup creation with .bak suffix — `core/files/migration.go.jinja`
+- [x] Implement migration logging — `core/files/migration.go.jinja`
+- [x] Add migrated config validation — `core/files/migration.go.jinja`
+- [x] Add legacy format support — `core/files/config.go.jinja`
+- [x] Add deprecation warnings for legacy format — `core/files/migration.go.jinja`
+- [x] Integrate migration into config loading — `core/files/main.go.jinja`
+- [x] Test migration from legacy format — `core/files/migration_test.go.jinja`
+- [x] Test backup creation — `core/files/migration_test.go.jinja`
+- [x] Test migration logging — `core/files/migration_test.go.jinja`
+- [x] Test migrated config validation — `core/files/migration_test.go.jinja`
+- [x] Test legacy format support — `core/files/migration_test.go.jinja`
+- [x] Test deprecation warnings — `core/files/migration_test.go.jinja`
 
 ## Relevant Files
 
-- `apps/cli/go/core/files/main.go.jinja` — Integrate migration
-- `apps/cli/go/core/files/config.go.jinja` — Add legacy support
-- `apps/cli/go/core/files/migration.go.jinja` — New file for migration logic
-- `apps/cli/go/core/files/migration_test.go.jinja` — New file for migration tests
+- `apps/cli/go/core/files/main.go.jinja` — Integrate migration into config loading
+- `apps/cli/go/core/files/config.go.jinja` — Add legacy format support and parsing helpers
+- `apps/cli/go/core/files/migration.go.jinja` — New file for migration logic (versioning, backup, validation, deprecation warnings)
+- `apps/cli/go/core/files/migration_test.go.jinja` — New file for migration tests (backup, migration, idempotency, legacy detection)
 
 ## Acceptance Criteria
 
-- [ ] Legacy configs auto-migrate to new format
-- [ ] Old config backed up with .bak suffix
-- [ ] Migration actions are logged
-- [ ] Migrated config is validated before use
-- [ ] Legacy format supported for one release cycle
-- [ ] Deprecation warnings shown for legacy format
-- [ ] Migration handles errors gracefully
-- [ ] Migration is idempotent
+- [x] Legacy configs auto-migrate to new format
+- [x] Old config backed up with .bak suffix
+- [x] Migration actions are logged
+- [x] Migrated config is validated before use
+- [x] Legacy format supported for one release cycle
+- [x] Deprecation warnings shown for legacy format
+- [x] Migration handles errors gracefully
+- [x] Migration is idempotent
 
 ## Test Plan
 

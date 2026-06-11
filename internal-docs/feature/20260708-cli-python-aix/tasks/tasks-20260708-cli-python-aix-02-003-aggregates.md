@@ -27,18 +27,18 @@ Implement pre-computed aggregates including total counts in list output and deri
 
 ## Sub-Tasks
 
-- [ ] Implement aggregate count computation for list queries — `output/aggregates.py`
-- [ ] Add total count to list output format — `output/aggregates.py`
-- [ ] Format counts as "count: 30 of 847 total" — `output/aggregates.py`
-- [ ] Implement derived status field computation — `output/aggregates.py`
-- [ ] Add lightweight summary inline (e.g., checks: 3/3 passed) — `output/aggregates.py`
-- [ ] Only include derived fields backend can provide cheaply — `output/aggregates.py`
-- [ ] Apply aggregates to detail views — `output/aggregates.py`
-- [ ] Apply aggregates to list views where relevant — `output/aggregates.py`
-- [ ] Optimize count queries for efficiency — `output/aggregates.py`
-- [ ] Test aggregate counts for all list commands — `tests/test_aggregates.py`
-- [ ] Test derived status fields — `tests/test_aggregates.py`
-- [ ] Test aggregate computation performance — `tests/test_aggregates.py`
+- [x] Implement aggregate count computation for list queries — `output/aggregates.py`
+- [x] Add total count to list output format — `output/aggregates.py`
+- [x] Format counts as "count: 30 of 847 total" — `output/aggregates.py`
+- [x] Implement derived status field computation — `output/aggregates.py`
+- [x] Add lightweight summary inline (e.g., checks: 3/3 passed) — `output/aggregates.py`
+- [x] Only include derived fields backend can provide cheaply — `output/aggregates.py`
+- [x] Apply aggregates to detail views — `output/aggregates.py`
+- [x] Apply aggregates to list views where relevant — `output/aggregates.py`
+- [x] Optimize count queries for efficiency — `output/aggregates.py`
+- [x] Test aggregate counts for all list commands — `tests/test_aggregates.py`
+- [x] Test derived status fields — `tests/test_aggregates.py`
+- [x] Test aggregate computation performance — `tests/test_aggregates.py`
 
 ## Relevant Files
 
@@ -48,15 +48,15 @@ Implement pre-computed aggregates including total counts in list output and deri
 
 ## Acceptance Criteria
 
-- [ ] List output includes total count
-- [ ] Count format is "count: 30 of 847 total"
-- [ ] Derived status fields are included inline
-- [ ] Derived fields are lightweight summaries only
-- [ ] Only cheap-to-compute derived fields are included
-- [ ] Aggregates apply to detail views
-- [ ] Aggregates apply to list views where relevant
-- [ ] Count queries are efficient
-- [ ] All tests pass
+- [x] List output includes total count
+- [x] Count format is "count: 30 of 847 total"
+- [x] Derived status fields are included inline
+- [x] Derived fields are lightweight summaries only
+- [x] Only cheap-to-compute derived fields are included
+- [x] Aggregates apply to detail views
+- [x] Aggregates apply to list views where relevant
+- [x] Count queries are efficient
+- [x] All tests pass
 
 ## Test Plan
 

@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 5
 parallel_id: 1
 branch: "feature/current/20260707-cli-typescript-standards/story-05-001-tui-mode"
-status: "todo"
+status: "in_progress"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,38 +27,38 @@ Add Terminal User Interface (TUI) mode with `--interactive` or `--tui` flag. All
 
 ## Sub-Tasks
 
-- [ ] Evaluate and select TUI library (blessed, ink, or similar)
-- [ ] Add selected TUI library to package.json.jinja
-- [ ] Create TUI module with interactive interface
-- [ ] Add `--interactive` and `--tui` flags to index.ts
-- [ ] Implement interactive argument configuration screen
-- [ ] Implement argument modification interface
-- [ ] Add execution confirmation in TUI mode
-- [ ] Implement TUI help and navigation
-- [ ] Add TUI fallback for non-TTY environments
-- [ ] Add unit tests for TUI components
-- [ ] Add integration tests for TUI mode
-- [ ] Update help text to document TUI mode
-- [ ] Add keyboard shortcuts for common actions
+- [x] Evaluate and select TUI library (blessed, ink, or similar)
+- [x] Add selected TUI library to package.json.jinja
+- [x] Create TUI module with interactive interface
+- [x] Add `--interactive` and `--tui` flags to index.ts
+- [x] Implement interactive argument configuration screen
+- [x] Implement argument modification interface
+- [x] Add execution confirmation in TUI mode
+- [x] Implement TUI help and navigation
+- [x] Add TUI fallback for non-TTY environments
+- [x] Add unit tests for TUI components
+- [x] Add integration tests for TUI mode
+- [x] Update help text to document TUI mode
+- [x] Add keyboard shortcuts for common actions
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/tui.ts.jinja` - New TUI module (to be created)
-- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with TUI flags
-- `apps/cli/typescript/core/files/src/tui.test.ts.jinja` - Unit tests for TUI (to be created)
-- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for TUI
-- `apps/cli/typescript/core/files/package.json.jinja` - Add TUI library dependency
+- `apps/cli/typescript/core/files/src/tui.ts.jinja` - New TUI module with Ink-based interactive interface
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with --interactive and --tui flags
+- `apps/cli/typescript/core/files/src/tui.test.ts.jinja` - Unit tests for TUI components
+- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for TUI mode
+- `apps/cli/typescript/core/files/package.json.jinja` - Added Ink, ink-text-input, ink-select-input, and React dependencies
 
 ## Acceptance Criteria
 
-- [ ] `--interactive` and `--tui` flags launch TUI mode
-- [ ] TUI allows viewing all arguments
-- [ ] TUI allows modifying all arguments
-- [ ] TUI provides execution confirmation
-- [ ] TUI has help and navigation
-- [ ] TUI falls back gracefully for non-TTY environments
-- [ ] TUI has keyboard shortcuts for common actions
-- [ ] TUI is responsive and user-friendly
+- [x] `--interactive` and `--tui` flags launch TUI mode
+- [x] TUI allows viewing all arguments
+- [x] TUI allows modifying all arguments
+- [x] TUI provides execution confirmation
+- [x] TUI has help and navigation
+- [x] TUI falls back gracefully for non-TTY environments
+- [x] TUI has keyboard shortcuts for common actions
+- [x] TUI is responsive and user-friendly
 
 ## Test Plan
 

@@ -1,0 +1,218 @@
+# vim: set ft=python :
+import os
+import sys
+from pathlib import Path
+from typing import Optional
+from platformdirs import user_config_dir, user_data_dir
+import typer
+from {{ project_slug }}.logging import get_logger
+from {{ project_slug }}.man_page import install_man_page, uninstall_man_page
+
+logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
+
+
+def get_completion_dir() -> Path:
+    """Get the platform-specific completion directory."""
+    home = Path.home()
+
+    # Detect shell and return appropriate completion directory
+    shell = os.environ.get("SHELL", "")
+
+    if "zsh" in shell:
+        # Zsh completions typically go in ~/.zsh/completions or use fpath
+        zsh_dir = home / ".zsh" / "completions"
+        zsh_dir.mkdir(parents=True, exist_ok=True)
+        return zsh_dir
+    elif "bash" in shell:
+        # Bash completions go in ~/.local/share/bash-completion/completions
+        bash_dir = Path(user_data_dir("bash-completion", appauthor="{{ project_slug }}")) / "completions"
+        bash_dir.mkdir(parents=True, exist_ok=True)
+        return bash_dir
+    elif "fish" in shell:
+        # Fish completions go in ~/.config/fish/completions
+        fish_dir = home / ".config" / "fish" / "completions"
+        fish_dir.mkdir(parents=True, exist_ok=True)
+        return fish_dir
+    else:
+        # Default to bash-completion location
+        bash_dir = Path(user_data_dir("bash-completion", appauthor="{{ project_slug }}")) / "completions"
+        bash_dir.mkdir(parents=True, exist_ok=True)
+        return bash_dir
+
+
+def generate_completion_script(shell: str, app: typer.Typer) -> str:
+    """Generate completion script for the specified shell."""
+    # Note: Typer's completion API varies between versions
+    # This is a simplified implementation that returns a basic completion script
+    # In production, use typer's built-in completion commands: --install-completion, --show-completion
+
+    project_slug = "{{ project_slug }}"
+
+    if shell == "bash":
+        script = "# Bash completion for " + project_slug + "\n"
+        script += "_" + project_slug + "_completion() {\n"
+        script += "    local cur prev words cword\n"
+        script += "    _init_completion || return\n"
+        script += "    words=(\"${COMP_WORDS[@]}\")\n"
+        script += "    cword=\"${COMP_CWORD}\"\n"
+        script += "    cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
+        script += "\n"
+        script += "    case \"${cur}\" in\n"
+        script += "        -*)\n"
+        script += "            COMPREPLY=($(compgen -W \"--help --version --quiet --verbose --debug --color --json --install --uninstall --man --force --dry-run\" -- \"${cur}\"))\n"
+        script += "            ;;\n"
+        script += "        *)\n"
+        script += "            COMPREPLY=($(compgen -f -- \"${cur}\"))\n"
+        script += "            ;;\n"
+        script += "    esac\n"
+        script += "}\n"
+        script += "\n"
+        script += "complete -F _" + project_slug + "_completion " + project_slug + "\n"
+        return script
+    elif shell == "zsh":
+        script = "# Zsh completion for " + project_slug + "\n"
+        script += "#compdef " + project_slug + "\n"
+        script += "\n"
+        script += "_" + project_slug + "() {\n"
+        script += "    local -a commands\n"
+        script += "    commands=(\n"
+        script += "        '--help:Show help message'\n"
+        script += "        '--version:Show version'\n"
+        script += "        '--quiet:Suppress output'\n"
+        script += "        '--verbose:Show detailed output'\n"
+        script += "        '--debug:Enable debug mode'\n"
+        script += "        '--color:Set color mode'\n"
+        script += "        '--json:JSON output format'\n"
+        script += "        '--install:Install shell completion'\n"
+        script += "        '--uninstall:Uninstall shell completion'\n"
+        script += "        '--man:Show man page'\n"
+        script += "        '--force:Bypass confirmation'\n"
+        script += "        '--dry-run:Preview changes'\n"
+        script += "    )\n"
+        script += "\n"
+        script += "    if [[ CURRENT -eq 1 ]]; then\n"
+        script += "        _describe 'command' commands\n"
+        script += "    else\n"
+        script += "        _files\n"
+        script += "    fi\n"
+        script += "}\n"
+        script += "\n"
+        script += "_" + project_slug + " \"$@\"\n"
+        return script
+    elif shell == "fish":
+        script = "# Fish completion for " + project_slug + "\n"
+        script += "complete -c " + project_slug + " -f\n"
+        script += "\n"
+        script += "complete -c " + project_slug + " -l help -d 'Show help message'\n"
+        script += "complete -c " + project_slug + " -l version -d 'Show version'\n"
+        script += "complete -c " + project_slug + " -l quiet -d 'Suppress output'\n"
+        script += "complete -c " + project_slug + " -l verbose -d 'Show detailed output'\n"
+        script += "complete -c " + project_slug + " -l debug -d 'Enable debug mode'\n"
+        script += "complete -c " + project_slug + " -l color -d 'Set color mode'\n"
+        script += "complete -c " + project_slug + " -l json -d 'JSON output format'\n"
+        script += "complete -c " + project_slug + " -l install -d 'Install shell completion'\n"
+        script += "complete -c " + project_slug + " -l uninstall -d 'Uninstall shell completion'\n"
+        script += "complete -c " + project_slug + " -l man -d 'Show man page'\n"
+        script += "complete -c " + project_slug + " -l force -d 'Bypass confirmation'\n"
+        script += "complete -c " + project_slug + " -l dry-run -d 'Preview changes'\n"
+        return script
+    else:
+        raise ValueError(f"Unsupported shell: {shell}")
+
+
+def install_completion(shell: str, app: typer.Typer, force: bool = False) -> bool:
+    """Install completion script for the specified shell."""
+    try:
+        completion_dir = get_completion_dir()
+        completion_script = generate_completion_script(shell, app)
+
+        # Determine filename based on shell
+        if shell == "bash":
+            filename = "{{ project_slug }}.bash"
+        elif shell == "zsh":
+            filename = "_{{ project_slug }}"
+        elif shell == "fish":
+            filename = "{{ project_slug }}.fish"
+        else:
+            filename = "{{ project_slug }}"
+
+        completion_file = completion_dir / filename
+
+        # Check if file exists
+        if completion_file.exists() and not force:
+            logger.warn(f"Completion file already exists: {completion_file}", module="completion")
+            logger.warn("Use --force to overwrite", module="completion")
+            return False
+
+        # Write completion script
+        completion_file.write_text(completion_script)
+        logger.info(f"Installed {shell} completion to {completion_file}", module="completion")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to install {shell} completion: {e}", module="completion")
+        return False
+
+
+def uninstall_completion(shell: str) -> bool:
+    """Uninstall completion script for the specified shell."""
+    try:
+        completion_dir = get_completion_dir()
+
+        # Determine filename based on shell
+        if shell == "bash":
+            filename = "{{ project_slug }}.bash"
+        elif shell == "zsh":
+            filename = "_{{ project_slug }}"
+        elif shell == "fish":
+            filename = "{{ project_slug }}.fish"
+        else:
+            filename = "{{ project_slug }}"
+
+        completion_file = completion_dir / filename
+
+        # Check if file exists
+        if not completion_file.exists():
+            logger.warn(f"Completion file not found: {completion_file}", module="completion")
+            return False
+
+        # Remove completion script
+        completion_file.unlink()
+        logger.info(f"Removed {shell} completion from {completion_file}", module="completion")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to uninstall {shell} completion: {e}", module="completion")
+        return False
+
+
+def install_all_completions(app: typer.Typer, force: bool = False) -> dict:
+    """Install completion scripts for all supported shells and man page."""
+    results = {
+        "bash": install_completion("bash", app, force),
+        "zsh": install_completion("zsh", app, force),
+        "fish": install_completion("fish", app, force),
+        "man_page": install_man_page(force)
+    }
+    return results
+
+
+def uninstall_all_completions() -> dict:
+    """Uninstall completion scripts for all supported shells and man page."""
+    results = {
+        "bash": uninstall_completion("bash"),
+        "zsh": uninstall_completion("zsh"),
+        "fish": uninstall_completion("fish"),
+        "man_page": uninstall_man_page()
+    }
+    return results
+
+
+def print_completion_script(shell: str, app: typer.Typer) -> None:
+    """Print completion script to stdout for manual installation."""
+    try:
+        completion_script = generate_completion_script(shell, app)
+        print(completion_script)
+    except Exception as e:
+        logger.error(f"Failed to generate {shell} completion: {e}", module="completion")
+        sys.exit(1)

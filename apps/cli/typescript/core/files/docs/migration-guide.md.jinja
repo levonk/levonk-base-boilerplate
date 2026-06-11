@@ -1,0 +1,299 @@
+# Migration Guide
+
+This guide helps users migrate from previous versions of {{ project_name }} to the current version.
+
+## Version 1.0.0 → 2.0.0
+
+### Breaking Changes
+
+#### 1. Color Flag Changes
+
+**Old:**
+```bash
+{{ project_slug }} --nocolor
+```
+
+**New:**
+```bash
+{{ project_slug }} --color=never
+```
+
+**Migration:** Replace `--nocolor` with `--color=never`. The old flag will show a deprecation warning but continues to work for one release cycle.
+
+#### 2. Exit Code Changes
+
+Exit codes have been standardized according to CLI Tool Standards ADR:
+
+- `0`: Success
+- `1`: General error (deprecated, use specific codes)
+- `2`: Usage error (invalid arguments, missing required inputs)
+- `3`: Configuration error
+- `4`: Network error
+- `5`: File not found
+- `6`: Permission denied
+- `7`: Validation error
+- `8`: Dependency error
+- `9`: Runtime error
+- `10-255`: Application-specific errors
+
+**Migration:** Update any scripts that check exit codes to use the new standardized codes.
+
+#### 3. Configuration File Location
+
+**Old:** `~/.{{ project_slug }}/config.toml`
+
+**New:** `~/.config/{{ project_slug }}/config.toml` (XDG Base Directory compliant)
+
+**Migration:** The CLI will automatically migrate your config file on first run. No manual action required.
+
+#### 4. Environment Variable Prefix
+
+**Old:** No prefix or inconsistent prefixes
+
+**New:** All environment variables now use `{{ project_slug | upper | replace("-", "_") }}_` prefix
+
+**Migration:** Update your environment variables:
+
+```bash
+# Old
+LOG_LEVEL=debug
+CONFIG_PATH=/path/to/config
+
+# New
+{{ project_slug | upper | replace("-", "_") }}_LOG_LEVEL=debug
+{{ project_slug | upper | replace("-", "_") }}_CONFIG_PATH=/path/to/config
+```
+
+### New Features
+
+#### 1. Enhanced Logging
+
+New logging modes and formats:
+
+```bash
+# Log formats
+{{ project_slug }} --log-format=text    # Human-readable (default)
+{{ project_slug }} --log-format=json    # Machine-readable
+
+# Log levels
+{{ project_slug }} --log-level=debug
+{{ project_slug }} --log-level=info
+{{ project_slug }} --log-level=warn
+{{ project_slug }} --log-level=error
+```
+
+#### 2. Structured Logging
+
+Auto-detection based on environment:
+
+- `NODE_ENV=production` → JSON format, warn level
+- `LOG_LEVEL` environment variable respected
+- `{{ project_slug | upper | replace("-", "_") }}_LOG_LEVEL` takes precedence
+
+#### 3. Privacy Mode
+
+New privacy mode for anonymizing data:
+
+```bash
+{{ project_slug }} --privacy file.txt
+```
+
+Configure in config file:
+
+```toml
+[privacy]
+enabled = true
+ignore_fields = ["email", "phone", "ip_address"]
+```
+
+#### 4. Audit Logging
+
+Append-only audit trail for compliance:
+
+```bash
+{{ project_slug }} --audit-enable
+{{ project_slug }} --audit-export /path/to/export.json
+```
+
+#### 5. Health Checks
+
+Container health check endpoints:
+
+```bash
+{{ project_slug }} --health-check
+```
+
+#### 6. Resource Limits
+
+Control memory and CPU usage:
+
+```bash
+{{ project_slug }} --max-memory 1GB --max-cpu 75 file.txt
+```
+
+#### 7. Signal-Based Config Reload
+
+Reload config without restart:
+
+```bash
+kill -HUP $(pgrep {{ project_slug }})
+```
+
+### Configuration Migration
+
+The CLI automatically migrates configuration files on first run. The migration process:
+
+1. Detects old config file location
+2. Reads old configuration
+3. Converts to new format if needed
+4. Writes to new XDG-compliant location
+5. Logs migration details in verbose mode
+
+**Manual Migration:**
+
+If automatic migration fails, manually migrate your config:
+
+```bash
+# Backup old config
+cp ~/.{{ project_slug }}/config.toml ~/.{{ project_slug }}/config.toml.backup
+
+# Create new directory
+mkdir -p ~/.config/{{ project_slug }}
+
+# Copy and update config
+cp ~/.{{ project_slug }}/config.toml ~/.config/{{ project_slug }}/config.toml
+
+# Update any deprecated options
+# See below for deprecated options
+```
+
+### Deprecated Options
+
+The following options are deprecated and will be removed in version 3.0.0:
+
+| Old Option | New Option | Notes |
+|------------|------------|-------|
+| `--nocolor` | `--color=never` | Shows deprecation warning |
+| `--no-color` | `--color=never` | Shows deprecation warning |
+| `--verbose-logging` | `--log-level=debug` | Shows deprecation warning |
+| `--quiet-logging` | `--log-level=error` | Shows deprecation warning |
+
+### Shell Completion Migration
+
+If you have shell completions installed, regenerate them:
+
+```bash
+# Remove old completions
+rm ~/.local/share/bash-completion/completions/{{ project_slug }}
+rm ~/.local/share/zsh/completions/_{{ project_slug }}
+rm ~/.local/share/fish/completions/{{ project_slug }}.fish
+
+# Install new completions
+{{ project_slug }} --completion-install bash
+{{ project_slug }} --completion-install zsh
+{{ project_slug }} --completion-install fish
+```
+
+### Man Page Migration
+
+Regenerate man pages to get updated documentation:
+
+```bash
+{{ project_slug }} --man-install
+```
+
+### Script Migration
+
+If you have scripts using {{ project_name }}, update them:
+
+**Before:**
+```bash
+#!/bin/bash
+{{ project_slug }} --nocolor --verbose-logging file.txt
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+  echo "Error occurred"
+fi
+```
+
+**After:**
+```bash
+#!/bin/bash
+{{ project_slug }} --color=never --log-level=debug file.txt
+EXIT_CODE=$?
+case $EXIT_CODE in
+  0) echo "Success" ;;
+  2) echo "Usage error" ;;
+  5) echo "File not found" ;;
+  6) echo "Permission denied" ;;
+  *) echo "Error occurred (code: $EXIT_CODE)" ;;
+esac
+```
+
+### Testing Your Migration
+
+After upgrading, test your workflow:
+
+1. **Test basic functionality:**
+   ```bash
+   {{ project_slug }} --help
+   {{ project_slug }} --version
+   ```
+
+2. **Test with your typical files:**
+   ```bash
+   {{ project_slug }} your-typical-file.txt
+   ```
+
+3. **Test configuration:**
+   ```bash
+   {{ project_slug }} --verbose your-file.txt
+   # Check that config is loaded correctly
+   ```
+
+4. **Test scripts:**
+   ```bash
+   # Run your existing scripts
+   ./your-script.sh
+   ```
+
+5. **Check for deprecation warnings:**
+   ```bash
+   {{ project_slug }} your-file.txt 2>&1 | grep -i deprecation
+   ```
+
+### Rollback Plan
+
+If you encounter issues after migration:
+
+1. **Restore old version:**
+   ```bash
+   npm install -g {{ project_slug }}@1.0.0
+   ```
+
+2. **Restore old config:**
+   ```bash
+   cp ~/.{{ project_slug }}/config.toml.backup ~/.config/{{ project_slug }}/config.toml
+   ```
+
+3. **Report issues:**
+   - GitHub Issues: {{ repository_url }}/issues
+   - Include version: `{{ project_slug }} --version`
+   - Include error messages and reproduction steps
+
+### Support
+
+If you need help with migration:
+
+- Check the [User Guide](user-guide.md) for detailed usage
+- Check the [Developer Guide](developer-guide.md) for technical details
+- Review [Release Notes](release-notes.md) for version-specific changes
+- Open an issue on GitHub for migration problems
+
+### Timeline
+
+- **Version 2.0.0:** Breaking changes introduced, deprecation warnings shown
+- **Version 2.1.0:** Deprecated options still work, warnings continue
+- **Version 3.0.0:** Deprecated options removed, migration required
+
+We recommend migrating to version 2.0.0 as soon as possible to avoid breaking changes in version 3.0.0.

@@ -1,0 +1,276 @@
+# vim: set ft=python :
+"""
+Tests for output schema system and field selection.
+"""
+
+import pytest
+from {{ project_slug }}.output.schema import (
+    FieldSchema,
+    SchemaManager,
+    get_schema_manager,
+    apply_field_selection,
+    DEFAULT_SCHEMAS
+)
+from {{ project_slug }}.output.formatter import OutputFormatter, OutputFormat
+from {{ project_slug }}.output.toon import to_dumps, to_loads
+from {{ project_slug }}.mode import Mode
+
+
+class TestFieldSchema:
+    """Test FieldSchema dataclass."""
+    
+    def test_field_schema_creation(self):
+        """Test creating a field schema."""
+        schema = FieldSchema(
+            command="test",
+            default_fields=["id", "name"],
+            available_fields=["id", "name", "status"],
+            default_limit=50
+        )
+        assert schema.command == "test"
+        assert schema.default_fields == ["id", "name"]
+        assert schema.available_fields == ["id", "name", "status"]
+        assert schema.default_limit == 50
+        assert schema.long_form_fields == set()
+    
+    def test_field_schema_with_long_form(self):
+        """Test field schema with long-form fields."""
+        schema = FieldSchema(
+            command="test",
+            default_fields=["id", "name"],
+            available_fields=["id", "name", "description"],
+            long_form_fields={"description"}
+        )
+        assert "description" in schema.long_form_fields
+
+
+class TestSchemaManager:
+    """Test SchemaManager class."""
+    
+    def test_default_schemas_exist(self):
+        """Test that default schemas are defined."""
+        assert "list" in DEFAULT_SCHEMAS
+        assert "status" in DEFAULT_SCHEMAS
+        assert "config" in DEFAULT_SCHEMAS
+        assert "resource" in DEFAULT_SCHEMAS
+    
+    def test_get_schema(self):
+        """Test retrieving a schema by command name."""
+        manager = SchemaManager()
+        schema = manager.get_schema("list")
+        assert schema is not None
+        assert schema.command == "list"
+    
+    def test_get_schema_unknown_command(self):
+        """Test retrieving schema for unknown command."""
+        manager = SchemaManager()
+        schema = manager.get_schema("unknown")
+        assert schema is None
+    
+    def test_get_default_fields(self):
+        """Test getting default fields for a command."""
+        manager = SchemaManager()
+        fields = manager.get_default_fields("list")
+        assert isinstance(fields, list)
+        assert len(fields) == 3  # Default has 3 fields
+        assert "id" in fields
+        assert "name" in fields
+        assert "status" in fields
+    
+    def test_get_available_fields(self):
+        """Test getting all available fields for a command."""
+        manager = SchemaManager()
+        fields = manager.get_available_fields("list")
+        assert isinstance(fields, list)
+        assert len(fields) > 3  # More fields than default
+        assert "id" in fields
+        assert "name" in fields
+        assert "status" in fields
+    
+    def test_parse_field_selection_default(self):
+        """Test parsing empty field selection returns defaults."""
+        manager = SchemaManager()
+        fields = manager.parse_field_selection("", "list")
+        assert fields == manager.get_default_fields("list")
+    
+    def test_parse_field_selection_custom(self):
+        """Test parsing custom field selection."""
+        manager = SchemaManager()
+        fields = manager.parse_field_selection("id,status", "list")
+        assert fields == ["id", "status"]
+    
+    def test_parse_field_selection_whitespace(self):
+        """Test parsing field selection with whitespace."""
+        manager = SchemaManager()
+        fields = manager.parse_field_selection("id, status , name", "list")
+        assert fields == ["id", "status", "name"]
+    
+    def test_parse_field_selection_invalid(self):
+        """Test parsing invalid field names raises error."""
+        manager = SchemaManager()
+        with pytest.raises(ValueError) as exc_info:
+            manager.parse_field_selection("id,invalid_field", "list")
+        assert "Invalid field(s)" in str(exc_info.value)
+        assert "invalid_field" in str(exc_info.value)
+    
+    def test_parse_field_selection_unknown_command(self):
+        """Test parsing field selection for unknown command."""
+        manager = SchemaManager()
+        # Should not raise error, just return requested fields
+        fields = manager.parse_field_selection("id,name", "unknown")
+        assert fields == ["id", "name"]
+    
+    def test_apply_schema_dict(self):
+        """Test applying schema to a dictionary."""
+        manager = SchemaManager()
+        data = {"id": 1, "name": "test", "status": "active", "description": "long text"}
+        filtered = manager.apply_schema(data, "list")
+        assert "id" in filtered
+        assert "name" in filtered
+        assert "status" in filtered
+        assert "description" not in filtered  # Not in default fields
+    
+    def test_apply_schema_list(self):
+        """Test applying schema to a list of dictionaries."""
+        manager = SchemaManager()
+        data = [
+            {"id": 1, "name": "test1", "status": "active", "description": "long1"},
+            {"id": 2, "name": "test2", "status": "inactive", "description": "long2"}
+        ]
+        filtered = manager.apply_schema(data, "list")
+        assert len(filtered) == 2
+        assert all("description" not in item for item in filtered)
+        assert all("id" in item for item in filtered)
+    
+    def test_apply_schema_custom_fields(self):
+        """Test applying schema with custom field selection."""
+        manager = SchemaManager()
+        data = {"id": 1, "name": "test", "status": "active", "created_at": "2024-01-01"}
+        filtered = manager.apply_schema(data, "list", fields=["id", "created_at"])
+        assert "id" in filtered
+        assert "created_at" in filtered
+        assert "name" not in filtered
+        assert "status" not in filtered
+    
+    def test_get_default_limit(self):
+        """Test getting default limit for a command."""
+        manager = SchemaManager()
+        limit = manager.get_default_limit("list")
+        assert limit == 100
+    
+    def test_get_default_limit_unknown_command(self):
+        """Test getting default limit for unknown command."""
+        manager = SchemaManager()
+        limit = manager.get_default_limit("unknown")
+        assert limit == 100  # Default fallback
+    
+    def test_is_long_form_field(self):
+        """Test checking if field is long-form."""
+        manager = SchemaManager()
+        assert manager.is_long_form_field("list", "description") is True
+        assert manager.is_long_form_field("list", "id") is False
+    
+    def test_custom_schemas(self):
+        """Test using custom schemas."""
+        custom_schema = FieldSchema(
+            command="custom",
+            default_fields=["custom_id"],
+            available_fields=["custom_id", "custom_name"],
+            default_limit=25
+        )
+        manager = SchemaManager(custom_schemas={"custom": custom_schema})
+        schema = manager.get_schema("custom")
+        assert schema is not None
+        assert schema.default_limit == 25
+
+
+class TestApplyFieldSelection:
+    """Test apply_field_selection function."""
+    
+    def test_apply_field_selection_defaults(self):
+        """Test applying field selection with defaults."""
+        data = {"id": 1, "name": "test", "status": "active", "description": "long"}
+        filtered = apply_field_selection(data, "list")
+        assert "description" not in filtered
+        assert "id" in filtered
+    
+    def test_apply_field_selection_custom(self):
+        """Test applying field selection with custom fields."""
+        data = {"id": 1, "name": "test", "status": "active"}
+        filtered = apply_field_selection(data, "list", fields="id,status")
+        assert filtered == {"id": 1, "status": "active"}
+    
+    def test_apply_field_selection_with_manager(self):
+        """Test applying field selection with custom manager."""
+        custom_schema = FieldSchema(
+            command="test",
+            default_fields=["test_id"],
+            available_fields=["test_id", "test_name"]
+        )
+        manager = SchemaManager(custom_schemas={"test": custom_schema})
+        data = {"test_id": 1, "test_name": "test"}
+        filtered = apply_field_selection(data, "test", schema_manager=manager)
+        assert filtered == {"test_id": 1}
+
+
+class TestFormatterIntegration:
+    """Test schema integration with output formatter."""
+    
+    def test_formatter_with_schema_toon(self):
+        """Test formatter applies schema before TOON output."""
+        data = {"id": 1, "name": "test", "status": "active", "description": "long"}
+        formatter = OutputFormatter(
+            mode=Mode.AGENT,
+            command="list",
+            fields=None
+        )
+        output = formatter.format_output(data)
+        # Parse output to verify fields
+        parsed = to_loads(output)
+        assert "description" not in parsed
+        assert "id" in parsed
+    
+    def test_formatter_with_schema_json(self):
+        """Test formatter applies schema before JSON output."""
+        data = {"id": 1, "name": "test", "status": "active", "description": "long"}
+        formatter = OutputFormatter(
+            mode=Mode.AGENT,
+            format_override=OutputFormat.JSON,
+            command="list",
+            fields=None
+        )
+        output = formatter.format_output(data)
+        import json
+        parsed = json.loads(output)
+        assert "description" not in parsed
+        assert "id" in parsed
+    
+    def test_formatter_with_custom_fields(self):
+        """Test formatter with custom field selection."""
+        data = {"id": 1, "name": "test", "status": "active"}
+        formatter = OutputFormatter(
+            mode=Mode.AGENT,
+            command="list",
+            fields="id,status"
+        )
+        output = formatter.format_output(data)
+        parsed = to_loads(output)
+        assert parsed == {"id": 1, "status": "active"}
+    
+    def test_formatter_without_schema(self):
+        """Test formatter without schema returns all fields."""
+        data = {"id": 1, "name": "test", "status": "active"}
+        formatter = OutputFormatter(mode=Mode.AGENT)
+        output = formatter.format_output(data)
+        parsed = to_loads(output)
+        assert parsed == data  # All fields present
+
+
+class TestGlobalSchemaManager:
+    """Test global schema manager instance."""
+    
+    def test_get_schema_manager_singleton(self):
+        """Test that get_schema_manager returns same instance."""
+        manager1 = get_schema_manager()
+        manager2 = get_schema_manager()
+        assert manager1 is manager2

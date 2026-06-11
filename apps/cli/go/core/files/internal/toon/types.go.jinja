@@ -1,0 +1,100 @@
+package toon
+
+// Delimiter represents the delimiter type used in TOON arrays
+type Delimiter rune
+
+const (
+	// DelimiterComma is the default comma delimiter
+	DelimiterComma Delimiter = ','
+	// DelimiterTab is the tab delimiter
+	DelimiterTab Delimiter = '\t'
+	// DelimiterPipe is the pipe delimiter
+	DelimiterPipe Delimiter = '|'
+)
+
+// String returns the string representation of the delimiter
+func (d Delimiter) String() string {
+	return string(d)
+}
+
+// Value represents a TOON value (primitive, array, or object)
+type Value interface {
+	isValue()
+}
+
+// StringValue represents a string primitive
+type StringValue string
+
+func (StringValue) isValue() {}
+
+// NumberValue represents a numeric primitive
+type NumberValue float64
+
+func (NumberValue) isValue() {}
+
+// BoolValue represents a boolean primitive
+type BoolValue bool
+
+func (BoolValue) isValue() {}
+
+// NullValue represents the null primitive
+type NullValue struct{}
+
+func (NullValue) isValue() {}
+
+// Array represents a TOON array
+type Array struct {
+	Length     int
+	Delimiter  Delimiter
+	Fields     []string // Optional field names for tabular arrays
+	Items      []Value
+	IsTabular  bool     // True if this is a tabular array of objects
+}
+
+func (Array) isValue() {}
+
+// Object represents a TOON object
+type Object struct {
+	Fields map[string]Value
+}
+
+func (Object) isValue() {}
+
+// Header represents a TOON array header
+type Header struct {
+	Key       string
+	Length    int
+	Delimiter Delimiter
+	Fields    []string
+}
+
+// EncoderOptions configures the TOON encoder
+type EncoderOptions struct {
+	StrictMode   bool
+	Delimiter    Delimiter
+	IndentSpaces int
+}
+
+// DecoderOptions configures the TOON decoder
+type DecoderOptions struct {
+	StrictMode       bool
+	PathExpansion    bool // Enable dotted key path expansion
+	AllowLeadingZeros bool // Allow leading zeros in numbers (non-strict)
+}
+
+// DefaultEncoderOptions returns the default encoder options
+func DefaultEncoderOptions() EncoderOptions {
+	return EncoderOptions{
+		StrictMode:   true,
+		Delimiter:    DelimiterComma,
+		IndentSpaces: 2,
+	}
+}
+
+// DefaultDecoderOptions returns the default decoder options
+func DefaultDecoderOptions() DecoderOptions {
+	return DecoderOptions{
+		StrictMode:    true,
+		PathExpansion: false,
+	}
+}

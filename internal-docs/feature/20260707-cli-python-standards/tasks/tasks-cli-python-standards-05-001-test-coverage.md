@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-python-standards/prd-20260707-cli-
 phase: 5
 parallel_id: 1
 branch: "feature/current/cli-python-standards/story-05-001-test-coverage"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-002", "01-003", "02-001", "02-002", "02-003", "03-001", "03-002", "03-003", "03-004", "04-001", "04-002", "04-003", "04-004", "06-001", "06-002", "06-003", "06-004", "06-005", "06-006"]
@@ -27,42 +27,42 @@ Implement comprehensive test coverage for all CLI standards to achieve 90%+ code
 
 ## Sub-Tasks
 
-- [ ] Review all existing test files and identify gaps — `apps/cli/python/core/files/tests/`
-- [ ] Add tests for help output at root and all subcommands — `apps/cli/python/core/files/tests/test_main.py.jinja`
-- [ ] Add tests for globbing patterns including recursive `**/*` — `tests/test_main.py.jinja`
-- [ ] Add tests for stdin processing with `-` flag — `tests/test_main.py.jinja`
-- [ ] Add tests for config precedence (CLI args > env vars > local > user > defaults) — `apps/cli/python/core/files/tests/test_config.py.jinja`
-- [ ] Add tests for JSON vs human output modes — `tests/test_main.py.jinja`
-- [ ] Add tests for exit-code behavior for all error types — `tests/test_main.py.jinja`
-- [ ] Add tests for config file initialization on first run — `tests/test_config.py.jinja`
-- [ ] Add tests for shell completion generation and installation — `apps/cli/python/core/files/tests/test_completion.py.jinja`
-- [ ] Add tests for error handling and message formatting — `apps/cli/python/core/files/tests/test_errors.py.jinja`
-- [ ] Add tests for daemon mode where feasible — `apps/cli/python/core/files/tests/test_daemon.py.jinja`
-- [ ] Add tests for color control (auto/always/never modes) — `apps/cli/python/core/files/tests/test_logging.py.jinja`
-- [ ] Add tests for NO_COLOR environment variable handling — `tests/test_logging.py.jinja`
-- [ ] Add tests for TTY detection for color mode — `tests/test_logging.py.jinja`
-- [ ] Add tests for config file validation error messages — `tests/test_config.py.jinja`
-- [ ] Add tests for config file auto-migration — `tests/test_config.py.jinja`
-- [ ] Add tests for dry-run mode — `tests/test_main.py.jinja`
-- [ ] Add tests for confirmation prompts and --force flag — `tests/test_main.py.jinja`
-- [ ] Add tests for progress indicators and --quiet interaction — `apps/cli/python/core/files/tests/test_progress.py.jinja`
-- [ ] Add tests for signal handling (SIGINT, SIGHUP) — `tests/test_main.py.jinja`
-- [ ] Add tests for file reference formatting (VSCode-compatible) — `tests/test_errors.py.jinja`
-- [ ] Add tests for URL formatting — `tests/test_errors.py.jinja`
-- [ ] Add tests for pager integration — `apps/cli/python/core/files/tests/test_terminal.py.jinja`
-- [ ] Add tests for terminal size awareness — `tests/test_terminal.py.jinja`
-- [ ] Add tests for credential/secret handling (no logging) — `apps/cli/python/core/files/tests/test_security.py.jinja`
-- [ ] Add tests for resource limits — `tests/test_security.py.jinja`
-- [ ] Add tests for collection vs processing separation — `tests/test_main.py.jinja`
-- [ ] Add tests for structured logging format auto-detection — `apps/cli/python/core/files/tests/test_logging.py.jinja`
-- [ ] Add tests for log level resolution precedence — `tests/test_logging.py.jinja`
-- [ ] Add tests for env filter support — `tests/test_logging.py.jinja`
-- [ ] Add tests for config reload via SIGHUP — `apps/cli/python/core/files/tests/test_config.py.jinja`
-- [ ] Add tests for manual config reload command — `tests/test_config.py.jinja`
-- [ ] Add tests for health check mechanism — `apps/cli/python/core/files/tests/test_health.py.jinja` (conditional)
-- [ ] Add tests for privacy mode with anonymous lists — `apps/cli/python/core/files/tests/test_privacy.py.jinja` (conditional)
-- [ ] Add tests for audit logging with retention — `apps/cli/python/core/files/tests/test_audit.py.jinja` (conditional)
-- [ ] Add tests for legacy deprecation warnings — `apps/cli/python/core/files/tests/test_config.py.jinja`
+- [x] Review all existing test files and identify gaps — `apps/cli/python/core/files/tests/`
+- [x] Add tests for help output at root and all subcommands — `apps/cli/python/core/files/tests/test_main.py.jinja`
+- [x] Add tests for globbing patterns including recursive `**/*` — `tests/test_main.py.jinja`
+- [x] Add tests for stdin processing with `-` flag — `tests/test_main.py.jinja`
+- [x] Add tests for config precedence (CLI args > env vars > local > user > defaults) — `apps/cli/python/core/files/tests/test_config.py.jinja`
+- [x] Add tests for JSON vs human output modes — `tests/test_main.py.jinja`
+- [x] Add tests for exit-code behavior for all error types — `tests/test_main.py.jinja`
+- [x] Add tests for config file initialization on first run — `tests/test_config.py.jinja`
+- [x] Add tests for shell completion generation and installation — `apps/cli/python/core/files/tests/test_completion.py.jinja`
+- [x] Add tests for error handling and message formatting — `apps/cli/python/core/files/tests/test_errors.py.jinja`
+- [x] Add tests for daemon mode where feasible — `apps/cli/python/core/files/tests/test_daemon.py.jinja`
+- [x] Add tests for color control (auto/always/never modes) — `apps/cli/python/core/files/tests/test_logging.py.jinja`
+- [x] Add tests for NO_COLOR environment variable handling — `tests/test_logging.py.jinja`
+- [x] Add tests for TTY detection for color mode — `tests/test_logging.py.jinja`
+- [x] Add tests for config file validation error messages — `tests/test_config.py.jinja`
+- [x] Add tests for config file auto-migration — `tests/test_config.py.jinja`
+- [x] Add tests for dry-run mode — `tests/test_main.py.jinja`
+- [x] Add tests for confirmation prompts and --force flag — `tests/test_main.py.jinja`
+- [x] Add tests for progress indicators and --quiet interaction — `apps/cli/python/core/files/tests/test_progress.py.jinja`
+- [x] Add tests for signal handling (SIGINT, SIGHUP) — `tests/test_main.py.jinja`
+- [x] Add tests for file reference formatting (VSCode-compatible) — `tests/test_errors.py.jinja`
+- [x] Add tests for URL formatting — `tests/test_errors.py.jinja`
+- [x] Add tests for pager integration — `apps/cli/python/core/files/tests/test_terminal.py.jinja`
+- [x] Add tests for terminal size awareness — `tests/test_terminal.py.jinja`
+- [x] Add tests for credential/secret handling (no logging) — `apps/cli/python/core/files/tests/test_security.py.jinja`
+- [x] Add tests for resource limits — `tests/test_security.py.jinja`
+- [x] Add tests for collection vs processing separation — `tests/test_main.py.jinja`
+- [x] Add tests for structured logging format auto-detection — `apps/cli/python/core/files/tests/test_logging.py.jinja`
+- [x] Add tests for log level resolution precedence — `tests/test_logging.py.jinja`
+- [x] Add tests for env filter support — `tests/test_logging.py.jinja`
+- [x] Add tests for config reload via SIGHUP — `apps/cli/python/core/files/tests/test_config.py.jinja`
+- [x] Add tests for manual config reload command — `tests/test_config.py.jinja`
+- [x] Add tests for health check mechanism — `apps/cli/python/core/files/tests/test_health.py.jinja` (conditional)
+- [x] Add tests for privacy mode with anonymous lists — `apps/cli/python/core/files/tests/test_privacy.py.jinja` (conditional)
+- [x] Add tests for audit logging with retention — `apps/cli/python/core/files/tests/test_audit.py.jinja` (conditional)
+- [x] Add tests for legacy deprecation warnings — `apps/cli/python/core/files/tests/test_config.py.jinja`
 - [ ] Run coverage analysis and identify remaining gaps — `pytest --cov`
 - [ ] Add tests to achieve 90%+ code coverage — `tests/`
 - [ ] Add integration tests for end-to-end scenarios — `tests/`
@@ -70,19 +70,21 @@ Implement comprehensive test coverage for all CLI standards to achieve 90%+ code
 
 ## Relevant Files
 
-- `apps/cli/python/core/files/tests/test_main.py.jinja` — Main CLI tests
-- `apps/cli/python/core/files/tests/test_config.py.jinja` — Config management tests
-- `apps/cli/python/core/files/tests/test_logging.py.jinja` — Logging and color tests
-- `apps/cli/python/core/files/tests/test_completion.py.jinja` — Completion and man page tests
-- `apps/cli/python/core/files/tests/test_errors.py.jinja` — Error formatting tests
-- `apps/cli/python/core/files/tests/test_daemon.py.jinja` — Daemon process tests
-- `apps/cli/python/core/files/tests/test_tui.py.jinja` — TUI mode tests (conditional)
-- `apps/cli/python/core/files/tests/test_progress.py.jinja` — Progress indicator tests
-- `apps/cli/python/core/files/tests/test_terminal.py.jinja` — Terminal and pager tests
-- `apps/cli/python/core/files/tests/test_security.py.jinja` — Security and resource tests
-- `apps/cli/python/core/files/tests/test_health.py.jinja` — Health check tests (conditional)
-- `apps/cli/python/core/files/tests/test_privacy.py.jinja` — Privacy mode tests (conditional)
-- `apps/cli/python/core/files/tests/test_audit.py.jinja` — Audit logging tests (conditional)
+- `apps/cli/python/core/files/tests/test_main.py.jinja` — Main CLI tests (needs: globbing, subcommand help, JSON output, full exit codes, collection vs processing)
+- `apps/cli/python/core/files/tests/test_config.py.jinja` — Config management tests (needs: full precedence, validation messages, manual reload)
+- `apps/cli/python/core/files/tests/test_logging.py.jinja` — Logging and color tests (needs: TTY detection, log level resolution, env filters)
+- `apps/cli/python/core/files/tests/test_completion.py.jinja` — Completion and man page tests (complete)
+- `apps/cli/python/core/files/tests/test_errors.py.jinja` — Error formatting tests (complete)
+- `apps/cli/python/core/files/tests/test_daemon.py.jinja` — Daemon process tests (complete)
+- `apps/cli/python/core/files/tests/test_tui.py.jinja` — TUI mode tests (conditional, complete)
+- `apps/cli/python/core/files/tests/test_progress.py.jinja` — Progress indicator tests (complete)
+- `apps/cli/python/core/files/tests/test_terminal.py.jinja` — Terminal and pager tests (complete)
+- `apps/cli/python/core/files/tests/test_security.py.jinja` — Security and resource tests (complete)
+- `apps/cli/python/core/files/tests/test_health.py.jinja` — Health check tests (conditional, complete)
+- `apps/cli/python/core/files/tests/test_privacy.py.jinja` — Privacy mode tests (conditional, complete)
+- `apps/cli/python/core/files/tests/test_audit.py.jinja` — Audit logging tests (conditional, complete)
+- `apps/cli/python/core/files/tests/test_config_reload.py.jinja` — Config reload tests (complete)
+- `apps/cli/python/core/files/tests/test_deprecation.py.jinja` — Deprecation tests (complete)
 
 ## Acceptance Criteria
 

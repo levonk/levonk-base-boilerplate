@@ -1,0 +1,181 @@
+package main
+
+import (
+	"testing"
+)
+
+func TestNewTerminal(t *testing.T) {
+	term := NewTerminal()
+	if term == nil {
+		t.Fatal("NewTerminal returned nil")
+	}
+
+	// Should have default width
+	if term.GetWidth() <= 0 {
+		t.Errorf("Expected positive width, got %d", term.GetWidth())
+	}
+
+	// Should have default height
+	if term.GetHeight() <= 0 {
+		t.Errorf("Expected positive height, got %d", term.GetHeight())
+	}
+}
+
+func TestTerminalWidthDetection(t *testing.T) {
+	term := NewTerminal()
+	width := term.GetWidth()
+
+	// Width should be positive
+	if width <= 0 {
+		t.Errorf("Expected positive width, got %d", width)
+	}
+
+	// Width should be at least the default
+	if width < DefaultTerminalWidth {
+		t.Errorf("Expected width >= %d, got %d", DefaultTerminalWidth, width)
+	}
+}
+
+func TestTerminalHeightDetection(t *testing.T) {
+	term := NewTerminal()
+	height := term.GetHeight()
+
+	// Height should be positive
+	if height <= 0 {
+		t.Errorf("Expected positive height, got %d", height)
+	}
+}
+
+func TestTerminalDefaultFallback(t *testing.T) {
+	// Create a terminal instance
+	term := NewTerminal()
+
+	// Even in non-TTY environments, should fallback to default
+	width := term.GetWidth()
+	if width != DefaultTerminalWidth && width <= 0 {
+		t.Errorf("Expected default width %d or positive value, got %d", DefaultTerminalWidth, width)
+	}
+}
+
+func TestFormatForWidth(t *testing.T) {
+	term := NewTerminal()
+
+	tests := []struct {
+		name     string
+		text     string
+		margin   int
+		expected string
+	}{
+		{
+			name:     "short text",
+			text:     "hello",
+			margin:   20,
+			expected: "hello",
+		},
+		{
+			name:     "text fits in margin",
+			text:     "hello world",
+			margin:   20,
+			expected: "hello world",
+		},
+		{
+			name:     "text exceeds margin",
+			text:     "this is a very long text that should be truncated",
+			margin:   20,
+			expected: "this is a very lo...",
+		},
+		{
+			name:     "no margin provided",
+			text:     "short",
+			margin:   0,
+			expected: "short",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result string
+			if tt.margin > 0 {
+				result = term.FormatForWidth(tt.text, tt.margin)
+			} else {
+				result = term.FormatForWidth(tt.text)
+			}
+
+			if result != tt.expected {
+				t.Errorf("FormatForWidth() = %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormatForWidthWithTerminal(t *testing.T) {
+	term := NewTerminal()
+	width := term.GetWidth()
+
+	// Text shorter than terminal width should not be truncated
+	shortText := "short"
+	result := term.FormatForWidth(shortText)
+	if result != shortText {
+		t.Errorf("Short text should not be truncated, got %s", result)
+	}
+
+	// Text longer than terminal width should be truncated
+	longText := string(make([]byte, width+10))
+	for i := range longText {
+		longText = longText[:i] + "x" + longText[i+1:]
+	}
+	result = term.FormatForWidth(longText)
+	if len(result) > width {
+		t.Errorf("Truncated text should not exceed terminal width %d, got %d", width, len(result))
+	}
+}
+
+func TestTerminalResizeHandling(t *testing.T) {
+	term := NewTerminal()
+
+	// Start resize handling
+	callbackCalled := false
+	var callbackWidth, callbackHeight int
+
+	term.StartResizeHandling(func(w, h int) {
+		callbackCalled = true
+		callbackWidth = w
+		callbackHeight = h
+	})
+
+	// Stop resize handling
+	term.StopResizeHandling()
+
+	// The callback should not have been called during this test
+	// since we didn't actually trigger a resize signal
+	_ = callbackCalled
+	_ = callbackWidth
+	_ = callbackHeight
+}
+
+func TestTerminalThreadSafety(t *testing.T) {
+	term := NewTerminal()
+
+	// Concurrent reads should not cause race conditions
+	done := make(chan bool)
+	for i := 0; i < 10; i++ {
+		go func() {
+			_ = term.GetWidth()
+			_ = term.GetHeight()
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+}
+
+func TestTerminalDefaultWidthConstant(t *testing.T) {
+	if DefaultTerminalWidth != 80 {
+		t.Errorf("Expected DefaultTerminalWidth to be 80, got %d", DefaultTerminalWidth)
+	}
+}
+
+{# vim: set ft=go: #}

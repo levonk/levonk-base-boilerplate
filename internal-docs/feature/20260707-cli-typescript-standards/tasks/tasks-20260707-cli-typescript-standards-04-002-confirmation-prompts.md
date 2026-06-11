@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260707-cli-typescript-standards/prd.md"
 phase: 4
 parallel_id: 2
 branch: "feature/current/20260707-cli-typescript-standards/story-04-002-confirmation-prompts"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: []
@@ -27,37 +27,38 @@ Require confirmation for destructive operations (delete, overwrite, etc.) with a
 
 ## Sub-Tasks
 
-- [ ] Create prompts module for user interaction
-- [ ] Add `--force` flag to index.ts
-- [ ] Implement confirmation prompt for delete operations
-- [ ] Implement confirmation prompt for overwrite operations
-- [ ] Implement confirmation prompt for other destructive operations
-- [ ] Add consistent prompt format with action descriptions
-- [ ] Implement prompt bypass via --force flag
-- [ ] Add prompt support for non-TTY environments (env var)
-- [ ] Add unit tests for confirmation prompts
-- [ ] Add unit tests for --force flag behavior
-- [ ] Add integration tests for confirmation workflow
-- [ ] Update help text to document confirmation prompts
-- [ ] Add prompt logging in verbose mode
+- [x] Create prompts module for user interaction
+- [x] Add `--force` flag to index.ts
+- [x] Implement confirmation prompt for delete operations
+- [x] Implement confirmation prompt for overwrite operations
+- [x] Implement confirmation prompt for other destructive operations
+- [x] Add consistent prompt format with action descriptions
+- [x] Implement prompt bypass via --force flag
+- [x] Add prompt support for non-TTY environments (env var)
+- [x] Add unit tests for confirmation prompts
+- [x] Add unit tests for --force flag behavior
+- [x] Add integration tests for confirmation workflow
+- [x] Update help text to document confirmation prompts
+- [x] Add prompt logging in verbose mode
 
 ## Relevant Files
 
-- `apps/cli/typescript/core/files/src/prompts.ts.jinja` - New prompts module (to be created)
-- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with --force flag
-- `apps/cli/typescript/core/files/src/prompts.test.ts.jinja` - Unit tests for prompts (to be created)
-- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for prompts
+- `apps/cli/typescript/core/files/src/prompts.ts.jinja` - Prompts module for user interaction
+- `apps/cli/typescript/core/files/src/prompts.test.ts.jinja` - Unit tests for prompts
+- `apps/cli/typescript/core/files/src/index.ts.jinja` - Main CLI with --force flag and prompts import
+- `apps/cli/typescript/core/files/src/index.test.ts.jinja` - Integration tests for confirmation workflow
+- `apps/cli/typescript/core/files/src/install.ts.jinja` - Uninstall operation with confirmation prompts
 
 ## Acceptance Criteria
 
-- [ ] Destructive operations require user confirmation
-- [ ] Confirmation prompts show clear action descriptions
-- [ ] `--force` flag bypasses confirmation prompts
-- [ ] Prompt format is consistent across all operations
-- [ ] Prompts work in TTY environments
-- [ ] Prompts can be bypassed via environment variable for non-TTY
-- [ ] Confirmation is logged in verbose mode
-- [ ] Prompt responses are case-insensitive
+- [x] Destructive operations require user confirmation
+- [x] Confirmation prompts show clear action descriptions
+- [x] `--force` flag bypasses confirmation prompts
+- [x] Prompt format is consistent across all operations
+- [x] Prompts work in TTY environments
+- [x] Prompts can be bypassed via environment variable for non-TTY
+- [x] Confirmation is logged in verbose mode
+- [x] Prompt responses are case-insensitive
 
 ## Test Plan
 

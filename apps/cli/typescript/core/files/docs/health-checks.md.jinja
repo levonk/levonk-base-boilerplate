@@ -1,0 +1,362 @@
+# Health Checks
+
+This document describes the health check system in {{ project_name }}, including health check endpoints, container orchestration support, and best practices.
+
+## Overview
+
+Health checks provide a way to monitor the operational status of the CLI tool, particularly in containerized environments. The health check system is designed to be:
+
+- **Fast**: Completes within 100ms by default
+- **Idempotent**: Multiple calls produce the same result
+- **No side effects**: Does not modify state or make external requests
+- **Container-ready**: Supports Docker HEALTHCHECK and Kubernetes probes
+
+## Health Check Command
+
+### Basic Usage
+
+```bash
+{{ project_slug }} --health
+```
+
+This returns a JSON health check result:
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-01-15T10:30:00.000Z",
+  "uptime": 3600.5,
+  "version": "1.0.0",
+  "checks": [
+    {
+      "name": "liveness",
+      "status": "pass",
+      "duration_ms": 1
+    },
+    {
+      "name": "readiness",
+      "status": "pass",
+      "duration_ms": 0
+    }
+  ]
+}
+```
+
+### Exit Codes
+
+- **0**: Health check passed (status is "healthy")
+- **1**: Health check failed (status is "unhealthy")
+
+### Options
+
+- `--health-timeout <ms>`: Set health check timeout in milliseconds (default: 100)
+- `--health-include-deps`: Include dependency checks in health check
+
+## Health Check Structure
+
+### Health Check Result
+
+```typescript
+interface HealthCheckResult {
+  status: 'healthy' | 'unhealthy';
+  timestamp: string;
+  uptime: number;
+  version: string;
+  checks: HealthCheck[];
+}
+```
+
+### Individual Check
+
+```typescript
+interface HealthCheck {
+  name: string;
+  status: 'pass' | 'fail';
+  message?: string;
+  duration_ms: number;
+}
+```
+
+## Built-in Checks
+
+### Liveness Check
+
+Verifies that the process is running and responsive.
+
+- **Name**: `liveness`
+- **Status**: Always passes if process is running
+- **Duration**: < 1ms
+
+### Readiness Check
+
+Verifies that the process is ready to handle requests.
+
+- **Name**: `readiness`
+- **Status**: Passes if process is not shutting down
+- **Duration**: < 1ms
+
+### Dependency Checks
+
+Optional checks for external dependencies (databases, APIs, etc.).
+
+- **Name**: `dependency:<name>`
+- **Status**: Passes if dependency is healthy
+- **Duration**: Varies by dependency
+
+## Container Orchestration Support
+
+### Docker HEALTHCHECK
+
+Add to your `Dockerfile`:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD {{ project_slug }} --health || exit 1
+```
+
+Example with custom timeout:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD {{ project_slug }} --health --health-timeout 50 || exit 1
+```
+
+### Kubernetes Probes
+
+#### Liveness Probe
+
+```yaml
+livenessProbe:
+  exec:
+    command:
+    - {{ project_slug }}
+    - --health
+  initialDelaySeconds: 5
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+```
+
+#### Readiness Probe
+
+```yaml
+readinessProbe:
+  exec:
+    command:
+    - {{ project_slug }}
+    - --health
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+```
+
+## Dependency Registration
+
+### Registering a Dependency Check
+
+```typescript
+import { registerDependencyCheck } from './health.js';
+
+registerDependencyCheck('database', async () => {
+  // Check database connectivity
+  const isConnected = await checkDatabaseConnection();
+  return isConnected;
+});
+```
+
+### Unregistering a Dependency Check
+
+```typescript
+import { unregisterDependencyCheck } from './health.js';
+
+unregisterDependencyCheck('database');
+```
+
+### Synchronous Checks
+
+```typescript
+registerDependencyCheck('filesystem', () => {
+  // Check filesystem availability
+  return fs.existsSync('/required/path');
+});
+```
+
+## Best Practices
+
+### Health Check Design
+
+1. **Keep checks fast**: Each check should complete in < 10ms
+2. **Avoid side effects**: Never modify state during health checks
+3. **Use timeouts**: Set appropriate timeouts for dependency checks
+4. **Be idempotent**: Multiple calls should produce the same result
+5. **Handle errors gracefully**: Return `false` instead of throwing
+
+### Dependency Checks
+
+1. **Register early**: Register dependency checks during initialization
+2. **Use connection pooling**: Reuse connections for health checks
+3. **Cache results**: Consider caching expensive check results
+4. **Degrade gracefully**: Mark as unhealthy rather than crashing
+
+### Container Orchestration
+
+1. **Set appropriate intervals**: Balance between responsiveness and load
+2. **Use start periods**: Allow time for initialization
+3. **Configure retries**: Handle transient failures
+4. **Monitor health check latency**: Alert if checks become slow
+
+## Testing
+
+### Unit Tests
+
+Health check logic is tested in `src/health.test.ts`:
+
+- Basic health check functionality
+- Dependency check registration
+- Timeout handling
+- No-side-effects guarantee
+- Performance requirements
+
+### Integration Tests
+
+Health check CLI integration is tested in `src/index.test.ts`:
+
+- `--health` flag returns healthy status
+- JSON output format validation
+- Exit code verification
+- Custom timeout support
+- Help text documentation
+
+### Manual Testing
+
+```bash
+# Basic health check
+{{ project_slug }} --health
+
+# With custom timeout
+{{ project_slug }} --health --health-timeout 50
+
+# With dependency checks
+{{ project_slug }} --health --health-include-deps
+
+# In Docker container
+docker run --rm my-image {{ project_slug }} --health
+```
+
+## Compliance
+
+This health check system implements:
+
+- **CLI Tool Standards ADR #27**: Health checks for containers
+- **Docker HEALTHCHECK**: Standard container health check support
+- **Kubernetes probes**: Liveness and readiness probe support
+- **No side effects**: Guaranteed read-only operation
+- **Performance**: Sub-100ms response time requirement
+
+## Troubleshooting
+
+### Health Check Timeout
+
+If health checks timeout:
+
+1. **Check timeout value**: Ensure `--health-timeout` is appropriate
+2. **Review dependency checks**: Slow dependencies may cause timeouts
+3. **Check system resources**: High CPU/memory may slow checks
+4. **Profile performance**: Use `--verbose` to identify slow checks
+
+### Unhealthy Status
+
+If health checks return unhealthy:
+
+1. **Review check results**: Check which individual checks failed
+2. **Check dependency status**: Verify external dependencies are available
+3. **Review logs**: Check for error messages in failed checks
+4. **Verify configuration**: Ensure configuration is valid
+
+### Slow Health Checks
+
+If health checks are slow:
+
+1. **Profile individual checks**: Identify which checks are slow
+2. **Optimize dependency checks**: Use connection pooling, caching
+3. **Reduce check complexity**: Simplify check logic
+4. **Increase timeout**: If checks are legitimately slow, increase timeout
+
+## API Reference
+
+### `getHealthCheck(options)`
+
+Perform a comprehensive health check.
+
+```typescript
+async function getHealthCheck(
+  options?: HealthCheckOptions
+): Promise<HealthCheckResult>
+```
+
+**Parameters**:
+- `options.timeout`: Timeout in milliseconds (default: 100)
+- `options.includeDependencies`: Include dependency checks (default: false)
+
+**Returns**: Health check result
+
+### `getHealthCheckJson(options)`
+
+Get health check result as JSON string.
+
+```typescript
+async function getHealthCheckJson(
+  options?: HealthCheckOptions
+): Promise<string>
+```
+
+**Returns**: JSON string of health check result
+
+### `getHealthCheckResponse(options)`
+
+Get health check result suitable for HTTP response.
+
+```typescript
+async function getHealthCheckResponse(
+  options?: HealthCheckOptions
+): Promise<{ statusCode: number; body: string }>
+```
+
+**Returns**: Object with HTTP status code and JSON body
+
+### `isHealthy()`
+
+Fast synchronous health check.
+
+```typescript
+function isHealthy(): boolean
+```
+
+**Returns**: `true` if healthy, `false` otherwise
+
+### `registerDependencyCheck(name, check)`
+
+Register a dependency health check.
+
+```typescript
+function registerDependencyCheck(
+  name: string,
+  check: () => Promise<boolean> | boolean
+): void
+```
+
+**Parameters**:
+- `name`: Name of the dependency
+- `check`: Function that returns `true` if dependency is healthy
+
+### `unregisterDependencyCheck(name)`
+
+Unregister a dependency health check.
+
+```typescript
+function unregisterDependencyCheck(name: string): void
+```
+
+**Parameters**:
+- `name`: Name of the dependency to remove

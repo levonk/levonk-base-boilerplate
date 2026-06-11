@@ -1,0 +1,363 @@
+package main
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestNewURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		rawURL   string
+		wantValid bool
+		wantEncoded string
+	}{
+		{
+			name:     "valid https URL",
+			rawURL:   "https://example.com",
+			wantValid: true,
+			wantEncoded: "https://example.com",
+		},
+		{
+			name:     "valid http URL",
+			rawURL:   "http://example.com",
+			wantValid: true,
+			wantEncoded: "http://example.com",
+		},
+		{
+			name:     "URL without scheme",
+			rawURL:   "example.com",
+			wantValid: true,
+			wantEncoded: "https://example.com",
+		},
+		{
+			name:     "URL with path",
+			rawURL:   "https://example.com/path/to/resource",
+			wantValid: true,
+			wantEncoded: "https://example.com/path/to/resource",
+		},
+		{
+			name:     "URL with query",
+			rawURL:   "https://example.com?query=value",
+			wantValid: true,
+			wantEncoded: "https://example.com?query=value",
+		},
+		{
+			name:     "URL with fragment",
+			rawURL:   "https://example.com#section",
+			wantValid: true,
+			wantEncoded: "https://example.com#section",
+		},
+		{
+			name:     "invalid URL",
+			rawURL:   "://invalid",
+			wantValid: false,
+			wantEncoded: "://invalid",
+		},
+		{
+			name:     "empty string",
+			rawURL:   "",
+			wantValid: false,
+			wantEncoded: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := NewURL(tt.rawURL)
+			if u.Valid != tt.wantValid {
+				t.Errorf("NewURL().Valid = %v, want %v", u.Valid, tt.wantValid)
+			}
+			if u.Encoded != tt.wantEncoded {
+				t.Errorf("NewURL().Encoded = %v, want %v", u.Encoded, tt.wantEncoded)
+			}
+		})
+	}
+}
+
+func TestURL_FormatPlain(t *testing.T) {
+	tests := []struct {
+		name string
+		rawURL string
+		want string
+	}{
+		{
+			name:   "simple URL",
+			rawURL: "https://example.com",
+			want:   "https://example.com",
+		},
+		{
+			name:   "URL without scheme",
+			rawURL: "example.com",
+			want:   "https://example.com",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := NewURL(tt.rawURL)
+			got := u.FormatPlain()
+			if got != tt.want {
+				t.Errorf("URL.FormatPlain() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestURL_FormatTerminal(t *testing.T) {
+	tests := []struct {
+		name string
+		rawURL string
+		wantContains string
+	}{
+		{
+			name:         "valid URL",
+			rawURL:       "https://example.com",
+			wantContains: "\x1b]8;;https://example.com\x1b\\",
+		},
+		{
+			name:         "URL without scheme",
+			rawURL:       "example.com",
+			wantContains: "\x1b]8;;https://example.com\x1b\\",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := NewURL(tt.rawURL)
+			got := u.FormatTerminal()
+			if !strings.Contains(got, tt.wantContains) {
+				t.Errorf("URL.FormatTerminal() = %v, want to contain %v", got, tt.wantContains)
+			}
+		})
+	}
+}
+
+func TestURL_Format(t *testing.T) {
+	tests := []struct {
+		name   string
+		rawURL string
+		format URLFormat
+		want   string
+	}{
+		{
+			name:   "plain format",
+			rawURL: "https://example.com",
+			format: FormatPlain,
+			want:   "https://example.com",
+		},
+		{
+			name:   "terminal format",
+			rawURL: "https://example.com",
+			format: FormatTerminal,
+			want:   "\x1b]8;;https://example.com\x1b\\https://example.com\x1b]8;;\x1b\\",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			u := NewURL(tt.rawURL)
+			got := u.Format(tt.format)
+			if got != tt.want {
+				t.Errorf("URL.Format() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		rawURL string
+		want   bool
+	}{
+		{
+			name:   "valid https URL",
+			rawURL: "https://example.com",
+			want:   true,
+		},
+		{
+			name:   "valid http URL",
+			rawURL: "http://example.com",
+			want:   true,
+		},
+		{
+			name:   "URL without scheme",
+			rawURL: "example.com",
+			want:   true,
+		},
+		{
+			name:   "invalid URL",
+			rawURL: "://invalid",
+			want:   false,
+		},
+		{
+			name:   "empty string",
+			rawURL: "",
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ValidateURL(tt.rawURL)
+			if got != tt.want {
+				t.Errorf("ValidateURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEncodeURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		rawURL string
+		want   string
+	}{
+		{
+			name:   "valid https URL",
+			rawURL: "https://example.com",
+			want:   "https://example.com",
+		},
+		{
+			name:   "URL without scheme",
+			rawURL: "example.com",
+			want:   "https://example.com",
+		},
+		{
+			name:   "URL with path",
+			rawURL: "https://example.com/path",
+			want:   "https://example.com/path",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := EncodeURL(tt.rawURL)
+			if got != tt.want {
+				t.Errorf("EncodeURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		rawURL string
+		format URLFormat
+		want   string
+	}{
+		{
+			name:   "plain format",
+			rawURL: "https://example.com",
+			format: FormatPlain,
+			want:   "https://example.com",
+		},
+		{
+			name:   "terminal format",
+			rawURL: "https://example.com",
+			format: FormatTerminal,
+			want:   "\x1b]8;;https://example.com\x1b\\https://example.com\x1b]8;;\x1b\\",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FormatURL(tt.rawURL, tt.format)
+			if got != tt.want {
+				t.Errorf("FormatURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatURLWithLabel(t *testing.T) {
+	tests := []struct {
+		name   string
+		rawURL string
+		label  string
+		format URLFormat
+		want   string
+	}{
+		{
+			name:   "plain format with label",
+			rawURL: "https://example.com",
+			label:  "Click here",
+			format: FormatPlain,
+			want:   "Click here (https://example.com)",
+		},
+		{
+			name:   "terminal format with label",
+			rawURL: "https://example.com",
+			label:  "Click here",
+			format: FormatTerminal,
+			want:   "\x1b]8;;https://example.com\x1b\\Click here\x1b]8;;\x1b\\",
+		},
+		{
+			name:   "invalid URL with label",
+			rawURL: "://invalid",
+			label:  "Click here",
+			format: FormatTerminal,
+			want:   "Click here",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FormatURLWithLabel(tt.rawURL, tt.label, tt.format)
+			if got != tt.want {
+				t.Errorf("FormatURLWithLabel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStripTerminalLinks(t *testing.T) {
+	tests := []struct {
+		name  string
+		text  string
+		want  string
+	}{
+		{
+			name:  "text with terminal links",
+			text:  "\x1b]8;;https://example.com\x1b\\Click here\x1b]8;;\x1b\\",
+			want:  "Click here",
+		},
+		{
+			name:  "plain text",
+			text:  "Just plain text",
+			want:  "Just plain text",
+		},
+		{
+			name:  "empty string",
+			text:  "",
+			want:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := StripTerminalLinks(tt.text)
+			if got != tt.want {
+				t.Errorf("StripTerminalLinks() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestURL_Nil(t *testing.T) {
+	var u *URL
+
+	if u.FormatPlain() != "" {
+		t.Errorf("nil URL.FormatPlain() should return empty string")
+	}
+	if u.FormatTerminal() != "" {
+		t.Errorf("nil URL.FormatTerminal() should return empty string")
+	}
+	if u.Format(FormatPlain) != "" {
+		t.Errorf("nil URL.Format() should return empty string")
+	}
+}
+
+{# vim: set ft=go: #}

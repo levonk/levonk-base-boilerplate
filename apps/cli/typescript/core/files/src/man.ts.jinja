@@ -1,0 +1,348 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { Command } from 'commander';
+import { createLogger } from './logger.js';
+
+/**
+ * Man page version
+ * Increment this when man page format changes
+ */
+export const MAN_PAGE_VERSION = '1.0.0';
+
+/**
+ * Man page section
+ * Section 1: User commands
+ */
+export const MAN_SECTION = 1;
+
+/**
+ * Man page sections in standard order
+ */
+export interface ManPageSection {
+    name: string;
+    content: string;
+}
+
+/**
+ * Man page generation options
+ */
+export interface ManPageOptions {
+    /**
+     * Output directory for man pages
+     */
+    outputDir?: string;
+    /**
+     * Whether to output to stdout instead of file
+     */
+    stdout?: boolean;
+    /**
+     * Man page section (default: 1)
+     */
+    section?: number;
+}
+
+/**
+ * Generate man page content from commander program
+ * @param program - The commander program instance
+ * @returns Man page content in roff format
+ */
+export function generateManPage(program: Command): string {
+    const programName = program.name();
+    const description = program.description() || '{{ description }}';
+    const version = program.version() || '1.0.0';
+
+    const sections: ManPageSection[] = [
+        {
+            name: 'NAME',
+            content: `${programName} - ${description}`,
+        },
+        {
+            name: 'SYNOPSIS',
+            content: generateSynopsis(program),
+        },
+        {
+            name: 'DESCRIPTION',
+            content: description,
+        },
+        {
+            name: 'OPTIONS',
+            content: generateOptions(program),
+        },
+        {
+            name: 'EXAMPLES',
+            content: generateExamples(programName),
+        },
+        {
+            name: 'EXIT CODES',
+            content: generateExitCodes(),
+        },
+        {
+            name: 'CONFIGURATION',
+            content: generateConfiguration(programName),
+        },
+        {
+            name: 'SEE ALSO',
+            content: generateSeeAlso(programName),
+        },
+    ];
+
+    return formatManPage(programName, sections, version);
+}
+
+/**
+ * Generate SYNOPSIS section
+ */
+function generateSynopsis(program: Command): string {
+    const programName = program.name();
+    return `.B ${programName}
+[options] [inputs...]
+.br
+.PP
+Process input files or glob patterns. Use "-" for stdin.`;
+}
+
+/**
+ * Generate OPTIONS section
+ */
+function generateOptions(program: Command): string {
+    const options = program.options;
+    let content = '';
+
+    for (const option of options) {
+        const flags = option.flags;
+        const description = option.description || '';
+        const defaultValue = option.defaultValue !== undefined ? ` (default: ${option.defaultValue})` : '';
+
+        content += `.TP\n`;
+        content += `.B ${flags}\n`;
+        content += `${description}${defaultValue}\n`;
+    }
+
+    return content;
+}
+
+/**
+ * Generate EXAMPLES section
+ */
+function generateExamples(programName: string): string {
+    return `.TP
+Process a single file
+.EX
+${programName} file.txt
+.EE
+.TP
+Process multiple files using glob patterns
+.EX
+${programName} "*.txt" "src/**/*.ts"
+.EE
+.TP
+Read from stdin
+.EX
+cat file.txt | ${programName} -
+.EE
+.TP
+Enable verbose output
+.EX
+${programName} --verbose file.txt
+.EE
+.TP
+Output results as JSON
+.EX
+${programName} --json file.txt
+.EE
+.TP
+Use custom config file
+.EX
+${programName} --config /path/to/config.toml file.txt
+.EE`;
+}
+
+/**
+ * Generate EXIT CODES section
+ */
+function generateExitCodes(): string {
+    return `.TP
+0
+Success
+.TP
+1
+Generic error
+.TP
+2
+Usage error (invalid arguments, missing required args)
+.TP
+3
+Network error (connection failures, timeouts)
+.TP
+4
+Validation error (invalid config, schema validation failures)
+.TP
+5
+File not found
+.TP
+6
+Permission denied
+.TP
+130
+SIGINT (Ctrl+C)`;
+}
+
+/**
+ * Generate CONFIGURATION section
+ */
+function generateConfiguration(programName: string): string {
+    const envPrefix = '{{ project_slug | upper | replace("-", "_") }}';
+    return `The ${programName} CLI can be configured via:
+.PP
+.RS
+.IP "\\(bu" 4
+CLI arguments (highest priority)
+.IP "\\(bu" 4
+Environment variables (${envPrefix}_*)
+.IP "\\(bu" 4
+Local project config (./.${programName}/config.toml)
+.IP "\\(bu" 4
+User config (~/.config/${programName}/config.toml)
+.IP "\\(bu" 4
+System config (/etc/${programName}/config.toml)
+.IP "\\(bu" 4
+Hardcoded defaults (lowest priority)
+.RE
+.PP
+Environment variables:
+.RS
+.IP "\\(bu" 4
+${envPrefix}_LOG_LEVEL
+.IP "\\(bu" 4
+${envPrefix}_QUIET
+.IP "\\(bu" 4
+${envPrefix}_VERBOSE
+.IP "\\(bu" 4
+${envPrefix}_DEBUG
+.IP "\\(bu" 4
+${envPrefix}_COLOR
+.IP "\\(bu" 4
+${envPrefix}_JSON
+.RE`;
+}
+
+/**
+ * Generate SEE ALSO section
+ */
+function generateSeeAlso(programName: string): string {
+    return `Project documentation: https://github.com/levonk/${programName}
+.br
+CLI Tool Standards ADR: https://github.com/levonk/levonk-base-boilerplate`;
+}
+
+/**
+ * Format man page in roff format
+ */
+function formatManPage(programName: string, sections: ManPageSection[], version: string): string {
+    const date = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+
+    let content = `.\\\" Man page for ${programName}
+.\\\" Contact: https://github.com/levonk/${programName}
+.\\\" Generated by ${programName} v${version}
+.TH ${programName.toUpperCase()} ${MAN_SECTION} "${date}" "${programName} ${version}" "User Commands"
+.SH NAME
+${sections.find(s => s.name === 'NAME')?.content || ''}
+`;
+
+    for (const section of sections) {
+        if (section.name === 'NAME') continue;
+        content += `.SH ${section.name}\n`;
+        content += `${section.content}\n`;
+    }
+
+    return content;
+}
+
+/**
+ * Write man page to file
+ * @param program - The commander program instance
+ * @param options - Man page generation options
+ * @param logger - Logger instance
+ */
+export async function writeManPage(
+    program: Command,
+    options: ManPageOptions,
+    logger: ReturnType<typeof createLogger>
+): Promise<void> {
+    const { outputDir, stdout, section = MAN_SECTION } = options;
+    const manPage = generateManPage(program);
+
+    if (stdout) {
+        console.log(manPage);
+        return;
+    }
+
+    const outputDirectory = outputDir || path.join(process.cwd(), 'man');
+    const fileName = `${program.name()}.${section}`;
+    const filePath = path.join(outputDirectory, fileName);
+
+    try {
+        await fs.mkdir(outputDirectory, { recursive: true });
+        await fs.writeFile(filePath, manPage, 'utf-8');
+        logger.info(`Man page written to: ${filePath}`);
+    } catch (error) {
+        throw new Error(`Failed to write man page: ${error}`);
+    }
+}
+
+/**
+ * Get man page installation instructions
+ * @param programName - Name of the CLI program
+ * @returns Installation instructions
+ */
+export function getManPageInstallInstructions(programName: string): string {
+    return `# Man page installation
+
+# User-level installation (recommended):
+mkdir -p ~/.local/share/man/man1
+cp man/${programName}.1 ~/.local/share/man/man1/
+mandb ~/.local/share/man  # Update man database
+
+# System-wide installation (requires sudo):
+sudo cp man/${programName}.1 /usr/share/man/man1/
+sudo mandb  # Update man database
+
+# After installation, view with:
+man ${programName}
+`;
+}
+
+/**
+ * Validate man page syntax
+ * @param manPage - The man page content
+ * @returns Validation result
+ */
+export function validateManPage(manPage: string): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (!manPage || manPage.trim().length === 0) {
+        errors.push('Man page is empty');
+    }
+
+    // Check for required sections
+    const requiredSections = ['.SH NAME', '.SH SYNOPSIS', '.SH DESCRIPTION', '.SH OPTIONS'];
+    for (const section of requiredSections) {
+        if (!manPage.includes(section)) {
+            errors.push(`Missing required section: ${section}`);
+        }
+    }
+
+    // Check for .TH directive
+    if (!manPage.includes('.TH')) {
+        errors.push('Missing .TH directive');
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors,
+    };
+}

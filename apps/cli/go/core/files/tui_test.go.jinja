@@ -1,0 +1,187 @@
+package main
+
+import (
+	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+func TestNewTUIModel(t *testing.T) {
+	args := []string{"arg1", "arg2", "arg3"}
+	model := NewTUIModel(args)
+
+	if len(model.args) != 3 {
+		t.Errorf("Expected 3 args, got %d", len(model.args))
+	}
+
+	if model.cursor != 0 {
+		t.Errorf("Expected cursor at 0, got %d", model.cursor)
+	}
+
+	if model.selected == nil {
+		t.Error("Expected selected map to be initialized")
+	}
+}
+
+func TestTUIModelInit(t *testing.T) {
+	model := NewTUIModel([]string{})
+	cmd := model.Init()
+
+	if cmd != nil {
+		t.Error("Expected nil command from Init")
+	}
+}
+
+func TestTUIModelNavigation(t *testing.T) {
+	model := NewTUIModel([]string{"a", "b", "c"})
+
+	// Test down navigation
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	model = newModel.(TUIModel)
+	if model.cursor != 1 {
+		t.Errorf("Expected cursor at 1 after down, got %d", model.cursor)
+	}
+
+	// Test up navigation
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	model = newModel.(TUIModel)
+	if model.cursor != 0 {
+		t.Errorf("Expected cursor at 0 after up, got %d", model.cursor)
+	}
+
+	// Test boundary - up at top
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("k")})
+	model = newModel.(TUIModel)
+	if model.cursor != 0 {
+		t.Errorf("Expected cursor to stay at 0, got %d", model.cursor)
+	}
+
+	// Test boundary - down at bottom
+	model.cursor = 2
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
+	model = newModel.(TUIModel)
+	if model.cursor != 2 {
+		t.Errorf("Expected cursor to stay at 2, got %d", model.cursor)
+	}
+}
+
+func TestTUIModelEdit(t *testing.T) {
+	model := NewTUIModel([]string{"original"})
+
+	// Enter edit mode
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("e")})
+	model = newModel.(TUIModel)
+	if !model.editing {
+		t.Error("Expected editing to be true")
+	}
+
+	if model.editValue != "original" {
+		t.Errorf("Expected editValue to be 'original', got '%s'", model.editValue)
+	}
+
+	// Type characters
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("modified")})
+	model = newModel.(TUIModel)
+	if model.editValue != "originalmodified" {
+		t.Errorf("Expected editValue to be 'originalmodified', got '%s'", model.editValue)
+	}
+
+	// Backspace
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyBackspace})
+	model = newModel.(TUIModel)
+	if model.editValue != "originalmodifie" {
+		t.Errorf("Expected editValue to be 'originalmodifie', got '%s'", model.editValue)
+	}
+
+	// Save with Enter
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = newModel.(TUIModel)
+	if model.editing {
+		t.Error("Expected editing to be false after Enter")
+	}
+
+	if model.args[0] != "originalmodifie" {
+		t.Errorf("Expected arg to be 'originalmodifie', got '%s'", model.args[0])
+	}
+}
+
+func TestTUIModelDelete(t *testing.T) {
+	model := NewTUIModel([]string{"a", "b", "c"})
+
+	// Delete middle item
+	model.cursor = 1
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("d")})
+	model = newModel.(TUIModel)
+
+	if len(model.args) != 2 {
+		t.Errorf("Expected 2 args after delete, got %d", len(model.args))
+	}
+
+	if model.args[1] != "c" {
+		t.Errorf("Expected second arg to be 'c', got '%s'", model.args[1])
+	}
+}
+
+func TestTUIModelConfirm(t *testing.T) {
+	model := NewTUIModel([]string{"a", "b"})
+
+	// Enter confirm mode
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = newModel.(TUIModel)
+	if !model.confirming {
+		t.Error("Expected confirming to be true")
+	}
+
+	// Cancel with N
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	model = newModel.(TUIModel)
+	if model.confirming {
+		t.Error("Expected confirming to be false after N")
+	}
+
+	// Enter confirm mode again
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	model = newModel.(TUIModel)
+
+	// Confirm with Y
+	newModel, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
+	model = newModel.(TUIModel)
+	if !model.quitting {
+		t.Error("Expected quitting to be true after Y")
+	}
+}
+
+func TestTUIModelQuit(t *testing.T) {
+	model := NewTUIModel([]string{"a"})
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	model = newModel.(TUIModel)
+	if !model.quitting {
+		t.Error("Expected quitting to be true after q")
+	}
+}
+
+func TestTUIModelEmptyArgs(t *testing.T) {
+	model := NewTUIModel([]string{})
+
+	// Should handle empty args gracefully
+	view := model.View()
+	if view == "" {
+		t.Error("Expected non-empty view for empty args")
+	}
+}
+
+func TestTUIModelView(t *testing.T) {
+	model := NewTUIModel([]string{"arg1", "arg2"})
+
+	view := model.View()
+	if view == "" {
+		t.Error("Expected non-empty view")
+	}
+
+	if len(view) < 10 {
+		t.Error("Expected view to have content")
+	}
+}
+
+{# vim: set ft=go: #}

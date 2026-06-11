@@ -1,0 +1,526 @@
+package session
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"{{ project_slug }}/internal/toon"
+)
+
+// AgentType represents the type of AI agent
+type AgentType string
+
+const (
+	AgentClaude AgentType = "claude"
+	AgentCodex  AgentType = "codex"
+	AgentOpenCode AgentType = "opencode"
+)
+
+// HookConfig represents a session hook configuration
+type HookConfig struct {
+	AgentType   AgentType `json:"agent_type"`
+	Command     string    `json:"command"`
+	Executable  string    `json:"executable"`
+	SessionEnd  bool      `json:"session_end"`
+	InstalledAt string    `json:"installed_at,omitempty"`
+}
+
+// HookRegistration represents the result of a hook registration
+type HookRegistration struct {
+	Success     bool   `json:"success"`
+	Message     string `json:"message"`
+	AgentType   string `json:"agent_type"`
+	HookFile    string `json:"hook_file"`
+	Executable  string `json:"executable"`
+	Updated     bool   `json:"updated"`
+}
+
+// HookOptions configures hook registration
+type HookOptions struct {
+	AgentType      AgentType
+	ExecutablePath string
+	SessionEnd     bool
+	ForceUpdate    bool
+}
+
+// DefaultHookOptions returns default hook options
+func DefaultHookOptions() HookOptions {
+	return HookOptions{
+		SessionEnd:  true,
+		ForceUpdate: false,
+	}
+}
+
+// RegisterHook registers a session hook for the specified agent
+func RegisterHook(opts HookOptions) (*HookRegistration, error) {
+	// Resolve executable path
+	execPath, err := resolveExecutablePath(opts.ExecutablePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve executable: %w", err)
+	}
+
+	// Determine hook file path
+	hookFile, err := getHookFilePath(opts.AgentType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine hook file path: %w", err)
+	}
+
+	// Check if hook already exists
+	existingHook, err := loadExistingHook(hookFile, opts.AgentType)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("failed to load existing hook: %w", err)
+	}
+
+	// Check if hook is already installed with same path
+	if existingHook != nil && existingHook.Executable == execPath && !opts.ForceUpdate {
+		return &HookRegistration{
+			Success:    true,
+			Message:    "Hook already installed with same path (no-op)",
+			AgentType:  string(opts.AgentType),
+			HookFile:   hookFile,
+			Executable: execPath,
+			Updated:    false,
+		}, nil
+	}
+
+	// Create hook configuration
+	hookConfig := HookConfig{
+		AgentType:  opts.AgentType,
+		Command:    fmt.Sprintf("%s --session-context", execPath),
+		Executable: execPath,
+		SessionEnd: opts.SessionEnd,
+	}
+
+	// Install hook based on agent type
+	var updated bool
+	switch opts.AgentType {
+	case AgentClaude:
+		updated, err = installClaudeHook(hookFile, hookConfig)
+	case AgentCodex:
+		updated, err = installCodexHook(hookFile, hookConfig)
+	default:
+		return nil, fmt.Errorf("unsupported agent type: %s", opts.AgentType)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to install hook: %w", err)
+	}
+
+	return &HookRegistration{
+		Success:    true,
+		Message:    "Hook installed successfully",
+		AgentType:  string(opts.AgentType),
+		HookFile:   hookFile,
+		Executable: execPath,
+		Updated:    updated,
+	}, nil
+}
+
+// resolveExecutablePath resolves the executable path (PATH-verified or absolute)
+func resolveExecutablePath(providedPath string) (string, error) {
+	if providedPath == "" {
+		// Use current executable
+		execPath, err := os.Executable()
+		if err != nil {
+			return "", fmt.Errorf("failed to get current executable: %w", err)
+		}
+		return execPath, nil
+	}
+
+	// Check if it's an absolute path
+	if filepath.IsAbs(providedPath) {
+		if _, err := os.Stat(providedPath); err != nil {
+			return "", fmt.Errorf("executable not found: %s", providedPath)
+		}
+		return providedPath, nil
+	}
+
+	// Check if it's in PATH
+	path, err := exec.LookPath(providedPath)
+	if err != nil {
+		return "", fmt.Errorf("executable not found in PATH: %s", providedPath)
+	}
+	return path, nil
+}
+
+// getHookFilePath returns the hook file path for the specified agent
+func getHookFilePath(agentType AgentType) (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	switch agentType {
+	case AgentClaude:
+		// Check project-local first, then global
+		projectConfig := filepath.Join(".", ".claude", "settings.json")
+		if _, err := os.Stat(projectConfig); err == nil {
+			return projectConfig, nil
+		}
+		return filepath.Join(homeDir, ".claude", "settings.json"), nil
+	case AgentCodex:
+		// Check project-local first, then global
+		projectConfig := filepath.Join(".", ".codex", "hooks.json")
+		if _, err := os.Stat(projectConfig); err == nil {
+			return projectConfig, nil
+		}
+		return filepath.Join(homeDir, ".codex", "hooks.json"), nil
+	default:
+		return "", fmt.Errorf("unsupported agent type: %s", agentType)
+	}
+}
+
+// loadExistingHook loads an existing hook configuration
+func loadExistingHook(hookFile string, agentType AgentType) (*HookConfig, error) {
+	data, err := os.ReadFile(hookFile)
+	if err != nil {
+		return nil, err
+	}
+
+	switch agentType {
+	case AgentClaude:
+		return loadClaudeHook(data)
+	case AgentCodex:
+		return loadCodexHook(data)
+	default:
+		return nil, fmt.Errorf("unsupported agent type: %s", agentType)
+	}
+}
+
+// installClaudeHook installs a hook for Claude Code
+func installClaudeHook(hookFile string, config HookConfig) (bool, error) {
+	// Read existing settings
+	var settings map[string]interface{}
+	data, err := os.ReadFile(hookFile)
+	if err != nil && !os.IsNotExist(err) {
+		return false, err
+	}
+
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, &settings); err != nil {
+			return false, err
+		}
+	} else {
+		settings = make(map[string]interface{})
+	}
+
+	// Add or update session hook
+	if settings["sessionHooks"] == nil {
+		settings["sessionHooks"] = []interface{}{}
+	}
+
+	sessionHooksInterface, ok := settings["sessionHooks"].([]interface{})
+	if !ok {
+		sessionHooksInterface = []interface{}{}
+	}
+
+	// Check if hook already exists
+	found := false
+	sessionHooks := []interface{}{}
+	for _, hookInterface := range sessionHooksInterface {
+		hook, ok := hookInterface.(map[string]interface{})
+		if !ok {
+			sessionHooks = append(sessionHooks, hookInterface)
+			continue
+		}
+
+		if cmd, ok := hook["command"].(string); ok && cmd == config.Command {
+			hook["command"] = config.Command
+			hook["executable"] = config.Executable
+			sessionHooks = append(sessionHooks, hook)
+			found = true
+		} else {
+			sessionHooks = append(sessionHooks, hook)
+		}
+	}
+
+	if !found {
+		newHook := map[string]interface{}{
+			"command":    config.Command,
+			"executable": config.Executable,
+		}
+		sessionHooks = append(sessionHooks, newHook)
+	}
+
+	settings["sessionHooks"] = sessionHooks
+
+	// Write updated settings
+	updatedData, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return false, err
+	}
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(hookFile), 0755); err != nil {
+		return false, err
+	}
+
+	if err := os.WriteFile(hookFile, updatedData, 0644); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// installCodexHook installs a hook for Codex
+func installCodexHook(hookFile string, config HookConfig) (bool, error) {
+	// Read existing hooks
+	var hooks []interface{}
+	data, err := os.ReadFile(hookFile)
+	if err != nil && !os.IsNotExist(err) {
+		return false, err
+	}
+
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, &hooks); err != nil {
+			return false, err
+		}
+	}
+
+	// Check if hook already exists
+	found := false
+	for i, hookInterface := range hooks {
+		hook, ok := hookInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if cmd, ok := hook["command"].(string); ok && cmd == config.Command {
+			hook["command"] = config.Command
+			hook["executable"] = config.Executable
+			hook["sessionEnd"] = config.SessionEnd
+			hooks[i] = hook
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		newHook := map[string]interface{}{
+			"command":    config.Command,
+			"executable": config.Executable,
+			"sessionEnd": config.SessionEnd,
+		}
+		hooks = append(hooks, newHook)
+	}
+
+	// Write updated hooks
+	updatedData, err := json.MarshalIndent(hooks, "", "  ")
+	if err != nil {
+		return false, err
+	}
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(hookFile), 0755); err != nil {
+		return false, err
+	}
+
+	if err := os.WriteFile(hookFile, updatedData, 0644); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// loadClaudeHook loads an existing Claude hook configuration
+func loadClaudeHook(data []byte) (*HookConfig, error) {
+	var settings map[string]interface{}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		return nil, err
+	}
+
+	sessionHooksInterface, ok := settings["sessionHooks"]
+	if !ok {
+		return nil, nil
+	}
+
+	// Handle JSON unmarshaling type conversion
+	sessionHooks, ok := sessionHooksInterface.([]interface{})
+	if !ok {
+		return nil, nil
+	}
+
+	for _, hookInterface := range sessionHooks {
+		hook, ok := hookInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if cmd, ok := hook["command"].(string); ok && strings.Contains(cmd, "--session-context") {
+			executable, _ := hook["executable"].(string)
+			return &HookConfig{
+				AgentType:  AgentClaude,
+				Command:    cmd,
+				Executable: executable,
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// loadCodexHook loads an existing Codex hook configuration
+func loadCodexHook(data []byte) (*HookConfig, error) {
+	var hooks []interface{}
+	if err := json.Unmarshal(data, &hooks); err != nil {
+		return nil, err
+	}
+
+	for _, hookInterface := range hooks {
+		hook, ok := hookInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if cmd, ok := hook["command"].(string); ok && strings.Contains(cmd, "--session-context") {
+			executable, _ := hook["executable"].(string)
+			sessionEnd, _ := hook["sessionEnd"].(bool)
+			return &HookConfig{
+				AgentType:  AgentCodex,
+				Command:    cmd,
+				Executable: executable,
+				SessionEnd: sessionEnd,
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// UnregisterHook removes a session hook for the specified agent
+func UnregisterHook(agentType AgentType) error {
+	hookFile, err := getHookFilePath(agentType)
+	if err != nil {
+		return err
+	}
+
+	switch agentType {
+	case AgentClaude:
+		return uninstallClaudeHook(hookFile)
+	case AgentCodex:
+		return uninstallCodexHook(hookFile)
+	default:
+		return fmt.Errorf("unsupported agent type: %s", agentType)
+	}
+}
+
+// uninstallClaudeHook removes a Claude hook
+func uninstallClaudeHook(hookFile string) error {
+	data, err := os.ReadFile(hookFile)
+	if err != nil {
+		return err
+	}
+
+	var settings map[string]interface{}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		return err
+	}
+
+	sessionHooksInterface, ok := settings["sessionHooks"]
+	if !ok {
+		return nil
+	}
+
+	// Handle JSON unmarshaling type conversion
+	sessionHooks, ok := sessionHooksInterface.([]interface{})
+	if !ok {
+		return nil
+	}
+
+	// Filter out session-context hooks
+	filteredHooks := []interface{}{}
+	for _, hookInterface := range sessionHooks {
+		hook, ok := hookInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if cmd, ok := hook["command"].(string); !ok || !strings.Contains(cmd, "--session-context") {
+			filteredHooks = append(filteredHooks, hook)
+		}
+	}
+
+	settings["sessionHooks"] = filteredHooks
+
+	updatedData, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(hookFile, updatedData, 0644)
+}
+
+// uninstallCodexHook removes a Codex hook
+func uninstallCodexHook(hookFile string) error {
+	data, err := os.ReadFile(hookFile)
+	if err != nil {
+		return err
+	}
+
+	var hooks []interface{}
+	if err := json.Unmarshal(data, &hooks); err != nil {
+		return err
+	}
+
+	// Filter out session-context hooks
+	filteredHooks := []interface{}{}
+	for _, hookInterface := range hooks {
+		hook, ok := hookInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		if cmd, ok := hook["command"].(string); !ok || !strings.Contains(cmd, "--session-context") {
+			filteredHooks = append(filteredHooks, hook)
+		}
+	}
+
+	updatedData, err := json.MarshalIndent(filteredHooks, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(hookFile, updatedData, 0644)
+}
+
+// ListHooks lists all registered session hooks
+func ListHooks() (string, error) {
+	encoder := toon.NewEncoder(toon.DefaultEncoderOptions())
+
+	hooks := toon.Array{
+		Length:    0,
+		Delimiter: toon.DelimiterComma,
+		Fields:    []string{"agent_type", "hook_file", "executable", "session_end"},
+		Items:     []toon.Value{},
+	}
+
+	// Check Claude hooks
+	for _, agentType := range []AgentType{AgentClaude, AgentCodex} {
+		hookFile, err := getHookFilePath(agentType)
+		if err != nil {
+			continue
+		}
+
+		existingHook, err := loadExistingHook(hookFile, agentType)
+		if err != nil || existingHook == nil {
+			continue
+		}
+
+		hookObj := toon.Object{
+			Fields: map[string]toon.Value{
+				"agent_type":  toon.StringValue(string(agentType)),
+				"hook_file":   toon.StringValue(hookFile),
+				"executable":  toon.StringValue(existingHook.Executable),
+				"session_end": toon.BoolValue(existingHook.SessionEnd),
+			},
+		}
+		hooks.Items = append(hooks.Items, hookObj)
+		hooks.Length++
+	}
+
+	return encoder.EncodeValue(hooks)
+}

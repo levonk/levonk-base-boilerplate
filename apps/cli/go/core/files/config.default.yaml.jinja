@@ -1,0 +1,235 @@
+# Default configuration for {{ project_name }}
+# {{ description }}
+#
+# This file contains all available configuration options with their default values.
+# All settings are commented out - uncomment and modify as needed.
+#
+# Configuration precedence (highest to lowest):
+# 1. Command-line flags (--flag)
+# 2. Environment variables ({{ project_slug | upper | replace('-', '_') }}_SETTING_NAME)
+# 3. Config file (this file)
+# 4. Default values
+#
+# AXI-specific settings (mode, default_format, truncation_limit, enable_contextual_help, session_context_enabled)
+# follow the same precedence chain as other settings.
+
+# -----------------------------------------------------------------------------
+# General Settings
+# -----------------------------------------------------------------------------
+
+# CLI operation mode: agent or human
+# - agent: Non-interactive mode for automation and agent environments (default)
+# - human: Interactive mode for human users
+# mode: agent
+
+# Default output format for agent mode
+# - toon: Structured TOON format (agent-friendly, default)
+# - json: JSON format
+# - human: Human-readable format
+# default_format: toon
+
+# Truncation settings for large text fields
+# truncation:
+#   # Disable truncation globally (overrides all other settings)
+#   # Can also be disabled with --full flag
+#   disable: false
+#   # Truncation limits per field type (in characters)
+#   # Use 0 for no truncation for a specific field type
+#   limits:
+#     description: 500  # Default limit for description fields
+#     body: 1000        # Default limit for body fields
+#     log: 1500         # Default limit for log fields
+#     generic: 1000     # Default limit for generic text fields
+#   # Minimum length before truncation is considered
+#   # Content shorter than this will never be truncated
+#   min_threshold: 200
+
+# Enable contextual help and suggestions in agent mode
+# When enabled, provides helpful context and suggestions for next actions
+# enable_contextual_help: true
+
+# Enable session context tracking
+# When enabled, maintains context across multiple CLI invocations in a session
+# session_context_enabled: false
+
+# Enable verbose output for debugging
+# verbose: false
+
+# Suppress all output except errors
+# quiet: false
+
+# Output results as JSON
+# json: false
+
+# -----------------------------------------------------------------------------
+# Color Control
+# -----------------------------------------------------------------------------
+
+# Color output mode: auto, always, or never
+# - auto: Enable color when TTY detected (default)
+# - always: Force color output regardless of TTY
+# - never: Disable all color output
+# color: auto
+
+# Note: The NO_COLOR environment variable takes precedence over all color settings
+# Set NO_COLOR=1 to disable color output globally
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+
+# Log level: debug, info, warn, error
+# log-level: info
+
+# Log file path (if set, logs will be written to file in addition to stderr)
+# log-file: ""
+
+# Log format: text or json
+# log-format: text
+
+# -----------------------------------------------------------------------------
+# Input Processing
+# -----------------------------------------------------------------------------
+
+# Maximum file size to process (in bytes)
+# Use 0 for unlimited
+# max-file-size: 104857600
+
+# Maximum number of files to process
+# Use 0 for unlimited
+# max-files: 1000
+
+# Follow symbolic links when processing files
+# follow-symlinks: false
+
+# -----------------------------------------------------------------------------
+# Output Formatting
+# -----------------------------------------------------------------------------
+
+# Output format: text, json, yaml
+# output-format: text
+
+# Indentation size for structured output
+# indent-size: 2
+
+# Include timestamps in output
+# include-timestamps: false
+
+# -----------------------------------------------------------------------------
+# Performance
+# -----------------------------------------------------------------------------
+
+# Number of parallel workers for processing
+# Set to 0 to use number of CPU cores
+# workers: 0
+
+# Timeout for individual file processing (in seconds)
+# Use 0 for no timeout
+# processing-timeout: 30
+
+# -----------------------------------------------------------------------------
+# Security
+# -----------------------------------------------------------------------------
+
+# Verify file checksums before processing
+# verify-checksums: false
+
+# Allow processing of files with potentially dangerous extensions
+# allow-dangerous-extensions: false
+
+# -----------------------------------------------------------------------------
+# Privacy Mode
+# -----------------------------------------------------------------------------
+
+# Enable privacy mode to ignore sensitive identifiers
+# When enabled, identifiers matching ignore/anonymous lists will be sanitized
+# privacy:
+#   enabled: false
+#   # Ignore list: identifiers are logged but not assigned (marked as <unknown>)
+#   ignore-list:
+#     - "email"
+#     - "phone"
+#     - "ssn"
+#   # Anonymous list: identifiers are ignored entirely (marked as <anonymous>)
+#   anonymous-list:
+#     - "password"
+#     - "token"
+#     - "secret"
+#   # Privacy toggles to disable specific data collection
+#   toggles:
+#     disable-ip-logging: false
+#     disable-user-logging: false
+#     disable-path-logging: false
+#     disable-timestamp-logging: false
+
+# -----------------------------------------------------------------------------
+# Audit Logging
+# -----------------------------------------------------------------------------
+
+# Enable audit logging for significant operations
+# Audit logs are stored in SQLite database in user config directory
+# audit:
+#   enabled: false
+#   # Retention period in days (0 = keep forever)
+#   retention-days: 90
+#   # Auto-prune old events on startup
+#   auto-prune: true
+
+# -----------------------------------------------------------------------------
+# Deprecation Policy
+# -----------------------------------------------------------------------------
+
+# Configure deprecation policies for legacy features
+# All dates must be in YYYY-MM-DD format
+# Minimum deprecation period is 6 months from announcement
+# deprecation:
+#   # Example deprecation policy for a feature
+#   # legacy-flag:
+#   #   deprecated_since: "2026-01-01"
+#   #   removal_date: "2026-07-01"
+#   #   warning_message: "Use --new-flag instead. See documentation for migration guide."
+#   #
+#   # Notes:
+#   # - deprecated_since: When the feature was first marked as deprecated
+#   # - removal_date: When the feature will be removed (must be at least 6 months after deprecated_since)
+#   # - warning_message: Custom message to display to users (optional)
+
+# -----------------------------------------------------------------------------
+# Daemon Process Support
+# -----------------------------------------------------------------------------
+
+# Enable daemon mode for background job processing
+# Daemon mode is only supported on Linux, macOS, and Windows
+# daemon:
+#   enabled: true
+#   # Enable noisy behavior (verbose logging for daemon operations)
+#   noisy_behavior: false
+#   # Directory for job metadata and state
+#   job_dir: ""
+#   # Maximum number of concurrent background jobs
+#   max_jobs: 10
+
+# -----------------------------------------------------------------------------
+# Advanced
+# -----------------------------------------------------------------------------
+
+# Custom configuration directory
+# Overrides default XDG config directory
+# config-dir: ""
+
+# Custom cache directory
+# Overrides default XDG cache directory
+# cache-dir: ""
+
+# Enable experimental features
+# Experimental features may change or be removed in future versions
+# enable-experimental: false
+
+# -----------------------------------------------------------------------------
+# Example: Custom Settings
+# -----------------------------------------------------------------------------
+
+# Add your custom settings here
+# custom-setting: "value"
+
+{# vim: set ft=yaml: #}

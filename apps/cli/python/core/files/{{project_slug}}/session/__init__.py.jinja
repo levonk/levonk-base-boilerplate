@@ -1,0 +1,20 @@
+# vim: set ft=python :
+"""Session module for agent ambient context injection.
+
+This module provides utilities for session context generation and
+hook infrastructure for agent integration.
+"""
+
+from {{project_slug}}.session.context import (
+    get_directory_state,
+    get_session_context,
+    format_session_context_toon,
+    get_session_context_toon,
+)
+
+__all__ = [
+    "get_directory_state",
+    "get_session_context",
+    "format_session_context_toon",
+    "get_session_context_toon",
+]

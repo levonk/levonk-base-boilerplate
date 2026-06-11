@@ -1,0 +1,96 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  initPrivacyManager,
+  getPrivacyManager,
+  type PrivacyConfig,
+} from './privacy.js';
+
+describe('Privacy Mode', () => {
+  beforeEach(() => {
+    // Reset privacy manager before each test
+    const manager = getPrivacyManager();
+    manager.config.enabled = false;
+    manager.config.ignoreList = [];
+  });
+
+  it('should initialize with default config', () => {
+    initPrivacyManager({});
+    const manager = getPrivacyManager();
+    expect(manager.config.enabled).toBe(false);
+    expect(manager.config.logUserIds).toBe(true);
+    expect(manager.config.logFilePaths).toBe(true);
+    expect(manager.config.logIpAddresses).toBe(true);
+    expect(manager.config.logTimestamps).toBe(true);
+  });
+
+  it('should enable privacy mode', () => {
+    initPrivacyManager({ enabled: true });
+    const manager = getPrivacyManager();
+    expect(manager.isEnabled()).toBe(true);
+  });
+
+  it('should disable privacy mode', () => {
+    initPrivacyManager({ enabled: false });
+    const manager = getPrivacyManager();
+    expect(manager.isEnabled()).toBe(false);
+  });
+
+  it('should respect ignore list', () => {
+    initPrivacyManager({ ignoreList: ['user123', 'secret-key'] });
+    const manager = getPrivacyManager();
+    expect(manager.isIdentifierIgnored('user123')).toBe(true);
+    expect(manager.isIdentifierIgnored('secret-key')).toBe(true);
+    expect(manager.isIdentifierIgnored('other')).toBe(false);
+  });
+
+  it('should not log ignored identifiers', () => {
+    initPrivacyManager({ enabled: true, ignoreList: ['user123'] });
+    const manager = getPrivacyManager();
+    expect(manager.shouldLogIdentifier('user123')).toBe(false);
+    expect(manager.shouldLogIdentifier('other')).toBe(true);
+  });
+
+  it('should redact sensitive data', () => {
+    initPrivacyManager({ enabled: true });
+    const manager = getPrivacyManager();
+    const data = 'user: john@example.com key: abc123';
+    const redacted = manager.redactSensitiveData(data);
+    expect(redacted).toContain('[REDACTED]');
+  });
+
+  it('should redact sensitive object properties', () => {
+    initPrivacyManager({ enabled: true });
+    const manager = getPrivacyManager();
+    const obj = {
+      username: 'john',
+      password: 'secret',
+      email: 'john@example.com',
+    };
+    const redacted = manager.redactSensitiveObject(obj);
+    expect(redacted.password).toBe('[REDACTED]');
+  });
+
+  it('should respect logUserIds toggle', () => {
+    initPrivacyManager({ enabled: true, logUserIds: false });
+    const manager = getPrivacyManager();
+    expect(manager.config.logUserIds).toBe(false);
+  });
+
+  it('should respect logFilePaths toggle', () => {
+    initPrivacyManager({ enabled: true, logFilePaths: false });
+    const manager = getPrivacyManager();
+    expect(manager.config.logFilePaths).toBe(false);
+  });
+
+  it('should respect logIpAddresses toggle', () => {
+    initPrivacyManager({ enabled: true, logIpAddresses: false });
+    const manager = getPrivacyManager();
+    expect(manager.config.logIpAddresses).toBe(false);
+  });
+
+  it('should respect logTimestamps toggle', () => {
+    initPrivacyManager({ enabled: true, logTimestamps: false });
+    const manager = getPrivacyManager();
+    expect(manager.config.logTimestamps).toBe(false);
+  });
+});

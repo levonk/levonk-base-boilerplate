@@ -1,0 +1,98 @@
+# vim: set ft=python :
+"""Tests for session context functionality."""
+
+import pytest
+from pathlib import Path
+from {{project_slug}}.session import (
+    get_directory_state,
+    get_session_context,
+    format_session_context_toon,
+    get_session_context_toon,
+)
+
+
+def test_get_directory_state_exists(tmp_path):
+    """Test getting state for existing directory."""
+    state = get_directory_state(tmp_path)
+    
+    assert state["path"] == str(tmp_path.absolute())
+    assert state["type"] == "directory"
+    assert "file_count" in state
+
+
+def test_get_directory_state_not_exists():
+    """Test getting state for non-existent directory."""
+    state = get_directory_state(Path("/nonexistent/path"))
+    
+    assert state["error"] == "directory_not_found"
+
+
+def test_get_session_context_default():
+    """Test getting session context with default directory."""
+    context = get_session_context()
+    
+    assert "cwd" in context
+    assert "dir" in context
+    assert context["cwd"] == str(Path.cwd())
+
+
+def test_get_session_context_custom(tmp_path):
+    """Test getting session context with custom directory."""
+    context = get_session_context(tmp_path)
+    
+    assert context["cwd"] == str(tmp_path.absolute())
+
+
+def test_format_session_context_toon():
+    """Test formatting session context to TOON format."""
+    context = {
+        "cwd": "/test/path",
+        "dir": {
+            "path": "/test/path",
+            "type": "directory",
+            "git_dirty": True,
+            "file_count": 42
+        }
+    }
+    
+    toon = format_session_context_toon(context)
+    
+    assert "cwd:/test/path" in toon
+    assert "dir:/test/path" in toon
+    assert "git:dirty" in toon
+    assert "files:42" in toon
+
+
+def test_format_session_context_toon_no_git():
+    """Test formatting session context without git info."""
+    context = {
+        "cwd": "/test/path",
+        "dir": {
+            "path": "/test/path",
+            "type": "directory",
+            "file_count": 10
+        }
+    }
+    
+    toon = format_session_context_toon(context)
+    
+    assert "cwd:/test/path" in toon
+    assert "dir:/test/path" in toon
+    assert "git:dirty" not in toon
+    assert "files:10" in toon
+
+
+def test_get_session_context_toon_default():
+    """Test getting session context directly in TOON format."""
+    toon = get_session_context_toon()
+    
+    assert "cwd:" in toon
+    assert "dir:" in toon
+
+
+def test_get_session_context_toon_custom(tmp_path):
+    """Test getting session context in TOON format with custom directory."""
+    toon = get_session_context_toon(tmp_path)
+    
+    assert "cwd:" in toon
+    assert str(tmp_path) in toon

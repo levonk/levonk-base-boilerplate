@@ -1,0 +1,52 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { isTTY, checkTUICompatibility } from './tui.js';
+
+describe('TUI Module', () => {
+    describe('isTTY', () => {
+        it('should return true when stdout is a TTY', () => {
+            // Mock process.stdout.isTTY
+            const originalIsTTY = process.stdout.isTTY;
+            process.stdout.isTTY = true;
+            
+            expect(isTTY()).toBe(true);
+            
+            // Restore original value
+            process.stdout.isTTY = originalIsTTY;
+        });
+
+        it('should return false when stdout is not a TTY', () => {
+            // Mock process.stdout.isTTY
+            const originalIsTTY = process.stdout.isTTY;
+            process.stdout.isTTY = false;
+            
+            expect(isTTY()).toBe(false);
+            
+            // Restore original value
+            process.stdout.isTTY = originalIsTTY;
+        });
+    });
+
+    describe('checkTUICompatibility', () => {
+        it('should return compatible when running in TTY', () => {
+            const originalIsTTY = process.stdout.isTTY;
+            process.stdout.isTTY = true;
+            
+            const result = checkTUICompatibility();
+            expect(result.compatible).toBe(true);
+            expect(result.reason).toBeUndefined();
+            
+            process.stdout.isTTY = originalIsTTY;
+        });
+
+        it('should return not compatible with reason when not in TTY', () => {
+            const originalIsTTY = process.stdout.isTTY;
+            process.stdout.isTTY = false;
+            
+            const result = checkTUICompatibility();
+            expect(result.compatible).toBe(false);
+            expect(result.reason).toBe('Not running in a TTY environment');
+            
+            process.stdout.isTTY = originalIsTTY;
+        });
+    });
+});

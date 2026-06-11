@@ -1,0 +1,189 @@
+# Command Organization
+
+This document describes the hierarchical command structure of {{ project_name }}, following CLI Tool Standards ADR requirement #20.
+
+## Overview
+
+{{ project_name }} uses a hierarchical command structure to improve discoverability and usability. Related commands are grouped under logical subcommands while maintaining backward compatibility with top-level flags.
+
+## Command Hierarchy
+
+### Top-Level Commands
+
+The main command accepts input files and global options:
+
+```bash
+{{ project_slug }} [inputs...] [options]
+```
+
+### Subcommands
+
+#### completion / completions
+
+Manage shell completion scripts for bash, zsh, and fish.
+
+```bash
+{{ project_slug }} completion --completion <shell>
+{{ project_slug }} completion --completion-install <shell>
+```
+
+**Aliases**: `completions`
+
+**Examples**:
+- Generate bash completion: `{{ project_slug }} completion --completion bash`
+- Show zsh installation: `{{ project_slug }} completion --completion-install zsh`
+
+#### man / manpage
+
+Manage man pages for the CLI.
+
+```bash
+{{ project_slug }} man --man
+{{ project_slug }} man --man-install
+```
+
+**Aliases**: `manpage`
+
+**Examples**:
+- Generate man page: `{{ project_slug }} man --man`
+- Show installation: `{{ project_slug }} man --man-install`
+
+#### daemon / jobs
+
+Manage background daemon processes and jobs.
+
+```bash
+{{ project_slug }} daemon --list-jobs
+{{ project_slug }} daemon --cancel-job <id>
+```
+
+**Aliases**: `jobs`
+
+**Examples**:
+- List jobs: `{{ project_slug }} daemon --list-jobs`
+- Cancel job: `{{ project_slug }} daemon --cancel-job abc123`
+
+#### health / status
+
+Perform health checks for container orchestration.
+
+```bash
+{{ project_slug }} health
+{{ project_slug }} health --health-timeout <ms>
+```
+
+**Aliases**: `status`
+
+**Examples**:
+- Basic health check: `{{ project_slug }} health`
+- Custom timeout: `{{ project_slug }} health --health-timeout 200`
+
+#### audit / auditing
+
+Manage audit logging for sensitive operations.
+
+```bash
+{{ project_slug }} audit --audit-verify
+{{ project_slug }} audit --audit-export <path>
+```
+
+**Aliases**: `auditing`
+
+**Examples**:
+- Verify integrity: `{{ project_slug }} audit --audit-verify`
+- Export logs: `{{ project_slug }} audit --audit-export /tmp/audit.json`
+
+#### deprecation / deprecated
+
+Manage deprecation policy and status.
+
+```bash
+{{ project_slug }} deprecation --deprecation-status
+```
+
+**Aliases**: `deprecated`
+
+**Examples**:
+- Show status: `{{ project_slug }} deprecation --deprecation-status`
+
+## Backward Compatibility
+
+For backward compatibility, most subcommand options are also available as top-level flags:
+
+```bash
+# Old way (still supported)
+{{ project_slug }} --completion bash
+{{ project_slug }} --man
+{{ project_slug }} --health
+{{ project_slug }} --deprecation-status
+
+# New way (recommended)
+{{ project_slug }} completion --completion bash
+{{ project_slug }} man --man
+{{ project_slug }} health
+{{ project_slug }} deprecation --deprecation-status
+```
+
+Both approaches work identically. The subcommand structure is recommended for better discoverability.
+
+## Command Discovery
+
+To discover available commands:
+
+```bash
+# List all subcommands
+{{ project_slug }} --help
+
+# Get help for a specific subcommand
+{{ project_slug }} <subcommand> --help
+
+# Example
+{{ project_slug }} completion --help
+```
+
+## Design Principles
+
+### Shallow Hierarchy
+
+The command hierarchy is kept shallow (2 levels maximum) to avoid complexity:
+- Level 1: Main command
+- Level 2: Subcommands
+
+### Logical Grouping
+
+Commands are grouped by functionality:
+- **completion**: Shell integration
+- **man**: Documentation
+- **daemon**: Background processes
+- **health**: System health
+- **audit**: Security auditing
+- **deprecation**: Feature lifecycle
+
+### Consistent Patterns
+
+All subcommands follow consistent patterns:
+- Descriptive names (lowercase, hyphen-separated)
+- Aliases for common variations
+- Help text with examples
+- Clear option descriptions
+
+## Adding New Subcommands
+
+When adding new subcommands:
+
+1. **Choose a logical group**: Add to existing subcommand or create new one
+2. **Use descriptive names**: Lowercase, hyphen-separated
+3. **Add aliases**: For common variations
+4. **Include examples**: In help text
+5. **Maintain compatibility**: Keep top-level flags if needed
+6. **Update documentation**: This file and help text
+
+## Related Documentation
+
+- [Configuration Management](config-management.md)
+- [Deprecation Policy](deprecation-policy.md)
+- [Error Handling](error-handling.md)
+
+## Questions or Issues?
+
+If you have questions about command organization or need help with subcommands, please open an issue on the project repository.

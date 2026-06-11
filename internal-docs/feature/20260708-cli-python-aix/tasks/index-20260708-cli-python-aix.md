@@ -18,40 +18,40 @@ This index summarizes all stories for the Python CLI AXI (Agent eXperience Inter
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 01-001 | Mode Selection Implementation | feature/current/20260708-cli-python-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli.py, config.py] |
-| 01-002 | TOON Format Implementation | feature/current/20260708-cli-python-aix/story-01-002-toon-format | None | Parallel-safe: true | [output.py, toon.py] |
-| 01-003 | Config Updates for Agent Mode | feature/current/20260708-cli-python-aix/story-01-003-config-updates | None | Parallel-safe: true | [config.py] |
+| 01-001 | Mode Selection Implementation | feature/current/20260708-cli-python-aix/story-01-001-mode-selection | None | Parallel-safe: true | [cli.py, config.py] | [x] Done |
+| 01-002 | TOON Format Implementation | feature/current/20260708-cli-python-aix/story-01-002-toon-format | None | Parallel-safe: true | [output.py, toon.py] | [x] Done |
+| 01-003 | Config Updates for Agent Mode | feature/current/20260708-cli-python-aix/story-01-003-config-updates | None | Parallel-safe: true | [config.py] | [x] Done |
 
 ### Phase 02: Output Optimization (Week 1)
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 02-001 | Minimal Default Schemas | feature/current/20260708-cli-python-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output.py, schema.py] |
-| 02-002 | Content Truncation | feature/current/20260708-cli-python-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output.py, truncation.py] |
-| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-python-aix/story-02-003-aggregates | 02-001 | Parallel-safe: true | [output.py, aggregates.py] |
-| 02-004 | Definitive Empty States | feature/current/20260708-cli-python-aix/story-02-004-empty-states | 02-001 | Parallel-safe: true | [output.py, empty.py] |
+| 02-001 | Minimal Default Schemas | feature/current/20260708-cli-python-aix/story-02-001-minimal-schemas | 01-002 | Parallel-safe: true | [output.py, schema.py] | [x] Done |
+| 02-002 | Content Truncation | feature/current/20260708-cli-python-aix/story-02-002-content-truncation | 01-002 | Parallel-safe: true | [output.py, truncation.py] | [x] Done
+| 02-003 | Pre-computed Aggregates | feature/current/20260708-cli-python-aix/story-02-003-aggregates | 02-001 | Parallel-safe: true | [output.py, aggregates.py] | [x] Done |
+| 02-004 | Definitive Empty States | feature/current/20260708-cli-python-aix/story-02-004-empty-states | 02-001 | Parallel-safe: true | [output.py, empty.py] | [x] Done |
 
 ### Phase 03: Error Handling & Idempotency (Week 2)
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 03-001 | Structured Errors & Exit Codes | feature/current/20260708-cli-python-aix/story-03-001-structured-errors | 02-004 | Parallel-safe: true | [errors.py, output.py] |
-| 03-002 | No Interactive Prompts | feature/current/20260708-cli-python-aix/story-03-002-no-prompts | 03-001 | Parallel-safe: true | [cli.py, prompts.py] |
-| 03-003 | Idempotent Operations | feature/current/20260708-cli-python-aix/story-03-003-idempotent-ops | 03-001, 03-002 | Parallel-safe: true | [operations.py, idempotent.py] |
+| 03-001 | Structured Errors & Exit Codes | feature/current/20260708-cli-python-aix/story-03-001-structured-errors | 02-004 | Parallel-safe: true | [errors.py, output.py] | [x] Done |
+| 03-002 | No Interactive Prompts | feature/current/20260708-cli-python-aix/story-03-002-no-prompts | 03-001 | Parallel-safe: true | [cli.py, prompts.py] | [x] Done |
+| 03-003 | Idempotent Operations | feature/current/20260708-cli-python-aix/story-03-003-idempotent-ops | 03-001, 03-002 | Parallel-safe: true | [operations.py, idempotent.py] | [x] Done |
 
 ### Phase 04: Session Integration (Week 2)
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-python-aix/story-04-001-session-hooks | 03-003 | Parallel-safe: true | [hooks.py, session.py] |
-| 04-002 | Installable Agent Skill | feature/current/20260708-cli-python-aix/story-04-002-agent-skills | 04-001 | Parallel-safe: true | [skills.py, skill_generator.py] |
+| 04-001 | Session Hook Infrastructure | feature/current/20260708-cli-python-aix/story-04-001-session-hooks | 03-003 | Parallel-safe: true | [hooks.py, session.py] | [x] Done |
+| 04-002 | Installable Agent Skill | feature/current/20260708-cli-python-aix/story-04-002-agent-skills | 04-001 | Parallel-safe: true | [skills.py, skill_generator.py] | [x] Done |
 
 ### Phase 05: UX Enhancement (Week 2)
 
 | Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
 | -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 05-001 | Content First No-Args | feature/current/20260708-cli-python-aix/story-05-001-content-first | 04-002 | Parallel-safe: false | [cli.py, output.py] |
-| 05-002 | Contextual Disclosure with Next Steps | feature/current/20260708-cli-python-aix/story-05-002-contextual-disclosure | 05-001 | Parallel-safe: false | [output.py, suggestions.py] |
+| 05-001 | Content First No-Args | feature/current/20260708-cli-python-aix/story-05-001-content-first | 04-002 | Parallel-safe: false | [cli.py, output.py] | [x] Done |
+| 05-002 | Contextual Disclosure with Next Steps | feature/current/20260708-cli-python-aix/story-05-002-contextual-disclosure | 05-001 | Parallel-safe: false | [output.py, suggestions.py] | [x] Done |
 
 ## Dependency Graph
 

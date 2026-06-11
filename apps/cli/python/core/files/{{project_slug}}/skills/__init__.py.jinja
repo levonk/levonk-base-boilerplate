@@ -1,0 +1,22 @@
+# vim: set ft=python :
+"""Skills module for installable agent skills.
+
+This module provides utilities for generating and managing installable
+agent skills for agentskills.io.
+"""
+
+from {{project_slug}}.skills.generator import (
+    strip_live_state,
+    rewrite_to_non_interactive,
+    generate_skill_frontmatter,
+    generate_skill_content,
+    generate_skill_from_cli,
+)
+
+__all__ = [
+    "strip_live_state",
+    "rewrite_to_non_interactive",
+    "generate_skill_frontmatter",
+    "generate_skill_content",
+    "generate_skill_from_cli",
+]

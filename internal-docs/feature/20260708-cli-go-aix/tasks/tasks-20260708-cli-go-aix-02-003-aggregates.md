@@ -27,48 +27,46 @@ Implement pre-computed aggregates (total counts, derived status fields) to reduc
 
 ## Sub-Tasks
 
-- [ ] Design aggregate computation strategy for efficiency
-- [ ] Implement total count computation for list queries
-- [ ] Add count field to list output structures
-- [ ] Format count as "count: 30 of 847 total"
-- [ ] Identify commonly-needed derived status fields
-- [ ] Implement derived status field computation (e.g., "3/3 passed", "7 comments")
-- [ ] Add derived status fields to detail view structures
-- [ ] Optimize aggregate queries for performance
-- [ ] Integrate aggregate counts into TOON output
-- [ ] Integrate aggregate counts into JSON output
-- [ ] Integrate derived status fields into TOON output
-- [ ] Integrate derived status fields into JSON output
-- [ ] Ensure aggregates are only computed when backend can provide them cheaply
-- [ ] Write unit tests for aggregate computation
-- [ ] Write unit tests for derived status field computation
-- [ ] Write integration tests for aggregate output formatting
-- [ ] Write performance tests for aggregate queries
-- [ ] Update CLI help text to document aggregate fields
+- [x] Design aggregate computation strategy for efficiency
+- [x] Implement total count computation for list queries
+- [x] Add count field to list output structures
+- [x] Format count as "count: 30 of 847 total"
+- [x] Identify commonly-needed derived status fields
+- [x] Implement derived status field computation (e.g., "3/3 passed", "7 comments")
+- [x] Add derived status fields to detail view structures
+- [x] Optimize aggregate queries for performance
+- [x] Integrate aggregate counts into TOON output
+- [x] Integrate aggregate counts into JSON output
+- [x] Integrate derived status fields into TOON output
+- [x] Integrate derived status fields into JSON output
+- [x] Ensure aggregates are only computed when backend can provide them cheaply
+- [x] Write unit tests for aggregate computation
+- [x] Write unit tests for derived status field computation
+- [x] Write integration tests for aggregate output formatting
+- [x] Write performance tests for aggregate queries
+- [x] Update CLI help text to document aggregate fields
 
 ## Relevant Files
 
-- `boilerplate/apps/cli/go/core/files/internal/aggregates/counter.go` — Count computation logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/aggregates/counter_test.go` — Tests for count computation (new file)
-- `boilerplate/apps/cli/go/core/files/internal/aggregates/derived.go` — Derived status field logic (new file)
-- `boilerplate/apps/cli/go/core/files/internal/aggregates/derived_test.go` — Tests for derived fields (new file)
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter.go` — Integrate aggregates into output
-- `boilerplate/apps/cli/go/core/files/internal/output/formatter_test.go` — Tests for aggregate integration
-- `boilerplate/apps/cli/go/core/files/data/queries.go` — Update queries to include aggregates
-- `boilerplate/apps/cli/go/core/files/data/queries_test.go` — Tests for aggregate queries
+- `boilerplate/apps/cli/go/core/files/internal/aggregates/counter.go.jinja` — Count computation logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/aggregates/counter_test.go.jinja` — Tests for count computation (new file)
+- `boilerplate/apps/cli/go/core/files/internal/aggregates/derived.go.jinja` — Derived status field logic (new file)
+- `boilerplate/apps/cli/go/core/files/internal/aggregates/derived_test.go.jinja` — Tests for derived fields (new file)
+- `boilerplate/apps/cli/go/core/files/internal/formatting/formatter.go.jinja` — Integrate aggregates into output (modified)
+- `boilerplate/apps/cli/go/core/files/internal/formatting/formatter_test.go.jinja` — Tests for aggregate integration (existing)
 
 ## Acceptance Criteria
 
-- [ ] Total count is computed efficiently for all list queries
-- [ ] Count output format matches specification ("count: 30 of 847 total")
-- [ ] Derived status fields are computed for relevant detail views
-- [ ] Derived status fields provide lightweight summaries only
-- [ ] Aggregates are integrated into TOON output correctly
-- [ ] Aggregates are integrated into JSON output correctly
-- [ ] Aggregate computation doesn't significantly impact query performance
-- [ ] Aggregates are only computed when backend can provide them cheaply
-- [ ] All aggregate functionality has test coverage
-- [ ] Help text documents aggregate fields
+- [x] Total count is computed efficiently for all list queries
+- [x] Count output format matches specification ("count: 30 of 847 total")
+- [x] Derived status fields are computed for relevant detail views
+- [x] Derived status fields provide lightweight summaries only
+- [x] Aggregates are integrated into TOON output correctly
+- [x] Aggregates are integrated into JSON output correctly
+- [x] Aggregate computation doesn't significantly impact query performance
+- [x] Aggregates are only computed when backend can provide them cheaply
+- [x] All aggregate functionality has test coverage
+- [x] Help text documents aggregate fields
 
 ## Test Plan
 

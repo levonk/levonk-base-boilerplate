@@ -1,0 +1,591 @@
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
+import * as toml from '@iarna/toml';
+import { validateConfig, formatZodError, isValidConfig, getValidationErrors, ConfigSchema, ValidationError } from './validation.js';
+import { needsMigration, isLegacyConfig, backupConfig, applyMigrations, CURRENT_CONFIG_VERSION } from './migration.js';
+
+/**
+ * Configuration schema with default values and descriptions
+ */
+export interface Config {
+    /** Config schema version for migration tracking. Default: 1 */
+    _version?: number;
+    /** Log level: error, warn, info, debug. Default: "info" */
+    log_level?: 'error' | 'warn' | 'info' | 'debug';
+    /** Suppress all output except errors. Default: false */
+    quiet?: boolean;
+    /** Enable verbose output with extra details. Default: false */
+    verbose?: boolean;
+    /** Debug mode (enables debug-level logging). Default: false */
+    debug?: boolean;
+    /** Color mode: auto, always, never. Default: "auto" */
+    color?: 'auto' | 'always' | 'never';
+    /** Log format: text or json. Default: "text" */
+    log_format?: 'text' | 'json';
+    /** Output results as JSON. Default: false */
+    json?: boolean;
+    /** File reference format: vscode, standard, auto. Default: "auto" */
+    file_ref_format?: 'vscode' | 'standard' | 'auto';
+    /** Enable privacy mode for anonymous usage. Default: false */
+    privacy?: boolean;
+    /** Enable audit logging for sensitive operations. Default: false */
+    audit?: boolean;
+    /** Custom path for audit log database. Default: ~/.local/share/{project_slug}/audit.db */
+    audit_path?: string;
+    /** Retention period for audit logs in days. Default: 90 */
+    audit_retention_days?: number;
+    /** Enable deprecation warnings. Default: true */
+    deprecation_warnings_enabled?: boolean;
+    /** Suppress specific deprecation warnings by ID */
+    deprecation_suppressed_warnings?: string[];
+    /** Custom configuration values */
+    [key: string]: any;
+}
+
+/**
+ * Config source tracking for debugging
+ */
+export interface ConfigSource {
+    source: 'defaults' | 'system' | 'user' | 'project' | 'env' | 'cli' | 'custom';
+    path?: string;
+    value?: any;
+}
+
+/**
+ * Extended config with source tracking
+ */
+export interface ConfigWithSources extends Config {
+    _sources?: Record<string, ConfigSource>;
+}
+
+/**
+ * Default configuration values
+ */
+export const DEFAULT_CONFIG: Config = {
+    _version: 1,
+    log_level: 'info',
+    quiet: false,
+    verbose: false,
+    debug: false,
+    color: 'auto',
+    log_format: 'text',
+    json: false,
+    file_ref_format: 'auto',
+    privacy: false,
+    audit: false,
+    audit_retention_days: 90,
+    deprecation_warnings_enabled: true,
+    deprecation_suppressed_warnings: [],
+};
+
+export interface ConfigOptions {
+    projectSlug: string;
+    configPath?: string;
+    cwd?: string;
+    debug?: boolean;
+}
+
+/**
+ * Get XDG config directory path
+ * Returns ~/.config/{project_slug}/
+ */
+export function getXDGConfigPath(projectSlug: string): string {
+    const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    return path.join(xdgConfigHome, projectSlug);
+}
+
+/**
+ * Get default config file path
+ * Returns ~/.config/{project_slug}/config.toml
+ * If customPath is provided and is a directory, appends config.toml
+ * If customPath is provided and is a file path, returns it as-is
+ */
+export function getConfigFilePath(projectSlug: string, customPath?: string): string {
+    if (customPath) {
+        // If customPath ends with config.toml, return it as-is
+        if (customPath.endsWith('config.toml')) {
+            return customPath;
+        }
+        // Otherwise, append config.toml
+        return path.join(customPath, 'config.toml');
+    }
+    return path.join(getXDGConfigPath(projectSlug), 'config.toml');
+}
+
+/**
+ * Get local project config path
+ * Returns .{project_slug}/config.toml
+ */
+export function getProjectConfigPath(projectSlug: string, cwd: string = process.cwd()): string {
+    return path.join(cwd, `.${projectSlug}`, 'config.toml');
+}
+
+/**
+ * Get system config path
+ * Returns /etc/{project_slug}/config.toml
+ */
+export function getSystemConfigPath(projectSlug: string): string {
+    return path.join('/etc', projectSlug, 'config.toml');
+}
+
+/**
+ * Check if config file exists
+ */
+export async function configExists(configPath: string): Promise<boolean> {
+    try {
+        await fs.access(configPath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Ensure config directory exists
+ */
+export async function ensureConfigDir(configDir: string): Promise<void> {
+    try {
+        await fs.mkdir(configDir, { recursive: true });
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+            throw error;
+        }
+    }
+}
+
+/**
+ * Get default config template with all settings commented out
+ */
+export function getDefaultConfigTemplate(): string {
+    return `# Configuration file for {{ project_slug }}
+# All settings are commented out with their default values
+# Uncomment and modify as needed
+
+# Log level: error, warn, info, debug
+# Default: "info"
+# log_level = "info"
+
+# Suppress all output except errors
+# Default: false
+# quiet = false
+
+# Enable verbose output with extra details
+# Default: false
+# verbose = false
+
+# Color mode: auto, always, never
+# Default: "auto"
+# color = "auto"
+
+# Output results as JSON
+# Default: false
+# json = false
+`;
+}
+
+/**
+ * Create default config file
+ */
+export async function createDefaultConfig(configPath: string, verbose: boolean = false): Promise<void> {
+    const configDir = path.dirname(configPath);
+
+    // Ensure directory exists
+    await ensureConfigDir(configDir);
+
+    // Check if config already exists
+    if (await configExists(configPath)) {
+        if (verbose) {
+            console.error(`Config file already exists at ${configPath}`);
+        }
+        return;
+    }
+
+    // Write default config
+    const template = getDefaultConfigTemplate();
+    await fs.writeFile(configPath, template, { mode: 0o644 });
+
+    if (verbose) {
+        console.error(`Created default config file at ${configPath}`);
+    }
+}
+
+/**
+ * Load config from file and merge with defaults
+ * Validates config against schema and throws helpful errors on invalid config
+ * Automatically migrates legacy configs to current version
+ */
+export async function loadConfig(configPath: string, debug: boolean = false): Promise<Config> {
+    try {
+        const content = await fs.readFile(configPath, 'utf-8');
+        const userConfig = toml.parse(content) as Config;
+
+        // Check if config needs migration
+        if (isLegacyConfig(userConfig) || needsMigration(userConfig)) {
+            if (debug) {
+                console.error(`[config] Detected legacy or outdated config, migrating to version ${CURRENT_CONFIG_VERSION}`);
+            }
+
+            // Show deprecation warning for legacy format
+            if (isLegacyConfig(userConfig)) {
+                console.error(`[config] WARNING: Your config file uses a legacy format and has been automatically migrated to version ${CURRENT_CONFIG_VERSION}.`);
+                console.error(`[config] The original config has been backed up with a .bak suffix.`);
+                console.error(`[config] This legacy format will be deprecated in a future release.`);
+            }
+
+            // Backup original config
+            const backupPath = await backupConfig(configPath);
+            if (debug) {
+                console.error(`[config] Backed up original config to ${backupPath}`);
+            }
+
+            // Apply migrations
+            const migratedConfig = applyMigrations(userConfig);
+
+            // Write migrated config
+            const migratedContent = toml.stringify(migratedConfig as any);
+            await fs.writeFile(configPath, migratedContent, { mode: 0o644 });
+
+            if (debug) {
+                console.error(`[config] Successfully migrated config to version ${CURRENT_CONFIG_VERSION}`);
+            }
+
+            // Use migrated config for validation
+            userConfig._version = CURRENT_CONFIG_VERSION;
+        }
+
+        // Validate config against schema with line number tracking
+        const validationResult = ConfigSchema.safeParse(userConfig);
+        if (!validationResult.success) {
+            const errors = getValidationErrors(userConfig, content);
+            if (debug) {
+                console.error(`[config] Validation errors for ${configPath}:`);
+                errors.forEach(err => {
+                    const location = err.line ? `line ${err.line}` : 'unknown location';
+                    console.error(`  - ${err.path.join('.')} (${location}): ${err.message}`);
+                    if (err.suggestion) {
+                        console.error(`    Suggestion: ${err.suggestion}`);
+                    }
+                });
+            }
+            throw formatZodError(validationResult.error, content);
+        }
+
+        // Merge with defaults, user config takes precedence
+        const mergedConfig = { ...DEFAULT_CONFIG, ...userConfig };
+
+        // Validate merged config
+        const validatedConfig = validateConfig(mergedConfig);
+
+        if (debug) {
+            console.error(`[config] Successfully validated config from ${configPath}`);
+        }
+
+        return validatedConfig;
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            // Config file doesn't exist, return defaults
+            return { ...DEFAULT_CONFIG };
+        }
+        throw error;
+    }
+}
+
+/**
+ * Deep merge two objects
+ */
+function deepMerge(target: any, source: any): any {
+    const output = { ...target };
+    if (isObject(target) && isObject(source)) {
+        Object.keys(source).forEach((key) => {
+            if (isObject(source[key])) {
+                if (!(key in target)) {
+                    Object.assign(output, { [key]: source[key] });
+                } else {
+                    output[key] = deepMerge(target[key], source[key]);
+                }
+            } else {
+                Object.assign(output, { [key]: source[key] });
+            }
+        });
+    }
+    return output;
+}
+
+function isObject(item: any): boolean {
+    return item && typeof item === 'object' && !Array.isArray(item);
+}
+
+/**
+ * Load environment variables with project prefix
+ */
+export function loadEnvConfig(projectSlug: string): Config {
+    const prefix = projectSlug.toUpperCase().replace(/-/g, '_');
+    const envConfig: Config = {};
+
+    // Map env vars to config keys
+    const envMappings: Record<string, keyof Config> = {
+        [`${prefix}_LOG_LEVEL`]: 'log_level',
+        [`${prefix}_QUIET`]: 'quiet',
+        [`${prefix}_VERBOSE`]: 'verbose',
+        [`${prefix}_DEBUG`]: 'debug',
+        [`${prefix}_COLOR`]: 'color',
+        [`${prefix}_LOG_FORMAT`]: 'log_format',
+        [`${prefix}_JSON`]: 'json',
+        [`${prefix}_PRIVACY`]: 'privacy',
+        [`${prefix}_AUDIT`]: 'audit',
+        [`${prefix}_AUDIT_PATH`]: 'audit_path',
+        [`${prefix}_AUDIT_RETENTION_DAYS`]: 'audit_retention_days',
+    };
+
+    for (const [envVar, configKey] of Object.entries(envMappings)) {
+        const value = process.env[envVar];
+        if (value !== undefined) {
+            // Convert string values to appropriate types
+            if (configKey === 'quiet' || configKey === 'verbose' || configKey === 'debug' || configKey === 'json' || configKey === 'privacy' || configKey === 'audit') {
+                envConfig[configKey] = value === 'true' || value === '1';
+            } else if (configKey === 'audit_retention_days') {
+                envConfig[configKey] = parseInt(value, 10);
+            } else {
+                envConfig[configKey] = value;
+            }
+        }
+    }
+
+    return envConfig;
+}
+
+/**
+ * Load config from all sources with precedence
+ * Precedence: CLI args > env vars > project config > user config > system config > defaults
+ */
+export async function loadConfigWithPrecedence(options: ConfigOptions, cliArgs?: Partial<Config>): Promise<ConfigWithSources> {
+    const configWithSources: ConfigWithSources = { ...DEFAULT_CONFIG, _sources: {} };
+    const sources = configWithSources._sources!;
+
+    // 1. Start with defaults
+    Object.keys(DEFAULT_CONFIG).forEach((key) => {
+        sources[key] = { source: 'defaults', value: DEFAULT_CONFIG[key as keyof Config] };
+    });
+
+    // 2. Load system config
+    try {
+        const systemConfigPath = getSystemConfigPath(options.projectSlug);
+        const systemConfig = await loadConfig(systemConfigPath, options.debug);
+        deepMerge(configWithSources, systemConfig);
+        Object.keys(systemConfig).forEach((key) => {
+            if (systemConfig[key as keyof Config] !== undefined) {
+                sources[key] = { source: 'system', path: systemConfigPath, value: systemConfig[key as keyof Config] };
+            }
+        });
+        if (options.debug) {
+            console.error(`[config] Loaded system config from ${systemConfigPath}`);
+        }
+    } catch (error) {
+        if (options.debug && (error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            console.error(`[config] Failed to load system config: ${error}`);
+        }
+    }
+
+    // 3. Load user config (XDG)
+    try {
+        const userConfigPath = getConfigFilePath(options.projectSlug, options.configPath);
+        const userConfig = await loadConfig(userConfigPath, options.debug);
+        deepMerge(configWithSources, userConfig);
+        Object.keys(userConfig).forEach((key) => {
+            if (userConfig[key as keyof Config] !== undefined) {
+                sources[key] = { source: 'user', path: userConfigPath, value: userConfig[key as keyof Config] };
+            }
+        });
+        if (options.debug) {
+            console.error(`[config] Loaded user config from ${userConfigPath}`);
+        }
+    } catch (error) {
+        if (options.debug && (error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            console.error(`[config] Failed to load user config: ${error}`);
+        }
+    }
+
+    // 4. Load project config
+    try {
+        const projectConfigPath = getProjectConfigPath(options.projectSlug, options.cwd);
+        const projectConfig = await loadConfig(projectConfigPath, options.debug);
+        deepMerge(configWithSources, projectConfig);
+        Object.keys(projectConfig).forEach((key) => {
+            if (projectConfig[key as keyof Config] !== undefined) {
+                sources[key] = { source: 'project', path: projectConfigPath, value: projectConfig[key as keyof Config] };
+            }
+        });
+        if (options.debug) {
+            console.error(`[config] Loaded project config from ${projectConfigPath}`);
+        }
+    } catch (error) {
+        if (options.debug && (error as NodeJS.ErrnoException).code !== 'ENOENT') {
+            console.error(`[config] Failed to load project config: ${error}`);
+        }
+    }
+
+    // 5. Load environment variables
+    const envConfig = loadEnvConfig(options.projectSlug);
+    deepMerge(configWithSources, envConfig);
+    Object.keys(envConfig).forEach((key) => {
+        if (envConfig[key as keyof Config] !== undefined) {
+            sources[key] = { source: 'env', value: envConfig[key as keyof Config] };
+        }
+    });
+    if (options.debug && Object.keys(envConfig).length > 0) {
+        console.error(`[config] Loaded ${Object.keys(envConfig).length} environment variables`);
+    }
+
+    // 6. Apply CLI args (highest precedence)
+    if (cliArgs) {
+        deepMerge(configWithSources, cliArgs);
+        Object.keys(cliArgs).forEach((key) => {
+            if (cliArgs[key as keyof Config] !== undefined) {
+                sources[key] = { source: 'cli', value: cliArgs[key as keyof Config] };
+            }
+        });
+        if (options.debug) {
+            console.error(`[config] Applied CLI arguments`);
+        }
+    }
+
+    return configWithSources;
+}
+
+/**
+ * Initialize config on first run
+ * Creates default config if it doesn't exist
+ */
+export async function initializeConfig(options: ConfigOptions, verbose: boolean = false): Promise<Config> {
+    const configPath = getConfigFilePath(options.projectSlug, options.configPath);
+
+    // Create default config if it doesn't exist
+    if (!await configExists(configPath)) {
+        await createDefaultConfig(configPath, verbose);
+    }
+
+    // Load config with full precedence chain
+    const config = await loadConfigWithPrecedence(options);
+
+    if (verbose) {
+        console.error(`Loaded config from ${configPath}`);
+    }
+
+    // Return config without source tracking for normal use
+    const { _sources, ...configWithoutSources } = config;
+    return configWithoutSources;
+}
+
+/**
+ * Config reload result with status and details
+ */
+export interface ConfigReloadResult {
+    success: boolean;
+    oldConfig: Config;
+    newConfig: Config | null;
+    error?: string;
+    diff?: Record<string, { old: any; new: any }>;
+}
+
+/**
+ * Reload config from file with validation
+ * Validates new config before applying, keeps old config active on validation errors
+ */
+export async function reloadConfig(
+    options: ConfigOptions,
+    cliArgs?: Partial<Config>,
+    verbose: boolean = false
+): Promise<ConfigReloadResult> {
+    const configPath = getConfigFilePath(options.projectSlug, options.configPath);
+
+    // Load current config (old config) with full precedence
+    const oldConfig = await loadConfigWithPrecedence(options, cliArgs);
+    const { _sources, ...oldConfigWithoutSources } = oldConfig;
+
+    try {
+        // Load new config from file only (without CLI args for validation)
+        // This ensures we validate the file content itself
+        let newConfigFromFile: Config;
+        try {
+            newConfigFromFile = await loadConfig(configPath, verbose);
+        } catch (error) {
+            // If file doesn't exist, use defaults
+            newConfigFromFile = { ...DEFAULT_CONFIG };
+        }
+
+        // Validate new config from file
+        const validationResult = ConfigSchema.safeParse(newConfigFromFile);
+        if (!validationResult.success) {
+            const content = await fs.readFile(configPath, 'utf-8');
+            const errors = getValidationErrors(newConfigFromFile, content);
+            const errorDetails = errors.map(err => {
+                const location = err.line ? `line ${err.line}` : 'unknown location';
+                return `${err.path.join('.')} (${location}): ${err.message}`;
+            }).join('; ');
+
+            if (verbose) {
+                console.error(`[config] Validation failed for reloaded config: ${errorDetails}`);
+            }
+
+            return {
+                success: false,
+                oldConfig: oldConfigWithoutSources,
+                newConfig: null,
+                error: `Config validation failed: ${errorDetails}`,
+            };
+        }
+
+        // Apply CLI args to the validated new config
+        let newConfigWithArgs = { ...newConfigFromFile };
+        if (cliArgs) {
+            newConfigWithArgs = { ...newConfigWithArgs, ...cliArgs };
+        }
+
+        // Calculate diff if verbose
+        let diff: Record<string, { old: any; new: any }> | undefined;
+        if (verbose) {
+            diff = {};
+            const allKeys = new Set([
+                ...Object.keys(oldConfigWithoutSources),
+                ...Object.keys(newConfigWithArgs),
+            ]);
+
+            for (const key of allKeys) {
+                const oldValue = oldConfigWithoutSources[key as keyof Config];
+                const newValue = newConfigWithArgs[key as keyof Config];
+                if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                    diff![key] = { old: oldValue, new: newValue };
+                }
+            }
+        }
+
+        if (verbose) {
+            console.error(`[config] Successfully reloaded config from ${configPath}`);
+            if (diff && Object.keys(diff).length > 0) {
+                console.error(`[config] Config changes:`);
+                for (const [key, change] of Object.entries(diff)) {
+                    console.error(`  ${key}: ${JSON.stringify(change.old)} -> ${JSON.stringify(change.new)}`);
+                }
+            }
+        }
+
+        return {
+            success: true,
+            oldConfig: oldConfigWithoutSources,
+            newConfig: newConfigWithArgs,
+            diff,
+        };
+    } catch (error) {
+        if (verbose) {
+            console.error(`[config] Failed to reload config: ${error}`);
+        }
+
+        return {
+            success: false,
+            oldConfig: oldConfigWithoutSources,
+            newConfig: null,
+            error: error instanceof Error ? error.message : String(error),
+        };
+    }
+}

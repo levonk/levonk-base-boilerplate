@@ -3,67 +3,40 @@
   "version": "0.1.0",
   "description": "{{ project_description | default('A TypeScript CLI application') }}",
   "shell": {
-    "init_hook": "just bootstrap-internal",
     "init": [
       "echo '📘 Setting up {{ project_name | default('ts-cli-app') }} development environment...'"
     ],
-    "scripts": {
-      "build": "tsc",
-      "build-watch": "tsc --watch",
-      "build-release": "tsc && npm pkg fix",
-      "test": "vitest",
-      "test-coverage": "vitest --coverage",
-      "lint": "eslint . --ext .ts,.js",
-      "format": "prettier --write .",
-      "format-check": "prettier --check .",
-      "run": "node dist/index.js",
-      "dev": "tsx watch src/index.ts",
-      "clean": "rm -rf dist/",
-      "type-check": "tsc --noEmit",
-      "check": "eslint . --ext .ts,.js && tsc --noEmit"
-    }
   },
-  "packages": {
-    "nixpkgs#nodejs_20": "",
-    "nixpkgs#nodePackages.typescript": "",
-    "nixpkgs#nodePackages.tsx": "",
-    "nixpkgs#nodePackages.vitest": "",
-    "nixpkgs#nodePackages.eslint": "",
-    "nixpkgs#nodePackages.prettier": "",
-    "nixpkgs#pnpm": "",
-    "nixpkgs#just": "",
-    {% if include_commander %}
-    "nixpkgs#nodePackages.commander": "",
-    {% endif %}
-    {% if include_inquirer %}
-    "nixpkgs#nodePackages.inquirer": "",
-    {% endif %}
-    {% if include_chalk %}
-    "nixpkgs#nodePackages.chalk": "",
-    {% endif %}
-    {% if include_axios %}
-    "nixpkgs#nodePackages.axios": "",
-    {% endif %}
-    {% if include_lodash %}
-    "nixpkgs#nodePackages.lodash": "",
-    {% endif %}
-    {% if include_yaml %}
-    "nixpkgs#nodePackages.yaml": "",
-    {% endif %}
-    {% if include_json_schema %}
-    "nixpkgs#nodePackages.jsonSchema": "",
-    {% endif %}
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
+  "scripts": {
+    "build": "tsc",
+    "build-watch": "tsc --watch",
+    "build-release": "tsc && npm pkg fix",
+    "test": "vitest",
+    "test-coverage": "vitest --coverage",
+    "lint": "eslint . --ext .ts,.js",
+    "format": "prettier --write .",
+    "format-check": "prettier --check .",
+    "run": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "clean": "rm -rf dist/",
+    "type-check": "tsc --noEmit",
+    "check": "eslint . --ext .ts,.js && tsc --noEmit"
   },
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %},
+  "packages": [
+    "nixpkgs#nodejs",
+    "nixpkgs#typescript",
+    "nixpkgs#tsx",
+    "nixpkgs#eslint",
+    "nixpkgs#prettier",
+    "nixpkgs#pnpm",
+    "nixpkgs#just"
+  ],
   "env": {
-    "NODE_ENV": "{{ node_env | default('development') }}",
-    "TS_NODE_PROJECT": "{{ ts_node_project | default('./tsconfig.json') }}",
-    {% if include_development %}
+    "TS_NODE_PROJECT": "{{ ts_node_project | default('./tsconfig.json') }}"{% if include_development %},
     "LOG_LEVEL": "{{ log_level | default('info') }}",
-    "DEBUG": "{{ debug | default('app:*') }}",
-    {% endif %}
-    {% if include_config %}
-    "CONFIG_PATH": "{{ config_path | default('./config.json') }}",
-    {% endif %}
+    "DEBUG": "{{ debug | default('app:*') }}"{% endif %}{% if include_config %},
+    "CONFIG_PATH": "{{ config_path | default('./config.json') }}"{% endif %},
+    "NODE_ENV": "{{ node_env | default('development') }}"
   }
 }

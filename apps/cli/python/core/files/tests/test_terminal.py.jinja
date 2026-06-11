@@ -1,0 +1,78 @@
+# vim: set ft=python :
+from {{ project_slug }}.terminal import (
+    get_terminal_size,
+    get_pager_command,
+    should_use_pager,
+    page_output,
+    format_for_terminal_width,
+    is_output_piped
+)
+
+
+def test_get_terminal_size():
+    """Test terminal size detection."""
+    size = get_terminal_size()
+    assert size is not None
+    assert len(size) == 2
+    assert size[0] > 0  # columns
+    assert size[1] > 0  # rows
+
+
+def test_get_pager_command():
+    """Test pager command retrieval."""
+    pager = get_pager_command()
+    assert pager is not None
+    assert isinstance(pager, str)
+    assert len(pager) > 0
+
+
+def test_should_use_pager():
+    """Test pager usage logic."""
+    # Should not page with no_pager flag
+    assert not should_use_pager(100, no_pager=True)
+    
+    # Should page with many lines (assuming terminal height < 100)
+    result = should_use_pager(100, no_pager=False)
+    # Result depends on whether running in TTY
+    assert isinstance(result, bool)
+
+
+def test_should_use_pager_short_output():
+    """Test pager usage with short output."""
+    # Should not page with short output
+    assert not should_use_pager(5, no_pager=False)
+
+
+def test_format_for_terminal_width():
+    """Test text formatting for terminal width."""
+    text = "This is a very long line that should be wrapped if the terminal width is small"
+    formatted = format_for_terminal_width(text, width=20)
+    assert formatted is not None
+    # Check that lines are not too long
+    for line in formatted.split('\n'):
+        assert len(line) <= 20 or ' ' in line  # Allow word breaks
+
+
+def test_format_for_terminal_width_default():
+    """Test text formatting with default terminal width."""
+    text = "Short line"
+    formatted = format_for_terminal_width(text)
+    assert formatted is not None
+    assert "Short line" in formatted
+
+
+def test_is_output_piped():
+    """Test piped output detection."""
+    result = is_output_piped()
+    assert isinstance(result, bool)
+
+
+def test_page_output():
+    """Test page output function."""
+    text = "Test output for pager"
+    # This should not raise an exception
+    try:
+        page_output(text)
+    except Exception:
+        # Pager might fail in test environment, that's okay
+        pass

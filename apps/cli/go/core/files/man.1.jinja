@@ -1,0 +1,119 @@
+.\" Man page for {{ project_name }}
+.\" Contact: {{ author_email | default("support@example.com") }}
+.TH {{ project_slug | upper }} 1 "2026-01-01" "{{ project_name }}" "User Commands"
+.SH NAME
+{{ project_slug }} \- {{ description }}
+.SH SYNOPSIS
+.B {{ project_slug }}
+[\fIOPTION\fR]... [\fIINPUT\fR]...
+.SH DESCRIPTION
+{{ description }}
+
+This tool processes files and stdin inputs with support for glob patterns, dry-run mode, and comprehensive configuration management.
+.SH OPTIONS
+.TP
+\fB\--config\fR \fIFILE\fR
+Config file (default is $HOME/.config/{{ project_slug }}/config.yaml)
+.TP
+\fB\--json\fR
+Output results as JSON
+.TP
+\fB\-q, \--quiet\fR
+Suppress all output except errors
+.TP
+\fB\-v, \--verbose\fR
+Enable verbose output
+.TP
+\fB\--debug\fR
+Enable debug logging with stack traces
+.TP
+\fB\--color\fR=\fImode\fR
+Color output: auto, always, never
+.TP
+\fB\--install\fR
+Install shell completions and initialize config
+.TP
+\fB\--uninstall\fR
+Remove shell completions and config files
+.TP
+\fB\--man\fR
+Generate and display man page
+.TP
+\fB\--dry-run\fR
+Preview changes without executing them
+.TP
+\fB\-f, \--force\fR
+Bypass confirmation prompts for destructive operations
+.TP
+\fB\--usage\fR
+Show usage information
+.SH EXAMPLES
+Process a single file:
+.PP
+.RS
+.EX
+{{ project_slug }} file.txt
+.EE
+.RE
+.PP
+Process files matching a glob pattern:
+.PP
+.RS
+.EX
+{{ project_slug }} "**/*.txt"
+.EE
+.RE
+.PP
+Process stdin:
+.PP
+.RS
+.EX
+cat file.txt | {{ project_slug }} -
+.EE
+.RE
+.PP
+Install shell completions:
+.PP
+.RS
+.EX
+{{ project_slug }} --install
+.EE
+.RE
+.PP
+Preview changes without executing:
+.PP
+.RS
+.EX
+{{ project_slug }} --dry-run file.txt
+.EE
+.RE
+.SH CONFIGURATION
+The tool uses a configuration file located at:
+.PP
+$HOME/.config/{{ project_slug }}/config.yaml
+.PP
+Configuration precedence (highest to lowest):
+.RS
+.IP 1.
+Command-line flags
+.IP 2.
+Environment variables (prefixed with {{ project_slug | upper | replace('-', '_') }}_)
+.IP 3.
+Config file
+.IP 4.
+Hardcoded defaults
+.RE
+.SH COMPLETION
+Shell completion scripts are installed via the \fB\--install\fR flag and support bash, zsh, and fish.
+.SH EXIT STATUS
+.TP
+.B 0
+Success
+.TP
+.B 1
+Error occurred
+.SH SEE ALSO
+The full documentation is available at: {{ project_url | default("https://github.com/example/" + project_slug) }}
+.SH AUTHOR
+{{ author_name | default("Developer") }} <{{ author_email | default("support@example.com") }}>
+{# vim: set ft=man: #}

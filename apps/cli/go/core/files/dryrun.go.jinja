@@ -1,0 +1,44 @@
+package main
+
+import (
+	"context"
+	"fmt"
+)
+
+// DryRunMode checks if dry-run mode is enabled in the context
+func DryRunMode(ctx context.Context) bool {
+	if dr, ok := ctx.Value("dry-run").(bool); ok {
+		return dr
+	}
+	return false
+}
+
+// DryRunLog logs what would be done in dry-run mode
+func DryRunLog(ctx context.Context, format string, args ...interface{}) {
+	if DryRunMode(ctx) {
+		fmt.Printf("[DRY-RUN] "+format+"\n", args...)
+	}
+}
+
+// DryRunFileOp logs a file operation that would be performed
+func DryRunFileOp(ctx context.Context, op, path string) {
+	if DryRunMode(ctx) {
+		DryRunLog(ctx, "Would %s: %s", op, path)
+	}
+}
+
+// DryRunCheck returns true if in dry-run mode and logs the operation
+func DryRunCheck(ctx context.Context, op string) bool {
+	if DryRunMode(ctx) {
+		DryRunLog(ctx, "Skipping %s in dry-run mode", op)
+		return true
+	}
+	return false
+}
+
+// IsDryRun returns the global dry-run flag value
+func IsDryRun() bool {
+	return dryRun
+}
+
+{# vim: set ft=go: #}

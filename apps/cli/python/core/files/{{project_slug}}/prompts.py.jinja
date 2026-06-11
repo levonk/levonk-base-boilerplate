@@ -1,0 +1,174 @@
+# vim: set ft=python :
+"""Prompt handling for CLI operations.
+
+This module provides utilities for suppressing prompts in agent mode
+while retaining them in human mode (unless --force is used).
+"""
+
+from typing import Optional, Callable, Any
+from {{project_slug}}.mode import Mode
+
+
+class PromptSuppressionError(Exception):
+    """Raised when a prompt is attempted in agent mode."""
+    pass
+
+
+def should_prompt(mode: Mode, force: bool = False) -> bool:
+    """Determine if prompts should be shown based on mode and force flag.
+    
+    Args:
+        mode: The current execution mode (AGENT or HUMAN)
+        force: Whether --force flag is set
+        
+    Returns:
+        True if prompts should be shown, False otherwise
+    """
+    # In agent mode, never prompt
+    if mode == Mode.AGENT:
+        return False
+    
+    # In human mode, prompt unless --force is set
+    if mode == Mode.HUMAN:
+        return not force
+    
+    # Default to no prompting for safety
+    return False
+
+
+def confirm(
+    message: str,
+    mode: Mode,
+    force: bool = False,
+    default: bool = False
+) -> bool:
+    """Prompt for user confirmation if appropriate.
+    
+    In agent mode or with --force, returns default without prompting.
+    In human mode without --force, prompts the user.
+    
+    Args:
+        message: The confirmation message
+        mode: The current execution mode
+        force: Whether --force flag is set
+        default: Default value when not prompting
+        
+    Returns:
+        True if confirmed, False otherwise
+    """
+    if not should_prompt(mode, force):
+        return default
+    
+    try:
+        response = input(f"{message} [y/N] ")
+        return response.lower() in ('y', 'yes')
+    except (EOFError, KeyboardInterrupt):
+        return default
+
+
+def prompt_for_value(
+    prompt: str,
+    mode: Mode,
+    force: bool = False,
+    default: Optional[str] = None,
+    validator: Optional[Callable[[str], bool]] = None
+) -> Optional[str]:
+    """Prompt for a value if appropriate.
+    
+    In agent mode or with --force, returns default without prompting.
+    In human mode without --force, prompts the user.
+    
+    Args:
+        prompt: The prompt message
+        mode: The current execution mode
+        force: Whether --force flag is set
+        default: Default value when not prompting
+        validator: Optional validation function
+        
+    Returns:
+        The user's value or default
+    """
+    if not should_prompt(mode, force):
+        return default
+    
+    try:
+        while True:
+            value = input(f"{prompt}: ")
+            if not value and default is not None:
+                return default
+            
+            if validator is None or validator(value):
+                return value
+            
+            print("Invalid value, please try again.")
+    except (EOFError, KeyboardInterrupt):
+        return default
+
+
+def require_value(
+    value: Any,
+    field_name: str,
+    mode: Mode,
+    force: bool = False
+) -> Any:
+    """Require a value to be present, failing if missing in agent mode.
+    
+    In agent mode, raises an error if value is missing.
+    In human mode without --force, prompts for the value.
+    
+    Args:
+        value: The value to check
+        field_name: Name of the field for error messages
+        mode: The current execution mode
+        force: Whether --force flag is set
+        
+    Returns:
+        The value if present
+        
+    Raises:
+        PromptSuppressionError: If value is missing in agent mode
+    """
+    if value is not None and value != "":
+        return value
+    
+    if mode == Mode.AGENT:
+        from {{project_slug}}.errors.formatter import format_missing_required_error
+        error = format_missing_required_error(field_name)
+        raise PromptSuppressionError(f"Missing required value: {field_name}")
+    
+    if mode == Mode.HUMAN and not force:
+        return prompt_for_value(f"Enter {field_name}", mode, force)
+    
+    # In human mode with --force, fail
+    from {{project_slug}}.errors.formatter import format_missing_required_error
+    error = format_missing_required_error(field_name)
+    raise PromptSuppressionError(f"Missing required value: {field_name}")
+
+
+def suppress_wrapped_tool_prompts(mode: Mode) -> dict:
+    """Get environment variables to suppress prompts from wrapped tools.
+    
+    Many external tools (pip, npm, etc.) have environment variables
+    to suppress interactive prompts. This function returns the
+    appropriate environment variables based on mode.
+    
+    Args:
+        mode: The current execution mode
+        
+    Returns:
+        Dictionary of environment variables to set
+    """
+    if mode == Mode.AGENT:
+        return {
+            # Suppress prompts from common package managers
+            'PIP_DISABLE_PIP_VERSION_CHECK': '1',
+            'PIP_NO_INPUT': '1',
+            'NPM_CONFIG_PRODUCTION': 'true',
+            'YARN_ENABLE_GLOBAL_CACHE': 'false',
+            # Suppress Git prompts
+            'GIT_TERMINAL_PROMPT': '0',
+            # Suppress other interactive prompts
+            'DEBIAN_FRONTEND': 'noninteractive',
+        }
+    
+    return {}

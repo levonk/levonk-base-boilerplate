@@ -10,9 +10,110 @@ from rich.console import Console
 from platformdirs import user_config_dir
 
 from {{ project_slug }}.logging import configure_logging, get_logger
+from {{ project_slug }}.completion import install_all_completions, uninstall_all_completions
+from {{ project_slug }}.errors import format_file_not_found_error, format_permission_denied_error
+from {{ project_slug }}.progress import progress_bar
+from {{ project_slug }}.daemon import get_daemon_manager
+from {{ project_slug }}.man_page import print_man_page
+from {{ project_slug }}.terminal import get_terminal_size, should_use_pager, page_output
+from {{ project_slug }}.resource import get_resource_monitor
+from {{ project_slug }}.health import perform_health_check
+from {{ project_slug }}.privacy import get_privacy_manager
+from {{ project_slug }}.audit import get_audit_logger
+from {{ project_slug }}.mode import Mode, determine_mode
+from {{ project_slug }}.output.formatter import OutputFormatter, get_formatter
+from {{ project_slug }}.output.schema import apply_field_selection, get_schema_manager
+from {{ project_slug }}.output.truncation import apply_truncation, get_truncator
+{% if include_tui %}
+from {{ project_slug }}.tui import CLIArguments, launch_tui, confirm_execution
+{% endif %}
+{% if include_advanced_config %}
+from {{ project_slug }}.config import ConfigManager, get_config_manager
+{% endif %}
 
 # Version constant
 VERSION = "0.1.0"
+
+# Exit code constants
+EXIT_SUCCESS = 0
+EXIT_ERROR = 1
+EXIT_USAGE = 2
+EXIT_NETWORK_ERROR = 3
+EXIT_VALIDATION_ERROR = 4
+EXIT_FILE_NOT_FOUND = 5
+EXIT_PERMISSION_DENIED = 6
+EXIT_SIGINT = 130
+
+# Deprecation warnings
+DEPRECATED_FLAGS = {
+    # Example: "--old-flag": "Use --new-flag instead (deprecated in v1.0, will be removed in v2.0)"
+}
+
+
+def warn_deprecated(feature: str, replacement: str = None, removal_version: str = None):
+    """
+    Log a deprecation warning to stderr.
+
+    Args:
+        feature: The deprecated feature name
+        replacement: The replacement feature (if any)
+        removal_version: Version when this will be removed
+    """
+    import sys
+    message = f"WARNING: {feature} is deprecated"
+    if replacement:
+        message += f". Use {replacement} instead"
+    if removal_version:
+        message += f". Will be removed in {removal_version}"
+    print(message, file=sys.stderr)
+
+
+# Config reload state
+_config_needs_reload = False
+
+
+def handle_sighup(signum, frame):
+    """Handle SIGHUP signal for config reload."""
+    global _config_needs_reload
+    _config_needs_reload = True
+    logger = get_logger()
+    logger.info("SIGHUP received, config reload requested", module="config")
+
+
+def reload_config() -> bool:
+    """
+    Reload configuration.
+
+    Returns:
+        True if reload successful, False otherwise
+    """
+    global _config_needs_reload
+    logger = get_logger()
+
+    try:
+        # Log reload event with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().isoformat()
+        logger.info(f"Config reload initiated at {timestamp}", module="config")
+
+        # Use config module if advanced config is enabled
+        {% if include_advanced_config %}
+        from {{ project_slug }}.config import reload_config as config_reload
+        result = config_reload()
+        {% else %}
+        # Config module not enabled, log intent
+        logger.info("Config reload completed (config module not enabled in this boilerplate)", module="config")
+        result = True
+        {% endif %}
+
+        _config_needs_reload = False
+        return result
+    except Exception as e:
+        logger.error(f"Config reload failed: {e}", module="config")
+        if logger.debug_mode:
+            import traceback
+            traceback.print_exc()
+        return False
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -30,7 +131,7 @@ def cleanup(signum, frame):
     if logger:
         logger.fatal("Aborted by user")
     console.print("[bold red]\nAborted! Cleaning up...[/bold red]")
-    sys.exit(130)
+    sys.exit(EXIT_SIGINT)
 
 
 signal.signal(signal.SIGINT, cleanup)
@@ -40,15 +141,21 @@ def version_callback(value: bool):
     """Show version and exit."""
     if value:
         console.print(f"{{ project_slug }} {VERSION}")
-        raise typer.Exit()
+        raise typer.Exit(code=EXIT_SUCCESS)
 
 
 def usage_callback(value: bool):
     """Show usage and exit."""
     if value:
-        ctx = typer.get_current_context()
-        console.print(ctx.get_help())
-        raise typer.Exit()
+        try:
+            ctx = typer.get_current_context()
+            console.print(ctx.get_help())
+        except Exception:
+            # Fallback if context not available
+            console.print("Usage: {{ project_slug }} [OPTIONS] COMMAND [ARGS]...")
+            console.print("  --help     Show this message and exit.")
+            console.print("  --version  Show version and exit.")
+        raise typer.Exit(code=EXIT_SUCCESS)
 
 
 def process_content(content: str, source: str, module: str = "processor"):
@@ -61,15 +168,59 @@ def process_content(content: str, source: str, module: str = "processor"):
     return {"source": source, "length": len(content), "status": "processed"}
 
 
+def confirm_destructive_action(action: str, force: bool = False) -> bool:
+    """
+    Prompt user for confirmation before destructive operations.
+
+    Args:
+        action: Description of the destructive action
+        force: If True, bypass confirmation (use --force flag)
+
+    Returns:
+        True if action should proceed, False otherwise
+    """
+    if force:
+        return True
+
+    response = input(f"{action} Continue? [y/N] ")
+    return response.lower() == 'y'
+
+
 @app.command()
 def process(
     inputs: Optional[List[str]] = typer.Argument(None, help="Input files or glob patterns. Use '-' for stdin."),
     config: Path = typer.Option(None, envvar="{{ project_slug | upper | replace('-', '_') }}_CONFIG", help="Path to config file"),
     json_output: bool = typer.Option(False, "--json", help="Output results as JSON to stdout"),
+    toon: bool = typer.Option(False, "--toon", help="Output results in TOON format (token-efficient)"),
+    format: Optional[str] = typer.Option(None, "--format", help="Output format: toon, json, or human"),
+    fields: Optional[str] = typer.Option(None, "--fields", help="Comma-separated list of fields to display (e.g., id,name,status)"),
     quiet: bool = typer.Option(False, "--quiet", "-q", help="Suppress all log output"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose (debug) logging"),
-    nocolor: bool = typer.Option(False, "--nocolor", help="Disable colored output"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    debug: bool = typer.Option(False, "--debug", help="Enable detailed debugging output"),
+    color: str = typer.Option("auto", "--color", help="Color mode: auto, always, or never"),
+    no_color: bool = typer.Option(False, "--no-color", callback=lambda x: None if not x else typer.Exit("WARNING: --no-color is deprecated. Use --color=never instead."), help="Deprecated: Use --color=never instead"),
+    log_format: str = typer.Option(None, "--log-format", help="Log format: human, json, or structured"),
+    install: bool = typer.Option(False, "--install", help="Install shell completions and initialize config"),
+    uninstall: bool = typer.Option(False, "--uninstall", help="Uninstall shell completions and cleanup"),
+{% if include_tui %}
+    interactive: bool = typer.Option(False, "--interactive", "--tui", help="Launch TUI mode for interactive configuration"),
+{% endif %}
+    human: bool = typer.Option(False, "--human", help="Force human mode (interactive terminal mode)"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes without executing"),
+    force: bool = typer.Option(False, "--force", help="Force overwrite during install and bypass confirmation prompts"),
+    daemon: bool = typer.Option(False, "--daemon", help="Run in daemon mode (background process)"),
+    no_daemon: bool = typer.Option(False, "--no-daemon", help="Force synchronous operation (no daemon)"),
+    list_jobs: bool = typer.Option(False, "--list-jobs", help="List background jobs"),
+    cancel_job: Optional[str] = typer.Option(None, "--cancel-job", help="Cancel a specific background job by ID"),
+    man: bool = typer.Option(False, "--man", help="Display man page"),
+    no_pager: bool = typer.Option(False, "--no-pager", help="Disable automatic paging of long output"),
+    max_memory: Optional[int] = typer.Option(None, "--max-memory", help="Maximum memory usage in MB"),
+    full: bool = typer.Option(False, "--full", help="Disable truncation and show full content"),
+    max_cpu: Optional[float] = typer.Option(None, "--max-cpu", help="Maximum CPU usage percentage"),
+    privacy_mode: bool = typer.Option(False, "--privacy-mode", help="Enable privacy mode with anonymous lists"),
+    audit_log: bool = typer.Option(False, "--audit-log", help="Enable audit logging with SQLite"),
     version: bool = typer.Option(False, "--version", callback=version_callback, help="Show version and exit"),
+    version_short: bool = typer.Option(False, "-V", callback=version_callback, help="Show version and exit"),
     usage: bool = typer.Option(False, "--usage", callback=usage_callback, help="Show usage information and exit"),
 ):
     """
@@ -81,22 +232,289 @@ def process(
         cat file.txt | {{ project_slug }} -
     """
     global logger
-    
+
     # Configure logging based on flags
     configure_logging(
         name="{{ project_slug }}",
         quiet=quiet,
         verbose=verbose,
-        nocolor=nocolor
+        debug_mode=debug,
+        color=color,
+        log_format=log_format
     )
     logger = get_logger()
-    
-    # XDG Config Resolution
+
+    # Determine execution mode (AXI - Agent eXperience Interface)
+    cli_mode = Mode.HUMAN if human else None
+{% if include_tui %}
+    # Interactive/TUI flag also forces human mode
+    if interactive:
+        cli_mode = Mode.HUMAN
+{% endif %}
+    config_mode_value = None
+{% if include_advanced_config %}
+    # Get mode from config if available
+    try:
+        config_manager = get_config_manager()
+        config_mode_value = config_manager.get("mode", None)
+    except Exception:
+        # Config not initialized yet, that's ok
+        pass
+{% endif %}
+    mode, detection_method = determine_mode(cli_flag=cli_mode, config_mode=config_mode_value)
+    logger.info(f"Execution mode: {mode.value} (detected via {detection_method.value})", module="mode")
+
+    # Content-first no-args behavior
+    # If no inputs provided and stdin is a terminal (not piped), show relevant content
+    if inputs is None and sys.stdin.isatty():
+        # No inputs and not piped - show content-first output
+        from {{project_slug}}.noargs import show_no_args_content
+        from pathlib import Path
+
+        content = show_no_args_content(directory=Path.cwd(), mode=mode)
+        print(content)
+        sys.exit(EXIT_SUCCESS)
+
+    # Initialize output formatter
+    formatter = get_formatter(mode=mode, toon=toon, json_output=json_output, command="process", fields=fields)
+    if format:
+        from {{ project_slug }}.output.formatter import OutputFormat
+        try:
+            format_enum = OutputFormat(format.lower())
+            formatter = OutputFormatter(mode=mode, format_override=format_enum, command="process", fields=fields)
+        except ValueError:
+            logger.error(f"Invalid format: {format}. Valid options: toon, json, human", module="output")
+            sys.exit(EXIT_USAGE)
+
+    # Handle daemon-related flags
+    daemon_manager = get_daemon_manager()
+
+    if list_jobs:
+        jobs = daemon_manager.list_jobs()
+        if not quiet:
+            logger.info(f"Background jobs: {len(jobs)}", module="daemon")
+            for job in jobs:
+                logger.info(f"  - {job}", module="daemon")
+        sys.exit(EXIT_SUCCESS)
+
+    if cancel_job:
+        if daemon_manager.cancel_job(cancel_job):
+            if not quiet:
+                logger.info(f"Cancelled job {cancel_job}", module="daemon")
+            sys.exit(EXIT_SUCCESS)
+        else:
+            if not quiet:
+                logger.error(f"Failed to cancel job {cancel_job}", module="daemon")
+            sys.exit(EXIT_ERROR)
+
+    if daemon:
+        if not daemon_manager.is_platform_supported():
+            if not quiet:
+                logger.error(daemon_manager.get_platform_fallback_message(), module="daemon")
+            sys.exit(EXIT_ERROR)
+
+        if not quiet:
+            logger.info("Starting daemon mode...", module="daemon")
+        pid = daemon_manager.start_daemon()
+        if pid:
+            if not quiet:
+                logger.info(f"Daemon started with PID {pid}", module="daemon")
+            sys.exit(EXIT_SUCCESS)
+        else:
+            if not quiet:
+                logger.error("Failed to start daemon", module="daemon")
+            sys.exit(EXIT_ERROR)
+
+    if no_daemon:
+        # Force synchronous mode
+        if not quiet:
+            logger.info("Running in synchronous mode (--no-daemon)", module="daemon")
+
+    if man:
+        print_man_page()
+        return
+
+    # Initialize resource monitor if limits specified
+    resource_monitor = None
+    if max_memory or max_cpu:
+        resource_monitor = get_resource_monitor(max_memory, max_cpu)
+        if not quiet:
+            logger.info(f"Resource limits: max_memory={max_memory}MB, max_cpu={max_cpu}%", module="resource")
+
+    # Initialize privacy manager if privacy mode enabled
+    privacy_manager = None
+    if privacy_mode:
+        privacy_manager = get_privacy_manager(privacy_mode=True)
+        if not quiet:
+            logger.info("Privacy mode enabled with anonymous lists", module="privacy")
+
+    # Initialize audit logger if audit logging enabled
+    audit_logger = None
+    if audit_log:
+        audit_logger = get_audit_logger()
+        if not quiet:
+            logger.info("Audit logging enabled with SQLite", module="audit")
+
+{% if include_tui %}
+    # Handle TUI mode
+    if interactive:
+        args = CLIArguments(
+            inputs=inputs,
+            config=str(config) if config else None,
+            json_output=json_output,
+            quiet=quiet,
+            verbose=verbose,
+            debug_mode=debug,
+            color=color,
+            install=install,
+            uninstall=uninstall,
+            force=force
+        )
+        modified_args = launch_tui(args)
+
+        # Update variables from TUI
+        inputs = modified_args.inputs
+        config = Path(modified_args.config) if modified_args.config else None
+        json_output = modified_args.json_output
+        quiet = modified_args.quiet
+        verbose = modified_args.verbose
+        debug = modified_args.debug
+        color = modified_args.color
+        install = modified_args.install
+        uninstall = modified_args.uninstall
+        force = modified_args.force
+
+        # Confirm execution
+        if not confirm_execution(modified_args):
+            logger.info("Execution cancelled by user", module="tui")
+            sys.exit(EXIT_SUCCESS)
+{% endif %}
+
+    # Handle dry-run mode
+    if dry_run:
+        logger.info("DRY RUN: Previewing changes without execution", module="dry-run")
+        # Show what would be done
+        if install:
+            logger.info("Would install shell completions", module="dry-run")
+        if uninstall:
+            logger.info("Would uninstall shell completions", module="dry-run")
+        if inputs:
+            logger.info(f"Would process {len(inputs)} input(s)", module="dry-run")
+        sys.exit(EXIT_SUCCESS)
+
+    # Handle install/uninstall flags
+    if install:
+        if not confirm_destructive_action("This will install shell completions.", force):
+            logger.info("Install cancelled by user", module="install")
+            sys.exit(EXIT_SUCCESS)
+        logger.info("Installing shell completions...", module="install")
+        results = install_all_completions(app, force=force)
+        success_count = sum(1 for v in results.values() if v)
+        logger.info(f"Installed {success_count}/{len(results)} completion scripts", module="install")
+
+        # Print installation instructions
+        console.print("\n[bold cyan]Installation Instructions:[/bold cyan]")
+        console.print("Shell completions have been installed. To enable them:")
+        console.print("")
+        console.print("  [bold]Bash:[/bold] Add to ~/.bashrc or ~/.bash_profile:")
+        console.print("    source ~/.local/share/bash-completion/completions/{{ project_slug }}")
+        console.print("")
+        console.print("  [bold]Zsh:[/bold] Completions are in ~/.zsh/completions/_{{ project_slug }}")
+        console.print("    Add to fpath in ~/.zshrc:")
+        console.print("    fpath=(~/.zsh/completions $fpath)")
+        console.print("    autoload -U compinit && compinit")
+        console.print("")
+        console.print("  [bold]Fish:[/bold] Completions are in ~/.config/fish/completions/{{ project_slug }}.fish")
+        console.print("    Fish will load them automatically")
+        console.print("")
+        console.print("Restart your shell or run the above commands to enable completions.")
+
+        {% if include_advanced_config %}
+        # Initialize config during install
+        try:
+            config_manager = get_config_manager()
+            config = config_manager.initialize_config()
+            logger.info(f"Initialized config at {config}", module="install")
+            console.print(f"\n[bold green]Config initialized at:[/bold green] {config}")
+        except Exception as e:
+            logger.warn(f"Could not initialize config: {e}", module="install")
+            if debug:
+                import traceback
+                traceback.print_exc()
+        {% endif %}
+
+        sys.exit(EXIT_SUCCESS)
+
+    if uninstall:
+        if not confirm_destructive_action("This will uninstall shell completions.", force):
+            logger.info("Uninstall cancelled by user", module="install")
+            sys.exit(EXIT_SUCCESS)
+        logger.info("Uninstalling shell completions...", module="install")
+        results = uninstall_all_completions()
+        success_count = sum(1 for v in results.values() if v)
+        logger.info(f"Removed {success_count}/{len(results)} completion scripts", module="install")
+
+        # Print uninstall instructions
+        console.print("\n[bold cyan]Uninstall Instructions:[/bold cyan]")
+        console.print("Shell completions have been removed. To complete cleanup:")
+        console.print("")
+        console.print("  [bold]Bash:[/bold] Remove from ~/.bashrc or ~/.bash_profile:")
+        console.print("    # Remove the source line for {{ project_slug }} completions")
+        console.print("")
+        console.print("  [bold]Zsh:[/bold] Remove from ~/.zshrc:")
+        console.print("    # Remove {{ project_slug }} from fpath")
+        console.print("")
+        console.print("  [bold]Fish:[/bold] Completions removed from ~/.config/fish/completions/")
+        console.print("")
+        console.print("Restart your shell or run the above commands to complete cleanup.")
+
+        sys.exit(EXIT_SUCCESS)
+
+    {% if include_advanced_config %}
+    # Load configuration with precedence
+    config_manager = get_config_manager()
+
+    # Initialize config file if it doesn't exist
+    if not config:
+        try:
+            config = config_manager.initialize_config()
+        except Exception as e:
+            if not quiet:
+                logger.warn(f"Could not initialize config: {e}", module="config")
+                if debug:
+                    import traceback
+                    traceback.print_exc()
+
+    # Load from specified config file if provided
+    if config and config.exists():
+        try:
+            from {{ project_slug }}.config import ConfigSource
+            config_manager._load_from_file(config, ConfigSource.USER)
+        except Exception as e:
+            if not quiet:
+                logger.error(f"Failed to load config from {config}: {e}", module="config")
+                if debug:
+                    import traceback
+                    traceback.print_exc()
+
+    # Validate configuration
+    validation_errors = config_manager.validate()
+    if validation_errors:
+        if not quiet:
+            logger.error("Configuration validation errors:", module="config")
+            for error in validation_errors:
+                logger.error(f"  - {error}", module="config")
+
+    if not quiet:
+        logger.info(f"Configuration loaded from {len(config_manager.sources)} sources", module="config")
+    {% else %}
+    # XDG Config Resolution (legacy)
     if not config:
         config = Path(user_config_dir("{{ project_slug }}")) / "config.toml"
 
     if not quiet:
         logger.info(f"Reading config from {config}", module="config")
+    {% endif %}
 
     files_to_process = []
     read_from_stdin = False
@@ -122,7 +540,7 @@ def process(
         # No input provided and TTY -> Show help
         ctx = typer.get_current_context()
         console.print(ctx.get_help())
-        sys.exit(1)
+        sys.exit(EXIT_USAGE)
 
     results = []
 
@@ -131,23 +549,235 @@ def process(
         content = sys.stdin.read()
         results.append(process_content(content, "stdin"))
 
-    # Process Files
-    for file_path in files_to_process:
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-                results.append(process_content(content, file_path))
-        except Exception as e:
-            if not quiet:
-                logger.error(f"Error reading {file_path}: {e}", module="io")
+    # Process Files with progress indicator
+    if files_to_process:
+        with progress_bar("Processing files", quiet=quiet) as progress:
+            if progress:
+                task = progress.add_task("Processing files", total=len(files_to_process))
+
+            for i, file_path in enumerate(files_to_process):
+                try:
+                    # Apply privacy mode filtering
+                    if privacy_manager:
+                        processed_path = privacy_manager.process_data("file_path", file_path)
+                        if processed_path is None:
+                            logger.debug(f"File path filtered by privacy mode: {file_path}", module="privacy")
+                            continue
+
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                        results.append(process_content(content, file_path))
+
+                        # Log audit event
+                        if audit_logger:
+                            audit_logger.log(
+                                action="process_file",
+                                resource=file_path,
+                                details={"input_count": len(inputs)}
+                            )
+                except FileNotFoundError:
+                    if not quiet:
+                        logger.error(format_file_not_found_error(Path(file_path)), module="io")
+                    sys.exit(EXIT_FILE_NOT_FOUND)
+                except PermissionError:
+                    if not quiet:
+                        logger.error(format_permission_denied_error(Path(file_path)), module="io")
+                    sys.exit(EXIT_PERMISSION_DENIED)
+                except Exception as e:
+                    if not quiet:
+                        logger.error(f"Error reading {file_path}: {e}", module="io")
+                        if debug:
+                            import traceback
+                            traceback.print_exc()
+                    sys.exit(EXIT_ERROR)
+
+                if progress:
+                    progress.update(task, advance=1)
+
+                # Check resource limits
+                if resource_monitor:
+                    if not resource_monitor.check_memory_limit():
+                        logger.error("Memory limit exceeded, aborting", module="resource")
+                        sys.exit(EXIT_ERROR)
+                    if not resource_monitor.check_cpu_limit():
+                        logger.error("CPU limit exceeded, aborting", module="resource")
+                        sys.exit(EXIT_ERROR)
+        # Apply truncation to results if not in full mode
+        if not full:
+            results = apply_truncation(results, limit=1000, full_output=False)
 
     # Output Strategy
-    if json_output:
-        print(json.dumps(results, indent=2))
+    if json_output or toon or format:
+        # Use formatter for structured output
+        output_str = formatter.format_output(results)
+        print(output_str)
     else:
         # Human readable output logic here
+        output_lines = []
         for res in results:
-            console.print(f"[green]✓[/green] Processed {res['source']}")
+            output_lines.append(f"✓ Processed {res['source']}")
+
+        output_text = '\n'.join(output_lines)
+
+        # Auto-pager if output is long
+        if should_use_pager(len(output_lines), no_pager):
+            page_output(output_text)
+        else:
+            for line in output_lines:
+                console.print(f"[green]✓[/green] {line.replace('✓ Processed ', '')}")
+
+
+@app.command()
+def health_check():
+    """
+    Perform health check for container orchestration.
+
+    Returns exit code 0 if healthy, 1 if unhealthy.
+    """
+    sys.exit(perform_health_check())
+
+
+@app.command()
+def session_context(
+    directory: Optional[str] = typer.Option(None, "--directory", "-d", help="Directory to scope context to (defaults to cwd)"),
+):
+    """
+    Output compact session context in TOON format for agent ambient context injection.
+
+    This command outputs directory-scoped state in a token-efficient format
+    suitable for agent consumption.
+    """
+    from {{project_slug}}.session import get_session_context_toon
+    from pathlib import Path
+
+    dir_path = Path(directory) if directory else None
+    toon_output = get_session_context_toon(dir_path)
+    print(toon_output)
+
+
+@app.command()
+def install_agent_hooks(
+    agent: str = typer.Argument(..., help="Agent type (claude, codex, or all)"),
+    executable: Optional[str] = typer.Option(None, "--executable", "-e", help="Path to CLI executable (auto-detected if not provided)"),
+    uninstall: bool = typer.Option(False, "--uninstall", "-u", help="Uninstall hooks instead of installing"),
+):
+    """
+    Install session hooks for agent ambient context injection.
+
+    This command registers session-end hooks that run the session-context command
+    when an agent session ends, providing ambient context for the next session.
+    """
+    from {{project_slug}}.hooks import (
+        install_claude_hook,
+        uninstall_claude_hook,
+        install_codex_hook,
+        uninstall_codex_hook,
+    )
+
+    results = []
+
+    if agent in ("claude", "all"):
+        if uninstall:
+            result = uninstall_claude_hook()
+        else:
+            result = install_claude_hook(executable)
+        results.append(result)
+
+    if agent in ("codex", "all"):
+        if uninstall:
+            result = uninstall_codex_hook()
+        else:
+            result = install_codex_hook(executable)
+        results.append(result)
+
+    # Output results
+    for result in results:
+        if result["status"] == "success":
+            print(f"✓ {result['message']}")
+        elif result["status"] == "noop":
+            print(f"○ {result['message']}")
+        else:
+            print(f"✗ {result['message']}")
+            sys.exit(EXIT_ERROR)
+
+
+@app.command()
+def generate_skill(
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file path (defaults to SKILL.md)"),
+):
+    """
+    Generate SKILL.md for installable agent skill.
+
+    This command generates a SKILL.md file from CLI help and examples,
+    suitable for installation via agentskills.io.
+    """
+    from {{project_slug}}.skills import generate_skill_from_cli
+    from pathlib import Path
+
+    skill_content = generate_skill_from_cli(
+        name="{{ project_slug }}",
+        description="{{ description }}"
+    )
+
+    if output:
+        output_path = Path(output)
+    else:
+        output_path = Path("SKILL.md")
+
+    output_path.write_text(skill_content)
+    print(f"✓ Skill generated at {output_path}")
+
+
+@app.command()
+def check_skill(
+    skill_file: str = typer.Option("SKILL.md", "--skill-file", "-s", help="Path to SKILL.md file"),
+):
+    """
+    Check if SKILL.md is up to date with CLI help.
+
+    This command is intended for CI/CD pipelines to ensure the committed
+    SKILL.md file is not stale.
+    """
+    from {{project_slug}}.skills import generate_skill_from_cli
+    from pathlib import Path
+
+    skill_path = Path(skill_file)
+
+    if not skill_path.exists():
+        print(f"✗ Skill file not found: {skill_path}")
+        sys.exit(EXIT_ERROR)
+
+    # Generate current skill content
+    current_content = generate_skill_from_cli(
+        name="{{ project_slug }}",
+        description="{{ description }}"
+    )
+
+    # Read committed skill content
+    committed_content = skill_path.read_text()
+
+    # Compare (ignore frontmatter timestamps if any)
+    if current_content.strip() != committed_content.strip():
+        print(f"✗ Skill file is stale. Run: {{ project_slug }} generate-skill")
+        sys.exit(EXIT_ERROR)
+
+    print(f"✓ Skill file is up to date")
+
+
+@app.command()
+def reload_config_cmd():
+    """
+    Manually trigger configuration reload.
+    """
+    configure_logging(name="{{ project_slug }}")
+    logger = get_logger()
+
+    if reload_config():
+        logger.info("Config reload successful", module="config")
+        sys.exit(EXIT_SUCCESS)
+    else:
+        logger.error("Config reload failed", module="config")
+        sys.exit(EXIT_ERROR)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,768 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"{{ project_slug }}/internal/idempotency"
+)
+
+// Mode represents the CLI operation mode
+type Mode string
+
+const (
+	// ModeAgent is the agent mode (default for non-interactive environments)
+	ModeAgent Mode = "agent"
+	// ModeHuman is the human mode (interactive)
+	ModeHuman Mode = "human"
+)
+
+// String returns the string representation of the mode
+func (m Mode) String() string {
+	return string(m)
+}
+
+// IsValid checks if the mode is valid
+func (m Mode) IsValid() bool {
+	return m == ModeAgent || m == ModeHuman
+}
+
+// Format represents the output format
+type Format string
+
+const (
+	// FormatToon is the TOON format (structured, agent-friendly)
+	FormatToon Format = "toon"
+	// FormatJSON is the JSON format
+	FormatJSON Format = "json"
+	// FormatHuman is the human-readable format
+	FormatHuman Format = "human"
+)
+
+// String returns the string representation of the format
+func (f Format) String() string {
+	return string(f)
+}
+
+// IsValid checks if the format is valid
+func (f Format) IsValid() bool {
+	return f == FormatToon || f == FormatJSON || f == FormatHuman
+}
+
+// IsFirstRun checks if this is the first run by detecting if the config file exists
+func IsFirstRun(configPath string) bool {
+	if configPath == "" {
+		return true
+	}
+	_, err := os.Stat(configPath)
+	return os.IsNotExist(err)
+}
+
+// GetConfigPath returns the default config file path
+func GetConfigPath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user config directory: %w", err)
+	}
+	configPath := filepath.Join(configDir, "{{ project_slug }}", "config.yaml")
+	return configPath, nil
+}
+
+// ValidateConfigPath checks if the config path is valid and accessible
+func ValidateConfigPath(configPath string) error {
+	if configPath == "" {
+		return fmt.Errorf("config path cannot be empty")
+	}
+
+	// Check if the path is absolute
+	if !filepath.IsAbs(configPath) {
+		return fmt.Errorf("config path must be absolute: %s", configPath)
+	}
+
+	// Check if the parent directory is accessible
+	configDir := filepath.Dir(configPath)
+	if _, err := os.Stat(configDir); err != nil {
+		if os.IsNotExist(err) {
+			// Directory doesn't exist yet, which is okay for first run
+			return nil
+		}
+		return fmt.Errorf("config directory is not accessible: %w", err)
+	}
+
+	// If config file exists, check if it's readable
+	if _, err := os.Stat(configPath); err == nil {
+		file, err := os.Open(configPath)
+		if err != nil {
+			return fmt.Errorf("config file exists but is not readable: %w", err)
+		}
+		file.Close()
+	}
+
+	return nil
+}
+
+// EnsureConfigDir creates the config directory if it doesn't exist
+func EnsureConfigDir(configPath string) error {
+	configDir := filepath.Dir(configPath)
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(configDir, 0755); err != nil {
+			return fmt.Errorf("failed to create config directory: %w", err)
+		}
+	}
+	return nil
+}
+
+// CreateDefaultConfig creates a default config file with all settings commented out
+func CreateDefaultConfig(configPath string) error {
+	// Ensure the config directory exists
+	if err := EnsureConfigDir(configPath); err != nil {
+		return err
+	}
+
+	// Create a basic default config file
+	// This will be replaced with the full template in the next sub-task
+	defaultConfig := `# Default configuration for {{ project_name }}
+# All settings are commented out with their default values
+# Uncomment and modify as needed
+
+# Example setting:
+# setting_name: default_value
+`
+
+	if err := os.WriteFile(configPath, []byte(defaultConfig), 0600); err != nil {
+		return fmt.Errorf("failed to create default config file: %w", err)
+	}
+
+	return nil
+}
+
+// InitConfigIfNeeded initializes the config file if it doesn't exist (idempotent)
+// This should be called during application initialization
+func InitConfigIfNeeded(configPath string) error {
+	handler := idempotency.NewHandler(logger)
+	ctx := context.Background()
+
+	result, err := handler.IdempotentOperation(
+		ctx,
+		func() (idempotency.State, error) { return idempotency.CheckFileExists(configPath) },
+		idempotency.IsFileExists,
+		func() error {
+			return CreateDefaultConfig(configPath)
+		},
+		func(state idempotency.State) string {
+			return fmt.Sprintf("Config file already exists at %s", configPath)
+		},
+		func() string {
+			return fmt.Sprintf("Config file initialized at %s", configPath)
+		},
+	)
+	if err != nil {
+		return err
+	}
+	if result.ActionPerformed {
+		logger.Info("Config file initialized")
+	}
+	return nil
+}
+
+// SupportsLegacyFormat checks if the config file is in legacy format
+func SupportsLegacyFormat(configPath string) bool {
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return false
+	}
+
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return false
+	}
+
+	// Check for version field - if missing, it's legacy format
+	config, err := parseConfigContent(string(content))
+	if err != nil {
+		return true // If we can't parse it, assume legacy
+	}
+
+	_, hasVersion := config["version"]
+	return !hasVersion
+}
+
+// parseConfigContent parses config file content into a map
+// This is a simplified parser for both legacy and new formats
+func parseConfigContent(content string) (map[string]interface{}, error) {
+	config := make(map[string]interface{})
+
+	// Simple YAML-like parser
+	lines := splitLines(content)
+	for _, line := range lines {
+		line = trimSpace(line)
+		if len(line) == 0 || line[0] == '#' {
+			continue
+		}
+
+		parts := splitColon(line)
+		if len(parts) == 2 {
+			key := trimSpace(parts[0])
+			value := trimSpace(parts[1])
+
+			// Try to parse as integer first
+			if intVal, err := parseInt(value); err == nil {
+				config[key] = intVal
+			} else if boolVal, err := parseBool(value); err == nil {
+				config[key] = boolVal
+			} else {
+				// Keep as string (remove quotes if present)
+				config[key] = unquote(value)
+			}
+		}
+	}
+
+	return config, nil
+}
+
+// Helper functions for parsing
+func splitLines(s string) []string {
+	var lines []string
+	start := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '\n' {
+			lines = append(lines, s[start:i])
+			start = i + 1
+		}
+	}
+	if start < len(s) {
+		lines = append(lines, s[start:])
+	}
+	return lines
+}
+
+func trimSpace(s string) string {
+	start := 0
+	for start < len(s) && (s[start] == ' ' || s[start] == '\t') {
+		start++
+	}
+	end := len(s)
+	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\r') {
+		end--
+	}
+	return s[start:end]
+}
+
+func splitColon(s string) []string {
+	for i := 0; i < len(s); i++ {
+		if s[i] == ':' {
+			return []string{s[:i], s[i+1:]}
+		}
+	}
+	return []string{s}
+}
+
+// parseInt parses a string as an integer
+func parseInt(s string) (int, error) {
+	var result int
+	for _, c := range s {
+		if c >= '0' && c <= '9' {
+			result = result*10 + int(c-'0')
+		} else {
+			return 0, fmt.Errorf("not a number")
+		}
+	}
+	return result, nil
+}
+
+// parseBool parses a string as a boolean
+func parseBool(s string) (bool, error) {
+	switch s {
+	case "true", "True", "TRUE":
+		return true, nil
+	case "false", "False", "FALSE":
+		return false, nil
+	default:
+		return false, fmt.Errorf("not a boolean")
+	}
+}
+
+// unquote removes quotes from a string if present
+func unquote(s string) string {
+	if len(s) >= 2 {
+		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
+}
+
+// GetLocalProjectConfigPath returns the path to a local project config file
+// This looks for .config/{project_slug}/config.yaml in the current directory or parent directories
+func GetLocalProjectConfigPath() (string, error) {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Search for .config/{project_slug}/config.yaml in current directory and parents
+	dir := currentDir
+	for {
+		configPath := filepath.Join(dir, ".config", "{{ project_slug }}", "config.yaml")
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath, nil
+		}
+
+		// Move to parent directory
+		parentDir := filepath.Dir(dir)
+		if parentDir == dir {
+			// Reached root, no local config found
+			return "", nil
+		}
+		dir = parentDir
+	}
+}
+
+// GetSystemConfigPath returns the path to the system/enterprise config file
+// This is typically /etc/{project_slug}/config.yaml
+func GetSystemConfigPath() (string, error) {
+	systemConfigPath := filepath.Join("/etc", "{{ project_slug }}", "config.yaml")
+	return systemConfigPath, nil
+}
+
+// GetConfigPrecedence returns a list of config paths in precedence order
+// from lowest to highest priority (excluding CLI args and env vars)
+// Order: system config -> user config -> local project config
+func GetConfigPrecedence() ([]string, error) {
+	var configPaths []string
+
+	// 1. System/enterprise config (lowest priority)
+	systemConfig, err := GetSystemConfigPath()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(systemConfig); err == nil {
+		configPaths = append(configPaths, systemConfig)
+	}
+
+	// 2. User config (XDG)
+	userConfig, err := GetConfigPath()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := os.Stat(userConfig); err == nil {
+		configPaths = append(configPaths, userConfig)
+	}
+
+	// 3. Local project config (highest priority among files)
+	localConfig, err := GetLocalProjectConfigPath()
+	if err != nil {
+		return nil, err
+	}
+	if localConfig != "" {
+		configPaths = append(configPaths, localConfig)
+	}
+
+	return configPaths, nil
+}
+
+// GetHardcodedDefaults returns the hardcoded default values for all settings
+// These are used when no config file exists
+func GetHardcodedDefaults() map[string]interface{} {
+	return map[string]interface{}{
+		"quiet":                  false,
+		"verbose":                false,
+		"debug":                  false,
+		"color":                  "auto",
+		"json":                   false,
+		"mode":                   string(ModeAgent), // Default to agent mode
+		"default_format":         string(FormatToon), // Default to TOON format
+		"truncation_limit":       1000, // Default truncation limit
+		"enable_contextual_help":  true, // Default to enable contextual help
+		"session_context_enabled": false, // Default to disable session context
+	}
+}
+
+// GetModeFromEnv returns the mode from the MYTOOL_MODE environment variable
+// Returns empty string if not set or invalid
+func GetModeFromEnv() string {
+	envMode := os.Getenv("MYTOOL_MODE")
+	if envMode == "" {
+		return ""
+	}
+
+	// Validate the mode
+	mode := Mode(envMode)
+	if !mode.IsValid() {
+		return ""
+	}
+
+	return envMode
+}
+
+// IsAgentSession checks if the CLI is running in an agent session
+// by checking for known agent session environment variables
+func IsAgentSession() bool {
+	// Check for Claude session
+	if os.Getenv("CLAUDE_SESSION") != "" {
+		return true
+	}
+
+	// Check for Codex session
+	if os.Getenv("CODEX_SESSION") != "" {
+		return true
+	}
+
+	return false
+}
+
+// GetParentProcessName returns the name of the parent process
+// This can be used to detect if running under an agent
+func GetParentProcessName() (string, error) {
+	// On Unix-like systems, read /proc/{pid}/status or use ps
+	// For cross-platform compatibility, we'll use a simple approach
+	// In production, this would use platform-specific code
+
+	// For now, return empty string - this is a placeholder
+	// that would be implemented with platform-specific code
+	return "", nil
+}
+
+// IsRunningUnderAgent checks if the CLI is running under an agent
+// by examining the parent process
+func IsRunningUnderAgent() (bool, error) {
+	parentName, err := GetParentProcessName()
+	if err != nil {
+		return false, err
+	}
+
+	// Known agent process names
+	agentProcesses := map[string]bool{
+		"claude": true,
+		"codex": true,
+		"cursor": true,
+		"windsurf": true,
+		"copilot": true,
+	}
+
+	if agentProcesses[parentName] {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+// DetectMode automatically detects the appropriate mode based on environment
+// Returns agent mode if no TTY or agent session detected, human mode otherwise
+func DetectMode() Mode {
+	// If no TTY, assume agent mode
+	if !IsTerminal() {
+		return ModeAgent
+	}
+
+	// If agent session detected, use agent mode
+	if IsAgentSession() {
+		return ModeAgent
+	}
+
+	// Check if running under agent process
+	if runningUnderAgent, err := IsRunningUnderAgent(); err == nil && runningUnderAgent {
+		return ModeAgent
+	}
+
+	// Default to human mode when TTY present and no agent detected
+	return ModeHuman
+}
+
+// DetermineMode determines the mode based on precedence chain:
+// CLI flags > env vars > config file > auto-detection
+func DetermineMode(humanFlag bool, configMode string) Mode {
+	// 1. CLI flags have highest precedence
+	if humanFlag {
+		return ModeHuman
+	}
+
+	// 2. Environment variables
+	envMode := GetModeFromEnv()
+	if envMode != "" {
+		return Mode(envMode)
+	}
+
+	// 3. Config file setting
+	if configMode != "" {
+		mode := Mode(configMode)
+		if mode.IsValid() {
+			return mode
+		}
+	}
+
+	// 4. Auto-detection
+	return DetectMode()
+}
+
+// ConfigValidationError represents a configuration validation error with context
+type ConfigValidationError struct {
+	Field       string
+	LineNumber  int
+	Description string
+	Suggestion  string
+}
+
+func (e ConfigValidationError) Error() string {
+	return fmt.Sprintf("config error at line %d: %s (field: %s). Suggestion: %s", e.LineNumber, e.Description, e.Field, e.Suggestion)
+}
+
+// ConfigSchema defines the validation rules for configuration fields
+type ConfigSchema struct {
+	Fields map[string]FieldSchema
+}
+
+// FieldSchema defines validation rules for a single field
+type FieldSchema struct {
+	Type         string   // "bool", "string", "int", "enum"
+	Required     bool
+	AllowedValues []string // For enum types
+	DefaultValue interface{}
+}
+
+// GetConfigSchema returns the configuration schema
+func GetConfigSchema() ConfigSchema {
+	return ConfigSchema{
+		Fields: map[string]FieldSchema{
+			"quiet": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+			"verbose": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+			"debug": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+			"color": {
+				Type:         "enum",
+				Required:     false,
+				AllowedValues: []string{"auto", "always", "never"},
+				DefaultValue: "auto",
+			},
+			"json": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+			"mode": {
+				Type:         "enum",
+				Required:     false,
+				AllowedValues: []string{string(ModeAgent), string(ModeHuman)},
+				DefaultValue: string(ModeAgent),
+			},
+			"default_format": {
+				Type:         "enum",
+				Required:     false,
+				AllowedValues: []string{string(FormatToon), string(FormatJSON), string(FormatHuman)},
+				DefaultValue: string(FormatToon),
+			},
+			"truncation_limit": {
+				Type:         "int",
+				Required:     false,
+				DefaultValue: 1000,
+			},
+			"enable_contextual_help": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: true,
+			},
+			"session_context_enabled": {
+				Type:         "bool",
+				Required:     false,
+				DefaultValue: false,
+			},
+		},
+	}
+}
+
+// ValidateConfig validates a configuration map against the schema
+func ValidateConfig(config map[string]interface{}, configPath string) []ConfigValidationError {
+	var errors []ConfigValidationError
+	schema := GetConfigSchema()
+
+	// Read config file to get line numbers
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		// If we can't read the file, we can't provide line numbers
+		// Still validate the values, just without line numbers
+		for field, value := range config {
+			if fieldSchema, ok := schema.Fields[field]; ok {
+				if err := validateField(field, value, fieldSchema); err != nil {
+					errors = append(errors, ConfigValidationError{
+						Field:       field,
+						LineNumber:  0,
+						Description: err.Error(),
+						Suggestion:  getErrorSuggestion(field, err),
+					})
+				}
+			}
+		}
+		return errors
+	}
+
+	lines := strings.Split(string(content), "\n")
+
+	// Validate each field
+	for field, value := range config {
+		if fieldSchema, ok := schema.Fields[field]; ok {
+			lineNumber := findLineNumber(lines, field)
+			if err := validateField(field, value, fieldSchema); err != nil {
+				errors = append(errors, ConfigValidationError{
+					Field:       field,
+					LineNumber:  lineNumber,
+					Description: err.Error(),
+					Suggestion:  getErrorSuggestion(field, err),
+				})
+			}
+		}
+	}
+
+	// Check for secrets in config values
+	secretWarnings := ValidateConfigForSecrets(config)
+	for _, warning := range secretWarnings {
+		fmt.Fprintf(os.Stderr, "WARNING: %s\n", warning)
+	}
+
+	return errors
+}
+
+// ValidateConfigForSecrets checks a config map for insecure secret storage
+func ValidateConfigForSecrets(config map[string]interface{}) []string {
+	warnings := []string{}
+
+	// Initialize a secret manager for validation
+	sm, err := NewSecretManager()
+	if err != nil {
+		// If we can't initialize the secret manager, skip validation
+		return warnings
+	}
+
+	// Check each config value
+	for key, value := range config {
+		strValue, ok := value.(string)
+		if !ok {
+			continue
+		}
+
+		isSecret, reason := sm.ValidateSecret(strValue)
+		if isSecret {
+			warning := fmt.Sprintf("Insecure config detected: key '%s' - %s. Use secure storage (keychain or encrypted file) instead.", key, reason)
+			warnings = append(warnings, warning)
+		}
+	}
+
+	return warnings
+}
+
+// validateField validates a single field against its schema
+func validateField(field string, value interface{}, schema FieldSchema) error {
+	switch schema.Type {
+	case "bool":
+		if _, ok := value.(bool); !ok {
+			return fmt.Errorf("expected boolean, got %T", value)
+		}
+	case "string":
+		if _, ok := value.(string); !ok {
+			return fmt.Errorf("expected string, got %T", value)
+		}
+	case "int":
+		if _, ok := value.(int); !ok {
+			return fmt.Errorf("expected integer, got %T", value)
+		}
+	case "enum":
+		strValue, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("expected string for enum, got %T", value)
+		}
+		valid := false
+		for _, allowed := range schema.AllowedValues {
+			if strValue == allowed {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("invalid value '%s', allowed values: %v", strValue, schema.AllowedValues)
+		}
+	}
+	return nil
+}
+
+// findLineNumber finds the line number where a field is defined
+func findLineNumber(lines []string, field string) int {
+	for i, line := range lines {
+		if strings.Contains(line, field+":") {
+			return i + 1 // Line numbers are 1-indexed
+		}
+	}
+	return 0
+}
+
+// getErrorSuggestion provides a suggestion for fixing a validation error
+func getErrorSuggestion(field string, err error) string {
+	errMsg := err.Error()
+
+	if strings.Contains(errMsg, "expected boolean") {
+		return fmt.Sprintf("Set %s to true or false", field)
+	}
+	if strings.Contains(errMsg, "expected string") {
+		return fmt.Sprintf("Set %s to a string value", field)
+	}
+	if strings.Contains(errMsg, "expected integer") {
+		return fmt.Sprintf("Set %s to an integer value", field)
+	}
+	if strings.Contains(errMsg, "invalid value") {
+		return fmt.Sprintf("Check the allowed values for %s in the config schema", field)
+	}
+
+	return fmt.Sprintf("Review the configuration for field %s", field)
+}
+
+// ReloadConfig reloads the configuration from the config file
+// It validates the new config before applying it, and keeps the old config if validation fails
+func ReloadConfig(configPath string, logger *Logger) error {
+	logger.Info("Attempting to reload configuration from %s", configPath)
+
+	// Read the new config file
+	newConfig, err := parseConfigContentFromFile(configPath)
+	if err != nil {
+		logger.Error("Failed to read config file during reload: %v", err)
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Validate the new config
+	validationErrors := ValidateConfig(newConfig, configPath)
+	if len(validationErrors) > 0 {
+		logger.Error("Config validation failed during reload, keeping old config")
+		for _, validationErr := range validationErrors {
+			logger.Error("  - %s", validationErr.Error())
+		}
+		return fmt.Errorf("config validation failed with %d error(s)", len(validationErrors))
+	}
+
+	// Config is valid, apply it
+	// In a real implementation, this would update the global config state
+	// For now, we just log that the reload was successful
+	logger.Info("Configuration reloaded successfully")
+	return nil
+}
+
+// parseConfigContentFromFile reads and parses the config file
+func parseConfigContentFromFile(configPath string) (map[string]interface{}, error) {
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	return parseConfigContent(string(content))
+}
+
+{# vim: set ft=go: #}

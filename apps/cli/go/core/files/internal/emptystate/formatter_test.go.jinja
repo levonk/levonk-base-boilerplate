@@ -1,0 +1,195 @@
+package emptystate
+
+import (
+	"testing"
+)
+
+func TestFormatter_Format(t *testing.T) {
+	formatter := NewFormatter()
+	ctx := Context{
+		Command:    "list",
+		Resource:   "items",
+		Filters:    map[string]string{"status": "active"},
+		Scope:      "all",
+		TotalCount: 100,
+	}
+	es := &EmptyState{
+		IsEmpty:  true,
+		Context:  ctx,
+		Message:  "No results found for items with filters: [status=active] in scope: all (total: 100). Command executed successfully.",
+		ExitCode: 0,
+	}
+
+	tests := []struct {
+		name        string
+		format      string
+		shouldError bool
+		contains    []string
+	}{
+		{
+			name:        "TOON format",
+			format:      "toon",
+			shouldError: false,
+			contains:    []string{"# Empty State", "message:", "context:"},
+		},
+		{
+			name:        "JSON format",
+			format:      "json",
+			shouldError: false,
+			contains:    []string{"\"empty\": true", "\"message\":", "\"exit_code\": 0"},
+		},
+		{
+			name:        "human format",
+			format:      "human",
+			shouldError: false,
+			contains:    []string{"No results found", "Resource:", "Filters:"},
+		},
+		{
+			name:        "unknown format defaults to human",
+			format:      "unknown",
+			shouldError: false,
+			contains:    []string{"No results found"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := formatter.Format(es, tt.format)
+			if (err != nil) != tt.shouldError {
+				t.Errorf("Format() error = %v, shouldError %v", err, tt.shouldError)
+				return
+			}
+			for _, substr := range tt.contains {
+				if !contains(result, substr) {
+					t.Errorf("Format() should contain %q, got: %s", substr, result)
+				}
+			}
+		})
+	}
+}
+
+func TestFormatter_formatTOON(t *testing.T) {
+	formatter := NewFormatter()
+	ctx := Context{
+		Command:  "list",
+		Resource: "items",
+		Filters:  map[string]string{"status": "active"},
+	}
+	es := &EmptyState{
+		IsEmpty:  true,
+		Context:  ctx,
+		Message:  "No results found",
+		ExitCode: 0,
+	}
+
+	result, err := formatter.formatTOON(es)
+	if err != nil {
+		t.Fatalf("formatTOON() error = %v", err)
+	}
+
+	expectedSubstrings := []string{
+		"# Empty State",
+		"message:",
+		"context:",
+		"resource:",
+		"items",
+		"filters:",
+		"status",
+		"active",
+	}
+
+	for _, substr := range expectedSubstrings {
+		if !contains(result, substr) {
+			t.Errorf("formatTOON() should contain %q, got: %s", substr, result)
+		}
+	}
+}
+
+func TestFormatter_formatJSON(t *testing.T) {
+	formatter := NewFormatter()
+	ctx := Context{
+		Command:    "list",
+		Resource:   "items",
+		TotalCount: 100,
+	}
+	es := &EmptyState{
+		IsEmpty:  true,
+		Context:  ctx,
+		Message:  "No results found",
+		ExitCode: 0,
+	}
+
+	result, err := formatter.formatJSON(es)
+	if err != nil {
+		t.Fatalf("formatJSON() error = %v", err)
+	}
+
+	expectedSubstrings := []string{
+		`"empty": true`,
+		`"message"`,
+		`"exit_code": 0`,
+		`"context"`,
+		`"resource"`,
+		`"items"`,
+		`"total"`,
+		`100`,
+	}
+
+	for _, substr := range expectedSubstrings {
+		if !contains(result, substr) {
+			t.Errorf("formatJSON() should contain %q, got: %s", substr, result)
+		}
+	}
+}
+
+func TestFormatter_formatHuman(t *testing.T) {
+	formatter := NewFormatter()
+	ctx := Context{
+		Command:  "list",
+		Resource: "items",
+		Scope:    "all",
+		Filters:  map[string]string{"status": "active", "type": "foo"},
+	}
+	es := &EmptyState{
+		IsEmpty:  true,
+		Context:  ctx,
+		Message:  "No results found",
+		ExitCode: 0,
+	}
+
+	result, err := formatter.formatHuman(es)
+	if err != nil {
+		t.Fatalf("formatHuman() error = %v", err)
+	}
+
+	expectedSubstrings := []string{
+		"No results found",
+		"Resource: items",
+		"Scope: all",
+		"Filters:",
+		"status: active",
+		"type: foo",
+	}
+
+	for _, substr := range expectedSubstrings {
+		if !contains(result, substr) {
+			t.Errorf("formatHuman() should contain %q, got: %s", substr, result)
+		}
+	}
+}
+
+func TestFormatter_Format_NonEmpty(t *testing.T) {
+	formatter := NewFormatter()
+	es := &EmptyState{
+		IsEmpty:  false,
+		ExitCode: 0,
+	}
+
+	result, err := formatter.Format(es, "json")
+	if err != nil {
+		t.Errorf("Format() for non-empty should not error, got: %v", err)
+	}
+	if result != "" {
+		t.Errorf("Format() for non-empty should return empty string, got: %s", result)
+	}
+}

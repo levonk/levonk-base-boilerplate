@@ -1,0 +1,555 @@
+package toon
+
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"strconv"
+	"strings"
+)
+
+// Decoder decodes TOON format to Go values
+type Decoder struct {
+	opts DecoderOptions
+}
+
+// NewDecoder creates a new TOON decoder with the given options
+func NewDecoder(opts DecoderOptions) *Decoder {
+	return &Decoder{opts: opts}
+}
+
+// Decode decodes a TOON string to a Value
+func (d *Decoder) Decode(input string) (Value, error) {
+	reader := strings.NewReader(input)
+	return d.DecodeReader(reader)
+}
+
+// DecodeReader decodes TOON format from an io.Reader
+func (d *Decoder) DecodeReader(r io.Reader) (Value, error) {
+	scanner := bufio.NewScanner(r)
+	var lines []string
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading input: %w", err)
+	}
+
+	return d.parseLines(lines)
+}
+
+// parseLines parses a list of lines into a TOON value
+func (d *Decoder) parseLines(lines []string) (Value, error) {
+	// Remove empty lines and trailing whitespace
+	var cleaned []string
+	for _, line := range lines {
+		trimmed := strings.TrimRight(line, " \t")
+		if trimmed != "" {
+			cleaned = append(cleaned, trimmed)
+		}
+	}
+
+	if len(cleaned) == 0 {
+		return Object{}, nil // Empty document → empty object
+	}
+
+	// Determine root form
+	firstLine := cleaned[0]
+	if d.isArrayHeader(firstLine) {
+		return d.parseArrayHeader(cleaned, 0)
+	}
+
+	if len(cleaned) == 1 {
+		if firstLine == "[]" {
+			return Array{Length: 0}, nil
+		}
+		// Single primitive
+		return d.parsePrimitive(firstLine)
+	}
+
+	// Otherwise, parse as object
+	return d.parseObject(cleaned, 0)
+}
+
+// isArrayHeader checks if a line is a valid array header
+func (d *Decoder) isArrayHeader(line string) bool {
+	// Root header: [N<delim?>]:
+	// With key: key[N<delim?>]:
+	// Tabular: key[N<delim?>]{fields}:
+	// Must have [ before ] and : after ]
+	bracketIdx := strings.Index(line, "[")
+	if bracketIdx == -1 {
+		return false
+	}
+	closeBracketIdx := strings.Index(line, "]")
+	if closeBracketIdx == -1 || closeBracketIdx < bracketIdx {
+		return false
+	}
+	colonIdx := strings.Index(line, ":")
+	if colonIdx == -1 || colonIdx < closeBracketIdx {
+		return false
+	}
+	return true
+}
+
+// parseArrayHeader parses an array header and its contents
+func (d *Decoder) parseArrayHeader(lines []string, depth int) (Value, error) {
+	headerLine := lines[depth]
+	header, err := d.parseHeader(headerLine)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for field list (tabular array)
+	if len(header.Fields) > 0 {
+		return d.parseTabularArray(lines, depth, header)
+	}
+
+	// Check for inline primitive array
+	if len(lines) == depth+1 {
+		// Inline array on same line
+		return d.parseInlineArray(headerLine, header)
+	}
+
+	// Expanded list array
+	return d.parseExpandedList(lines, depth, header)
+}
+
+// parseHeader parses a header line
+func (d *Decoder) parseHeader(line string) (Header, error) {
+	var header Header
+
+	// Extract key if present
+	colonIdx := strings.Index(line, ":")
+	bracketStart := strings.Index(line, "[")
+	bracketEnd := strings.Index(line, "]")
+
+	if bracketStart == -1 || bracketEnd == -1 || colonIdx == -1 {
+		return header, fmt.Errorf("invalid header format: %s", line)
+	}
+
+	// Key is everything before the bracket
+	if bracketStart > 0 {
+		header.Key = line[:bracketStart]
+	}
+
+	// Parse bracket segment
+	bracketContent := line[bracketStart+1 : bracketEnd]
+	length, delim, err := d.parseBracketSegment(bracketContent)
+	if err != nil {
+		return header, err
+	}
+	header.Length = length
+	header.Delimiter = delim
+
+	// Parse fields segment if present
+	fieldsStart := strings.Index(line, "{")
+	fieldsEnd := strings.Index(line, "}")
+	if fieldsStart != -1 && fieldsEnd != -1 && fieldsStart > bracketEnd && fieldsEnd < colonIdx {
+		fieldsContent := line[fieldsStart+1 : fieldsEnd]
+		header.Fields = d.splitByDelimiter(fieldsContent, delim)
+	}
+
+	return header, nil
+}
+
+// parseBracketSegment parses the bracket segment [N<delim?>]
+func (d *Decoder) parseBracketSegment(seg string) (int, Delimiter, error) {
+	var delim Delimiter = DelimiterComma
+
+	// Check for delimiter at end
+	if len(seg) > 0 && (seg[len(seg)-1] == '\t' || seg[len(seg)-1] == '|') {
+		delim = Delimiter(seg[len(seg)-1])
+		seg = seg[:len(seg)-1]
+	}
+
+	// Parse length
+	length, err := strconv.Atoi(seg)
+	if err != nil {
+		return 0, DelimiterComma, fmt.Errorf("invalid length in bracket segment: %s", seg)
+	}
+
+	if length < 0 {
+		return 0, DelimiterComma, fmt.Errorf("length cannot be negative: %d", length)
+	}
+
+	// Check for leading zeros in strict mode
+	if d.opts.StrictMode && len(seg) > 1 && seg[0] == '0' {
+		return 0, DelimiterComma, fmt.Errorf("leading zeros not allowed in strict mode: %s", seg)
+	}
+
+	return length, delim, nil
+}
+
+// splitByDelimiter splits a string by the delimiter, respecting quotes
+func (d *Decoder) splitByDelimiter(s string, delim Delimiter) []string {
+	if delim == DelimiterComma {
+		return strings.Split(s, ",")
+	}
+	return strings.Split(s, delim.String())
+}
+
+// parseInlineArray parses an inline primitive array
+func (d *Decoder) parseInlineArray(line string, header Header) (Value, error) {
+	// Find the colon and extract values after it
+	colonIdx := strings.Index(line, ":")
+	if colonIdx == -1 {
+		return nil, fmt.Errorf("no colon in header line")
+	}
+
+	valuesStr := strings.TrimSpace(line[colonIdx+1:])
+	if valuesStr == "" {
+		return Array{Length: header.Length, Delimiter: header.Delimiter}, nil
+	}
+
+	values := d.splitByDelimiter(valuesStr, header.Delimiter)
+	items := make([]Value, len(values))
+
+	for i, v := range values {
+		parsed, err := d.parsePrimitive(v)
+		if err != nil {
+			return nil, err
+		}
+		items[i] = parsed
+	}
+
+	if d.opts.StrictMode && len(items) != header.Length {
+		return nil, fmt.Errorf("array count mismatch: expected %d, got %d", header.Length, len(items))
+	}
+
+	return Array{
+		Length:    header.Length,
+		Delimiter: header.Delimiter,
+		Items:     items,
+	}, nil
+}
+
+// parseTabularArray parses a tabular array of objects
+func (d *Decoder) parseTabularArray(lines []string, depth int, header Header) (Value, error) {
+	arr := Array{
+		Length:    header.Length,
+		Delimiter: header.Delimiter,
+		Fields:    header.Fields,
+		IsTabular: true,
+	}
+
+	indent := strings.Repeat(" ", 2) // Default 2-space indent
+
+	for i := depth + 1; i < len(lines); i++ {
+		line := lines[i]
+		if !strings.HasPrefix(line, indent) {
+			break // End of array
+		}
+
+		values := d.splitByDelimiter(strings.TrimSpace(line), header.Delimiter)
+		if d.opts.StrictMode && len(values) != len(header.Fields) {
+			return nil, fmt.Errorf("row width mismatch: expected %d, got %d", len(header.Fields), len(values))
+		}
+
+		obj := Object{Fields: make(map[string]Value)}
+		for j, field := range header.Fields {
+			if j < len(values) {
+				parsed, err := d.parsePrimitive(values[j])
+				if err != nil {
+					return nil, err
+				}
+				obj.Fields[field] = parsed
+			}
+		}
+
+		arr.Items = append(arr.Items, obj)
+	}
+
+	if d.opts.StrictMode && len(arr.Items) != header.Length {
+		return nil, fmt.Errorf("array count mismatch: expected %d, got %d", header.Length, len(arr.Items))
+	}
+
+	return arr, nil
+}
+
+// parseExpandedList parses an expanded list array
+func (d *Decoder) parseExpandedList(lines []string, depth int, header Header) (Value, error) {
+	arr := Array{
+		Length:    header.Length,
+		Delimiter: header.Delimiter,
+	}
+
+	indent := strings.Repeat(" ", 2)
+
+	for i := depth + 1; i < len(lines); i++ {
+		line := lines[i]
+		if !strings.HasPrefix(line, indent) {
+			break
+		}
+
+		if !strings.HasPrefix(line, "- ") {
+			return nil, fmt.Errorf("expected list item starting with '- '")
+		}
+
+		itemContent := strings.TrimSpace(line[2:])
+		item, err := d.parseListItem(itemContent, lines, i, indent)
+		if err != nil {
+			return nil, err
+		}
+
+		arr.Items = append(arr.Items, item)
+
+		// Skip nested lines
+		if nested, ok := item.(Array); ok && !d.isPrimitiveArrayInline(nested) {
+			// Count nested items
+			nestedDepth := i + 1
+			for nestedDepth < len(lines) && strings.HasPrefix(lines[nestedDepth], indent+indent) {
+				nestedDepth++
+			}
+			i = nestedDepth - 1
+		}
+	}
+
+	if d.opts.StrictMode && len(arr.Items) != header.Length {
+		return nil, fmt.Errorf("array count mismatch: expected %d, got %d", header.Length, len(arr.Items))
+	}
+
+	return arr, nil
+}
+
+// isPrimitiveArrayInline checks if an array is inline primitive
+func (d *Decoder) isPrimitiveArrayInline(arr Array) bool {
+	return len(arr.Items) > 0 && d.isAllPrimitives(arr.Items)
+}
+
+// isAllPrimitives checks if all items are primitives
+func (d *Decoder) isAllPrimitives(items []Value) bool {
+	for _, item := range items {
+		switch item.(type) {
+		case StringValue, NumberValue, BoolValue, NullValue:
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// parseListItem parses a list item
+func (d *Decoder) parseListItem(content string, lines []string, lineIdx int, indent string) (Value, error) {
+	// Check for nested array header
+	if d.isArrayHeader(content) {
+		_, err := d.parseHeader(content)
+		if err != nil {
+			return nil, err
+		}
+		return d.parseArrayHeader(lines, lineIdx)
+	}
+
+	// Check for object (key: value)
+	if strings.Contains(content, ":") {
+		return d.parseObjectListItem(content, lines, lineIdx, indent)
+	}
+
+	// Primitive
+	return d.parsePrimitive(content)
+}
+
+// parseObjectListItem parses an object as a list item
+func (d *Decoder) parseObjectListItem(content string, lines []string, lineIdx int, indent string) (Value, error) {
+	obj := Object{Fields: make(map[string]Value)}
+
+	// Parse first field on the hyphen line
+	parts := strings.SplitN(content, ":", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid object field: %s", content)
+	}
+
+	key := strings.TrimSpace(parts[0])
+	valueStr := strings.TrimSpace(parts[1])
+
+	value, err := d.parsePrimitive(valueStr)
+	if err != nil {
+		return nil, err
+	}
+	obj.Fields[key] = value
+
+	// Parse remaining fields at depth +1
+	for i := lineIdx + 1; i < len(lines); i++ {
+		line := lines[i]
+		if !strings.HasPrefix(line, indent) {
+			break
+		}
+
+		if strings.HasPrefix(line, "- ") {
+			break // Next list item
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key = strings.TrimSpace(parts[0])
+		valueStr = strings.TrimSpace(parts[1])
+
+		value, err := d.parsePrimitive(valueStr)
+		if err != nil {
+			return nil, err
+		}
+		obj.Fields[key] = value
+	}
+
+	return obj, nil
+}
+
+// parseObject parses an object from lines
+func (d *Decoder) parseObject(lines []string, depth int) (Value, error) {
+	obj := Object{Fields: make(map[string]Value)}
+
+	for i := depth; i < len(lines); i++ {
+		line := lines[i]
+
+		// Check for nested structure
+		if strings.HasPrefix(line, strings.Repeat(" ", depth+2)) {
+			continue // Nested line, handled by parent
+		}
+
+		if !strings.Contains(line, ":") {
+			continue // Not a key-value line
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		valueStr := strings.TrimSpace(parts[1])
+
+		// Check for nested object or array
+		if valueStr == "" {
+			// Nested structure
+			if i+1 < len(lines) {
+				nextLine := lines[i+1]
+				if d.isArrayHeader(nextLine) {
+					// Nested array
+					arr, err := d.parseArrayHeader(lines, i+1)
+					if err != nil {
+						return nil, err
+					}
+					obj.Fields[key] = arr
+					continue
+				}
+				// Nested object
+				nestedObj, err := d.parseObject(lines, i+1)
+				if err != nil {
+					return nil, err
+				}
+				obj.Fields[key] = nestedObj
+				continue
+			}
+		}
+
+		// Primitive value
+		value, err := d.parsePrimitive(valueStr)
+		if err != nil {
+			return nil, err
+		}
+		obj.Fields[key] = value
+	}
+
+	return obj, nil
+}
+
+// parsePrimitive parses a primitive value
+func (d *Decoder) parsePrimitive(s string) (Value, error) {
+	s = strings.TrimSpace(s)
+
+	// Check for quoted string
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		unquoted, err := d.unquoteString(s)
+		if err != nil {
+			return nil, err
+		}
+		return StringValue(unquoted), nil
+	}
+
+	// Check for boolean literals
+	switch s {
+	case "true":
+		return BoolValue(true), nil
+	case "false":
+		return BoolValue(false), nil
+	case "null":
+		return NullValue{}, nil
+	}
+
+	// Check for number
+	if num, err := d.parseNumber(s); err == nil {
+		return NumberValue(num), nil
+	}
+
+	// Default to string
+	return StringValue(s), nil
+}
+
+// unquoteString unquotes a string and handles escape sequences
+func (d *Decoder) unquoteString(s string) (string, error) {
+	if len(s) < 2 || s[0] != '"' || s[len(s)-1] != '"' {
+		return "", fmt.Errorf("not a quoted string: %s", s)
+	}
+
+	content := s[1 : len(s)-1]
+	var result strings.Builder
+
+	for i := 0; i < len(content); i++ {
+		if content[i] == '\\' && i+1 < len(content) {
+			switch content[i+1] {
+			case '\\':
+				result.WriteRune('\\')
+				i++
+			case '"':
+				result.WriteRune('"')
+				i++
+			case 'n':
+				result.WriteRune('\n')
+				i++
+			case 'r':
+				result.WriteRune('\r')
+				i++
+			case 't':
+				result.WriteRune('\t')
+				i++
+			case 'u':
+				if i+5 < len(content) {
+					hex := content[i+2 : i+6]
+					if r, err := strconv.ParseInt(hex, 16, 32); err == nil {
+						result.WriteRune(rune(r))
+						i += 5
+					} else {
+						result.WriteByte(content[i])
+					}
+				} else {
+					result.WriteByte(content[i])
+				}
+			default:
+				return "", fmt.Errorf("invalid escape sequence: \\%c", content[i+1])
+			}
+		} else {
+			result.WriteByte(content[i])
+		}
+	}
+
+	return result.String(), nil
+}
+
+// parseNumber parses a numeric value
+func (d *Decoder) parseNumber(s string) (float64, error) {
+	// Check for leading zeros in strict mode
+	if d.opts.StrictMode && len(s) > 1 && s[0] == '0' && s[1] != '.' && s[1] != 'e' && s[1] != 'E' {
+		return 0, fmt.Errorf("leading zeros not allowed in strict mode: %s", s)
+	}
+
+	// Also check for negative leading zeros
+	if d.opts.StrictMode && len(s) > 2 && s[0] == '-' && s[1] == '0' && s[2] != '.' && s[2] != 'e' && s[2] != 'E' {
+		return 0, fmt.Errorf("leading zeros not allowed in strict mode: %s", s)
+	}
+
+	return strconv.ParseFloat(s, 64)
+}

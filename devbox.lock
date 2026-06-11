@@ -1,9 +1,69 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "copier": {
-      "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#copier",
-      "source": "nixpkg"
+    "copier@latest": {
+      "last_modified": "2026-05-23T11:35:32Z",
+      "resolved": "github:NixOS/nixpkgs/3d8f0f3f72a6cd4d93d0ad13203f2ea1cb7e1456#copier",
+      "source": "devbox-search",
+      "version": "9.15.1",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/fy6kmr7a8rbwbz8s85hs2mjz9wxwdd5k-python3.13-copier-9.15.1",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/vn47vjc81qxy9hac184nmd3gll9dnkds-python3.13-copier-9.15.1-dist"
+            }
+          ],
+          "store_path": "/nix/store/fy6kmr7a8rbwbz8s85hs2mjz9wxwdd5k-python3.13-copier-9.15.1"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ary2mr0zp4vq2j6h0a6945bw8rnd1b5v-python3.13-copier-9.15.1",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/7mvfbxwzhwrprn81sm7qmkww61lbf0rz-python3.13-copier-9.15.1-dist"
+            }
+          ],
+          "store_path": "/nix/store/ary2mr0zp4vq2j6h0a6945bw8rnd1b5v-python3.13-copier-9.15.1"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/r4cs2xdc1lfa9rld1p6nwkqjvy830lly-python3.13-copier-9.15.1",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/x3kn1z550ffmsbspzk7shhz5whvapv4r-python3.13-copier-9.15.1-dist"
+            }
+          ],
+          "store_path": "/nix/store/r4cs2xdc1lfa9rld1p6nwkqjvy830lly-python3.13-copier-9.15.1"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/718sa7fgnv8naxd0hwn0smq5sv89s8ff-python3.13-copier-9.15.1",
+              "default": true
+            },
+            {
+              "name": "dist",
+              "path": "/nix/store/8yhfv2mk2z8cmqb2kylf9g18x4pic96y-python3.13-copier-9.15.1-dist"
+            }
+          ],
+          "store_path": "/nix/store/718sa7fgnv8naxd0hwn0smq5sv89s8ff-python3.13-copier-9.15.1"
+        }
+      }
     },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
       "last_modified": "2026-05-25T07:42:19Z",

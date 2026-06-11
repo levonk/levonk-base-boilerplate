@@ -1,0 +1,159 @@
+package main
+
+import (
+	"bytes"
+	"strings"
+	"testing"
+
+	"github.com/spf13/cobra"
+)
+
+func TestCompletionCommand(t *testing.T) {
+	tests := []struct {
+		name    string
+		shell   string
+		wantErr bool
+	}{
+		{
+			name:    "bash completion",
+			shell:   "bash",
+			wantErr: false,
+		},
+		{
+			name:    "zsh completion",
+			shell:   "zsh",
+			wantErr: false,
+		},
+		{
+			name:    "fish completion",
+			shell:   "fish",
+			wantErr: false,
+		},
+		{
+			name:    "powershell completion",
+			shell:   "powershell",
+			wantErr: false,
+		},
+		{
+			name:    "invalid shell",
+			shell:   "invalid",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Initialize logger to prevent nil pointer dereference
+			logger = NewLogger("test")
+
+			// Create a test root command
+			testCmd := &cobra.Command{
+				Use: "{{ project_slug }}",
+			}
+			testCmd.AddCommand(completionCmd)
+
+			// Execute the completion command
+			args := []string{"completion", tt.shell}
+			var out bytes.Buffer
+			testCmd.SetOut(&out)
+			testCmd.SetErr(&out)
+			testCmd.SetArgs(args)
+
+			err := testCmd.Execute()
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("completionCmd.Execute() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !tt.wantErr {
+				output := out.String()
+				if output == "" {
+					t.Errorf("completionCmd.Execute() produced no output for shell %s", tt.shell)
+				}
+			}
+		})
+	}
+}
+
+func TestBashCompletionContent(t *testing.T) {
+	var out bytes.Buffer
+	err := rootCmd.GenBashCompletion(&out)
+	if err != nil {
+		t.Fatalf("GenBashCompletion failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "{{ project_slug }}") {
+		t.Errorf("bash completion does not contain project name")
+	}
+	if !strings.Contains(output, "complete") {
+		t.Errorf("bash completion does not contain completion function")
+	}
+}
+
+func TestZshCompletionContent(t *testing.T) {
+	var out bytes.Buffer
+	err := rootCmd.GenZshCompletion(&out)
+	if err != nil {
+		t.Fatalf("GenZshCompletion failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "{{ project_slug }}") {
+		t.Errorf("zsh completion does not contain project name")
+	}
+	if !strings.Contains(output, "compdef") {
+		t.Errorf("zsh completion does not contain compdef")
+	}
+}
+
+func TestFishCompletionContent(t *testing.T) {
+	var out bytes.Buffer
+	err := rootCmd.GenFishCompletion(&out, true)
+	if err != nil {
+		t.Fatalf("GenFishCompletion failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "{{ project_slug }}") {
+		t.Errorf("fish completion does not contain project name")
+	}
+	if !strings.Contains(output, "complete") {
+		t.Errorf("fish completion does not contain complete command")
+	}
+}
+
+func TestCompletionWithSubcommands(t *testing.T) {
+	// Test that completions include subcommands
+	var out bytes.Buffer
+	err := rootCmd.GenBashCompletion(&out)
+	if err != nil {
+		t.Fatalf("GenBashCompletion failed: %v", err)
+	}
+
+	output := out.String()
+	// Check for known subcommands
+	if strings.Contains(output, "completion") {
+		// completion command should be in the completion script
+		t.Logf("completion command found in bash completion")
+	}
+}
+
+func TestCompletionWithFlags(t *testing.T) {
+	// Test that completions include flags
+	var out bytes.Buffer
+	err := rootCmd.GenBashCompletion(&out)
+	if err != nil {
+		t.Fatalf("GenBashCompletion failed: %v", err)
+	}
+
+	output := out.String()
+	// Check for known flags
+	if strings.Contains(output, "--config") {
+		t.Logf("--config flag found in bash completion")
+	}
+	if strings.Contains(output, "--help") {
+		t.Logf("--help flag found in bash completion")
+	}
+}

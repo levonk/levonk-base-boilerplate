@@ -1,0 +1,370 @@
+# {{ project_name }} - Developer Guide
+
+This guide helps developers contribute to {{ project_name }} and understand its architecture.
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm 8+
+- TypeScript 5+
+- Devbox (optional but recommended)
+
+### Getting Started
+
+```bash
+# Clone the repository
+git clone {{ repository_url }}
+cd {{ project_slug }}
+
+# Install dependencies
+pnpm install
+
+# Run in development mode
+pnpm dev
+
+# Build the project
+pnpm build
+
+# Run tests
+pnpm test
+```
+
+### Using Devbox
+
+```bash
+# Initialize devbox environment
+devbox shell
+
+# Run commands in devbox
+devbox run pnpm test
+devbox run pnpm build
+```
+
+## Project Structure
+
+```
+src/
+├── index.ts              # Main CLI entry point
+├── logger.ts             # Logging implementation
+├── config.ts             # Configuration management
+├── error.ts              # Error handling
+├── completions.ts        # Shell completion generation
+├── man.ts                # Man page generation
+├── install.ts            # Installation logic
+├── dry-run.ts            # Dry-run mode
+├── prompts.ts            # Confirmation prompts
+├── progress.ts           # Progress indicators
+├── pager.ts              # Pager integration
+├── terminal.ts           # Terminal size detection
+├── tui.tsx               # TUI mode (React/Ink)
+├── daemon.ts             # Daemon process support
+├── file-ref.ts           # File reference formatting
+├── url.ts                # URL formatting
+├── validation.ts         # Configuration validation
+├── migration.ts          # Config migration
+├── secrets.ts            # Secret/credential handling
+├── path.ts               # Cross-platform path handling
+├── resources.ts          # Resource limit management
+├── processing.ts         # Collection/processing separation
+├── audit.ts              # Audit logging
+├── health.ts             # Health check endpoints
+├── privacy.ts            # Privacy mode
+└── deprecation.ts        # Deprecation policy
+
+tests/
+├── index.test.ts         # Integration tests
+├── logger.test.ts        # Logger unit tests
+├── config.test.ts        # Config unit tests
+├── error.test.ts         # Error handling tests
+├── performance.test.ts   # Performance benchmarks
+└── daemon-load.test.ts   # Daemon load tests
+```
+
+## Architecture
+
+### Core Components
+
+**CLI Entry Point (`index.ts`)**
+- Parses command-line arguments using Commander
+- Orchestrates all CLI operations
+- Manages exit codes and error handling
+
+**Logger (`logger.ts`)**
+- Structured logging with multiple formats
+- TTY detection for color output
+- Privacy mode support
+
+**Configuration (`config.ts`)**
+- XDG config directory support
+- Environment variable precedence
+- TOML-based configuration files
+- Schema validation with Zod
+
+**Error Handling (`error.ts`)**
+- Standardized error types
+- File reference formatting
+- Exit code mapping
+
+### Design Patterns
+
+**Dependency Injection**
+- Configuration and logger are injected
+- Easy to test and mock
+
+**Functional Programming**
+- Pure functions where possible
+- Immutable data structures
+
+**Error-First Callbacks**
+- Consistent error handling
+- Clear error propagation
+
+## Adding New Features
+
+### Step 1: Create Feature Module
+
+```typescript
+// src/feature.ts
+export interface FeatureOptions {
+  // Define options
+}
+
+export async function feature(options: FeatureOptions): Promise<void> {
+  // Implementation
+}
+```
+
+### Step 2: Add CLI Flags
+
+```typescript
+// index.ts
+program
+  .command('feature')
+  .description('Feature description')
+  .option('--option <value>', 'Option description')
+  .action(async (options) => {
+    await feature(options);
+  });
+```
+
+### Step 3: Add Tests
+
+```typescript
+// src/feature.test.ts
+import { describe, it, expect } from 'vitest';
+import { feature } from './feature';
+
+describe('feature', () => {
+  it('should do something', async () => {
+    await feature({ /* options */ });
+    // Assertions
+  });
+});
+```
+
+### Step 4: Update Documentation
+
+- Add to README.md
+- Update help text
+- Add to user guide
+- Update ADR compliance matrix
+
+## Testing
+
+### Unit Tests
+
+```bash
+# Run all unit tests
+pnpm test
+
+# Run specific test file
+pnpm test src/feature.test.ts
+
+# Run with coverage
+pnpm test-coverage
+```
+
+### Integration Tests
+
+Integration tests use the built CLI:
+
+```typescript
+import { exec } from 'child_process';
+
+it('should process file', async () => {
+  const { stdout } = await exec('node dist/index.js file.txt');
+  expect(stdout).toContain('Processed');
+});
+```
+
+### Performance Tests
+
+Performance benchmarks are in `performance.test.ts`:
+
+```bash
+pnpm test src/performance.test.ts
+```
+
+## Code Style
+
+### TypeScript
+
+- Use explicit types
+- Prefer `type` over `interface`
+- Use `import type` for type-only imports
+- Follow the existing code style
+
+### Naming Conventions
+
+- Files: kebab-case (`feature.ts`)
+- Functions: camelCase (`processFile`)
+- Constants: UPPER_SNAKE_CASE (`MAX_RETRIES`)
+- Types: PascalCase (`FeatureOptions`)
+
+### Comments
+
+- Use JSDoc for public APIs
+- Add inline comments for complex logic
+- Document edge cases and assumptions
+
+## Configuration
+
+### Adding New Config Options
+
+1. Update schema in `config.ts`:
+```typescript
+const configSchema = z.object({
+  // Add new field
+  newOption: z.string().default('default'),
+});
+```
+
+2. Add to config template:
+```toml
+# New option
+new_option = "default"
+```
+
+3. Add environment variable support:
+```typescript
+const envPrefix = '{{ project_slug | upper | replace("-", "_") }}';
+const newOption = process.env[`${envPrefix}_NEW_OPTION`] || config.newOption;
+```
+
+## Error Handling
+
+### Standard Error Types
+
+```typescript
+export class CustomError extends Error {
+  constructor(
+    message: string,
+    public exitCode: number,
+    public context?: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = 'CustomError';
+  }
+}
+```
+
+### Error Messages
+
+- Be specific and actionable
+- Include file references with formatting
+- Provide suggestions for resolution
+- Use consistent exit codes
+
+## Release Process
+
+### Version Bump
+
+```bash
+# Update version in package.json
+npm version patch|minor|major
+
+# Build
+pnpm build
+
+# Test
+pnpm test
+
+# Commit
+git commit -am "Release X.Y.Z"
+git tag vX.Y.Z
+git push --tags
+```
+
+### Release Notes
+
+Update `docs/release-notes.md` with:
+- New features
+- Bug fixes
+- Breaking changes
+- Migration guide if needed
+
+## Contributing
+
+### Pull Request Process
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Update documentation
+6. Submit a PR
+
+### Code Review Checklist
+
+- [ ] Tests pass
+- [ ] Linting passes
+- [ ] Type checking passes
+- [ ] Documentation updated
+- [ ] Breaking changes documented
+- [ ] ADR compliance maintained
+
+## Troubleshooting
+
+### Build Issues
+
+**TypeScript errors:**
+```bash
+# Check TypeScript version
+pnpm tsc --version
+
+# Clean build
+rm -rf dist/
+pnpm build
+```
+
+**Dependency issues:**
+```bash
+# Clear pnpm cache
+pnpm store prune
+
+# Reinstall
+rm -rf node_modules/
+pnpm install
+```
+
+### Test Issues
+
+**Flaky tests:**
+- Check for timing dependencies
+- Use proper mocking
+- Isolate test dependencies
+
+**Coverage issues:**
+- Add tests for uncovered code
+- Check for unreachable code
+- Review test assertions
+
+## Resources
+
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
+- [Commander.js](https://github.com/tj/commander.js)
+- [Vitest](https://vitest.dev/)
+- [Zod](https://zod.dev/)
+- [Ink](https://github.com/vadimdemedes/ink)

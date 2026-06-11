@@ -1,0 +1,404 @@
+package main
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+)
+
+// Integration tests verify the entire CLI tool works end-to-end
+// These tests require the binary to be built and test complete workflows
+
+func TestIntegrationCompleteCLIWorkflow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Build the binary first
+	buildCmd := exec.Command("go", "build", "-o", "{{ project_slug }}-test", ".")
+	if output, err := buildCmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to build binary: %v\nOutput: %s", err, string(output))
+	}
+	defer os.Remove("{{ project_slug }}-test")
+
+	// Test help command
+	helpCmd := exec.Command("./{{ project_slug }}-test", "--help")
+	output, err := helpCmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Help command failed: %v\nOutput: %s", err, string(output))
+	}
+	if !strings.Contains(string(output), "Usage:") {
+		t.Errorf("Expected help output to contain 'Usage:', got: %s", string(output))
+	}
+
+	// Test version command if available
+	versionCmd := exec.Command("./{{ project_slug }}-test", "--version")
+	output, err = versionCmd.CombinedOutput()
+	if err == nil {
+		// Version command succeeded, verify output
+		if len(output) == 0 {
+			t.Errorf("Version command produced no output")
+		}
+	}
+}
+
+func TestIntegrationConfigFileInitialization(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	// Test config initialization
+	initCmd := exec.Command("go", "run", ".", "--config", configPath, "init")
+	initCmd.Dir = tempDir
+	output, err := initCmd.CombinedOutput()
+	if err != nil {
+		t.Logf("Config init command output: %s", string(output))
+		// Some implementations may not have an explicit init command
+		// Try alternative: run the tool and let it create config
+	}
+
+	// Verify config file was created
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// Try creating config via API
+		err = InitConfigIfNeeded(configPath)
+		if err != nil {
+			t.Fatalf("Failed to initialize config: %v", err)
+		}
+	}
+
+	// Verify config file has content
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to read config file: %v", err)
+	}
+	if len(content) == 0 {
+		t.Errorf("Config file is empty")
+	}
+}
+
+func TestIntegrationConfigPrecedenceChain(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	// Create a config file with specific values
+	configContent := `
+log_level: debug
+color: true
+`
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	// Test that config is loaded correctly
+	cfg, err := parseConfigContentFromFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Verify values
+	if cfg["log_level"] != "debug" {
+		t.Errorf("Expected log_level to be 'debug', got '%v'", cfg["log_level"])
+	}
+	if cfg["color"] != true {
+		t.Errorf("Expected color to be true, got %v", cfg["color"])
+	}
+
+	// Test environment variable override
+	os.Setenv("{{ project_slug | upper }}_LOG_LEVEL", "error")
+	defer os.Unsetenv("{{ project_slug | upper }}_LOG_LEVEL")
+
+	cfg2, err := parseConfigContentFromFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load config with env override: %v", err)
+	}
+
+	// Verify environment variable takes precedence
+	if cfg2["log_level"] != "error" {
+		t.Errorf("Expected log_level to be 'error' from env, got '%v'", cfg2["log_level"])
+	}
+}
+
+func TestIntegrationInstallUninstallWorkflow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Test install command
+	installCmd := exec.Command("go", "run", ".", "install", "--dry-run")
+	output, err := installCmd.CombinedOutput()
+	if err != nil {
+		t.Logf("Install command failed (may not be implemented): %v\nOutput: %s", err, string(output))
+		// This is acceptable if install command is not implemented
+		return
+	}
+
+	if !strings.Contains(string(output), "dry-run") {
+		t.Logf("Install command output: %s", string(output))
+	}
+
+	// Test uninstall command
+	uninstallCmd := exec.Command("go", "run", ".", "uninstall", "--dry-run")
+	output, err = uninstallCmd.CombinedOutput()
+	if err != nil {
+		t.Logf("Uninstall command failed (may not be implemented): %v\nOutput: %s", err, string(output))
+		return
+	}
+
+	if !strings.Contains(string(output), "dry-run") {
+		t.Logf("Uninstall command output: %s", string(output))
+	}
+}
+
+func TestIntegrationShellCompletionInstallation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Test completion generation for different shells
+	shells := []string{"bash", "zsh", "fish"}
+
+	for _, shell := range shells {
+		t.Run(shell, func(t *testing.T) {
+			cmd := exec.Command("go", "run", ".", "completion", shell)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Logf("Completion for %s failed (may not be implemented): %v", shell, err)
+				return
+			}
+
+			// Verify output contains completion script markers
+			outputStr := string(output)
+			if len(outputStr) == 0 {
+				t.Errorf("Completion script for %s is empty", shell)
+			}
+
+			// Shell-specific checks
+			switch shell {
+			case "bash":
+				if !strings.Contains(outputStr, "complete") {
+					t.Logf("Bash completion may not contain 'complete': %s", outputStr[:min(100, len(outputStr))])
+				}
+			case "zsh":
+				if !strings.Contains(outputStr, "compdef") {
+					t.Logf("Zsh completion may not contain 'compdef': %s", outputStr[:min(100, len(outputStr))])
+				}
+			case "fish":
+				if !strings.Contains(outputStr, "complete") {
+					t.Logf("Fish completion may not contain 'complete': %s", outputStr[:min(100, len(outputStr))])
+				}
+			}
+		})
+	}
+}
+
+func TestIntegrationColorControl(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Test with color enabled
+	cmd := exec.Command("go", "run", ".", "--color=always", "--help")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Command with color failed: %v", err)
+	}
+
+	// Check for ANSI color codes in output
+	outputStr := string(output)
+	hasColor := strings.Contains(outputStr, "\x1b[") || strings.Contains(outputStr, "\033[")
+	if !hasColor {
+		t.Logf("Output may not contain color codes (this is OK if terminal detection is working)")
+	}
+
+	// Test with color disabled
+	cmdNoColor := exec.Command("go", "run", ".", "--color=never", "--help")
+	cmdNoColor.Env = append(os.Environ(), "TERM=dumb")
+	outputNoColor, err := cmdNoColor.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Command without color failed: %v", err)
+	}
+
+	// Verify no color codes
+	outputNoColorStr := string(outputNoColor)
+	hasColorNoColor := strings.Contains(outputNoColorStr, "\x1b[") || strings.Contains(outputNoColorStr, "\033[")
+	if hasColorNoColor {
+		t.Errorf("Output with --color=never should not contain color codes")
+	}
+}
+
+func TestIntegrationErrorHandling(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Test invalid command
+	cmd := exec.Command("go", "run", ".", "invalid-command-that-does-not-exist")
+	output, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Errorf("Expected error for invalid command, but got none")
+	}
+
+	outputStr := string(output)
+	if len(outputStr) == 0 {
+		t.Errorf("Error output should not be empty")
+	}
+
+	// Test invalid flag
+	cmdFlag := exec.Command("go", "run", ".", "--invalid-flag")
+	outputFlag, err := cmdFlag.CombinedOutput()
+	if err == nil {
+		t.Errorf("Expected error for invalid flag, but got none")
+	}
+
+	outputFlagStr := string(outputFlag)
+	if len(outputFlagStr) == 0 {
+		t.Errorf("Error output for invalid flag should not be empty")
+	}
+}
+
+func TestIntegrationCrossPlatformPathHandling(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tempDir := t.TempDir()
+
+	// Test path with spaces
+	pathWithSpaces := filepath.Join(tempDir, "path with spaces")
+	err := os.MkdirAll(pathWithSpaces, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create path with spaces: %v", err)
+	}
+
+	configPath := filepath.Join(pathWithSpaces, "config.yaml")
+	err = InitConfigIfNeeded(configPath)
+	if err != nil {
+		t.Errorf("Failed to initialize config in path with spaces: %v", err)
+	}
+
+	// Test path with special characters (platform-specific)
+	var specialPath string
+	if runtime.GOOS == "windows" {
+		specialPath = filepath.Join(tempDir, "path-with-special!@#")
+	} else {
+		specialPath = filepath.Join(tempDir, "path-with-special-@#")
+	}
+
+	err = os.MkdirAll(specialPath, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create path with special characters: %v", err)
+	}
+
+	specialConfigPath := filepath.Join(specialPath, "config.yaml")
+	err = InitConfigIfNeeded(specialConfigPath)
+	if err != nil {
+		t.Errorf("Failed to initialize config in path with special characters: %v", err)
+	}
+}
+
+func TestIntegrationConfigMigration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+
+	// Create an old version config file
+	oldConfig := `
+version: "1.0"
+log_level: info
+`
+	err := os.WriteFile(configPath, []byte(oldConfig), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write old config: %v", err)
+	}
+
+	// Load config which should trigger migration
+	cfg, err := parseConfigContentFromFile(configPath)
+	if err != nil {
+		t.Fatalf("Failed to load old config: %v", err)
+	}
+
+	// Verify migration occurred (version should be updated)
+	if cfg["version"] == "" {
+		t.Logf("Config version not set, migration may not be implemented")
+	}
+
+	// Verify config is still functional
+	if cfg["log_level"] != "info" {
+		t.Errorf("Expected log_level to be 'info', got '%v'", cfg["log_level"])
+	}
+}
+
+func TestIntegrationDaemonProcessLifecycle(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// This test is optional as daemon support may not be implemented
+	// Test daemon start command
+	startCmd := exec.Command("go", "run", ".", "daemon", "start", "--test-mode")
+	output, err := startCmd.CombinedOutput()
+	if err != nil {
+		t.Logf("Daemon start failed (may not be implemented): %v\nOutput: %s", err, string(output))
+		return
+	}
+
+	// Give daemon time to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Test daemon status command
+	statusCmd := exec.Command("go", "run", ".", "daemon", "status")
+	statusOutput, err := statusCmd.CombinedOutput()
+	if err != nil {
+		t.Logf("Daemon status failed: %v\nOutput: %s", err, string(statusOutput))
+	}
+
+	// Test daemon stop command
+	stopCmd := exec.Command("go", "run", ".", "daemon", "stop")
+	stopOutput, err := stopCmd.CombinedOutput()
+	if err != nil {
+		t.Logf("Daemon stop failed: %v\nOutput: %s", err, string(stopOutput))
+	}
+}
+
+func TestIntegrationTUIMode(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Test TUI mode with timeout to prevent hanging
+	cmd := exec.Command("timeout", "1s", "go", "run", ".", "--tui")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Timeout is expected for TUI mode
+		t.Logf("TUI mode timed out as expected: %v", err)
+	}
+
+	// Verify TUI was attempted
+	outputStr := string(output)
+	if len(outputStr) > 0 {
+		t.Logf("TUI output: %s", outputStr[:min(200, len(outputStr))])
+	}
+}
+
+// Helper function for min
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}

@@ -1,0 +1,349 @@
+package errors
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestNewSuggestionGenerator(t *testing.T) {
+	generator := NewSuggestionGenerator("test-project")
+	
+	if generator.projectSlug != "test-project" {
+		t.Errorf("Expected projectSlug 'test-project', got %v", generator.projectSlug)
+	}
+}
+
+func TestGetSuggestionConfigErrors(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	tests := []struct {
+		name     string
+		message  string
+		wantIn   string
+	}{
+		{
+			name:    "config not found",
+			message: "config file not found",
+			wantIn:  "config init",
+		},
+		{
+			name:    "invalid config",
+			message: "invalid configuration",
+			wantIn:  "config validate",
+		},
+		{
+			name:    "permission error",
+			message: "permission denied on config",
+			wantIn:  "permission",
+		},
+		{
+			name:    "missing config",
+			message: "required config missing",
+			wantIn:  "config init",
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := generator.GetSuggestion(ErrorTypeConfig, tt.message)
+			if !strings.Contains(strings.ToLower(suggestion), strings.ToLower(tt.wantIn)) {
+				t.Errorf("GetSuggestion() = %v, want to contain %v", suggestion, tt.wantIn)
+			}
+		})
+	}
+}
+
+func TestGetSuggestionFileErrors(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	tests := []struct {
+		name     string
+		message  string
+		wantIn   string
+	}{
+		{
+			name:    "permission denied",
+			message: "permission denied",
+			wantIn:  "permission",
+		},
+		{
+			name:    "file not found",
+			message: "file not found",
+			wantIn:  "verify",
+		},
+		{
+			name:    "directory error",
+			message: "directory not found",
+			wantIn:  "directory",
+		},
+		{
+			name:    "lock error",
+			message: "file is locked",
+			wantIn:  "in use",
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := generator.GetSuggestion(ErrorTypeFile, tt.message)
+			if !strings.Contains(strings.ToLower(suggestion), strings.ToLower(tt.wantIn)) {
+				t.Errorf("GetSuggestion() = %v, want to contain %v", suggestion, tt.wantIn)
+			}
+		})
+	}
+}
+
+func TestGetSuggestionNetworkErrors(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	tests := []struct {
+		name     string
+		message  string
+		wantIn   string
+	}{
+		{
+			name:    "connection refused",
+			message: "connection refused",
+			wantIn:  "network",
+		},
+		{
+			name:    "timeout",
+			message: "connection timeout",
+			wantIn:  "timeout",
+		},
+		{
+			name:    "dns error",
+			message: "dns resolution failed",
+			wantIn:  "dns",
+		},
+		{
+			name:    "401 unauthorized",
+			message: "401 unauthorized",
+			wantIn:  "auth login",
+		},
+		{
+			name:    "403 forbidden",
+			message: "403 forbidden",
+			wantIn:  "permission",
+		},
+		{
+			name:    "404 not found",
+			message: "404 not found",
+			wantIn:  "not found",
+		},
+		{
+			name:    "500 error",
+			message: "500 internal server error",
+			wantIn:  "try again",
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := generator.GetSuggestion(ErrorTypeNetwork, tt.message)
+			if !strings.Contains(strings.ToLower(suggestion), strings.ToLower(tt.wantIn)) {
+				t.Errorf("GetSuggestion() = %v, want to contain %v", suggestion, tt.wantIn)
+			}
+		})
+	}
+}
+
+func TestGetSuggestionPermissionErrors(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	tests := []struct {
+		name     string
+		message  string
+		wantIn   string
+	}{
+		{
+			name:    "sudo required",
+			message: "sudo required",
+			wantIn:  "elevated",
+		},
+		{
+			name:    "file permission",
+			message: "file permission denied",
+			wantIn:  "ownership",
+		},
+		{
+			name:    "executable permission",
+			message: "execute permission denied",
+			wantIn:  "execute",
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := generator.GetSuggestion(ErrorTypePermission, tt.message)
+			if !strings.Contains(strings.ToLower(suggestion), strings.ToLower(tt.wantIn)) {
+				t.Errorf("GetSuggestion() = %v, want to contain %v", suggestion, tt.wantIn)
+			}
+		})
+	}
+}
+
+func TestGetSuggestionValidationErrors(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	tests := []struct {
+		name     string
+		message  string
+		wantIn   string
+	}{
+		{
+			name:    "invalid flag",
+			message: "invalid flag",
+			wantIn:  "help",
+		},
+		{
+			name:    "invalid argument",
+			message: "invalid argument",
+			wantIn:  "help",
+		},
+		{
+			name:    "invalid format",
+			message: "invalid format",
+			wantIn:  "format",
+		},
+		{
+			name:    "required field",
+			message: "required field missing",
+			wantIn:  "required",
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := generator.GetSuggestion(ErrorTypeValidation, tt.message)
+			if !strings.Contains(strings.ToLower(suggestion), strings.ToLower(tt.wantIn)) {
+				t.Errorf("GetSuggestion() = %v, want to contain %v", suggestion, tt.wantIn)
+			}
+		})
+	}
+}
+
+func TestGetSuggestionExecutionErrors(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	tests := []struct {
+		name     string
+		message  string
+		wantIn   string
+	}{
+		{
+			name:    "command not found",
+			message: "command not found",
+			wantIn:  "installed",
+		},
+		{
+			name:    "signal killed",
+			message: "process killed",
+			wantIn:  "terminated",
+		},
+		{
+			name:    "out of memory",
+			message: "out of memory",
+			wantIn:  "memory",
+		},
+		{
+			name:    "disk space",
+			message: "no disk space",
+			wantIn:  "disk",
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := generator.GetSuggestion(ErrorTypeExecution, tt.message)
+			if !strings.Contains(strings.ToLower(suggestion), strings.ToLower(tt.wantIn)) {
+				t.Errorf("GetSuggestion() = %v, want to contain %v", suggestion, tt.wantIn)
+			}
+		})
+	}
+}
+
+func TestGetSuggestionPlatformErrors(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	tests := []struct {
+		name     string
+		message  string
+		wantIn   string
+	}{
+		{
+			name:    "unsupported platform",
+			message: "unsupported platform",
+			wantIn:  "supported",
+		},
+		{
+			name:    "version mismatch",
+			message: "version too old",
+			wantIn:  "version",
+		},
+		{
+			name:    "architecture",
+			message: "unsupported architecture",
+			wantIn:  "architecture",
+		},
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestion := generator.GetSuggestion(ErrorTypePlatform, tt.message)
+			if !strings.Contains(strings.ToLower(suggestion), strings.ToLower(tt.wantIn)) {
+				t.Errorf("GetSuggestion() = %v, want to contain %v", suggestion, tt.wantIn)
+			}
+		})
+	}
+}
+
+func TestGetSuggestionGeneralErrors(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	suggestion := generator.GetSuggestion(ErrorTypeGeneral, "some error")
+	
+	if suggestion == "" {
+		t.Error("GetSuggestion() should return a suggestion for general errors")
+	}
+}
+
+func TestFormatCommand(t *testing.T) {
+	generator := NewSuggestionGenerator("my-cli")
+	
+	suggestion := generator.formatCommand("config init", "to create config")
+	
+	if !strings.Contains(suggestion, "my-cli") {
+		t.Error("formatCommand should include project slug")
+	}
+	if !strings.Contains(suggestion, "config init") {
+		t.Error("formatCommand should include command")
+	}
+	if !strings.Contains(suggestion, "to create config") {
+		t.Error("formatCommand should include action")
+	}
+}
+
+func TestFormatCommandNoProjectSlug(t *testing.T) {
+	generator := NewSuggestionGenerator("")
+	
+	suggestion := generator.formatCommand("config init", "to create config")
+	
+	if strings.Contains(suggestion, "my-cli") {
+		t.Error("formatCommand should not include project slug when empty")
+	}
+	if !strings.Contains(suggestion, "config init") {
+		t.Error("formatCommand should include command even without project slug")
+	}
+}
+
+func TestGetSuggestionForError(t *testing.T) {
+	suggestion := GetSuggestionForError("my-cli", ErrorTypeConfig, "config not found")
+	
+	if suggestion == "" {
+		t.Error("GetSuggestionForError should return a suggestion")
+	}
+	if !strings.Contains(strings.ToLower(suggestion), "config") {
+		t.Error("GetSuggestionForError should return config-related suggestion")
+	}
+}

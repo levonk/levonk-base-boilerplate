@@ -15,52 +15,52 @@ This index summarizes all stories for the Go CLI Standards compliance implementa
 
 ### Phase 01: Core Infrastructure (High Priority - Week 1)
 
-| Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
-| -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 01-001 | Config File Initialization | feature/current/20260707-cli-go-standards/story-01-001-config-file-initialization | None | Parallel-safe: true | [config, main] |
-| 01-002 | Install/Uninstall Flag | feature/current/20260707-cli-go-standards/story-01-002-install-uninstall-flag | None | Parallel-safe: true | [main, install] |
-| 01-003 | Proper Color Control | feature/current/20260707-cli-go-standards/story-01-003-proper-color-control | None | Parallel-safe: true | [logger, main] |
-| 01-004 | Debug Flag | feature/current/20260707-cli-go-standards/story-01-004-debug-flag | None | Parallel-safe: true | [logger, main] |
-| 01-005 | Shell Completion | feature/current/20260707-cli-go-standards/story-01-005-shell-completion | None | Parallel-safe: true | [main, completion] |
-| 01-006 | Configuration Precedence Chain | feature/current/20260707-cli-go-standards/story-01-006-config-precedence-chain | None | Parallel-safe: true | [config, main] |
-| 01-007 | Configuration Validation | feature/current/20260707-cli-go-standards/story-01-007-config-validation | 01-006 | Parallel-safe: true | [config, main] |
+| Story ID | Story Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
+| -------- | ----------- | ----: | ------ | -------- | ------------- | ------------ | ---------- | ------- | ------ |
+| 01-001 | Config File Initialization | 01 | [x] Done | | true | None | 01-007, 02-001, 02-002, 03-001, 03-002, 03-005, 03-006 | [config, main] | feature/current/20260707-cli-go-standards/story-01-001-config-file-initialization |
+| 01-002 | Install/Uninstall Flag | 01 | [x] Done | | true | None | None | [main, install] | feature/current/20260707-cli-go-standards/story-01-002-install-uninstall-flag |
+| 01-003 | Proper Color Control | 01 | [x] Done | | true | None | 02-003 | [logger, main] | feature/current/20260707-cli-go-standards/story-01-003-proper-color-control |
+| 01-004 | Debug Flag | 01 | [x] Done | | true | None | None | [logger, main] | feature/current/20260707-cli-go-standards/story-01-004-debug-flag |
+| 01-005 | Shell Completion | 01 | [x] Done | | true | None | None | [main, completion] | feature/current/20260707-cli-go-standards/story-01-005-shell-completion |
+| 01-006 | Configuration Precedence Chain | 01 | [x] Done | | true | None | 01-007, 02-001, 03-001, 03-002 | [config, main] | feature/current/20260707-cli-go-standards/story-01-006-config-precedence-chain |
+| 01-007 | Configuration Validation | 01 | [x] Done | | true | 01-006 | 03-005, 03-006 | [config, main] | feature/current/20260707-cli-go-standards/story-01-007-config-validation |
 
 ### Phase 02: Enhanced Features (Medium Priority - Week 2)
 
-| Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
-| -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 02-001 | Dry-Run Mode | feature/current/20260707-cli-go-standards/story-02-001-dry-run-mode | 01-001, 01-006 | Parallel-safe: true | [main, cmd] |
-| 02-002 | Confirmation Prompts | feature/current/20260707-cli-go-standards/story-02-002-confirmation-prompts | 01-001 | Parallel-safe: true | [main, prompt] |
-| 02-003 | Progress Indicators | feature/current/20260707-cli-go-standards/story-02-003-progress-indicators | 01-003 | Parallel-safe: true | [progress, main] |
-| 02-004 | Error Message Formatting | feature/current/20260707-cli-go-standards/story-02-004-error-message-formatting | None | Parallel-safe: true | [logger, main] |
-| 02-005 | Man Pages | feature/current/20260707-cli-go-standards/story-02-005-man-pages | None | Parallel-safe: true | [docs, main] |
-| 02-006 | Pager Integration | feature/current/20260707-cli-go-standards/story-02-006-pager-integration | None | Parallel-safe: true | [main, output] |
-| 02-007 | Terminal Size Awareness | feature/current/20260707-cli-go-standards/story-02-007-terminal-size-awareness | None | Parallel-safe: true | [main, terminal] |
+| Story ID | Story Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
+| -------- | ----------- | ----: | ------ | -------- | ------------- | ------------ | ---------- | ------- | ------ |
+| 02-001 | Dry-Run Mode | 02 | [x] Done | | true | 01-001, 01-006 | None | [main, cmd] | feature/current/20260707-cli-go-standards/story-02-001-dry-run-mode |
+| 02-002 | Confirmation Prompts | 02 | [x] Done | | true | 01-001 | None | [main, prompt] | feature/current/20260707-cli-go-standards/story-02-002-confirmation-prompts |
+| 02-003 | Progress Indicators | 02 | [x] Done | | true | 01-003 | None | [progress, main] | feature/current/20260707-cli-go-standards/story-02-003-progress-indicators |
+| 02-004 | Error Message Formatting | 02 | [x] Done | | true | None | 03-003 | [logger, main] | feature/current/20260707-cli-go-standards/story-02-004-error-message-formatting |
+| 02-005 | Man Pages | 02 | [x] Done | | true | None | None | [docs, main] | feature/current/20260707-cli-go-standards/story-02-005-man-pages |
+| 02-006 | Pager Integration | 02 | [x] Done | | true | None | None | [main, output] | feature/current/20260707-cli-go-standards/story-02-006-pager-integration |
+| 02-007 | Terminal Size Awareness | 02 | [x] Done | | true | None | 04-001 | [main, terminal] | feature/current/20260707-cli-go-standards/story-02-007-terminal-size-awareness |
 
 ### Phase 03: Advanced Features (Advanced Priority - Week 2)
 
-| Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
-| -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 03-001 | TUI Mode | feature/current/20260707-cli-go-standards/story-03-001-tui-mode | 01-001, 01-006 | Parallel-safe: true | [tui, main] |
-| 03-002 | Daemon Process Support | feature/current/20260707-cli-go-standards/story-03-002-daemon-process-support | 01-001, 01-006 | Parallel-safe: false | [daemon, main] |
-| 03-003 | File Reference Formatting | feature/current/20260707-cli-go-standards/story-03-003-file-reference-formatting | 02-004 | Parallel-safe: true | [main, output] |
-| 03-004 | URL Formatting | feature/current/20260707-cli-go-standards/story-03-004-url-formatting | None | Parallel-safe: true | [main, output] |
-| 03-005 | Credential/Secret Handling | feature/current/20260707-cli-go-standards/story-03-005-credential-secret-handling | 01-001, 01-007 | Parallel-safe: true | [secrets, config] |
-| 03-006 | Config File Auto-Migration | feature/current/20260707-cli-go-standards/story-03-006-config-auto-migration | 01-001, 01-007 | Parallel-safe: true | [config, migration] |
-| 03-007 | Structured Logging with Format Auto-Detection | feature/current/20260707-cli-go-standards/story-03-007-structured-logging | None | Parallel-safe: true | [logging, main] |
-| 03-008 | Signal-Based Config Reload | feature/current/20260707-cli-go-standards/story-03-008-config-reload | 01-007 | Parallel-safe: true | [config, main] |
-| 03-009 | Health Check for Containers | feature/current/20260707-cli-go-standards/story-03-009-health-check | None | Parallel-safe: true | [health, main] |
-| 03-010 | Privacy Mode with Anonymous Lists | feature/current/20260707-cli-go-standards/story-03-010-privacy-mode | None | Parallel-safe: true | [privacy, main] |
-| 03-011 | Audit Logging with Retention | feature/current/20260707-cli-go-standards/story-03-011-audit-logging | None | Parallel-safe: true | [audit, main] |
-| 03-012 | Legacy Deprecation Policy | feature/current/20260707-cli-go-standards/story-03-012-deprecation-policy | None | Parallel-safe: true | [deprecation, main] |
+| Story ID | Story Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
+| -------- | ----------- | ----: | ------ | -------- | ------------- | ------------ | ---------- | ------- | ------ |
+| 03-001 | TUI Mode | 03 | [x] Done | | true | 01-001, 01-006 | None | [tui, main] | feature/current/20260707-cli-go-standards/story-03-001-tui-mode |
+| 03-002 | Daemon Process Support | 03 | [x] Done | | false | 01-001, 01-006 | None | [daemon, main] | feature/current/20260707-cli-go-standards/story-03-002-daemon-process-support |
+| 03-003 | File Reference Formatting | 03 | [x] Done | | true | 02-004 | None | [main, output] | feature/current/20260707-cli-go-standards/story-03-003-file-reference-formatting |
+| 03-004 | URL Formatting | 03 | [x] Done | | true | None | None | [main, output] | feature/current/20260707-cli-go-standards/story-03-004-url-formatting |
+| 03-005 | Credential/Secret Handling | 03 | [x] Done | | true | 01-001, 01-007 | None | [secrets, config] | feature/current/20260707-cli-go-standards/story-03-005-credential-secret-handling |
+| 03-006 | Config File Auto-Migration | 03 | [x] Done | | true | 01-001, 01-007 | 04-001 | [config, migration] | feature/current/20260707-cli-go-standards/story-03-006-config-auto-migration |
+| 03-007 | Structured Logging with Format Auto-Detection | 03 | [x] Done | | true | None | None | [logging, main] | feature/current/20260707-cli-go-standards/story-03-007-structured-logging |
+| 03-008 | Signal-Based Config Reload | 03 | [x] Done | | true | 01-007 | None | [config, main] | feature/current/20260707-cli-go-standards/story-03-008-config-reload |
+| 03-009 | Health Check for Containers | 03 | [x] Done | | true | None | None | [health, main] | feature/current/20260707-cli-go-standards/story-03-009-health-check |
+| 03-010 | Privacy Mode with Anonymous Lists | 03 | [x] Done | | true | None | None | [privacy, main] | feature/current/20260707-cli-go-standards/story-03-010-privacy-mode |
+| 03-011 | Audit Logging with Retention | 03 | [x] Done | | true | None | None | [audit, main] | feature/current/20260707-cli-go-standards/story-03-011-audit-logging |
+| 03-012 | Legacy Deprecation Policy | 03 | [x] Done | | true | None | None | [deprecation, main] | feature/current/20260707-cli-go-standards/story-03-012-deprecation-policy |
 
 ### Phase 04: Comprehensive Testing
 
-| Story ID | Story Title | Branch | Dependencies | Parallel-safe | Modules |
-| -------- | ----------- | ------ | ------------ | ------------- | ------- |
-| 04-001 | Test Coverage for New Features | feature/current/20260707-cli-go-standards/story-04-001-test-new-features | 01-007, 02-007, 03-006 | Parallel-safe: true | [all] |
-| 04-002 | Test Coverage for Existing Features | feature/current/20260707-cli-go-standards/story-04-002-test-existing-features | None | Parallel-safe: true | [all] |
-| 04-003 | Integration Testing | feature/current/20260707-cli-go-standards/story-04-003-integration-testing | 04-001, 04-002 | Parallel-safe: true | [all] |
+| Story ID | Story Title | Phase | Status | Assignee | Parallel-safe | Dependencies | Dependants | Modules | Branch |
+| -------- | ----------- | ----: | ------ | -------- | ------------- | ------------ | ---------- | ------- | ------ |
+| 04-001 | Test Coverage for New Features | 04 | [x] Done | | true | 01-007, 02-007, 03-006 | 04-003 | [all] | feature/current/20260707-cli-go-standards/story-04-001-test-new-features |
+| 04-002 | Test Coverage for Existing Features | 04 | [x] Done | | true | None | 04-003 | [all] | feature/current/20260707-cli-go-standards/story-04-002-test-existing-features |
+| 04-003 | Integration Testing | 04 | [x] Done | | true | 04-001, 04-002 | None | [all] | feature/current/20260707-cli-go-standards/story-04-003-integration-testing |
 
 ## Dependency Graph
 

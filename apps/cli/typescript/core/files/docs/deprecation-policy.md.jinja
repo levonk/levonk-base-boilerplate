@@ -1,0 +1,174 @@
+# Deprecation Policy
+
+This document describes the deprecation policy for {{ project_name }}, following CLI Tool Standards ADR requirement #35.
+
+## Overview
+
+{{ project_name }} follows a clear deprecation policy to provide users with ample time to migrate to new features before legacy support is removed. This policy ensures backward compatibility while allowing the project to evolve and improve.
+
+## Key Principles
+
+### Minimum Deprecation Period
+
+- **Minimum 6 months**: All deprecated features have a minimum deprecation period of 6 months from the announcement date
+- **Clear end-of-support dates**: Each deprecated feature has a specific end-of-support date
+- **No surprise removals**: Features are never removed before the announced end-of-support date
+
+### Communication
+
+- **Prominent warnings**: Deprecation warnings are logged to stderr when deprecated features are used
+- **Clear migration paths**: Each deprecated feature includes a migration guide or alternative solution
+- **Multiple notification points**: Warnings appear at relevant usage points to ensure visibility
+
+## Deprecation Workflow
+
+### 1. Feature Deprecation
+
+When a feature is deprecated:
+
+1. **Announcement**: The deprecation is announced with:
+   - Feature ID and name
+   - Description of what is being deprecated
+   - Announcement date
+   - End-of-support date (minimum 6 months from announcement)
+   - Migration path or alternative solution
+   - Additional context or notes
+
+2. **Registration**: The deprecated feature is registered in the deprecation module
+
+3. **Warning Implementation**: Deprecation warnings are logged to stderr when the feature is used
+
+### 2. Deprecation Period
+
+During the deprecation period:
+
+- **Warnings are shown**: Users see prominent warnings when using deprecated features
+- **Feature remains functional**: Deprecated features continue to work as expected
+- **Migration support**: Documentation and guidance are provided for migration
+- **Days remaining**: Warnings include the number of days until end-of-support
+
+### 3. End-of-Support
+
+After the end-of-support date:
+
+- **Feature is removed**: The deprecated feature is no longer available
+- **Error messages**: Clear error messages inform users that the feature has been removed
+- **Migration required**: Users must update their code to use alternative features
+
+## Configuration
+
+### Enabling/Disabling Warnings
+
+Deprecation warnings are enabled by default. You can control them via:
+
+**Command-line flag:**
+```bash
+{{ project_slug }} --no-deprecation-warnings
+```
+
+**Configuration file:**
+```toml
+[{{ project_slug }}]
+deprecation_warnings_enabled = false
+```
+
+**Environment variable:**
+```bash
+export DEPRECATION_WARNINGS=false
+```
+
+### Suppressing Specific Warnings
+
+You can suppress warnings for specific deprecated features:
+
+**Configuration file:**
+```toml
+[{{ project_slug }}]
+deprecation_suppressed_warnings = ["old-flag", "legacy-api"]
+```
+
+### Checking Deprecation Status
+
+To see the status of all deprecated features:
+
+```bash
+{{ project_slug }} --deprecation-status
+```
+
+This outputs a JSON report with:
+- Total number of deprecated features
+- Number of features still in deprecation period
+- Number of features that have been removed
+- List of all features with their status and end-of-support dates
+
+## Example Deprecation Warning
+
+When using a deprecated feature, you'll see a warning like:
+
+```
+⚠ DEPRECATION WARNING: Old Flag is deprecated and will be removed on 2024-12-31 (45 days remaining).
+  This flag is being replaced by --new-flag
+  Migration: Use --new-flag instead for the same functionality
+  Note: The old flag will be completely removed after the end-of-support date
+```
+
+## Best Practices
+
+### For Users
+
+1. **Monitor warnings**: Pay attention to deprecation warnings when they appear
+2. **Plan migration**: Allocate time to migrate away from deprecated features
+3. **Check status**: Use `--deprecation-status` to see all deprecated features
+4. **Test early**: Test with new features before the end-of-support date
+5. **Provide feedback**: If a deprecation affects your workflow, provide feedback
+
+### For Developers
+
+1. **Minimum 6 months**: Always provide at least 6 months deprecation period
+2. **Clear migration paths**: Document how to migrate from deprecated features
+3. **Register features**: Use the deprecation module to register deprecated features
+4. **Test warnings**: Ensure deprecation warnings are shown at appropriate times
+5. **Remove on schedule**: Remove deprecated features only after end-of-support date
+
+## API Reference
+
+### Deprecation Module Functions
+
+The deprecation module provides the following functions:
+
+- `registerDeprecatedFeature(feature)`: Register a deprecated feature
+- `getDeprecatedFeature(id)`: Get a deprecated feature by ID
+- `getAllDeprecatedFeatures()`: Get all deprecated features
+- `isDeprecated(id)`: Check if a feature is deprecated
+- `isRemoved(id)`: Check if a feature has been removed
+- `getDeprecationStatus(id)`: Get the deprecation status of a feature
+- `getDaysRemaining(id)`: Get days remaining until end-of-support
+- `logDeprecationWarning(id, config)`: Log a deprecation warning to stderr
+- `generateDeprecationReport()`: Generate a deprecation status report
+- `checkLegacyFeatures(usedFeatures, config)`: Check for legacy features and log warnings
+- `removeDeprecatedFeature(id)`: Remove a deprecated feature from registry
+- `clearDeprecatedFeatures()`: Clear all deprecated features (for testing)
+
+## Compliance
+
+This deprecation policy complies with:
+
+- **CLI Tool Standards ADR requirement #35**: Legacy Deprecation Policy
+- **Minimum 6-month deprecation period**: Ensures users have adequate time to migrate
+- **Clear end-of-support dates**: Provides predictable timeline for feature removal
+- **Prominent warnings**: Ensures users are aware of upcoming changes
+- **Migration guidance**: Supports users in transitioning to new features
+
+## Related Documentation
+
+- [Configuration Management](config-management.md)
+- [Error Handling](error-handling.md)
+- [Security Best Practices](security-best-practices.md)
+
+## Questions or Issues?
+
+If you have questions about the deprecation policy or need help migrating from deprecated features, please:
+
+1. Check the migration guide for the specific deprecated feature
+2. Review the deprecation status with `--deprecation-status`
+3. Open an issue on the project repository for additional support

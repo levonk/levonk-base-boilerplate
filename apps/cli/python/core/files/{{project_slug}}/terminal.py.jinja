@@ -1,0 +1,132 @@
+# vim: set ft=python :
+import os
+import sys
+import subprocess
+from typing import Optional, Tuple
+from {{ project_slug }}.logging import get_logger
+
+logger = get_logger(name="{{ project_slug }}", quiet=False, verbose=False, debug_mode=False, color="auto", log_format=None)
+
+
+def get_terminal_size() -> Tuple[int, int]:
+    """
+    Get the current terminal size (columns, rows).
+
+    Returns:
+        Tuple of (columns, rows). Returns (80, 24) as fallback if not a TTY.
+    """
+    try:
+        if sys.stdout.isatty():
+            import shutil
+            size = shutil.get_terminal_size()
+            return (size.columns, size.lines)
+    except Exception:
+        pass
+    return (80, 24)
+
+
+def get_pager_command() -> str:
+    """
+    Get the pager command from environment or use default.
+
+    Returns:
+        Pager command string
+    """
+    return os.environ.get("PAGER", "less")
+
+
+def should_use_pager(output_lines: int, no_pager: bool = False) -> bool:
+    """
+    Determine if output should be paged based on length and terminal size.
+
+    Args:
+        output_lines: Number of lines in output
+        no_pager: If True, bypass paging
+
+    Returns:
+        True if pager should be used, False otherwise
+    """
+    if no_pager:
+        return False
+
+    # Don't page if not a TTY (e.g., piped output)
+    if not sys.stdout.isatty():
+        return False
+
+    # Get terminal height
+    _, terminal_height = get_terminal_size()
+
+    # Page if output exceeds terminal height
+    return output_lines > terminal_height
+
+
+def page_output(text: str, pager: Optional[str] = None) -> None:
+    """
+    Display text through a pager.
+
+    Args:
+        text: Text to display
+        pager: Pager command to use (defaults to PAGER env var or 'less')
+    """
+    if pager is None:
+        pager = get_pager_command()
+
+    try:
+        # Use subprocess to run the pager
+        process = subprocess.Popen(
+            pager.split(),
+            stdin=subprocess.PIPE,
+            stdout=sys.stdout,
+            stderr=sys.stderr
+        )
+        process.communicate(text.encode('utf-8'))
+        process.wait()
+    except Exception as e:
+        # If pager fails, just print the text
+        print(text)
+
+
+def format_for_terminal_width(text: str, width: Optional[int] = None) -> str:
+    """
+    Format text to fit within terminal width.
+
+    Args:
+        text: Text to format
+        width: Target width (defaults to terminal width)
+
+    Returns:
+        Formatted text
+    """
+    if width is None:
+        width, _ = get_terminal_size()
+
+    # Simple word wrapping
+    lines = []
+    for line in text.split('\n'):
+        if len(line) <= width:
+            lines.append(line)
+        else:
+            # Wrap long lines
+            words = line.split(' ')
+            current_line = ''
+            for word in words:
+                if len(current_line) + len(word) + 1 <= width:
+                    current_line += (' ' if current_line else '') + word
+                else:
+                    if current_line:
+                        lines.append(current_line)
+                    current_line = word
+            if current_line:
+                lines.append(current_line)
+
+    return '\n'.join(lines)
+
+
+def is_output_piped() -> bool:
+    """
+    Check if output is being piped or redirected.
+
+    Returns:
+        True if output is piped/redirected, False otherwise
+    """
+    return not sys.stdout.isatty()

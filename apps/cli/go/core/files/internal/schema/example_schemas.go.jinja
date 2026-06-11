@@ -1,0 +1,96 @@
+package schema
+
+import (
+	"fmt"
+)
+
+// Example: Define schemas for CLI commands
+// Each command should define its schema with 3-4 default fields
+// excluding long-form content (body, description, content, etc.)
+
+// GetRootCommandSchema returns the schema for the root command
+func GetRootCommandSchema() *Schema {
+	s := NewSchema("root")
+	s.AddField("source", FieldTypeString, "Source of the input (file path or stdin)", true, nil)
+	s.AddField("length", FieldTypeNumber, "Length of the content in bytes", true, 0)
+	s.AddField("status", FieldTypeString, "Processing status", true, "processed")
+	s.AddField("error", FieldTypeString, "Error message if processing failed", false, nil)
+	s.SetDefaultFields("source", "length", "status")
+	return s
+}
+
+// GetListCommandSchema returns the schema for list commands
+func GetListCommandSchema() *Schema {
+	s := NewSchema("list")
+	s.AddField("id", FieldTypeString, "Unique identifier", true, nil)
+	s.AddField("name", FieldTypeString, "Item name", true, nil)
+	s.AddField("status", FieldTypeString, "Item status", true, nil)
+	s.AddField("created", FieldTypeString, "Creation timestamp", false, nil)
+	s.AddField("description", FieldTypeString, "Detailed description (excluded from defaults)", false, nil)
+	s.AddField("body", FieldTypeString, "Long-form content (excluded from defaults)", false, nil)
+	s.SetDefaultFields("id", "name", "status")
+	return s
+}
+
+// GetStatusCommandSchema returns the schema for status commands
+func GetStatusCommandSchema() *Schema {
+	s := NewSchema("status")
+	s.AddField("id", FieldTypeString, "Resource identifier", true, nil)
+	s.AddField("state", FieldTypeString, "Current state", true, nil)
+	s.AddField("health", FieldTypeString, "Health status", true, nil)
+	s.AddField("last_updated", FieldTypeString, "Last update timestamp", false, nil)
+	s.SetDefaultFields("id", "state", "health")
+	return s
+}
+
+// GetAuditCommandSchema returns the schema for audit commands
+func GetAuditCommandSchema() *Schema {
+	s := NewSchema("audit")
+	s.AddField("event_id", FieldTypeString, "Unique event identifier", true, nil)
+	s.AddField("event_type", FieldTypeString, "Type of event", true, nil)
+	s.AddField("timestamp", FieldTypeString, "Event timestamp", true, nil)
+	s.AddField("user", FieldTypeString, "User who performed the action", false, nil)
+	s.AddField("details", FieldTypeString, "Event details (excluded from defaults)", false, nil)
+	s.SetDefaultFields("event_id", "event_type", "timestamp")
+	return s
+}
+
+// SchemaRegistry holds all command schemas
+type SchemaRegistry struct {
+	schemas map[string]*Schema
+}
+
+// NewSchemaRegistry creates a new schema registry
+func NewSchemaRegistry() *SchemaRegistry {
+	registry := &SchemaRegistry{
+		schemas: make(map[string]*Schema),
+	}
+
+	// Register default schemas
+	registry.Register("root", GetRootCommandSchema())
+	registry.Register("list", GetListCommandSchema())
+	registry.Register("status", GetStatusCommandSchema())
+	registry.Register("audit", GetAuditCommandSchema())
+
+	return registry
+}
+
+// Register registers a schema for a command
+func (r *SchemaRegistry) Register(commandName string, schema *Schema) {
+	r.schemas[commandName] = schema
+}
+
+// Get retrieves a schema for a command
+func (r *SchemaRegistry) Get(commandName string) (*Schema, error) {
+	schema, ok := r.schemas[commandName]
+	if !ok {
+		return nil, fmt.Errorf("schema not found for command '%s'", commandName)
+	}
+	return schema, nil
+}
+
+// Has checks if a schema exists for a command
+func (r *SchemaRegistry) Has(commandName string) bool {
+	_, ok := r.schemas[commandName]
+	return ok
+}

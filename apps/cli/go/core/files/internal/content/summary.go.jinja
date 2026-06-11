@@ -1,0 +1,251 @@
+package content
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+)
+
+// Summary represents a state summary
+type Summary struct {
+	// Working directory
+	WorkingDir string `json:"working_dir"`
+	// Whether in a git repository
+	IsGitRepo bool `json:"is_git_repo"`
+	// Project type if detected
+	ProjectType string `json:"project_type,omitempty"`
+	// Number of files in current directory
+	FileCount int `json:"file_count"`
+	// Last modification time
+	LastModified time.Time `json:"last_modified"`
+	// Contextual suggestions
+	Suggestions []string `json:"suggestions,omitempty"`
+	// Pre-computed aggregates (if available)
+	Aggregates map[string]interface{} `json:"aggregates,omitempty"`
+}
+
+// Generator generates state summaries
+type Generator struct {
+	ctx context.Context
+}
+
+// NewGenerator creates a new summary generator
+func NewGenerator(ctx context.Context) *Generator {
+	return &Generator{
+		ctx: ctx,
+	}
+}
+
+// GenerateSummary generates a state summary for the current context
+func (g *Generator) GenerateSummary(ctx *Context) (*Summary, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	summary := &Summary{
+		WorkingDir:  wd,
+		IsGitRepo:   ctx.IsGitRepo,
+		ProjectType: ctx.ProjectType,
+		FileCount:   len(ctx.Files),
+	}
+
+	// Get last modification time
+	lastMod, err := g.getLastModifiedTime(wd)
+	if err == nil {
+		summary.LastModified = lastMod
+	} else {
+		summary.LastModified = time.Now()
+	}
+
+	// Generate contextual suggestions
+	summary.Suggestions = g.generateSuggestions(ctx)
+
+	// Add aggregates (placeholder for integration with aggregates package)
+	summary.Aggregates = g.getAggregates(ctx)
+
+	return summary, nil
+}
+
+// getLastModifiedTime finds the most recent modification time in the directory
+func (g *Generator) getLastModifiedTime(dir string) (time.Time, error) {
+	var lastMod time.Time
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return time.Now(), err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+
+		if info.ModTime().After(lastMod) {
+			lastMod = info.ModTime()
+		}
+	}
+
+	if lastMod.IsZero() {
+		return time.Now(), nil
+	}
+
+	return lastMod, nil
+}
+
+// generateSuggestions generates contextual help suggestions based on context
+func (g *Generator) generateSuggestions(ctx *Context) []string {
+	suggestions := []string{}
+
+	if ctx.IsProjectDir {
+		switch ctx.ProjectType {
+		case "nodejs":
+			suggestions = append(suggestions, "Run 'npm install' to install dependencies")
+			suggestions = append(suggestions, "Run 'npm test' to run tests")
+		case "go":
+			suggestions = append(suggestions, "Run 'go mod tidy' to tidy dependencies")
+			suggestions = append(suggestions, "Run 'go test ./...' to run tests")
+		case "python":
+			suggestions = append(suggestions, "Run 'pip install -r requirements.txt' to install dependencies")
+			suggestions = append(suggestions, "Run 'pytest' to run tests")
+		case "rust":
+			suggestions = append(suggestions, "Run 'cargo build' to build the project")
+			suggestions = append(suggestions, "Run 'cargo test' to run tests")
+		default:
+			suggestions = append(suggestions, "Check project documentation for build instructions")
+		}
+	}
+
+	if ctx.IsGitRepo {
+		suggestions = append(suggestions, "Run 'git status' to check repository status")
+		suggestions = append(suggestions, "Run 'git log' to view commit history")
+	}
+
+	if len(suggestions) == 0 {
+		suggestions = append(suggestions, "Run '{{ project_slug }} --help' for usage information")
+	}
+
+	return suggestions
+}
+
+// getAggregates retrieves pre-computed aggregates (placeholder)
+// This will be integrated with the aggregates package in a future task
+func (g *Generator) getAggregates(ctx *Context) map[string]interface{} {
+	aggregates := make(map[string]interface{})
+
+	// Placeholder for aggregates integration
+	// In the full implementation, this would call the aggregates package
+	// to get pre-computed statistics about the current directory
+
+	if ctx.IsGitRepo {
+		aggregates["git_status"] = "repository detected"
+	}
+
+	if ctx.IsProjectDir {
+		aggregates["project_type"] = ctx.ProjectType
+		aggregates["file_count"] = len(ctx.Files)
+	}
+
+	return aggregates
+}
+
+// FormatSummary formats the summary for output
+func (g *Generator) FormatSummary(summary *Summary, format string) (string, error) {
+	switch format {
+	case "toon":
+		return g.formatTOON(summary), nil
+	case "json":
+		return g.formatJSON(summary)
+	case "human":
+		return g.formatHuman(summary), nil
+	default:
+		return g.formatHuman(summary), nil
+	}
+}
+
+// formatTOON formats the summary in TOON format
+func (g *Generator) formatTOON(summary *Summary) string {
+	var sb strings.Builder
+
+	sb.WriteString("summary[")
+	sb.WriteString(fmt.Sprintf("working_dir:%s", summary.WorkingDir))
+	sb.WriteString(fmt.Sprintf(",is_git_repo:%v", summary.IsGitRepo))
+
+	if summary.ProjectType != "" {
+		sb.WriteString(fmt.Sprintf(",project_type:%s", summary.ProjectType))
+	}
+
+	sb.WriteString(fmt.Sprintf(",file_count:%d", summary.FileCount))
+	sb.WriteString(fmt.Sprintf(",last_modified:%s", summary.LastModified.Format(time.RFC3339)))
+
+	if len(summary.Suggestions) > 0 {
+		sb.WriteString(",suggestions:[")
+		for i, s := range summary.Suggestions {
+			if i > 0 {
+				sb.WriteString(",")
+			}
+			sb.WriteString(fmt.Sprintf("%q", s))
+		}
+		sb.WriteString("]")
+	}
+
+	if len(summary.Aggregates) > 0 {
+		sb.WriteString(",aggregates:{")
+		first := true
+		for k, v := range summary.Aggregates {
+			if !first {
+				sb.WriteString(",")
+			}
+			sb.WriteString(fmt.Sprintf("%s:%v", k, v))
+			first = false
+		}
+		sb.WriteString("}")
+	}
+
+	sb.WriteString("]")
+
+	return sb.String()
+}
+
+// formatJSON formats the summary as JSON
+func (g *Generator) formatJSON(summary *Summary) (string, error) {
+	// Use encoding/json in actual implementation
+	// This is a simplified placeholder
+	return fmt.Sprintf(`{"working_dir":"%s","is_git_repo":%v,"project_type":"%s","file_count":%d}`,
+		summary.WorkingDir, summary.IsGitRepo, summary.ProjectType, summary.FileCount), nil
+}
+
+// formatHuman formats the summary in human-readable format
+func (g *Generator) formatHuman(summary *Summary) string {
+	var sb strings.Builder
+
+	sb.WriteString("State Summary\n")
+	sb.WriteString("=============\n\n")
+	sb.WriteString(fmt.Sprintf("Working Directory: %s\n", summary.WorkingDir))
+	sb.WriteString(fmt.Sprintf("Git Repository: %v\n", summary.IsGitRepo))
+
+	if summary.ProjectType != "" {
+		sb.WriteString(fmt.Sprintf("Project Type: %s\n", summary.ProjectType))
+	}
+
+	sb.WriteString(fmt.Sprintf("File Count: %d\n", summary.FileCount))
+	sb.WriteString(fmt.Sprintf("Last Modified: %s\n", summary.LastModified.Format(time.RFC1123)))
+
+	if len(summary.Suggestions) > 0 {
+		sb.WriteString("\nSuggestions:\n")
+		for _, s := range summary.Suggestions {
+			sb.WriteString(fmt.Sprintf("  - %s\n", s))
+		}
+	}
+
+	return sb.String()
+}
+
+{# vim: set ft=go: #}

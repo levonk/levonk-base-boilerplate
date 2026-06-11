@@ -1,0 +1,234 @@
+package toon
+
+import (
+	"encoding/json"
+	"strconv"
+	"strings"
+	"testing"
+)
+
+func BenchmarkEncodeString(b *testing.B) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+	value := StringValue("hello world")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = encoder.EncodeValue(value)
+	}
+}
+
+func BenchmarkEncodeNumber(b *testing.B) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+	value := NumberValue(42.5)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = encoder.EncodeValue(value)
+	}
+}
+
+func BenchmarkEncodeBool(b *testing.B) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+	value := BoolValue(true)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = encoder.EncodeValue(value)
+	}
+}
+
+func BenchmarkEncodePrimitiveArray(b *testing.B) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	items := make([]Value, 100)
+	for i := 0; i < 100; i++ {
+		items[i] = StringValue("value")
+	}
+
+	arr := Array{
+		Length:    100,
+		Delimiter: DelimiterComma,
+		Items:     items,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = encoder.EncodeValue(arr)
+	}
+}
+
+func BenchmarkEncodeTabularArray(b *testing.B) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	items := make([]Value, 100)
+	for i := 0; i < 100; i++ {
+		items[i] = Object{
+			Fields: map[string]Value{
+				"id":   NumberValue(float64(i)),
+				"name": StringValue("name"),
+				"value": StringValue("value"),
+			},
+		}
+	}
+
+	arr := Array{
+		Length:    100,
+		Delimiter: DelimiterComma,
+		Fields:    []string{"id", "name", "value"},
+		IsTabular: true,
+		Items:     items,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = encoder.EncodeValue(arr)
+	}
+}
+
+func BenchmarkEncodeObject(b *testing.B) {
+	encoder := NewEncoder(DefaultEncoderOptions())
+
+	obj := Object{
+		Fields: map[string]Value{
+			"name":  StringValue("Alice"),
+			"age":   NumberValue(30),
+			"email": StringValue("alice@example.com"),
+			"admin": BoolValue(true),
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = encoder.EncodeValue(obj)
+	}
+}
+
+func BenchmarkDecodePrimitive(b *testing.B) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+	input := "hello world"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = decoder.Decode(input)
+	}
+}
+
+func BenchmarkDecodePrimitiveArray(b *testing.B) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+	input := "[100]: " + repeatString("value,", 100)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = decoder.Decode(input)
+	}
+}
+
+func BenchmarkDecodeTabularArray(b *testing.B) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+
+	var builder strings.Builder
+	builder.WriteString("[100]{id,name,value}:\n")
+	for i := 0; i < 100; i++ {
+		builder.WriteString("  ")
+		builder.WriteString(strconv.Itoa(i))
+		builder.WriteString(",name,value\n")
+	}
+	input := builder.String()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = decoder.Decode(input)
+	}
+}
+
+func BenchmarkDecodeObject(b *testing.B) {
+	decoder := NewDecoder(DefaultDecoderOptions())
+	input := `name: Alice
+age: 30
+email: alice@example.com
+admin: true`
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = decoder.Decode(input)
+	}
+}
+
+// JSON benchmarks for comparison
+func BenchmarkJSONEncodeString(b *testing.B) {
+	value := "hello world"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = json.Marshal(value)
+	}
+}
+
+func BenchmarkJSONEncodeObject(b *testing.B) {
+	obj := map[string]interface{}{
+		"name":  "Alice",
+		"age":   30,
+		"email": "alice@example.com",
+		"admin": true,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = json.Marshal(obj)
+	}
+}
+
+func BenchmarkJSONEncodeArray(b *testing.B) {
+	arr := make([]string, 100)
+	for i := 0; i < 100; i++ {
+		arr[i] = "value"
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = json.Marshal(arr)
+	}
+}
+
+func BenchmarkJSONDecodeString(b *testing.B) {
+	input := `"hello world"`
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var result string
+		_ = json.Unmarshal([]byte(input), &result)
+	}
+}
+
+func BenchmarkJSONDecodeObject(b *testing.B) {
+	input := `{"name":"Alice","age":30,"email":"alice@example.com","admin":true}`
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var result map[string]interface{}
+		_ = json.Unmarshal([]byte(input), &result)
+	}
+}
+
+func BenchmarkJSONDecodeArray(b *testing.B) {
+	arr := make([]string, 100)
+	for i := 0; i < 100; i++ {
+		arr[i] = "value"
+	}
+	input, _ := json.Marshal(arr)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var result []string
+		_ = json.Unmarshal(input, &result)
+	}
+}
+
+// Helper function
+func repeatString(s string, count int) string {
+	var builder strings.Builder
+	for i := 0; i < count; i++ {
+		builder.WriteString(s)
+	}
+	return builder.String()
+}

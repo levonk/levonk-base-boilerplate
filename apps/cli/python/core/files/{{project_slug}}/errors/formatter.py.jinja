@@ -1,0 +1,251 @@
+# vim: set ft=python :
+"""Structured error formatting for CLI output.
+
+This module provides utilities for formatting errors in a structured format
+that goes to stdout (not stderr) in the same format as normal output.
+Errors include what went wrong and actionable suggestions.
+"""
+
+from typing import Any, Dict, Optional
+
+
+class StructuredError:
+    """Represents a structured error with description and suggestion."""
+    
+    def __init__(
+        self,
+        description: str,
+        suggestion: str,
+        error_code: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize a structured error.
+        
+        Args:
+            description: What went wrong
+            suggestion: Actionable suggestion to fix the error
+            error_code: Optional error code for programmatic handling
+            context: Optional additional context about the error
+        """
+        self.description = description
+        self.suggestion = suggestion
+        self.error_code = error_code
+        self.context = context or {}
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert error to dictionary format.
+        
+        Returns:
+            Dictionary representation of the error
+        """
+        result = {
+            "error": True,
+            "description": self.description,
+            "suggestion": self.suggestion
+        }
+        
+        if self.error_code:
+            result["error_code"] = self.error_code
+        
+        if self.context:
+            result["context"] = self.context
+        
+        return result
+
+
+def format_structured_error(
+    description: str,
+    suggestion: str,
+    error_code: Optional[str] = None,
+    context: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Format an error in structured format for stdout.
+    
+    This function formats errors in the same structured format as normal
+    output, ensuring consistency for agent mode parsing.
+    
+    Args:
+        description: What went wrong
+        suggestion: Actionable suggestion to fix the error
+        error_code: Optional error code for programmatic handling
+        context: Optional additional context about the error
+        
+    Returns:
+        Structured error dictionary
+    """
+    error = StructuredError(description, suggestion, error_code, context)
+    return error.to_dict()
+
+
+def format_validation_error(
+    field: str,
+    value: str,
+    reason: str,
+    suggestion: Optional[str] = None
+) -> Dict[str, Any]:
+    """Format a validation error in structured format.
+    
+    Args:
+        field: The field that failed validation
+        value: The invalid value
+        reason: The reason for validation failure
+        suggestion: Optional specific suggestion (auto-generated if not provided)
+        
+    Returns:
+        Structured error dictionary
+    """
+    if suggestion is None:
+        suggestion = f"Provide a valid value for {field}"
+    
+    return format_structured_error(
+        description=f"Validation failed for {field}: {value}",
+        suggestion=f"{reason}. {suggestion}",
+        error_code="VALIDATION_ERROR",
+        context={"field": field, "value": value, "reason": reason}
+    )
+
+
+def format_missing_required_error(
+    field: str,
+    suggestion: Optional[str] = None
+) -> Dict[str, Any]:
+    """Format a missing required field error in structured format.
+    
+    Args:
+        field: The missing required field
+        suggestion: Optional specific suggestion (auto-generated if not provided)
+        
+    Returns:
+        Structured error dictionary
+    """
+    if suggestion is None:
+        suggestion = f"Provide the required --{field} flag"
+    
+    return format_structured_error(
+        description=f"Missing required field: {field}",
+        suggestion=suggestion,
+        error_code="MISSING_REQUIRED",
+        context={"field": field}
+    )
+
+
+def format_file_not_found_error(
+    file_path: str,
+    suggestion: Optional[str] = None
+) -> Dict[str, Any]:
+    """Format a file not found error in structured format.
+    
+    Args:
+        file_path: The file that was not found
+        suggestion: Optional specific suggestion (auto-generated if not provided)
+        
+    Returns:
+        Structured error dictionary
+    """
+    if suggestion is None:
+        suggestion = "Check the file path and ensure the file exists"
+    
+    return format_structured_error(
+        description=f"File not found: {file_path}",
+        suggestion=suggestion,
+        error_code="FILE_NOT_FOUND",
+        context={"file_path": file_path}
+    )
+
+
+def format_permission_denied_error(
+    resource: str,
+    suggestion: Optional[str] = None
+) -> Dict[str, Any]:
+    """Format a permission denied error in structured format.
+    
+    Args:
+        resource: The resource with permission issues
+        suggestion: Optional specific suggestion (auto-generated if not provided)
+        
+    Returns:
+        Structured error dictionary
+    """
+    if suggestion is None:
+        suggestion = "Check file permissions or run with appropriate privileges"
+    
+    return format_structured_error(
+        description=f"Permission denied: {resource}",
+        suggestion=suggestion,
+        error_code="PERMISSION_DENIED",
+        context={"resource": resource}
+    )
+
+
+def format_network_error(
+    url: str,
+    reason: str,
+    suggestion: Optional[str] = None
+) -> Dict[str, Any]:
+    """Format a network error in structured format.
+    
+    Args:
+        url: The URL that failed
+        reason: The reason for network failure
+        suggestion: Optional specific suggestion (auto-generated if not provided)
+        
+    Returns:
+        Structured error dictionary
+    """
+    if suggestion is None:
+        suggestion = "Check your network connection and the URL"
+    
+    return format_structured_error(
+        description=f"Network error accessing {url}",
+        suggestion=f"{reason}. {suggestion}",
+        error_code="NETWORK_ERROR",
+        context={"url": url, "reason": reason}
+    )
+
+
+def format_config_error(
+    config_path: str,
+    reason: str,
+    suggestion: Optional[str] = None
+) -> Dict[str, Any]:
+    """Format a configuration error in structured format.
+    
+    Args:
+        config_path: The configuration file path
+        reason: The reason for config error
+        suggestion: Optional specific suggestion (auto-generated if not provided)
+        
+    Returns:
+        Structured error dictionary
+    """
+    if suggestion is None:
+        suggestion = "Check your configuration file"
+    
+    return format_structured_error(
+        description=f"Configuration error in {config_path}",
+        suggestion=f"{reason}. {suggestion}",
+        error_code="CONFIG_ERROR",
+        context={"config_path": config_path, "reason": reason}
+    )
+
+
+def format_generic_error(
+    description: str,
+    suggestion: str,
+    error_code: Optional[str] = None
+) -> Dict[str, Any]:
+    """Format a generic error in structured format.
+    
+    Args:
+        description: What went wrong
+        suggestion: Actionable suggestion to fix the error
+        error_code: Optional error code for programmatic handling
+        
+    Returns:
+        Structured error dictionary
+    """
+    return format_structured_error(
+        description=description,
+        suggestion=suggestion,
+        error_code=error_code or "GENERIC_ERROR"
+    )

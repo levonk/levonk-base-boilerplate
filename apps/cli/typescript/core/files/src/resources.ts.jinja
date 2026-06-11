@@ -1,0 +1,249 @@
+import process from 'process';
+import { createLogger, type LoggerOptions } from './logger.js';
+
+export interface ResourceLimits {
+  maxMemoryMB?: number;
+  maxCpuPercent?: number;
+}
+
+export interface ResourceUsage {
+  memoryMB: number;
+  cpuPercent: number;
+}
+
+export interface ResourceMonitorOptions {
+  limits: ResourceLimits;
+  loggerOptions?: LoggerOptions;
+  samplingInterval?: number;
+}
+
+export class ResourceLimitError extends Error {
+  constructor(
+    message: string,
+    public readonly resourceType: 'memory' | 'cpu',
+    public readonly currentUsage: number,
+    public readonly limit: number
+  ) {
+    super(message);
+    this.name = 'ResourceLimitError';
+  }
+}
+
+export class ResourceMonitor {
+  private limits: ResourceLimits;
+  private logger: ReturnType<typeof createLogger>;
+  private samplingInterval: number;
+  private startTime: number;
+  private startCpuUsage: NodeJS.CpuUsage;
+  private checkInterval?: NodeJS.Timeout;
+
+  constructor(options: ResourceMonitorOptions) {
+    this.limits = options.limits;
+    this.logger = createLogger({
+      quiet: false,
+      verbose: options.loggerOptions?.verbose || false,
+      color: 'auto',
+      module: 'resources',
+    });
+    this.samplingInterval = options.samplingInterval || 1000; // 1 second default
+    this.startTime = Date.now();
+    this.startCpuUsage = process.cpuUsage();
+  }
+
+  /**
+   * Get current memory usage in MB
+   */
+  getMemoryUsage(): number {
+    const usage = process.memoryUsage();
+    // Use RSS (Resident Set Size) for actual memory used
+    return usage.rss / 1024 / 1024;
+  }
+
+  /**
+   * Get current CPU usage percentage
+   * This is an approximation based on CPU time since monitor start
+   */
+  getCpuUsage(): number {
+    const elapsedMs = Date.now() - this.startTime;
+    if (elapsedMs === 0) return 0;
+
+    const currentCpuUsage = process.cpuUsage(this.startCpuUsage);
+    const totalCpuTimeMs = (currentCpuUsage.user + currentCpuUsage.system) / 1000;
+    const cpuPercent = (totalCpuTimeMs / elapsedMs) * 100;
+
+    return Math.min(cpuPercent, 100); // Cap at 100%
+  }
+
+  /**
+   * Get current resource usage
+   */
+  getCurrentUsage(): ResourceUsage {
+    return {
+      memoryMB: this.getMemoryUsage(),
+      cpuPercent: this.getCpuUsage(),
+    };
+  }
+
+  /**
+   * Check if memory limit is exceeded
+   */
+  checkMemoryLimit(): void {
+    if (this.limits.maxMemoryMB === undefined) return;
+
+    const currentMemory = this.getMemoryUsage();
+    if (currentMemory > this.limits.maxMemoryMB) {
+      throw new ResourceLimitError(
+        `Memory limit exceeded: ${currentMemory.toFixed(2)}MB used, limit is ${this.limits.maxMemoryMB}MB`,
+        'memory',
+        currentMemory,
+        this.limits.maxMemoryMB
+      );
+    }
+  }
+
+  /**
+   * Check if CPU limit is exceeded
+   */
+  checkCpuLimit(): void {
+    if (this.limits.maxCpuPercent === undefined) return;
+
+    const currentCpu = this.getCpuUsage();
+    if (currentCpu > this.limits.maxCpuPercent) {
+      throw new ResourceLimitError(
+        `CPU limit exceeded: ${currentCpu.toFixed(2)}% used, limit is ${this.limits.maxCpuPercent}%`,
+        'cpu',
+        currentCpu,
+        this.limits.maxCpuPercent
+      );
+    }
+  }
+
+  /**
+   * Check all resource limits
+   */
+  checkLimits(): void {
+    this.checkMemoryLimit();
+    this.checkCpuLimit();
+  }
+
+  /**
+   * Log current resource usage in verbose mode
+   */
+  logUsage(): void {
+    const usage = this.getCurrentUsage();
+    this.logger.debug(
+      `Resource usage: Memory: ${usage.memoryMB.toFixed(2)}MB, CPU: ${usage.cpuPercent.toFixed(2)}%`
+    );
+
+    if (this.limits.maxMemoryMB) {
+      const memoryPercent = (usage.memoryMB / this.limits.maxMemoryMB) * 100;
+      this.logger.debug(
+        `Memory limit: ${usage.memoryMB.toFixed(2)}MB / ${this.limits.maxMemoryMB}MB (${memoryPercent.toFixed(1)}%)`
+      );
+    }
+
+    if (this.limits.maxCpuPercent) {
+      const cpuPercent = (usage.cpuPercent / this.limits.maxCpuPercent) * 100;
+      this.logger.debug(
+        `CPU limit: ${usage.cpuPercent.toFixed(2)}% / ${this.limits.maxCpuPercent}% (${cpuPercent.toFixed(1)}%)`
+      );
+    }
+  }
+
+  /**
+   * Start periodic resource monitoring
+   * This will check limits at the specified interval and log usage in verbose mode
+   */
+  startMonitoring(): void {
+    if (this.checkInterval) {
+      this.logger.warn('Resource monitoring already started');
+      return;
+    }
+
+    this.logger.info('Starting resource monitoring...');
+    if (this.limits.maxMemoryMB) {
+      this.logger.info(`Memory limit: ${this.limits.maxMemoryMB}MB`);
+    }
+    if (this.limits.maxCpuPercent) {
+      this.logger.info(`CPU limit: ${this.limits.maxCpuPercent}%`);
+    }
+
+    this.checkInterval = setInterval(() => {
+      try {
+        this.logUsage();
+        this.checkLimits();
+      } catch (error) {
+        this.logger.error(`Resource limit check failed: ${error}`);
+        this.stopMonitoring();
+        throw error;
+      }
+    }, this.samplingInterval);
+  }
+
+  /**
+   * Stop periodic resource monitoring
+   */
+  stopMonitoring(): void {
+    if (this.checkInterval) {
+      clearInterval(this.checkInterval);
+      this.checkInterval = undefined;
+      this.logger.info('Resource monitoring stopped');
+    }
+  }
+
+  /**
+   * Check if monitoring is active
+   */
+  isMonitoring(): boolean {
+    return this.checkInterval !== undefined;
+  }
+}
+
+/**
+ * Parse memory limit string (e.g., "512", "512MB", "1GB")
+ * Returns memory limit in MB
+ */
+export function parseMemoryLimit(value: string): number {
+  const upperValue = value.toUpperCase().trim();
+
+  if (upperValue.endsWith('GB')) {
+    const num = parseFloat(upperValue.slice(0, -2));
+    return num * 1024;
+  }
+
+  if (upperValue.endsWith('MB')) {
+    const num = parseFloat(upperValue.slice(0, -2));
+    return num;
+  }
+
+  // Assume MB if no unit specified
+  const num = parseFloat(upperValue);
+  return num;
+}
+
+/**
+ * Parse CPU limit string (e.g., "50", "50%")
+ * Returns CPU limit as percentage (0-100)
+ */
+export function parseCpuLimit(value: string): number {
+  const upperValue = value.toUpperCase().trim();
+
+  if (upperValue.endsWith('%')) {
+    const num = parseFloat(upperValue.slice(0, -1));
+    return Math.min(Math.max(num, 0), 100); // Clamp to 0-100
+  }
+
+  // Assume percentage if no % specified
+  const num = parseFloat(upperValue);
+  return Math.min(Math.max(num, 0), 100); // Clamp to 0-100
+}
+
+/**
+ * Create a resource monitor with the specified limits
+ */
+export function createResourceMonitor(
+  limits: ResourceLimits,
+  loggerOptions?: LoggerOptions
+): ResourceMonitor {
+  return new ResourceMonitor({ limits, loggerOptions });
+}

@@ -1,0 +1,201 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import {
+  formatFileRef,
+  formatErrorFileRef,
+  formatLogFileRef,
+  formatUserFileRef,
+  parseFileRef,
+  type FileLocation,
+  type FileRefFormat,
+} from './file-ref.js';
+
+describe('file-ref', () => {
+  describe('formatFileRef', () => {
+    it('should format file reference in VSCode format', () => {
+      const location: FileLocation = {
+        path: '/path/to/file.ts',
+        line: 10,
+        column: 5,
+      };
+      const result = formatFileRef(location, { format: 'vscode' });
+      expect(result).toBe('file:///path/to/file.ts:10:5');
+    });
+
+    it('should format file reference in standard format with absolute path', () => {
+      const location: FileLocation = {
+        path: '/path/to/file.ts',
+        line: 10,
+        column: 5,
+      };
+      const result = formatFileRef(location, { format: 'standard', absolute: true });
+      expect(result).toBe('/path/to/file.ts:10:5');
+    });
+
+    it('should format file reference in standard format with relative path', () => {
+      const location: FileLocation = {
+        path: 'src/file.ts',
+        line: 10,
+        column: 5,
+      };
+      const result = formatFileRef(location, { format: 'standard', absolute: false });
+      expect(result).toBe('src/file.ts:10:5');
+    });
+
+    it('should format file reference without line and column', () => {
+      const location: FileLocation = {
+        path: '/path/to/file.ts',
+      };
+      const result = formatFileRef(location, { format: 'vscode' });
+      expect(result).toBe('file:///path/to/file.ts');
+    });
+
+    it('should format file reference with only line', () => {
+      const location: FileLocation = {
+        path: '/path/to/file.ts',
+        line: 10,
+      };
+      const result = formatFileRef(location, { format: 'vscode' });
+      expect(result).toBe('file:///path/to/file.ts:10');
+    });
+
+    it('should convert relative path to absolute in VSCode format', () => {
+      const location: FileLocation = {
+        path: 'src/file.ts',
+        line: 10,
+      };
+      const result = formatFileRef(location, { format: 'vscode' });
+      expect(result).toMatch(/^file:\/\/\/.*\/src\/file\.ts:10$/);
+    });
+  });
+
+  describe('formatErrorFileRef', () => {
+    it('should format file reference for error messages', () => {
+      const location: FileLocation = {
+        path: '/path/to/file.ts',
+        line: 10,
+        column: 5,
+      };
+      const result = formatErrorFileRef(location);
+      expect(result).toMatch(/file:\/.*\/path\/to\/file\.ts:10:5/);
+    });
+  });
+
+  describe('formatLogFileRef', () => {
+    it('should format file reference for log output', () => {
+      const location: FileLocation = {
+        path: 'src/file.ts',
+        line: 10,
+        column: 5,
+      };
+      const result = formatLogFileRef(location);
+      expect(result).toBe('src/file.ts:10:5');
+    });
+  });
+
+  describe('formatUserFileRef', () => {
+    it('should format file reference for user-facing output', () => {
+      const location: FileLocation = {
+        path: '/path/to/file.ts',
+        line: 10,
+        column: 5,
+      };
+      const result = formatUserFileRef(location);
+      expect(result).toMatch(/file:\/.*\/path\/to\/file\.ts:10:5/);
+    });
+  });
+
+  describe('parseFileRef', () => {
+    it('should parse VSCode format file reference', () => {
+      const ref = 'file:///path/to/file.ts:10:5';
+      const result = parseFileRef(ref);
+      expect(result).toEqual({
+        path: '/path/to/file.ts',
+        line: 10,
+        column: 5,
+      });
+    });
+
+    it('should parse standard format file reference', () => {
+      const ref = 'src/file.ts:10:5';
+      const result = parseFileRef(ref);
+      expect(result).toEqual({
+        path: 'src/file.ts',
+        line: 10,
+        column: 5,
+      });
+    });
+
+    it('should parse file reference without line and column', () => {
+      const ref = 'src/file.ts';
+      const result = parseFileRef(ref);
+      expect(result).toEqual({
+        path: 'src/file.ts',
+        line: undefined,
+        column: undefined,
+      });
+    });
+
+    it('should parse file reference with only line', () => {
+      const ref = 'src/file.ts:10';
+      const result = parseFileRef(ref);
+      expect(result).toEqual({
+        path: 'src/file.ts',
+        line: 10,
+        column: undefined,
+      });
+    });
+
+    it('should handle malformed file reference', () => {
+      const ref = 'invalid';
+      const result = parseFileRef(ref);
+      expect(result).toEqual({
+        path: 'invalid',
+        line: undefined,
+        column: undefined,
+      });
+    });
+  });
+
+  describe('environment detection', () => {
+    let originalEnv: NodeJS.ProcessEnv;
+
+    beforeEach(() => {
+      originalEnv = { ...process.env };
+    });
+
+    afterEach(() => {
+      process.env = originalEnv;
+    });
+
+    it('should detect VSCode environment', () => {
+      process.env.VSCODE_PID = '12345';
+      const location: FileLocation = {
+        path: '/path/to/file.ts',
+        line: 10,
+      };
+      const result = formatFileRef(location, { format: 'auto' });
+      expect(result).toBe('file:///path/to/file.ts:10');
+    });
+
+    it('should detect VSCode via TERM_PROGRAM', () => {
+      process.env.TERM_PROGRAM = 'vscode';
+      const location: FileLocation = {
+        path: '/path/to/file.ts',
+        line: 10,
+      };
+      const result = formatFileRef(location, { format: 'auto' });
+      expect(result).toBe('file:///path/to/file.ts:10');
+    });
+
+    it('should use standard format when not in VSCode', () => {
+      delete process.env.VSCODE_PID;
+      delete process.env.TERM_PROGRAM;
+      const location: FileLocation = {
+        path: 'src/file.ts',
+        line: 10,
+      };
+      const result = formatFileRef(location, { format: 'auto' });
+      expect(result).toBe('src/file.ts:10');
+    });
+  });
+});

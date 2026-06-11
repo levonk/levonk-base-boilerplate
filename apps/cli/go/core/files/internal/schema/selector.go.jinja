@@ -1,0 +1,106 @@
+package schema
+
+import (
+	"fmt"
+)
+
+// Selector handles field selection for output formatting
+type Selector struct {
+	schema      *Schema
+	fieldNames  []string
+	useDefaults bool
+}
+
+// NewSelector creates a new field selector
+func NewSelector(schema *Schema) *Selector {
+	return &Selector{
+		schema:      schema,
+		fieldNames:  nil,
+		useDefaults: true,
+	}
+}
+
+// WithFields sets specific fields to select
+func (s *Selector) WithFields(fieldNames []string) *Selector {
+	s.fieldNames = fieldNames
+	s.useDefaults = false
+	return s
+}
+
+// WithDefaults sets the selector to use default fields
+func (s *Selector) WithDefaults() *Selector {
+	s.useDefaults = true
+	s.fieldNames = nil
+	return s
+}
+
+// SelectFields returns the field names to select based on configuration
+func (s *Selector) SelectFields() ([]string, error) {
+	if s.useDefaults {
+		return s.schema.DefaultFields, nil
+	}
+	
+	if len(s.fieldNames) == 0 {
+		return s.schema.DefaultFields, nil
+	}
+	
+	// Validate field names
+	if err := s.schema.ValidateFieldNames(s.fieldNames); err != nil {
+		return nil, err
+	}
+	
+	return s.fieldNames, nil
+}
+
+// Apply applies the field selection to a data map
+func (s *Selector) Apply(data map[string]interface{}) (map[string]interface{}, error) {
+	fields, err := s.SelectFields()
+	if err != nil {
+		return nil, err
+	}
+	
+	return s.schema.ApplyToMap(data, fields)
+}
+
+// ApplyToSlice applies the field selection to a slice of data maps
+func (s *Selector) ApplyToSlice(data []map[string]interface{}) ([]map[string]interface{}, error) {
+	fields, err := s.SelectFields()
+	if err != nil {
+		return nil, err
+	}
+	
+	result := make([]map[string]interface{}, len(data))
+	for i, item := range data {
+		filtered, err := s.schema.ApplyToMap(item, fields)
+		if err != nil {
+			return nil, fmt.Errorf("error applying fields to item %d: %w", i, err)
+		}
+		result[i] = filtered
+	}
+	
+	return result, nil
+}
+
+// ApplyWithLimit applies field selection and enforces a maximum item limit
+func (s *Selector) ApplyWithLimit(data []map[string]interface{}, limit int) ([]map[string]interface{}, error) {
+	if limit <= 0 {
+		limit = s.schema.MaxItems
+	}
+	
+	// Apply limit
+	if len(data) > limit {
+		data = data[:limit]
+	}
+	
+	return s.ApplyToSlice(data)
+}
+
+// GetSelectedFields returns the currently selected field names
+func (s *Selector) GetSelectedFields() ([]string, error) {
+	return s.SelectFields()
+}
+
+// IsUsingDefaults returns whether the selector is using default fields
+func (s *Selector) IsUsingDefaults() bool {
+	return s.useDefaults
+}
