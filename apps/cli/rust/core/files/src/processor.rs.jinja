@@ -157,10 +157,10 @@ impl DataProcessor {
                 "original_count": records.len(),
                 "records": filtered,
             }),
-            metadata: {
-                "operation".to_string() => "filter".to_string(),
-                "criteria".to_string() => serde_json::to_string(&criteria).unwrap_or_default(),
-            },
+            metadata: HashMap::from([
+                ("operation".to_string(), "filter".to_string()),
+                ("criteria".to_string(), serde_json::to_string(&criteria).unwrap_or_default()),
+            ]),
         })
     }
 
@@ -196,11 +196,11 @@ impl DataProcessor {
         Ok(AnalysisResult {
             analysis_type: "aggregate".to_string(),
             result: serde_json::to_value(result)?,
-            metadata: {
-                "operation".to_string() => "aggregate".to_string(),
-                "field".to_string() => spec.field,
-                "function".to_string() => spec.function,
-            },
+            metadata: HashMap::from([
+                ("operation".to_string(), "aggregate".to_string()),
+                ("field".to_string(), spec.field),
+                ("function".to_string(), spec.function),
+            ]),
         })
     }
 
@@ -227,11 +227,11 @@ impl DataProcessor {
                 "transformed_count": transformed.len(),
                 "records": transformed,
             }),
-            metadata: {
-                "operation".to_string() => "transform".to_string(),
-                "field".to_string() => spec.field,
-                "function".to_string() => spec.function,
-            },
+            metadata: HashMap::from([
+                ("operation".to_string(), "transform".to_string()),
+                ("field".to_string(), spec.field),
+                ("function".to_string(), spec.function),
+            ]),
         })
     }
 
@@ -264,10 +264,10 @@ impl DataProcessor {
         Ok(AnalysisResult {
             analysis_type: "analyze".to_string(),
             result: serde_json::to_value(analysis)?,
-            metadata: {
-                "operation".to_string() => "analyze".to_string(),
-                "source_file".to_string() => self.config.input_path.to_string_lossy().to_string(),
-            },
+            metadata: HashMap::from([
+                ("operation".to_string(), "analyze".to_string()),
+                ("source_file".to_string(), self.config.input_path.to_string_lossy().to_string()),
+            ]),
         })
     }
 

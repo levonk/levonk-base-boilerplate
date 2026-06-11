@@ -436,7 +436,7 @@ impl Cli {
     /// Print version information
     pub fn print_version(&self) -> Result<()> {
         use clap::CommandFactory;
-        println!("{} {}", Self::command().get_name().to_string(), Self::command().get_version().to_string());
+        println!("{} {}", Self::command().get_name(), Self::command().get_version().unwrap_or("unknown"));
         Ok(())
     }
 
@@ -479,7 +479,7 @@ impl Progress {
                 .unwrap()
                 .progress_chars("#>-"),
         );
-        bar.set_message(message);
+        bar.set_message(message.to_string());
         bar.enable_steady_tick(Duration::from_millis(100));
         Some(bar)
     }
@@ -497,7 +497,7 @@ impl Progress {
                 .unwrap()
                 .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]),
         );
-        spinner.set_message(message);
+        spinner.set_message(message.to_string());
         spinner.enable_steady_tick(Duration::from_millis(100));
         Some(spinner)
     }

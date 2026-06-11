@@ -31,7 +31,6 @@ pub mod decoder;
 pub use types::{ToonValue, ToonEncodeOptions, ToonDecodeOptions, ToonEncodeError, ToonDecodeError};
 pub use encoder::{ToonEncoder, to_string, to_string_with_options};
 pub use decoder::{ToonDecoder, from_str, from_str_with_options};
-pub use self::OutputFormatter;
 
 use crate::internal::schema::{OutputSchema, FieldSelector, apply_schema_transforms};
 use crate::internal::truncation::{Truncator, TruncationMetadata};

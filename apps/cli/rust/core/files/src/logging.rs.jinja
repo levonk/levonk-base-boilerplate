@@ -10,8 +10,7 @@ use tracing_subscriber::{
     EnvFilter,
 };
 use futures_util::stream::StreamExt;
-
-pub use crate::structured_log::{init_structured_logging, init_structured_logging_with_format, LogFormat};
+use crate::structured_log::{init_structured_logging, init_structured_logging_with_format, LogFormat};
 
 // Module name for environment variable prefix
 const MODULE_NAME: &str = "{{ project_slug }}";

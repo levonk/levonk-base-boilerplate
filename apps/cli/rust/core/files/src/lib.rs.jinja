@@ -16,6 +16,7 @@ pub mod privacy;
 pub mod audit;
 pub mod deprecation;
 pub mod destructive;
+pub mod io_ops;
 pub mod internal;
 
 {% if enable_tui -%}
@@ -29,6 +30,7 @@ pub use logging::{
     exit_with_code, exit_success, exit_error, exit_usage,
     exit_config, exit_network, exit_permission, exit_timeout,
 };
+pub use structured_log::{init_structured_logging, init_structured_logging_with_format, LogFormat};
 
 pub use signals::SignalHandler;
 pub use daemon::{DaemonManager, DaemonConfig, Job, JobStatus, DaemonMode, JobType};
@@ -41,10 +43,10 @@ pub use security::{SecurityUtils, SecureString};
 pub use resource::{ResourceLimits, ResourceMonitor, ResourceLimiter};
 pub use export::{DataExporter, DataImporter, ExportConfig, ImportConfig, ExportFormat, DataRecord, ExportManifest};
 pub use processor::{DataProcessor, ProcessingConfig, ProcessingOperation, AnalysisResult};
-pub use privacy::{PrivacyManager, PrivacyConfig, PrivacyMode};
-pub use audit::{AuditLogger, AuditConfig, AuditEntry, AuditOperation};
-pub use deprecation::{DeprecationManager, DeprecationConfig, DeprecationSeverity, DeprecationWarning};
-pub use destructive::{DestructiveDetector, DestructiveOperation, DestructiveConfig};
+pub use privacy::{PrivacyManager, PrivacyConfig};
+pub use audit::{AuditLogger, AuditConfig, AuditEntry};
+pub use deprecation::{DeprecationManager, DeprecationSeverity, DeprecationWarning};
+pub use destructive::{DestructiveOperation, detect_destructive_operation, check_paths_for_destructive};
 
 {% if enable_tui -%}
 pub use tui::{TuiConfig, TuiHandler, TuiError, init_tui_mode, terminal_supports_tui};

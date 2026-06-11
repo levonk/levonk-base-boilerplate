@@ -4,10 +4,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(with = "chrono::serde::ts_seconds")]
 pub struct DeprecationPolicy {
     pub feature_name: String,
+    #[serde(with = "chrono::serde::ts_seconds")]
     pub announced_date: DateTime<Utc>,
+    #[serde(with = "chrono::serde::ts_seconds")]
     pub end_of_support_date: DateTime<Utc>,
     pub description: String,
     pub migration_guide: Option<String>,

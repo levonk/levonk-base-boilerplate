@@ -81,7 +81,7 @@ pub trait EmptyCheck {
 // Implement EmptyCheck for common types
 impl<T> EmptyCheck for Vec<T> {
     fn is_empty(&self) -> bool {
-        self.is_empty()
+        Vec::is_empty(self)
     }
 }
 
@@ -93,19 +93,19 @@ impl<T> EmptyCheck for Option<T> {
 
 impl EmptyCheck for String {
     fn is_empty(&self) -> bool {
-        self.is_empty()
+        String::is_empty(self)
     }
 }
 
 impl EmptyCheck for &str {
     fn is_empty(&self) -> bool {
-        self.is_empty()
+        str::is_empty(self)
     }
 }
 
 impl<K, V> EmptyCheck for HashMap<K, V> {
     fn is_empty(&self) -> bool {
-        self.is_empty()
+        HashMap::is_empty(self)
     }
 }
 

@@ -254,6 +254,11 @@ impl ConfigManager {
         }
     }
     
+    /// Get a reference to the current configuration
+    pub fn get_config(&self) -> &Config {
+        &self.config
+    }
+    
     /// Load configuration from all sources with precedence
     pub fn load(&mut self) -> Result<()> {
         // Load in order of precedence (lowest to highest)

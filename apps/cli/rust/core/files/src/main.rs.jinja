@@ -1,10 +1,12 @@
 mod cli;
 mod config;
-mod io;
+mod io_ops;
 mod logging;
+mod structured_log;
 mod signals;
 mod destructive;
 mod daemon;
+mod health;
 mod terminal;
 mod completion;
 mod man;
@@ -13,6 +15,8 @@ mod security;
 mod resource;
 mod export;
 mod processor;
+mod privacy;
+mod audit;
 mod internal;
 
 {% if enable_tui -%}
@@ -26,14 +30,16 @@ use std::sync::Arc;
 use directories::ProjectDirs;
 use glob::glob;
 use tokio::sync::Mutex;
-use tracing::{info, error};
+use tracing::{info, error, debug};
+use clap::Parser;
 use cli::{Cli, Progress, Commands};
 use config::ConfigManager;
-use io::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
+use io_ops::{InputHandler, OutputHandler, ColorMode, FileReferenceFormat};
 use logging::{init_logging, setup_signal_handlers, Verbosity, exit_success, exit_error, exit_usage};
 use signals::SignalHandler;
 use destructive::{DestructiveOperation, detect_destructive_operation};
 use daemon::{DaemonManager, DaemonConfig, JobStatus};
+use health::{HealthManager, HealthConfig, HealthStatus, HealthResponse, HealthCheck, ConfigValidation};
 use terminal::{TerminalInfo, ResizeHandler};
 use completion::{generate_completion, install_completion, get_completion_path};
 use man::ManHandler;
@@ -44,8 +50,8 @@ use internal::mode::{detect_mode, Mode};
 use internal::toon::{OutputFormatter, OutputFormat};
 use internal::schema::{create_default_schema_registry, FieldSelector, parse_fields_arg};
 use internal::errors::{StructuredError, ErrorCode, format_error_with_format, translate_error_with_context, OutputChannels};
+use internal::prompts::{PromptSuppressor, PromptDecision, PromptType};
 use internal::idempotency::{check_idempotency, OperationType, IdempotentResult, acknowledge_noop};
-use internal::prompts::{PromptSuppressor, PromptType};
 
 {% if enable_tui -%}
 use tui::{init_tui_mode, terminal_supports_tui};
@@ -133,7 +139,7 @@ async fn main() -> Result<()> {
     }
 
     // Handle subcommands
-    if let Some(command) = cli.command {
+    if let Some(ref command) = cli.command {
         handle_subcommand(command, &cli).await?;
         std::process::exit(0);
     }
@@ -158,10 +164,10 @@ async fn main() -> Result<()> {
         };
         
         if let Some(completion_path) = completion::get_completion_path(shell_name) {
-            if completion_path.exists() {
+            if PathBuf::from(&completion_path).exists() {
                 // Already installed - idempotent no-op
-                let mode = detect_mode();
-                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let mode = detect_mode(Some(cli.human), None)?;
+                let format = OutputFormatter::auto_detect(mode.mode, false, false, None).unwrap();
                 let noop_msg = format!("Completions already installed for shell: {} at {}", shell_name, completion_path);
                 
                 match acknowledge_noop(&noop_msg) {
@@ -178,8 +184,8 @@ async fn main() -> Result<()> {
                 println!("Configuration initialized at: {:?}", config_path);
             }
             Err(e) => {
-                let mode = detect_mode();
-                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let mode = detect_mode(Some(cli.human), None)?;
+                let format = OutputFormatter::auto_detect(mode.mode, false, false, None).unwrap();
                 let structured_error = translate_error_with_context(e, "Initializing configuration");
                 let formatted = format.format_error(&structured_error);
                 println!("{}", formatted);
@@ -194,8 +200,8 @@ async fn main() -> Result<()> {
                 println!("You may need to restart your shell or run: source ~/.bashrc (or equivalent)");
             }
             Err(e) => {
-                let mode = detect_mode();
-                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let mode = detect_mode(Some(cli.human), None)?;
+                let format = OutputFormatter::auto_detect(mode.mode, false, false, None).unwrap();
                 let structured_error = translate_error_with_context(e, "Installing completions");
                 let formatted = format.format_error(&structured_error);
                 println!("{}", formatted);
@@ -222,10 +228,10 @@ async fn main() -> Result<()> {
 
         if let Some(path) = completion::get_completion_path(shell_name) {
             // Check if file exists (idempotency)
-            if !path.exists() {
+            if !PathBuf::from(&path).exists() {
                 // Already uninstalled - idempotent no-op
-                let mode = detect_mode();
-                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let mode = detect_mode(Some(cli.human), None)?;
+                let format = OutputFormatter::auto_detect(mode.mode, false, false, None).unwrap();
                 let noop_msg = format!("Completions already uninstalled for shell: {} (file not found at {})", shell_name, path);
                 
                 match acknowledge_noop(&noop_msg) {
@@ -240,9 +246,9 @@ async fn main() -> Result<()> {
                     println!("You may need to restart your shell or run: source ~/.bashrc (or equivalent)");
                 }
                 Err(e) => {
-                    let mode = detect_mode();
-                    let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
-                    let structured_error = translate_error_with_context(e, "Removing completion script");
+                    let mode = detect_mode(Some(cli.human), None)?;
+                    let format = OutputFormatter::auto_detect(mode.mode, false, false, None).unwrap();
+                    let structured_error = translate_error_with_context(e.into(), "Removing completion script");
                     let formatted = format.format_error(&structured_error);
                     println!("{}", formatted);
                     std::process::exit(structured_error.exit_code);
@@ -250,8 +256,8 @@ async fn main() -> Result<()> {
             }
         } else {
             // Cannot determine path - assume already uninstalled (idempotent no-op)
-            let mode = detect_mode();
-            let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+            let mode = detect_mode(Some(cli.human), None)?;
+            let format = OutputFormatter::auto_detect(mode.mode, false, false, None).unwrap();
             let noop_msg = format!("Completions already uninstalled for shell: {} (path not found)", shell_name);
             
             match acknowledge_noop(&noop_msg) {
@@ -267,8 +273,8 @@ async fn main() -> Result<()> {
         match ManHandler::display_man_page() {
             Ok(_) => std::process::exit(0),
             Err(e) => {
-                let mode = detect_mode();
-                let format = OutputFormatter::auto_detect(mode, false, false, None).unwrap();
+                let mode = detect_mode(Some(cli.human), None)?;
+                let format = OutputFormatter::auto_detect(mode.mode, false, false, None).unwrap();
                 let mut structured_error = translate_error_with_context(e, "Displaying man page");
                 structured_error.with_suggestion("Try generating man pages first: just generate-man-pages");
                 let formatted = format.format_error(&structured_error);
@@ -331,8 +337,16 @@ async fn main() -> Result<()> {
     config_manager.load()?;
 
     // Detect CLI mode with precedence chain
-    let mode_detection = detect_mode(Some(cli.human), config_manager.get_config().mode.as_deref())?;
+    let mode_detection = detect_mode(Some(cli.human), Some(config_manager.get_config().mode.as_str()))?;
     info!("CLI mode: {} (source: {})", mode_detection.mode.as_str(), mode_detection.source.as_str());
+
+    // Extract daemon config before moving config_manager into Arc
+    let daemon_mode_str = config_manager.get_config().daemon_mode.clone();
+    let daemon_enabled = config_manager.get_config().daemon_enabled;
+    let daemon_auto_spawn = config_manager.get_config().daemon_auto_spawn;
+    let daemon_max_jobs = config_manager.get_config().daemon_max_jobs;
+    let daemon_job_timeout = config_manager.get_config().daemon_job_timeout;
+    let daemon_data_storage_path = config_manager.get_config().daemon_data_storage_path.clone();
 
     // Detect output format with precedence chain
     let truncation_limit = if cli.full {
@@ -404,19 +418,19 @@ async fn main() -> Result<()> {
     signal_handler.run().await?;
 
     // Initialize daemon manager
-    let daemon_mode = match config.daemon_mode.as_str() {
+    let daemon_mode = match daemon_mode_str.as_str() {
         "collection" => daemon::DaemonMode::Collection,
         "processing" => daemon::DaemonMode::Processing,
         _ => daemon::DaemonMode::Execution,
     };
     
     let daemon_config = DaemonConfig {
-        enabled: config.daemon_enabled && !cli.no_daemon,
-        auto_spawn: config.daemon_auto_spawn && !cli.no_daemon,
-        max_jobs: config.daemon_max_jobs,
-        job_timeout: config.daemon_job_timeout,
+        enabled: daemon_enabled && !cli.no_daemon,
+        auto_spawn: daemon_auto_spawn && !cli.no_daemon,
+        max_jobs: daemon_max_jobs,
+        job_timeout: daemon_job_timeout,
         mode: daemon_mode,
-        data_storage_path: config.daemon_data_storage_path.map(|p| p.to_string_lossy().to_string()),
+        data_storage_path: daemon_data_storage_path.map(|p| p.to_string_lossy().to_string()),
         ..Default::default()
     };
     let daemon_manager = Arc::new(DaemonManager::new(daemon_config));
@@ -547,20 +561,20 @@ async fn main() -> Result<()> {
 }
 
 /// Handle management subcommands
-async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
+async fn handle_subcommand(command: &Commands, cli: &Cli) -> Result<()> {
     match command {
         Commands::Config { show, reset, validate } => {
-            let config_manager = ConfigManager::new();
+            let mut config_manager = ConfigManager::new();
             config_manager.load()?;
 
-            if show {
+            if *show {
                 let config = config_manager.get_config();
                 println!("Current configuration:");
                 println!("{:#?}", config);
-            } else if reset {
+            } else if *reset {
                 let config_path = config_manager.initialize_config()?;
                 println!("Configuration reset to defaults at: {:?}", config_path);
-            } else if validate {
+            } else if *validate {
                 let config = config_manager.get_config();
                 match config.validate() {
                     Ok(_) => println!("Configuration is valid"),
@@ -578,19 +592,19 @@ async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
             let daemon_config = DaemonConfig::default();
             let daemon_manager = DaemonManager::new(daemon_config);
 
-            if start {
+            if *start {
                 println!("Starting daemon...");
                 // Daemon start logic would go here
                 println!("Daemon started");
-            } else if stop {
+            } else if *stop {
                 println!("Stopping daemon...");
                 // Daemon stop logic would go here
                 println!("Daemon stopped");
-            } else if restart {
+            } else if *restart {
                 println!("Restarting daemon...");
                 // Daemon restart logic would go here
                 println!("Daemon restarted");
-            } else if status {
+            } else if *status {
                 println!("Daemon status: running");
             } else if let Some(filter_str) = list_jobs {
                 let filter = match filter_str.to_lowercase().as_str() {
@@ -646,21 +660,21 @@ async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
         Commands::Doctor { all, config, daemon, terminal } => {
             println!("Running diagnostics...");
 
-            if all || config {
+            if *all || *config {
                 println!("Checking configuration...");
-                let config_manager = ConfigManager::new();
+                let mut config_manager = ConfigManager::new();
                 match config_manager.load() {
                     Ok(_) => println!("  ✓ Configuration loaded successfully"),
                     Err(e) => println!("  ✗ Configuration error: {}", e),
                 }
             }
 
-            if all || daemon {
+            if *all || *daemon {
                 println!("Checking daemon status...");
                 println!("  ✓ Daemon check passed");
             }
 
-            if all || terminal {
+            if *all || *terminal {
                 println!("Checking terminal capabilities...");
                 if atty::is(atty::Stream::Stdout) {
                     println!("  ✓ Terminal detected");
@@ -669,7 +683,7 @@ async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
                 }
             }
 
-            if !all && !config && !daemon && !terminal {
+            if !*all && !*config && !*daemon && !*terminal {
                 println!("Use --all, --config, --daemon, or --terminal with doctor subcommand");
             }
         }
@@ -687,13 +701,13 @@ async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
                 }
             };
             
-            let output_path = output.unwrap_or_else(|| PathBuf::from("export.json"));
+            let output_path = output.clone().unwrap_or_else(|| PathBuf::from("export.json"));
             
             let export_config = ExportConfig {
                 format: export_format,
                 output_path: output_path.clone(),
-                include_metadata,
-                compress,
+                include_metadata: *include_metadata,
+                compress: *compress,
             };
             
             let exporter = DataExporter::new(export_config);
@@ -737,13 +751,13 @@ async fn handle_subcommand(command: Commands, cli: &Cli) -> Result<()> {
                 }
             };
             
-            let op_config = operation_config
+            let op_config = operation_config.clone()
                 .and_then(|s| serde_json::from_str(&s).ok())
                 .unwrap_or(serde_json::Value::Null);
             
             let processing_config = ProcessingConfig {
                 input_path: input.clone(),
-                output_path: output,
+                output_path: output.clone(),
                 operation: processing_operation,
                 operation_config: op_config,
             };
