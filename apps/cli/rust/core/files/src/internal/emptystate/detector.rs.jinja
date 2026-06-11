@@ -63,7 +63,7 @@ impl EmptyStateDetector {
     pub fn is_empty_with_context<T>(
         &self,
         result: &T,
-        context: &EmptyStateContext,
+        _context: &EmptyStateContext,
     ) -> bool
     where
         T: EmptyCheck,

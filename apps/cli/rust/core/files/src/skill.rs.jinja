@@ -4,7 +4,6 @@
 //! discoverability via agentskills.io.
 
 use anyhow::Result;
-use clap::Parser;
 use std::path::PathBuf;
 
 use crate::cli::Commands;
@@ -47,7 +46,8 @@ fn handle_generate(output: Option<&PathBuf>) -> Result<()> {
     let strip_config = StripConfig::default();
     let content = generator.generate_with_stripping(&strip_config)?;
 
-    let output_path = output.unwrap_or(&PathBuf::from("SKILL.md"));
+    let binding = PathBuf::from("SKILL.md");
+    let output_path = output.unwrap_or(&binding);
 
     std::fs::write(output_path, content)?;
     println!("Skill generated to: {}", output_path.display());
@@ -67,12 +67,12 @@ fn handle_check() -> Result<()> {
         }
         crate::internal::skill::ValidationResult::Stale { reason } => {
             eprintln!("✗ Skill is stale: {}", reason);
-            eprintln!("Run: {} skill generate --output SKILL.md", "{{ project_slug }}");
+            eprintln!("Run: {{ project_slug }} skill generate --output SKILL.md");
             std::process::exit(1);
         }
         crate::internal::skill::ValidationResult::NotFound => {
             eprintln!("✗ Skill file not found: {}", skill_path);
-            eprintln!("Run: {} skill generate --output SKILL.md", "{{ project_slug }}");
+            eprintln!("Run: {{ project_slug }} skill generate --output SKILL.md");
             std::process::exit(1);
         }
         crate::internal::skill::ValidationResult::Error(err) => {

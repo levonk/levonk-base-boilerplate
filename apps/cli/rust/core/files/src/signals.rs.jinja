@@ -3,7 +3,7 @@ use signal_hook::consts::SIGHUP;
 use signal_hook_tokio::Signals;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{info, warn, error, debug};
+use tracing::{info, error, debug};
 use futures_util::stream::StreamExt;
 use crate::config::ConfigManager;
 
@@ -69,7 +69,7 @@ impl SignalHandler {
     /// Reload configuration from files
     async fn reload_config(config_manager: &Arc<Mutex<ConfigManager>>) -> Result<()> {
         // Clone old config for rollback
-        let old_config = {
+        let _old_config = {
             let manager = config_manager.lock().await;
             manager.config().clone()
         };

@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use tracing::{debug, info, warn};
+use tracing::info;
 
 /// Data export format
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

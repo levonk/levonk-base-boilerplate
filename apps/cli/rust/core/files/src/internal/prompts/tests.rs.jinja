@@ -1,8 +1,5 @@
 //! Integration tests for prompt suppression behavior
 
-use crate::internal::prompts::{PromptSuppressor, PromptType, PromptDecision};
-use crate::internal::Mode;
-
 #[test]
 fn test_integration_prompt_suppression_agent_mode() {
     let suppressor = PromptSuppressor::new(Mode::Agent, false, false);

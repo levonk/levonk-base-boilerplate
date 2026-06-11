@@ -7,29 +7,29 @@ default:
 
 # Normal targets - Developer interface (REQUIRED)
 clean:
-    devbox run clean
+    just clean-internal
 
 dev:
-    devbox run dev
+    just dev-internal
 
 build:
-    devbox run build
+    just build-internal
 
 test:
-    devbox run test --quiet
+    just test-internal
 
 lint:
-    devbox run lint
+    just lint-internal
 
 typecheck:
-    devbox run typecheck
+    just typecheck-internal
 
 release:
-    devbox run release
+    just release-internal
 
 # Bootstrap recipes (REQUIRED)
 bootstrap:
-    devbox run bootstrap
+    just bootstrap-internal
 
 bootstrap-internal:
     #!/usr/bin/env bash
@@ -206,12 +206,12 @@ setup:
 # Internal targets - Actual implementation
 clean-internal:
     # Clean build artifacts
-    cargo clean
+    command cargo clean
     echo "🧹 Build artifacts removed"
 
 build-internal:
     # Build the project in debug mode
-    cargo build
+    command cargo build
 
 release-internal:
     # Full release pipeline: quality checks + build
@@ -224,56 +224,56 @@ release-internal:
 
 build-release-internal:
     # Build the project in release mode
-    cargo build --release
+    command cargo build --release
 
 debug-internal:
     # Build the project in debug mode
-    cargo build
+    command cargo build
 
 install-internal:
     # Install the binary locally
-    cargo install --path .
+    command cargo install --path .
 
 lint-internal:
     # Lint the code using clippy
-    cargo clippy -- -D warnings
+    command cargo clippy -- -D warnings
 
 test-internal:
     # Run tests
-    cargo test
+    command cargo test
 
 typecheck-internal:
     # Run type checking (cargo check)
-    cargo check
+    command cargo check
 
 dev-internal:
     # Run the application in development mode
-    cargo run
+    command cargo run
 
 run-internal:
     # Run the application with arguments
-    cargo run
+    command cargo run
 
 # Additional Rust-specific targets
 test-coverage-internal:
     # Run tests with coverage
-    cargo tarpaulin --out Html
+    command cargo tarpaulin --out Html
 
 format-internal:
     # Format code with rustfmt
-    cargo fmt
+    command cargo fmt
 
 format-check-internal:
     # Check code format
-    cargo fmt -- --check
+    command cargo fmt -- --check
 
 doc-internal:
     # Generate documentation
-    cargo doc --open
+    command cargo doc --open
 
 audit-internal:
     # Audit dependencies
-    cargo audit
+    command cargo audit
 
 # Man page generation and installation
 generate-man-pages:

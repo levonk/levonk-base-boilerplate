@@ -1,16 +1,10 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tracing::Level;
-use tracing_subscriber::{
-    fmt,
-    layer::SubscriberExt,
-    util::SubscriberInitExt,
-    EnvFilter,
-};
 use futures_util::stream::StreamExt;
-use crate::structured_log::{init_structured_logging, init_structured_logging_with_format, LogFormat};
+use crate::structured_log::init_structured_logging;
 
 // Module name for environment variable prefix
 const MODULE_NAME: &str = "{{ project_slug }}";

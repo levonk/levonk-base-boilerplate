@@ -1,0 +1,159 @@
+//! Session metadata capture and storage
+//! 
+//! This module provides session metadata capture for tracking session information.
+
+use std::time::{SystemTime, UNIX_EPOCH};
+use serde::{Deserialize, Serialize};
+
+/// Session metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionMetadata {
+    /// Session start time (Unix timestamp)
+    pub start_time: u64,
+    /// Session end time (Unix timestamp, if ended)
+    pub end_time: Option<u64>,
+    /// Current working directory
+    pub directory: String,
+    /// Tool version
+    pub version: Option<String>,
+    /// Session ID (unique identifier)
+    pub session_id: String,
+}
+
+impl SessionMetadata {
+    /// Create new session metadata
+    pub fn new(directory: String) -> Self {
+        let start_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        
+        let session_id = format!("{}-{}", start_time, generate_session_id());
+
+        Self {
+            start_time,
+            end_time: None,
+            directory,
+            version: None,
+            session_id,
+        }
+    }
+
+    /// Set the tool version
+    pub fn with_version(mut self, version: String) -> Self {
+        self.version = Some(version);
+        self
+    }
+
+    /// Mark session as ended
+    pub fn end_session(&mut self) {
+        let end_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        self.end_time = Some(end_time);
+    }
+
+    /// Get session duration in seconds
+    pub fn duration(&self) -> Option<u64> {
+        self.end_time.map(|end| end.saturating_sub(self.start_time))
+    }
+}
+
+/// Generate a unique session ID
+fn generate_session_id() -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    use std::process;
+
+    let mut hasher = DefaultHasher::new();
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    
+    let pid = process::id();
+    timestamp.hash(&mut hasher);
+    pid.hash(&mut hasher);
+    
+    format!("{:x}", hasher.finish())
+}
+
+/// Capture session metadata from current environment
+pub fn capture_session_metadata() -> anyhow::Result<SessionMetadata> {
+    let current_dir = std::env::current_dir()
+        .map_err(|e| anyhow::anyhow!("Failed to get current directory: {}", e))?;
+    
+    let dir_str = current_dir.to_string_lossy().to_string();
+    
+    let mut metadata = SessionMetadata::new(dir_str);
+    
+    // Try to get version
+    if let Ok(version) = get_tool_version() {
+        metadata = metadata.with_version(version);
+    }
+    
+    Ok(metadata)
+}
+
+/// Get tool version
+fn get_tool_version() -> anyhow::Result<String> {
+    let output = std::process::Command::new("{{ project_name }}")
+        .args(["--version"])
+        .output()
+        .map_err(|e| anyhow::anyhow!("Failed to get version: {}", e))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        Err(anyhow::anyhow!("Version command failed"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_session_metadata_new() {
+        let metadata = SessionMetadata::new("/test/path".to_string());
+        assert_eq!(metadata.directory, "/test/path");
+        assert!(metadata.start_time > 0);
+        assert!(metadata.end_time.is_none());
+        assert!(!metadata.session_id.is_empty());
+    }
+
+    #[test]
+    fn test_session_metadata_with_version() {
+        let metadata = SessionMetadata::new("/test/path".to_string())
+            .with_version("1.0.0".to_string());
+        assert_eq!(metadata.version, Some("1.0.0".to_string()));
+    }
+
+    #[test]
+    fn test_session_metadata_end_session() {
+        let mut metadata = SessionMetadata::new("/test/path".to_string());
+        assert!(metadata.end_time.is_none());
+        
+        metadata.end_session();
+        assert!(metadata.end_time.is_some());
+    }
+
+    #[test]
+    fn test_session_metadata_duration() {
+        let mut metadata = SessionMetadata::new("/test/path".to_string());
+        assert!(metadata.duration().is_none());
+        
+        metadata.end_session();
+        assert!(metadata.duration().is_some());
+    }
+
+    #[test]
+    fn test_generate_session_id() {
+        let id1 = generate_session_id();
+        let id2 = generate_session_id();
+        assert_ne!(id1, id2);
+        assert!(!id1.is_empty());
+        assert!(!id2.is_empty());
+    }
+}

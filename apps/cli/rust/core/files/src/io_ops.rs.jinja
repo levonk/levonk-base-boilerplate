@@ -1,11 +1,11 @@
 use anyhow::{Context, Result};
 use glob::Pattern;
-use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader, Read, Write, IsTerminal};
+use std::fs;
+use std::io::{self, Read, Write, IsTerminal};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use serde::Serialize;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 use crate::path::PathUtils;
 
 /// Color mode for output
@@ -18,11 +18,12 @@ pub enum ColorMode {
 
 impl ColorMode {
     /// Parse color mode from string
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "always" => ColorMode::Always,
             "never" => ColorMode::Never,
-            "auto" | _ => ColorMode::Auto,
+            "auto" => ColorMode::Auto,
+            _ => ColorMode::Auto,
         }
     }
 

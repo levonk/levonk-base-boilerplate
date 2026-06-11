@@ -1,0 +1,403 @@
+//! Session context generation
+//! 
+//! This module provides compact session context generation in TOON format
+//! for ambient context injection into agent sessions.
+
+use crate::internal::toon::{ToonValue, to_string};
+use std::path::Path;
+use std::collections::BTreeMap;
+
+/// Session context information
+#[derive(Debug, Clone)]
+pub struct SessionContext {
+    /// Current working directory
+    pub directory: String,
+    /// Git repository information (if in a git repo)
+    pub git: Option<GitInfo>,
+    /// Configuration information
+    pub config: ConfigInfo,
+    /// Presence/availability information
+    pub presence: PresenceInfo,
+}
+
+/// Git repository information
+#[derive(Debug, Clone)]
+pub struct GitInfo {
+    /// Repository name
+    pub repo_name: Option<String>,
+    /// Current branch
+    pub branch: Option<String>,
+    /// Current commit hash (short)
+    pub commit: Option<String>,
+    /// Whether repository has uncommitted changes
+    pub dirty: bool,
+}
+
+/// Configuration information
+#[derive(Debug, Clone)]
+pub struct ConfigInfo {
+    /// Config file path (if found)
+    pub config_path: Option<String>,
+    /// Config file exists
+    pub config_exists: bool,
+}
+
+/// Presence/availability information
+#[derive(Debug, Clone)]
+pub struct PresenceInfo {
+    /// Whether the tool is available in PATH
+    pub in_path: bool,
+    /// Tool version (if available)
+    pub version: Option<String>,
+}
+
+/// Builder for SessionContext
+pub struct SessionContextBuilder {
+    directory: Option<String>,
+    git: Option<GitInfo>,
+    config: Option<ConfigInfo>,
+    presence: Option<PresenceInfo>,
+}
+
+impl SessionContextBuilder {
+    /// Create a new builder
+    pub fn new() -> Self {
+        Self {
+            directory: None,
+            git: None,
+            config: None,
+            presence: None,
+        }
+    }
+
+    /// Set the current directory
+    pub fn directory(mut self, dir: String) -> Self {
+        self.directory = Some(dir);
+        self
+    }
+
+    /// Set git information
+    pub fn git(mut self, git: GitInfo) -> Self {
+        self.git = Some(git);
+        self
+    }
+
+    /// Set configuration information
+    pub fn config(mut self, config: ConfigInfo) -> Self {
+        self.config = Some(config);
+        self
+    }
+
+    /// Set presence information
+    pub fn presence(mut self, presence: PresenceInfo) -> Self {
+        self.presence = Some(presence);
+        self
+    }
+
+    /// Build the SessionContext
+    pub fn build(self) -> anyhow::Result<SessionContext> {
+        let directory = self.directory.ok_or_else(|| anyhow::anyhow!("Directory is required"))?;
+        let config = self.config.unwrap_or(ConfigInfo {
+            config_path: None,
+            config_exists: false,
+        });
+        let presence = self.presence.unwrap_or(PresenceInfo {
+            in_path: true,
+            version: None,
+        });
+
+        Ok(SessionContext {
+            directory,
+            git: self.git,
+            config,
+            presence,
+        })
+    }
+}
+
+impl Default for SessionContextBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SessionContext {
+    /// Generate session context from current environment
+    pub fn from_current_dir() -> anyhow::Result<Self> {
+        let current_dir = std::env::current_dir()
+            .map_err(|e| anyhow::anyhow!("Failed to get current directory: {}", e))?;
+        
+        let dir_str = current_dir.to_string_lossy().to_string();
+        
+        let git_info = Self::detect_git_info(&current_dir);
+        let config_info = Self::detect_config_info(&current_dir);
+        let presence_info = Self::detect_presence_info();
+
+        Ok(SessionContext {
+            directory: dir_str,
+            git: git_info,
+            config: config_info,
+            presence: presence_info,
+        })
+    }
+
+    /// Detect git repository information
+    fn detect_git_info(dir: &Path) -> Option<GitInfo> {
+        // Check if we're in a git repository
+        let git_dir = dir.join(".git");
+        if !git_dir.exists() {
+            return None;
+        }
+
+        // Try to get branch name
+        let branch = Self::get_git_branch(dir).ok();
+        
+        // Try to get commit hash
+        let commit = Self::get_git_commit(dir).ok();
+        
+        // Check for uncommitted changes
+        let dirty = Self::is_git_dirty(dir).unwrap_or(false);
+
+        // Get repo name from directory
+        let repo_name = dir.file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_string());
+
+        Some(GitInfo {
+            repo_name,
+            branch,
+            commit,
+            dirty,
+        })
+    }
+
+    /// Get current git branch
+    fn get_git_branch(dir: &Path) -> anyhow::Result<String> {
+        let output = std::process::Command::new("git")
+            .current_dir(dir)
+            .args(["rev-parse", "--abbrev-ref", "HEAD"])
+            .output()
+            .map_err(|e| anyhow::anyhow!("Failed to get git branch: {}", e))?;
+
+        if output.status.success() {
+            let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if branch == "HEAD" {
+                // Detached HEAD state
+                Ok("detached".to_string())
+            } else {
+                Ok(branch)
+            }
+        } else {
+            Err(anyhow::anyhow!("git rev-parse failed"))
+        }
+    }
+
+    /// Get current git commit hash (short)
+    fn get_git_commit(dir: &Path) -> anyhow::Result<String> {
+        let output = std::process::Command::new("git")
+            .current_dir(dir)
+            .args(["rev-parse", "--short", "HEAD"])
+            .output()
+            .map_err(|e| anyhow::anyhow!("Failed to get git commit: {}", e))?;
+
+        if output.status.success() {
+            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        } else {
+            Err(anyhow::anyhow!("git rev-parse failed"))
+        }
+    }
+
+    /// Check if git repository has uncommitted changes
+    fn is_git_dirty(dir: &Path) -> anyhow::Result<bool> {
+        let output = std::process::Command::new("git")
+            .current_dir(dir)
+            .args(["status", "--porcelain"])
+            .output()
+            .map_err(|e| anyhow::anyhow!("Failed to check git status: {}", e))?;
+
+        Ok(!output.stdout.is_empty())
+    }
+
+    /// Detect configuration information
+    fn detect_config_info(dir: &Path) -> ConfigInfo {
+        // Look for common config files
+        let config_files = vec![
+            "{{ project_name }}.toml",
+            "{{ project_name }}.yaml",
+            "{{ project_name }}.yml",
+            ".{{ project_name }}.toml",
+            ".{{ project_name }}.yaml",
+            ".{{ project_name }}.yml",
+        ];
+
+        for config_file in config_files {
+            let config_path = dir.join(config_file);
+            if config_path.exists() {
+                return ConfigInfo {
+                    config_path: Some(config_path.to_string_lossy().to_string()),
+                    config_exists: true,
+                };
+            }
+        }
+
+        ConfigInfo {
+            config_path: None,
+            config_exists: false,
+        }
+    }
+
+    /// Detect presence information
+    fn detect_presence_info() -> PresenceInfo {
+        // Check if tool is in PATH
+        let in_path = which::which("{{ project_name }}").is_ok();
+        
+        // Try to get version
+        let version = if in_path {
+            Self::get_tool_version().ok()
+        } else {
+            None
+        };
+
+        PresenceInfo {
+            in_path,
+            version,
+        }
+    }
+
+    /// Get tool version
+    fn get_tool_version() -> anyhow::Result<String> {
+        let output = std::process::Command::new("{{ project_name }}")
+            .args(["--version"])
+            .output()
+            .map_err(|e| anyhow::anyhow!("Failed to get version: {}", e))?;
+
+        if output.status.success() {
+            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        } else {
+            Err(anyhow::anyhow!("Version command failed"))
+        }
+    }
+
+    /// Convert to compact TOON format
+    pub fn to_compact_toon(&self) -> String {
+        let mut map = BTreeMap::new();
+        
+        map.insert("dir".to_string(), ToonValue::string(&self.directory));
+        
+        if let Some(git) = &self.git {
+            let mut git_map = BTreeMap::new();
+            if let Some(repo_name) = &git.repo_name {
+                git_map.insert("repo".to_string(), ToonValue::string(repo_name));
+            }
+            if let Some(branch) = &git.branch {
+                git_map.insert("branch".to_string(), ToonValue::string(branch));
+            }
+            if let Some(commit) = &git.commit {
+                git_map.insert("commit".to_string(), ToonValue::string(commit));
+            }
+            git_map.insert("dirty".to_string(), ToonValue::bool(git.dirty));
+            map.insert("git".to_string(), ToonValue::Object(git_map));
+        }
+        
+        let mut config_map = BTreeMap::new();
+        config_map.insert("exists".to_string(), ToonValue::bool(self.config.config_exists));
+        if let Some(path) = &self.config.config_path {
+            config_map.insert("path".to_string(), ToonValue::string(path));
+        }
+        map.insert("config".to_string(), ToonValue::Object(config_map));
+        
+        let mut presence_map = BTreeMap::new();
+        presence_map.insert("in_path".to_string(), ToonValue::bool(self.presence.in_path));
+        if let Some(version) = &self.presence.version {
+            presence_map.insert("version".to_string(), ToonValue::string(version));
+        }
+        map.insert("presence".to_string(), ToonValue::Object(presence_map));
+        
+        to_string(&ToonValue::Object(map)).unwrap_or_else(|_| "{}".to_string())
+    }
+
+    /// Convert to TOON format with full details
+    pub fn to_toon(&self) -> String {
+        self.to_compact_toon()
+    }
+}
+
+/// Generate session context from current directory
+pub fn generate_session_context() -> anyhow::Result<SessionContext> {
+    SessionContext::from_current_dir()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_session_context_builder() {
+        let context = SessionContextBuilder::new()
+            .directory("/test/path".to_string())
+            .config(ConfigInfo {
+                config_path: Some("/test/config.toml".to_string()),
+                config_exists: true,
+            })
+            .presence(PresenceInfo {
+                in_path: true,
+                version: Some("1.0.0".to_string()),
+            })
+            .build()
+            .unwrap();
+
+        assert_eq!(context.directory, "/test/path");
+        assert!(context.config.config_exists);
+        assert!(context.presence.in_path);
+    }
+
+    #[test]
+    fn test_session_context_to_compact_toon() {
+        let context = SessionContext {
+            directory: "/test/path".to_string(),
+            git: Some(GitInfo {
+                repo_name: Some("test-repo".to_string()),
+                branch: Some("main".to_string()),
+                commit: Some("abc123".to_string()),
+                dirty: false,
+            }),
+            config: ConfigInfo {
+                config_path: Some("/test/config.toml".to_string()),
+                config_exists: true,
+            },
+            presence: PresenceInfo {
+                in_path: true,
+                version: Some("1.0.0".to_string()),
+            },
+        };
+
+        let toon = context.to_compact_toon();
+        assert!(toon.contains("dir"));
+        assert!(toon.contains("/test/path"));
+        assert!(toon.contains("git"));
+        assert!(toon.contains("config"));
+        assert!(toon.contains("presence"));
+    }
+
+    #[test]
+    fn test_session_context_to_compact_toon_no_git() {
+        let context = SessionContext {
+            directory: "/test/path".to_string(),
+            git: None,
+            config: ConfigInfo {
+                config_path: None,
+                config_exists: false,
+            },
+            presence: PresenceInfo {
+                in_path: false,
+                version: None,
+            },
+        };
+
+        let toon = context.to_compact_toon();
+        assert!(toon.contains("dir"));
+        assert!(!toon.contains("git"));
+        assert!(toon.contains("config"));
+        assert!(toon.contains("presence"));
+    }
+}

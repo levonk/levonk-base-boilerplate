@@ -44,7 +44,7 @@ pub fn detect_destructive_operation(
             return Some(DestructiveOperation::Other(operation.to_string()));
         }
         
-        for path in paths {
+        if let Some(path) = paths.iter().next() {
             let path_str = path.as_ref().display().to_string();
             if path_str.contains("/") || path_str.contains("\\") {
                 // Likely a directory

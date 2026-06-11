@@ -1,0 +1,431 @@
+//! Hook registration for agent integration
+//! 
+//! This module provides hook registration for Claude Code, Codex, and other agents.
+
+use std::path::{Path, PathBuf};
+use std::fs;
+use serde::{Deserialize, Serialize};
+use anyhow::{Context, Result};
+
+/// Hook platform types
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HookPlatform {
+    /// Claude Code
+    Claude,
+    /// Codex
+    Codex,
+    /// Generic (custom hook format)
+    Generic,
+}
+
+impl HookPlatform {
+    /// Parse platform from string
+    pub fn parse(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_str() {
+            "claude" => Ok(HookPlatform::Claude),
+            "codex" => Ok(HookPlatform::Codex),
+            "generic" => Ok(HookPlatform::Generic),
+            _ => Err(anyhow::anyhow!("Invalid platform: {}. Valid options: claude, codex, generic", s)),
+        }
+    }
+
+    /// Get platform config directory
+    pub fn config_dir(&self) -> PathBuf {
+        match self {
+            HookPlatform::Claude => {
+                // Claude Code settings.json location
+                let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+                PathBuf::from(home).join(".config").join("claude")
+            }
+            HookPlatform::Codex => {
+                // Codex hooks.json location
+                let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+                PathBuf::from(home).join(".config").join("codex")
+            }
+            HookPlatform::Generic => {
+                // Generic hooks directory
+                let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+                PathBuf::from(home).join(".config").join("{{ project_name }}")
+            }
+        }
+    }
+
+    /// Get hook file name
+    pub fn hook_file_name(&self) -> &'static str {
+        match self {
+            HookPlatform::Claude => "settings.json",
+            HookPlatform::Codex => "hooks.json",
+            HookPlatform::Generic => "hooks.json",
+        }
+    }
+}
+
+/// Hook configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HookConfig {
+    /// Hook command to execute
+    pub command: String,
+    /// Command arguments
+    pub args: Vec<String>,
+    /// Hook type (session-start, session-end, etc.)
+    pub hook_type: String,
+    /// Whether the hook is enabled
+    pub enabled: bool,
+}
+
+impl HookConfig {
+    /// Create a new hook configuration
+    pub fn new(command: String, hook_type: String) -> Self {
+        Self {
+            command,
+            args: vec![],
+            hook_type,
+            enabled: true,
+        }
+    }
+
+    /// Add arguments to the hook
+    pub fn with_args(mut self, args: Vec<String>) -> Self {
+        self.args = args;
+        self
+    }
+
+    /// Set enabled state
+    pub fn with_enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+}
+
+/// Hook registry for managing agent hooks
+pub struct HookRegistry {
+    platform: HookPlatform,
+    hooks: Vec<HookConfig>,
+}
+
+impl HookRegistry {
+    /// Create a new hook registry for a platform
+    pub fn new(platform: HookPlatform) -> Self {
+        Self {
+            platform,
+            hooks: vec![],
+        }
+    }
+
+    /// Load existing hooks from platform config
+    pub fn load(platform: HookPlatform) -> Result<Self> {
+        let config_dir = platform.config_dir();
+        let hook_file = config_dir.join(platform.hook_file_name());
+
+        if !hook_file.exists() {
+            return Ok(Self::new(platform));
+        }
+
+        let content = fs::read_to_string(&hook_file)
+            .with_context(|| format!("Failed to read hook file: {}", hook_file.display()))?;
+
+        // Parse based on platform
+        let hooks = match platform {
+            HookPlatform::Claude => Self::parse_claude_hooks(&content)?,
+            HookPlatform::Codex => Self::parse_codex_hooks(&content)?,
+            HookPlatform::Generic => Self::parse_generic_hooks(&content)?,
+        };
+
+        Ok(Self { platform, hooks })
+    }
+
+    /// Parse Claude Code hooks from settings.json
+    fn parse_claude_hooks(content: &str) -> Result<Vec<HookConfig>> {
+        let json: serde_json::Value = serde_json::from_str(content)
+            .with_context(|| "Failed to parse Claude settings.json")?;
+
+        let mut hooks = vec![];
+
+        // Claude Code stores hooks in a specific format
+        if let Some(hook_config) = json.get("hooks") {
+            if let Some(hook_array) = hook_config.as_array() {
+                for hook_value in hook_array {
+                    if let Some(hook_obj) = hook_value.as_object() {
+                        if let Some(command) = hook_obj.get("command").and_then(|v| v.as_str()) {
+                            let hook_type = hook_obj.get("type")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("session-start")
+                                .to_string();
+                            
+                            let args = hook_obj.get("args")
+                                .and_then(|v| v.as_array())
+                                .map(|arr| {
+                                    arr.iter()
+                                        .filter_map(|v| v.as_str())
+                                        .map(|s| s.to_string())
+                                        .collect()
+                                })
+                                .unwrap_or_default();
+
+                            hooks.push(HookConfig {
+                                command: command.to_string(),
+                                args,
+                                hook_type,
+                                enabled: true,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(hooks)
+    }
+
+    /// Parse Codex hooks from hooks.json
+    fn parse_codex_hooks(content: &str) -> Result<Vec<HookConfig>> {
+        let json: serde_json::Value = serde_json::from_str(content)
+            .with_context(|| "Failed to parse Codex hooks.json")?;
+
+        let mut hooks = vec![];
+
+        if let Some(hook_array) = json.as_array() {
+            for hook_value in hook_array {
+                if let Some(hook_obj) = hook_value.as_object() {
+                    if let Some(command) = hook_obj.get("command").and_then(|v| v.as_str()) {
+                        let hook_type = hook_obj.get("type")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("session-start")
+                            .to_string();
+                        
+                        let args = hook_obj.get("args")
+                            .and_then(|v| v.as_array())
+                            .map(|arr| {
+                                arr.iter()
+                                    .filter_map(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+
+                        hooks.push(HookConfig {
+                            command: command.to_string(),
+                            args,
+                            hook_type,
+                            enabled: true,
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(hooks)
+    }
+
+    /// Parse generic hooks from hooks.json
+    fn parse_generic_hooks(content: &str) -> Result<Vec<HookConfig>> {
+        // Same format as Codex
+        Self::parse_codex_hooks(content)
+    }
+
+    /// Add a hook to the registry
+    pub fn add_hook(&mut self, hook: HookConfig) {
+        self.hooks.push(hook);
+    }
+
+    /// Remove hooks that match a command
+    pub fn remove_hooks_by_command(&mut self, command: &str) {
+        self.hooks.retain(|h| h.command != command);
+    }
+
+    /// Check if a hook with the given command exists
+    pub fn has_hook(&self, command: &str) -> bool {
+        self.hooks.iter().any(|h| h.command == command)
+    }
+
+    /// Save hooks to platform config
+    pub fn save(&self) -> Result<()> {
+        let config_dir = self.platform.config_dir();
+        
+        // Create config directory if it doesn't exist
+        fs::create_dir_all(&config_dir)
+            .with_context(|| format!("Failed to create config directory: {}", config_dir.display()))?;
+
+        let hook_file = config_dir.join(self.platform.hook_file_name());
+
+        let content = match self.platform {
+            HookPlatform::Claude => self.format_claude_hooks()?,
+            HookPlatform::Codex => self.format_codex_hooks()?,
+            HookPlatform::Generic => self.format_generic_hooks()?,
+        };
+
+        fs::write(&hook_file, content)
+            .with_context(|| format!("Failed to write hook file: {}", hook_file.display()))?;
+
+        Ok(())
+    }
+
+    /// Format hooks for Claude Code settings.json
+    fn format_claude_hooks(&self) -> Result<String> {
+        let mut hooks_array = serde_json::json!([]);
+
+        if let Some(arr) = hooks_array.as_array_mut() {
+            for hook in &self.hooks {
+                let hook_obj = serde_json::json!({
+                    "command": hook.command,
+                    "args": hook.args,
+                    "type": hook.hook_type,
+                });
+                arr.push(hook_obj);
+            }
+        }
+
+        let settings = serde_json::json!({
+            "hooks": hooks_array
+        });
+
+        serde_json::to_string_pretty(&settings)
+            .with_context(|| "Failed to format Claude hooks")
+    }
+
+    /// Format hooks for Codex hooks.json
+    fn format_codex_hooks(&self) -> Result<String> {
+        let hooks_array: Vec<serde_json::Value> = self.hooks
+            .iter()
+            .map(|hook| {
+                serde_json::json!({
+                    "command": hook.command,
+                    "args": hook.args,
+                    "type": hook.hook_type,
+                })
+            })
+            .collect();
+
+        serde_json::to_string_pretty(&serde_json::Value::Array(hooks_array))
+            .with_context(|| "Failed to format Codex hooks")
+    }
+
+    /// Format hooks for generic hooks.json
+    fn format_generic_hooks(&self) -> Result<String> {
+        self.format_codex_hooks()
+    }
+
+    /// Get all hooks
+    pub fn hooks(&self) -> &[HookConfig] {
+        &self.hooks
+    }
+}
+
+/// Install agent hooks for a platform
+pub fn install_agent_hooks(platform: HookPlatform, command: &str) -> Result<()> {
+    let mut registry = HookRegistry::load(platform)?;
+
+    // Resolve command to absolute path if needed
+    let resolved_command = resolve_command_path(command)?;
+
+    // Check if hook already exists
+    if registry.has_hook(&resolved_command) {
+        // Update existing hook
+        registry.remove_hooks_by_command(&resolved_command);
+    }
+
+    // Add new hook
+    let hook = HookConfig::new(resolved_command, "session-start".to_string());
+    registry.add_hook(hook);
+
+    // Save hooks
+    registry.save()?;
+
+    Ok(())
+}
+
+/// Register a session-end hook
+pub fn register_session_hook(platform: HookPlatform, command: &str) -> Result<()> {
+    let mut registry = HookRegistry::load(platform)?;
+
+    let resolved_command = resolve_command_path(command)?;
+
+    let hook = HookConfig::new(resolved_command, "session-end".to_string());
+    registry.add_hook(hook);
+
+    registry.save()?;
+
+    Ok(())
+}
+
+/// Resolve command to absolute path if it's in PATH
+fn resolve_command_path(command: &str) -> Result<String> {
+    // If it's already an absolute path, return it
+    if Path::new(command).is_absolute() {
+        return Ok(command.to_string());
+    }
+
+    // Try to find the command in PATH
+    if let Ok(path) = which::which(command) {
+        Ok(path.to_string_lossy().to_string())
+    } else {
+        // If not in PATH, return as-is (may be a relative path or will be installed later)
+        Ok(command.to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hook_platform_from_str() {
+        assert_eq!(HookPlatform::from_str("claude").unwrap(), HookPlatform::Claude);
+        assert_eq!(HookPlatform::from_str("codex").unwrap(), HookPlatform::Codex);
+        assert_eq!(HookPlatform::from_str("generic").unwrap(), HookPlatform::Generic);
+        assert!(HookPlatform::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_hook_config_new() {
+        let hook = HookConfig::new("test-command".to_string(), "session-start".to_string());
+        assert_eq!(hook.command, "test-command");
+        assert_eq!(hook.hook_type, "session-start");
+        assert!(hook.enabled);
+        assert!(hook.args.is_empty());
+    }
+
+    #[test]
+    fn test_hook_config_with_args() {
+        let hook = HookConfig::new("test-command".to_string(), "session-start".to_string())
+            .with_args(vec!["--arg1".to_string(), "--arg2".to_string()]);
+        assert_eq!(hook.args.len(), 2);
+    }
+
+    #[test]
+    fn test_hook_registry_new() {
+        let registry = HookRegistry::new(HookPlatform::Claude);
+        assert!(registry.hooks().is_empty());
+    }
+
+    #[test]
+    fn test_hook_registry_add_hook() {
+        let mut registry = HookRegistry::new(HookPlatform::Claude);
+        let hook = HookConfig::new("test-command".to_string(), "session-start".to_string());
+        registry.add_hook(hook);
+        assert_eq!(registry.hooks().len(), 1);
+    }
+
+    #[test]
+    fn test_hook_registry_has_hook() {
+        let mut registry = HookRegistry::new(HookPlatform::Claude);
+        let hook = HookConfig::new("test-command".to_string(), "session-start".to_string());
+        registry.add_hook(hook);
+        assert!(registry.has_hook("test-command"));
+        assert!(!registry.has_hook("other-command"));
+    }
+
+    #[test]
+    fn test_hook_registry_remove_hooks_by_command() {
+        let mut registry = HookRegistry::new(HookPlatform::Claude);
+        let hook1 = HookConfig::new("test-command".to_string(), "session-start".to_string());
+        let hook2 = HookConfig::new("other-command".to_string(), "session-start".to_string());
+        registry.add_hook(hook1);
+        registry.add_hook(hook2);
+        assert_eq!(registry.hooks().len(), 2);
+        
+        registry.remove_hooks_by_command("test-command");
+        assert_eq!(registry.hooks().len(), 1);
+        assert!(!registry.has_hook("test-command"));
+    }
+}

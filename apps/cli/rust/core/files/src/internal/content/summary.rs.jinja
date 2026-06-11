@@ -3,7 +3,7 @@
 //! This module provides functionality for generating concise state summaries
 //! that show the most relevant information without overwhelming output.
 
-use crate::internal::aggregates::{AggregateInfo, CountInfo, DerivedStatus, CountFormatter};
+use crate::internal::aggregates::{AggregateInfo, CountFormatter};
 use serde::{Deserialize, Serialize};
 
 /// State summary with relevant information
@@ -77,20 +77,19 @@ impl StateSummary {
         // Add content type
         output.push_str("content_type: ");
         output.push_str(&self.content_type);
-        output.push_str("\n");
+        output.push('\n');
         
         // Add CWD
         output.push_str("cwd: ");
         output.push_str(&self.cwd);
-        output.push_str("\n");
+        output.push('\n');
         
         // Add aggregates if available
         if !self.aggregates.is_empty() {
             if let Some(ref count) = self.aggregates.count {
-                let formatter = CountFormatter;
                 output.push_str("count: ");
-                output.push_str(CountFormatter::format(count));
-                output.push_str("\n");
+                output.push_str(&CountFormatter::format(count));
+                output.push('\n');
             }
             if let Some(ref derived) = self.aggregates.derived {
                 // Format derived status as field list
@@ -118,7 +117,7 @@ impl StateSummary {
                     output.push_str(", ");
                 }
                 output.push_str(key);
-                output.push_str("=");
+                output.push('=');
                 output.push_str(value);
             }
         }
@@ -137,8 +136,7 @@ impl StateSummary {
         // Add aggregates if available
         if !self.aggregates.is_empty() {
             if let Some(ref count) = self.aggregates.count {
-                let formatter = CountFormatter;
-                output.push_str(&format!("{}\n", formatter.format(count)));
+                output.push_str(&format!("{}\n", CountFormatter::format(count)));
             }
             if let Some(ref derived) = self.aggregates.derived {
                 if !derived.is_empty() {

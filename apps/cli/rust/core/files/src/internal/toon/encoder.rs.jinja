@@ -4,7 +4,6 @@
 //! The encoder produces UTF-8 output with LF line endings and consistent indentation.
 
 use crate::internal::toon::types::{ToonValue, ToonEncodeOptions, ToonEncodeError};
-use std::io::{self, Write};
 
 /// TOON encoder
 pub struct ToonEncoder {
@@ -123,7 +122,7 @@ impl ToonEncoder {
                 return true;
             }
             // Quote if starts with digit (to avoid confusion with numbers)
-            if c.is_ascii_digit() && value.chars().next() == Some(c) {
+            if c.is_ascii_digit() && value.starts_with(c) {
                 return true;
             }
             // Quote if is a boolean/null literal

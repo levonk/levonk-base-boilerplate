@@ -63,7 +63,6 @@ impl ManHandler {
     }
 
     /// Generate man page from help text (fallback if clap_mangen is available)
-    #[cfg(feature = "man-pages")]
     pub fn generate_man_page() -> Result<()> {
         // This would use clap_mangen to generate man pages dynamically
         // For the template approach, we use static templates instead

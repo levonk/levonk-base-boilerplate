@@ -58,7 +58,7 @@ impl TruncationMetadata {
             return None;
         }
 
-        let info = self.info.as_ref()?;
+        let _info = self.info.as_ref()?;
         let percentage = self.retention_percentage();
         
         Some(format!(

@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use directories::ProjectDirs;
-use tracing::{info, warn, error, debug, Level};
+use tracing::{info, warn, debug, Level};
 use std::fs;
 use std::io::Write;
 use crate::security::SecurityUtils;
@@ -415,7 +415,7 @@ impl ConfigManager {
     }
     
     /// Merge configuration with precedence
-    fn merge_config(&mut self, new_config: Config, source: ConfigSource) {
+    fn merge_config(&mut self, new_config: Config, _source: ConfigSource) {
         // Only override if the new value is not the default
         if new_config.mode != default_mode() {
             self.config.mode = new_config.mode;
@@ -468,7 +468,7 @@ impl ConfigManager {
         info!("Created config backup at {:?}", backup_path);
         
         // Merge old config with new defaults
-        let mut new_config = Config::default();
+        let new_config = Config::default();
         self.merge_config(old_config.clone(), ConfigSource::User);
         
         // Write migrated config

@@ -300,7 +300,7 @@ impl ToonDecoder {
     fn skip_whitespace(&mut self) {
         while let Some(c) = self.peek_char() {
             if c.is_whitespace() {
-                self.next_char();
+                let _ = self.next_char();
             } else {
                 break;
             }

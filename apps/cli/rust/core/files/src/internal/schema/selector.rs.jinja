@@ -3,9 +3,9 @@
 //! This module provides functionality for selecting and filtering fields
 //! from output data based on schema definitions and user-provided field lists.
 
-use super::definition::{OutputSchema, FieldDefinition};
+use super::definition::OutputSchema;
 use serde_json::Value;
-use anyhow::{Result, Context};
+use anyhow::Result;
 
 /// Field selector for filtering output data
 #[derive(Debug, Clone)]
