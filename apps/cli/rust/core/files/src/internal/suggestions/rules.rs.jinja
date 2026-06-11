@@ -4,6 +4,7 @@
 //! relevant next steps based on command output and state.
 
 use super::engine::{Suggestion, SuggestionContext, SuggestionRank};
+use crate::internal::aggregates::DerivedField;
 
 /// A rule that can generate suggestions based on context
 pub trait SuggestionRule: Send + Sync {
@@ -319,9 +320,9 @@ impl SuggestionRule for StatusRule {
         // If there are issues, suggest fixing
         if let Some(aggregates) = &context.aggregates {
             if let Some(derived) = &aggregates.derived {
-                if derived.contains_key("error_count") {
-                    if let Some(error_count_str) = derived.get("error_count") {
-                        if error_count_str != "0" {
+                if let Some(error_field) = derived.fields.get("error_count") {
+                    if let DerivedField::Count { value, .. } = error_field {
+                        if *value > 0 {
                             suggestions.push(Suggestion {
                                 command: "fix --all".to_string(),
                                 description: "Fix all errors".to_string(),
