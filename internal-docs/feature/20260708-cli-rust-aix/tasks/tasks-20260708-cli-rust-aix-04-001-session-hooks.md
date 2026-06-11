@@ -7,7 +7,7 @@ prd_file: "internal-docs/feature/20260708-cli-rust-aix/prd.md"
 phase: 4
 parallel_id: 1
 branch: "feature/current/20260708-cli-rust-aix/story-04-001-session-hooks"
-status: "todo"
+status: "done"
 assignee: ""
 reviewer: ""
 dependencies: ["01-001", "01-002"]
@@ -27,7 +27,7 @@ Implement session hook infrastructure for ambient context injection. Add `--sess
 
 ## Sub-Tasks
 
-- [ ] Design session context output format (compact TOON)
+- [~] Design session context output format (compact TOON)
 - [ ] Implement `--session-context` command
 - [ ] Implement compact state generation for session context
 - [ ] Ensure session context is token-budget-aware

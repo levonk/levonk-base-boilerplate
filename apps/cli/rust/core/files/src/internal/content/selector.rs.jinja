@@ -1,0 +1,128 @@
+//! Context-aware content selection
+//!
+//! This module provides logic for selecting the most relevant content based on
+//! the current execution context (directory, environment, state).
+
+use std::path::Path;
+use anyhow::Result;
+
+/// Context information for content selection
+#[derive(Debug, Clone)]
+pub struct ContentContext {
+    /// Current working directory
+    pub cwd: String,
+    /// Whether running in a git repository
+    pub in_git_repo: bool,
+    /// Whether running in a project root
+    pub in_project_root: bool,
+    /// Available state information
+    pub has_state: bool,
+}
+
+impl ContentContext {
+    /// Detect current context from environment
+    pub fn detect() -> Self {
+        let cwd = std::env::current_dir()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| ".".to_string());
+        
+        let in_git_repo = Path::new(&cwd).join(".git").exists();
+        let in_project_root = Self::detect_project_root(&cwd);
+        let has_state = Self::detect_state(&cwd);
+        
+        Self {
+            cwd,
+            in_git_repo,
+            in_project_root,
+            has_state,
+        }
+    }
+    
+    /// Detect if current directory is a project root
+    fn detect_project_root(cwd: &str) -> bool {
+        let path = Path::new(cwd);
+        // Check for common project markers
+        path.join("Cargo.toml").exists()
+            || path.join("package.json").exists()
+            || path.join("pyproject.toml").exists()
+            || path.join("go.mod").exists()
+    }
+    
+    /// Detect if state information is available
+    fn detect_state(cwd: &str) -> bool {
+        let path = Path::new(cwd);
+        // Check for state files or directories
+        path.join(".{{ project_slug }}").exists()
+            || path.join("state").exists()
+            || path.join("data").exists()
+    }
+}
+
+/// Content selector for choosing relevant content
+pub struct ContentSelector {
+    context: ContentContext,
+}
+
+impl ContentSelector {
+    /// Create a new content selector
+    pub fn new(context: ContentContext) -> Self {
+        Self { context }
+    }
+    
+    /// Select the most relevant content type for current context
+    pub fn select_content_type(&self) -> ContentType {
+        match (&self.context.in_project_root, &self.context.has_state) {
+            (true, true) => ContentType::ProjectState,
+            (true, false) => ContentType::ProjectOverview,
+            (false, true) => ContentType::StateOnly,
+            (false, false) => ContentType::GeneralHelp,
+        }
+    }
+    
+    /// Get contextual help suggestions based on context
+    pub fn get_suggestions(&self) -> Vec<String> {
+        let mut suggestions = Vec::new();
+        
+        if self.context.in_git_repo {
+            suggestions.push("{{ project_slug }} status".to_string());
+            suggestions.push("{{ project_slug }} log --oneline -5".to_string());
+        }
+        
+        if self.context.in_project_root {
+            suggestions.push("{{ project_slug }} doctor".to_string());
+            suggestions.push("{{ project_slug }} config --show".to_string());
+        }
+        
+        if self.context.has_state {
+            suggestions.push("{{ project_slug }} list".to_string());
+            suggestions.push("{{ project_slug }} export --format toon".to_string());
+        }
+        
+        // Always add help suggestion
+        suggestions.push("{{ project_slug }} --help".to_string());
+        
+        suggestions
+    }
+}
+
+/// Types of content that can be selected
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContentType {
+    /// Project state (when in project root with state available)
+    ProjectState,
+    /// Project overview (when in project root without state)
+    ProjectOverview,
+    /// State only (when not in project root but state available)
+    StateOnly,
+    /// General help (fallback when no context available)
+    GeneralHelp,
+}
+
+/// Select content based on current context
+pub fn select_content() -> (ContentType, Vec<String>) {
+    let context = ContentContext::detect();
+    let selector = ContentSelector::new(context);
+    let content_type = selector.select_content_type();
+    let suggestions = selector.get_suggestions();
+    (content_type, suggestions)
+}

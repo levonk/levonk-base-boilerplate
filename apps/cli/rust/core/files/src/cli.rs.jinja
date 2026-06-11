@@ -6,6 +6,14 @@ use std::time::Duration;
 
 /// {{ description }}
 ///
+/// # Content-First Behavior
+///
+/// Running the CLI with no arguments shows the most relevant live content instead of a usage manual:
+///   {{ project_slug }}  # Shows state summary and contextual suggestions
+///
+/// This enables agents to see actual state immediately and act without a second call.
+/// Detailed help remains available via the --help flag.
+///
 /// # Examples
 ///
 /// Process files:
@@ -612,3 +620,6 @@ impl Progress {
         self.multi.clear().ok();
     }
 }
+
+#[cfg(test)]
+mod tests;

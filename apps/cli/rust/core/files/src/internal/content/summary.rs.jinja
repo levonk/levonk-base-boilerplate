@@ -1,0 +1,168 @@
+//! State summary generation
+//!
+//! This module provides functionality for generating concise state summaries
+//! that show the most relevant information without overwhelming output.
+
+use crate::internal::aggregates::{AggregateInfo, CountInfo, DerivedStatus, CountFormatter};
+use serde::{Deserialize, Serialize};
+
+/// State summary with relevant information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateSummary {
+    /// Content type being summarized
+    pub content_type: String,
+    /// Aggregate information (counts, derived status)
+    pub aggregates: AggregateInfo,
+    /// Current working directory
+    pub cwd: String,
+    /// Additional context information
+    pub context: Vec<(String, String)>,
+}
+
+impl StateSummary {
+    /// Create a new state summary
+    pub fn new(
+        content_type: String,
+        aggregates: AggregateInfo,
+        cwd: String,
+        context: Vec<(String, String)>,
+    ) -> Self {
+        Self {
+            content_type,
+            aggregates,
+            cwd,
+            context,
+        }
+    }
+    
+    /// Generate summary from current state
+    pub fn generate(content_type: &str, aggregates: AggregateInfo) -> Self {
+        let cwd = std::env::current_dir()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|_| ".".to_string());
+        
+        let mut context = Vec::new();
+        
+        // Add git context if available
+        if std::path::Path::new(&cwd).join(".git").exists() {
+            context.push(("git_repo".to_string(), "true".to_string()));
+        }
+        
+        // Add project root context if available
+        if Self::is_project_root(&cwd) {
+            context.push(("project_root".to_string(), "true".to_string()));
+        }
+        
+        Self {
+            content_type: content_type.to_string(),
+            aggregates,
+            cwd,
+            context,
+        }
+    }
+    
+    /// Check if directory is a project root
+    fn is_project_root(cwd: &str) -> bool {
+        let path = std::path::Path::new(cwd);
+        path.join("Cargo.toml").exists()
+            || path.join("package.json").exists()
+            || path.join("pyproject.toml").exists()
+            || path.join("go.mod").exists()
+    }
+    
+    /// Format summary in TOON format for agent mode
+    pub fn format_toon(&self) -> String {
+        let mut output = String::new();
+        
+        // Add content type
+        output.push_str("content_type: ");
+        output.push_str(&self.content_type);
+        output.push_str("\n");
+        
+        // Add CWD
+        output.push_str("cwd: ");
+        output.push_str(&self.cwd);
+        output.push_str("\n");
+        
+        // Add aggregates if available
+        if !self.aggregates.is_empty() {
+            if let Some(ref count) = self.aggregates.count {
+                let formatter = CountFormatter;
+                output.push_str("count: ");
+                output.push_str(CountFormatter::format(count));
+                output.push_str("\n");
+            }
+            if let Some(ref derived) = self.aggregates.derived {
+                // Format derived status as field list
+                if !derived.is_empty() {
+                    output.push_str("status[");
+                    output.push_str(&derived.field_count().to_string());
+                    output.push_str("]: ");
+                    for (i, (name, _field)) in derived.fields.iter().enumerate() {
+                        if i > 0 {
+                            output.push_str(", ");
+                        }
+                        output.push_str(name);
+                    }
+                }
+            }
+        }
+        
+        // Add context
+        if !self.context.is_empty() {
+            output.push_str("context[");
+            output.push_str(&self.context.len().to_string());
+            output.push_str("]: ");
+            for (i, (key, value)) in self.context.iter().enumerate() {
+                if i > 0 {
+                    output.push_str(", ");
+                }
+                output.push_str(key);
+                output.push_str("=");
+                output.push_str(value);
+            }
+        }
+        
+        output
+    }
+    
+    /// Format summary in human-readable format
+    pub fn format_human(&self) -> String {
+        let mut output = String::new();
+        
+        // Add header
+        output.push_str(&format!("{}\n", self.content_type));
+        output.push_str(&format!("Location: {}\n", self.cwd));
+        
+        // Add aggregates if available
+        if !self.aggregates.is_empty() {
+            if let Some(ref count) = self.aggregates.count {
+                let formatter = CountFormatter;
+                output.push_str(&format!("{}\n", formatter.format(count)));
+            }
+            if let Some(ref derived) = self.aggregates.derived {
+                if !derived.is_empty() {
+                    output.push_str("Status:\n");
+                    for (name, _field) in derived.fields.iter() {
+                        output.push_str(&format!("  {}: {}\n", name, "derived_value"));
+                    }
+                }
+            }
+        }
+        
+        // Add context
+        if !self.context.is_empty() {
+            output.push_str("\nContext:\n");
+            for (key, value) in &self.context {
+                output.push_str(&format!("  {}: {}\n", key, value));
+            }
+        }
+        
+        output
+    }
+}
+
+/// Generate a state summary from current state
+pub fn generate_summary(content_type: &str, aggregates: AggregateInfo) -> StateSummary {
+    StateSummary::generate(content_type, aggregates)
+}

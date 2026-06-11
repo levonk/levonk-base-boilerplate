@@ -14,7 +14,7 @@
 | 03-003 | No Interactive Prompts in Agent Mode | [x] Done | feature/current/20260708-cli-rust-aix/story-03-003-no-prompts | 01-001 | Parallel-safe: true | [cli-commands, user-interaction] |
 | 04-001 | Session Hook Infrastructure | [x] Done | feature/current/20260708-cli-rust-aix/story-04-001-session-hooks | 01-001, 01-002 | Parallel-safe: true | [session-integration, cli-commands] |
 | 04-002 | Agent Skill Support | [x] Done | feature/current/20260708-cli-rust-aix/story-04-002-agent-skills | 01-002 | Parallel-safe: true | [skill-generation, documentation] |
-| 05-001 | Content-First No-Args Behavior | [ ] Todo | feature/current/20260708-cli-rust-aix/story-05-001-content-first | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, output-formats] |
+| 05-001 | Content-First No-Args Behavior | [~] In-Progress | feature/current/20260708-cli-rust-aix/story-05-001-content-first | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, output-formats] |
 | 05-002 | Contextual Disclosure | [ ] Todo | feature/current/20260708-cli-rust-aix/story-05-002-contextual-disclosure | 01-001, 01-002, 02-003 | Parallel-safe: false | [cli-commands, suggestion-engine] |
 
 ## Phase Summary

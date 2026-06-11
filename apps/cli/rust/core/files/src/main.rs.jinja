@@ -54,6 +54,8 @@ use internal::errors::{StructuredError, ErrorCode, format_error_with_format, tra
 use internal::prompts::{PromptSuppressor, PromptDecision, PromptType};
 use internal::idempotency::{check_idempotency, OperationType, IdempotentResult, acknowledge_noop};
 use internal::session::{generate_session_context, install_agent_hooks, register_session_hook, HookPlatform};
+use internal::content::{select_content, generate_summary, ContentFirstOutput, ContentType};
+use internal::aggregates::AggregateInfo;
 use skill::handle_skill_command;
 
 {% if enable_tui -%}
@@ -61,6 +63,31 @@ use tui::{init_tui_mode, terminal_supports_tui};
 {% endif -%}
 
 const MODULE_NAME: &str = "{{ project_slug }}";
+
+/// Handle no-args invocation with content-first output
+fn handle_no_args(mode: Mode) -> Result<()> {
+    let (content_type, suggestions) = select_content();
+    
+    // Generate appropriate content type string
+    let content_type_str = match content_type {
+        ContentType::ProjectState => "project_state",
+        ContentType::ProjectOverview => "project_overview",
+        ContentType::StateOnly => "state_only",
+        ContentType::GeneralHelp => "general_help",
+    };
+    
+    // Create state summary with empty aggregates (will be populated by real implementation)
+    let aggregates = AggregateInfo::empty();
+    let summary = generate_summary(content_type_str, aggregates);
+    
+    // Create content-first output
+    let output = ContentFirstOutput::new(summary, suggestions, mode == Mode::Agent);
+    
+    // Print the formatted output
+    println!("{}", output.format());
+    
+    Ok(())
+}
 
 /// Prompt user for confirmation before destructive operation
 /// Returns true if operation should proceed, false if cancelled
@@ -545,6 +572,13 @@ async fn main() -> Result<()> {
 
     // Create input handler
     let input_handler = InputHandler::from_args(&cli.inputs);
+
+    // Handle no-args invocation with content-first output
+    if input_handler.is_empty() && cli.command.is_none() {
+        info!("No arguments provided, showing content-first output");
+        handle_no_args(mode_detection.mode)?;
+        std::process::exit(0);
+    }
 
     // Process all inputs
     let contents = input_handler.read_all()?;
