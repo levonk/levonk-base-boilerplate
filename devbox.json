@@ -3,7 +3,12 @@
   "version": "0.1.0",
   "description": "Development environment for boilerplate scaffolding",
   "packages": [
-    "copier@latest"
+    "copier@latest",
+    "git",
+    "eza",
+    "zoxide",
+    "fzf",
+    "rtk"
   ],
   "shell": {
     "init_hook": []
