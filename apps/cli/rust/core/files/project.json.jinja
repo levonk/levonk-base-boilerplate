@@ -39,5 +39,14 @@
         "cwd": "{projectRoot}"
       }
     }
+    {%- if include_http_server -%},
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo run -- serve",
+        "cwd": "{projectRoot}"
+      }
+    }
+    {%- endif -%}
   }
 }

@@ -254,6 +254,21 @@ run-internal:
     # Run the application with arguments
     command cargo run
 
+{% if include_http_server -%}
+serve:
+    @echo "🌐 Starting HTTP server..."
+    @devbox run serve
+
+serve-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Start the HTTP server
+    PORT="${HTTP_PORT:-{{ http_port }}}"
+    HOST="${HTTP_HOST:-0.0.0.0}"
+    echo "Starting server on $HOST:$PORT"
+    cargo run -- serve --port "$PORT" --host "$HOST"
+{% endif -%}
+
 # Additional Rust-specific targets
 test-coverage-internal:
     # Run tests with coverage

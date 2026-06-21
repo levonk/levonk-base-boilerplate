@@ -16,6 +16,12 @@ use std::time::Duration;
 ///
 /// # Examples
 ///
+{% if include_http_server -%}
+/// Start HTTP server:
+///   {{ project_slug }} serve
+///   {{ project_slug }} serve --port 3000
+///
+{% endif -%}
 /// Process files:
 ///   {{ project_slug }} file1.txt file2.txt
 ///
@@ -39,6 +45,12 @@ use std::time::Duration;
 /// Run diagnostics:
 ///   {{ project_slug }} doctor --all
 ///
+{% if include_http_server -%}
+/// Start HTTP server:
+///   {{ project_slug }} serve
+///   {{ project_slug }} serve --port 3000
+///
+{% endif -%}
 /// # Mode Selection
 ///
 /// The CLI automatically detects the execution mode (agent vs human) based on:
@@ -547,6 +559,30 @@ pub enum Commands {
         #[arg(long, value_name = "PATH", help = "Output file path for generated skill")]
         output: Option<PathBuf>,
     },
+
+{% if include_http_server -%}
+    /// Start HTTP server
+    ///
+    /// # Examples
+    ///
+    /// Start server on default port:
+    ///   {{ project_slug }} serve
+    ///
+    /// Start server on custom port:
+    ///   {{ project_slug }} serve --port 3000
+    ///
+    /// Start server on specific host:
+    ///   {{ project_slug }} serve --host 127.0.0.1
+    Serve {
+        /// Port to listen on
+        #[arg(long, value_name = "PORT", help = "Port to listen on")]
+        port: Option<u16>,
+
+        /// Host to bind to
+        #[arg(long, value_name = "HOST", help = "Host to bind to")]
+        host: Option<String>,
+    },
+{% endif -%}
 }
 
 impl Cli {

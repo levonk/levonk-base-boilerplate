@@ -32,9 +32,9 @@ uuid = { version = "1.0", features = ["v4"] }
 gethostname = "0.4"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "process", "fs", "io-util", "time", "net"] }
 futures-util = "0.3"
-axum = { version = "0.7", features = ["tokio"] }
+axum = { version = "0.7", features = ["tokio", "macros"] }
 tower = "0.4"
-tower-http = { version = "0.5", features = ["trace"] }
+tower-http = { version = "0.5", features = ["trace", "cors", "compression-gzip"] }
 zeroize = "1.7"
 secrecy = "0.8"
 which = "6.0"
@@ -42,6 +42,9 @@ ratatui = { version = "0.26", optional = true }
 cursive = { version = "0.21", optional = true }
 {% if include_sqlite -%}
 rusqlite = { version = "0.31", features = ["bundled"] }
+{% endif %}
+{% if include_redis -%}
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
 {% endif %}
 regex = "1.10"
 

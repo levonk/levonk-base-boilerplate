@@ -1,0 +1,56 @@
+{% if include_http_server -%}
+use anyhow::{Context, Result};
+use axum::{
+    routing::get,
+    Router,
+    http::StatusCode,
+    response::Json,
+};
+use std::net::SocketAddr;
+use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
+use tower_http::compression::CompressionLayer;
+use tracing::{info, error};
+
+use api::health_check;
+
+pub mod api;
+
+pub struct ServerConfig {
+    pub port: u16,
+    pub host: String,
+}
+
+impl Default for ServerConfig {
+    fn default() -> Self {
+        Self {
+            port: {{ http_port }},
+            host: "0.0.0.0".to_string(),
+        }
+    }
+}
+
+pub async fn run_server(config: ServerConfig) -> Result<()> {
+    let addr = format!("{}:{}", config.host, config.port);
+    let socket_addr: SocketAddr = addr.parse()
+        .context("Invalid server address")?;
+
+    // Build the application router
+    let app = Router::new()
+        .route("/health", get(health_check))
+        .layer(CorsLayer::permissive())
+        .layer(CompressionLayer::new());
+
+    let listener = TcpListener::bind(socket_addr)
+        .await
+        .context("Failed to bind to address")?;
+
+    info!("Server starting on http://{}", socket_addr);
+    
+    axum::serve(listener, app)
+        .await
+        .context("Server error")?;
+
+    Ok(())
+}
+{% endif -%}

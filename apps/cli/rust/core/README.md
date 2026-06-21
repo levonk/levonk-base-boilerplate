@@ -20,12 +20,17 @@ devbox run -- ./boilerplate/copier-wrapper.sh copy apps/cli/rust/core ./path/to/
 | `include_openssl` | bool | Include OpenSSL packages | `false` |
 | `include_postgres` | bool | Include PostgreSQL packages | `false` |
 | `include_sqlite` | bool | Include SQLite packages + rusqlite crate | `false` |
+| `include_http_server` | bool | Include HTTP server capabilities (axum) | `false` |
+| `http_port` | int | Default HTTP port for the server | `8080` |
+| `include_redis` | bool | Include Redis support | `false` |
 
 ## Generated Project Structure
 
 ```
 .
 ├── src/main.rs          # CLI entry point with clap
+├── src/server.rs        # HTTP server (if include_http_server)
+├── src/api/             # HTTP handlers (if include_http_server)
 ├── tests/cli_tests.rs   # Integration tests with assert_cmd
 ├── docs/                # Documentation directory
 ├── internal-docs/       # ADRs and specs
@@ -42,3 +47,5 @@ devbox run -- ./boilerplate/copier-wrapper.sh copy apps/cli/rust/core ./path/to/
 - Uses tokio for async runtime support
 - Includes tracing for structured logging
 - SQLite support adds `rusqlite` crate and `sqlite` devbox package
+- HTTP server support adds axum web framework and `serve` CLI command
+- Redis support adds `redis` crate with tokio async support

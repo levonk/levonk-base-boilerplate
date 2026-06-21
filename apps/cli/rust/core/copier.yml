@@ -41,3 +41,18 @@ include_sqlite:
   type: bool
   help: Include SQLite support?
   default: false
+
+include_http_server:
+  type: bool
+  help: Include HTTP server capabilities?
+  default: false
+
+http_port:
+  type: int
+  help: Default HTTP port for the server
+  default: 8080
+
+include_redis:
+  type: bool
+  help: Include Redis support?
+  default: false

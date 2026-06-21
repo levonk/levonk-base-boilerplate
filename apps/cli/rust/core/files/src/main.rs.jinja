@@ -20,6 +20,10 @@ mod audit;
 mod internal;
 mod skill;
 
+{% if include_http_server -%}
+mod server;
+{% endif -%}
+
 {% if enable_tui -%}
 mod tui;
 {% endif -%}
@@ -967,6 +971,25 @@ async fn handle_subcommand(command: &Commands, cli: &Cli) -> Result<()> {
                 }
             }
         }
+
+{% if include_http_server -%}
+        Commands::Serve { port, host } => {
+            use server::{ServerConfig, run_server};
+            
+            let server_config = ServerConfig {
+                port: port.unwrap_or({{ http_port }}),
+                host: host.clone().unwrap_or_else(|| "0.0.0.0".to_string()),
+            };
+            
+            match run_server(server_config).await {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("Server error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+{% endif -%}
     }
 
     Ok(())

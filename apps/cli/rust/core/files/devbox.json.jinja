@@ -23,6 +23,9 @@
     {%- if include_sqlite -%},
     "sqlite"
     {%- endif -%}
+    {%- if include_redis -%},
+    "redis"
+    {%- endif -%}
   ],
   "shell": {
     "init_hook": [
@@ -41,6 +44,9 @@
     "debug": "just debug-internal",
     "install": "just install-internal",
     "release": "just release-internal"
+    {%- if include_http_server -%},
+    "serve": "just serve-internal"
+    {%- endif -%}
   },
   "env": {
     "RUST_LOG": "{{ rust_log_level | default('info') }}",
@@ -50,6 +56,13 @@
     {%- endif -%}
     {%- if include_sqlite -%},
     "DATABASE_URL": "sqlite:./{{ project_name | default('rust-cli-app') }}.db"
+    {%- endif -%}
+    {%- if include_redis -%},
+    "REDIS_URL": "redis://localhost:6379"
+    {%- endif -%}
+    {%- if include_http_server -%},
+    "HTTP_PORT": "{{ http_port | default('8080') }}",
+    "HTTP_HOST": "0.0.0.0"
     {%- endif -%}
   },
   {% include "partials.bak/partials/devbox-partials/devbox-hooks-rust.jinja" %}
