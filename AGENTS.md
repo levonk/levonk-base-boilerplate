@@ -37,7 +37,7 @@ When asked to "make a new **boilerplate** for [project type]", you:
    ```
 3. **Run copier-wrapper.sh** (NOT copier directly) to generate your project:
    ```bash
-   devbox run -- ./boilerplate/copier-wrapper.sh copy \
+    devbox run -- rtk ./boilerplate/copier-wrapper.sh copy \
      ./boilerplate/apps/infrastructure/airflow-project \
      ./path/to/new-project \
      --data @copier-answers.yml
@@ -89,8 +89,140 @@ boilerplate/
 │                   ├── python3/    # Python packages (logical template root)
 │                   └── typescript/ # TypeScript packages (logical template root)
 │
+├── _shared/                       # Global shared templates and partials
+│   ├── partials/
+│   │   ├── nx-partials/           # Nx monorepo configuration partials
+│   │   │   ├── nx-base-config.jinja
+│   │   │   ├── nx-packages-core.jinja
+│   │   │   ├── nx-packages-docker.jinja
+│   │   │   ├── nx-packages-nodejs.jinja
+│   │   │   ├── nx-packages-python.jinja
+│   │   │   ├── nx-plugins-docker.jinja
+│   │   │   ├── nx-plugins-nodejs.jinja
+│   │   │   ├── nx-plugins-python.jinja
+│   │   │   ├── nx-target-docker-build.jinja
+│   │   │   ├── nx-target-docker-compose.jinja
+│   │   │   ├── nx-target-nextjs-build.jinja
+│   │   │   ├── nx-target-nextjs-dev.jinja
+│   │   │   ├── nx-target-nodejs-lint.jinja
+│   │   │   ├── nx-target-nodejs-test.jinja
+│   │   │   ├── nx-target-python-lint.jinja
+│   │   │   ├── nx-target-python-serve.jinja
+│   │   │   └── nx-target-python-test.jinja
+│   │   └── devbox-partials/       # Devbox configuration partials
+│   └── nx.json.template.jinja     # Base Nx workspace configuration
+│
 └── internal-docs/                 # Boilerplate system documentation
+    └── adr/
+        └── adr-20260419001-nx-monorepo-build-tool.md  # Nx adoption decision
 ```
+
+---
+
+## Nx Monorepo Support
+
+### Overview
+
+All boilerplate templates include **Nx monorepo build orchestration** support. Nx is the unified build system for the monorepo, providing:
+
+- **Polyglot build support**: JavaScript/TypeScript, Docker, Python, Rust, and more
+- **Computation caching**: Build artifacts cached across all technologies
+- **Task orchestration**: Dependency-aware task scheduling
+- **Unified developer experience**: Consistent commands across all project types
+
+### Nx Configuration in Templates
+
+Each generated project includes Nx configuration:
+
+- **`nx.json`**: Workspace-level configuration (generated from `_shared/nx.json.template.jinja`)
+- **`project.json`**: Project-specific tasks and targets (or `nx` key in `package.json`)
+- **Nx plugins**: Technology-specific plugins (`@nx/js`, `@nx/docker`, `@nx/python`, etc.)
+
+### Shared Nx Partials
+
+The boilerplate system includes reusable Nx configuration partials in `_shared/partials/nx-partials/`:
+
+#### Core Configuration
+- `nx-base-config.jinja`: Base Nx workspace configuration
+- `nx-packages-core.jinja`: Core package definitions
+
+#### Technology-Specific Packages
+- `nx-packages-docker.jinja`: Docker build packages
+- `nx-packages-nodejs.jinja`: Node.js/TypeScript packages
+- `nx-packages-python.jinja`: Python packages
+
+#### Technology-Specific Plugins
+- `nx-plugins-docker.jinja`: Docker plugin configuration
+- `nx-plugins-nodejs.jinja`: Node.js plugin configuration
+- `nx-plugins-python.jinja`: Python plugin configuration
+
+#### Target Definitions
+- `nx-target-docker-build.jinja`: Docker build target
+- `nx-target-docker-compose.jinja`: Docker Compose target
+- `nx-target-nextjs-build.jinja`: Next.js build target
+- `nx-target-nextjs-dev.jinja`: Next.js dev server target
+- `nx-target-nodejs-lint.jinja`: Node.js linting target
+- `nx-target-nodejs-test.jinja`: Node.js testing target
+- `nx-target-python-lint.jinja`: Python linting target
+- `nx-target-python-serve.jinja`: Python serve target
+- `nx-target-python-test.jinja`: Python testing target
+
+### Using Nx in Generated Projects
+
+After generating a project from a boilerplate template:
+
+```bash
+# Run project-specific tasks
+nx build <project-name>
+nx test <project-name>
+nx lint <project-name>
+
+# Run tasks across multiple projects
+nx run-many -t build -p <project1> <project2>
+
+# Run affected projects (based on git changes)
+nx affected -t build
+
+# Visualize the project graph
+nx graph
+```
+
+### Nx Integration with Devbox
+
+Nx is available through devbox in all generated projects:
+
+```bash
+# Use Nx via devbox
+ devbox run -- rtk nx build <project-name>
+
+# Run justfile commands that use Nx
+ devbox run -- rtk just build  # Justfile wraps Nx commands
+```
+
+### Template-Specific Nx Configuration
+
+Different template types include appropriate Nx configuration:
+
+- **TypeScript/Next.js apps**: `@nx/next` plugin with build/dev/test targets
+- **Docker services**: `@nx/docker` plugin with build/compose targets
+- **Python services**: Python plugin with lint/test/serve targets
+- **CLI tools**: Node.js or language-specific plugins with appropriate targets
+
+### For Template Authors
+
+When creating or modifying boilerplate templates:
+
+1. **Include Nx configuration**: Add `nx.json.jinja` or use shared partials
+2. **Define project targets**: Create `project.json.jinja` with appropriate targets
+3. **Use shared partials**: Include relevant Nx partials from `_shared/partials/nx-partials/`
+4. **Test Nx integration**: Verify `nx build`, `nx test`, and other targets work correctly
+5. **Document Nx usage**: Include Nx-specific commands in the generated README
+
+### References
+
+- [Nx Documentation](https://nx.dev)
+- [ADR: Nx Monorepo Build Tool](../internal-docs/adr/adr-20260419001-nx-monorepo-build-tool.md)
+- [Nx Plugin Ecosystem](https://nx.dev/packages)
 
 ---
 
@@ -531,7 +663,7 @@ description: "A test project"
 EOF
 
 # Use copier-wrapper.sh with devbox for testing
-devbox run -- ./boilerplate/copier-wrapper.sh copy \
+ devbox run -- rtk ./boilerplate/copier-wrapper.sh copy \
   ./boilerplate/apps/infrastructure/my-new-project \
   /tmp/test-project \
   --data @/tmp/test-answers.yml
@@ -628,7 +760,7 @@ The template:
 
 ```bash
 # From the job-aide repository root
-devbox run -- ./boilerplate/copier-wrapper.sh copy <template-path> <output-path> [options]
+ devbox run -- rtk ./boilerplate/copier-wrapper.sh copy <template-path> <output-path> [options]
 ```
 
 ### Non-Interactive Usage (Answer Files)
@@ -645,14 +777,14 @@ description: "A project description"
 EOF
 
 # Use the answers file
-devbox run -- ./boilerplate/copier-wrapper.sh copy \
+ devbox run -- rtk ./boilerplate/copier-wrapper.sh copy \
   <template-path> <output-path> \
   --data @copier-answers.yml
 ```
 
 **Alternative: Use --defaults flag** (only works if all prompts have defaults):
 ```bash
-devbox run -- ./boilerplate/copier-wrapper.sh copy \
+ devbox run -- rtk ./boilerplate/copier-wrapper.sh copy \
   <template-path> <output-path> \
   --defaults
 ```
@@ -669,7 +801,7 @@ author_name: "Developer"
 author_email: "dev@example.com"
 EOF
 
-devbox run -- ./boilerplate/copier-wrapper.sh copy \
+ devbox run -- rtk ./boilerplate/copier-wrapper.sh copy \
   apps/plugins/browser-extension \
   ./apps/active/plugin/browser/my-extension \
   --data @copier-answers.yml
@@ -681,7 +813,7 @@ The `copier-wrapper.sh` automatically handles shared partials from `_shared/` di
 
 ```bash
 # The wrapper copies _shared/ contents to partials.bak/ before running copier
-devbox run -- ./boilerplate/copier-wrapper.sh copy \
+ devbox run -- rtk ./boilerplate/copier-wrapper.sh copy \
   apps/infrastructure/docker/docker-linux \
   /tmp/my-project \
   --defaults
@@ -691,13 +823,13 @@ devbox run -- ./boilerplate/copier-wrapper.sh copy \
 
 ```bash
 # Use copier-wrapper.sh for updates too
-devbox run -- ./boilerplate/copier-wrapper.sh update --vcs-ref=HEAD ./path/to/existing-project
+ devbox run -- rtk ./boilerplate/copier-wrapper.sh update --vcs-ref=HEAD ./path/to/existing-project
 ```
 
 ### Dry Run (Preview Changes)
 
 ```bash
-devbox run -- ./boilerplate/copier-wrapper.sh copy --defaults \
+ devbox run -- rtk ./boilerplate/copier-wrapper.sh copy --defaults \
   ./boilerplate/apps/infrastructure/airflow-project \
   /tmp/preview
 ```
@@ -709,7 +841,7 @@ For CLI templates, use the project's justfile for testing:
 ```bash
 # After generating a project, cd into it and use just
 cd /tmp/test-project
-devbox run -- just test-internal  # Run tests in devbox environment
+ devbox run -- rtk just test-internal  # Run tests in devbox environment
 ```
 
 The `just test-internal` command ensures tests run in the proper devbox environment with all dependencies available.
@@ -738,7 +870,7 @@ If you see `jinja2.exceptions.TemplateNotFound: 'partials.bak/...'`:
 
 1. **Use the wrapper script via devbox** (not direct copier):
    ```bash
-   devbox run -- ./boilerplate/copier-wrapper.sh copy <template> <output>
+    devbox run -- rtk ./boilerplate/copier-wrapper.sh copy <template> <output>
    ```
 
 2. **Do NOT run copier directly** - it won't copy the shared partials:
@@ -747,14 +879,14 @@ If you see `jinja2.exceptions.TemplateNotFound: 'partials.bak/...'`:
    copier copy ./boilerplate/apps/plugins/browser-extension ./my-extension
    
    # ✅ CORRECT - use the wrapper via devbox
-   devbox run -- ./boilerplate/copier-wrapper.sh copy apps/plugins/browser-extension ./my-extension
+    devbox run -- rtk ./boilerplate/copier-wrapper.sh copy apps/plugins/browser-extension ./my-extension
    ```
 
 3. **Check wrapper copied hidden files**: The wrapper now copies ALL files including hidden (`.envrc.jinja`, etc.)
 
 4. **Verify copier is available via devbox**:
    ```bash
-   devbox run -- which copier
+    devbox run -- rtk which copier
    # Should show path like /nix/store/.../bin/copier
    ```
 
@@ -773,5 +905,7 @@ Ensure `.jinja` suffix is on files that need rendering. Files without `.jinja` a
 - [ADR 004: Package Path Modifier](../internal-docs/adr/adr-20251016001-package-path-modifier.md)
 - [ADR 003: Application Organization](../internal-docs/adr-adr-20251014002-application-organization.md)
 - [Shared Partials ADR](apps/infrastructure/docker/internal-docs/adr/adr-20250123001-shared-partials-wrapper.md)
+- [Nx Documentation](https://nx.dev)
+- [ADR: Nx Monorepo Build Tool](../internal-docs/adr/adr-20260419001-nx-monorepo-build-tool.md)
 
 <!-- vim: set ft=markdown: -->
