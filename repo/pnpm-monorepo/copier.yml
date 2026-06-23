@@ -1,7 +1,7 @@
 # Template variables
 _defaults:
   monorepo_name: "my-monorepo"
-  project_name: "my-monorepo"
+  package_name: "my-monorepo"
   boilerplate_name: "pnpm-monorepo"
   description: "A pnpm-based monorepo with turbo"
 
@@ -10,7 +10,7 @@ monorepo_name:
   type: str
   help: "What is your monorepo name?"
 
-project_name:
+package_name:
   type: str
   help: "Project name (defaults to monorepo_name)"
 

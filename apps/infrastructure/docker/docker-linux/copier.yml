@@ -15,12 +15,12 @@ base_os:
 _subdirectory: files
 _templates_suffix: .jinja
 
-_service_name:
+package_name:
   type: str
   help: Name of the service (used for container names, directories, etc.)
   default: my-service
 
-_service_name_slug:
+package_slug:
   type: str
   default: "{{ _service_name | lower | replace(' ', '-') }}"
   help: Slug of service name used in directory and resource naming.
@@ -105,7 +105,7 @@ _templates_suffix: .jinja
 _templates:
   README.md.jinja: README.md
   package.json.jinja: package.json
-  Dockerfile.{{ _service_name_slug }}.jinja: "Dockerfile.{{ _service_name_slug }}"
+  Dockerfile.{{ package_slug }}.jinja: "Dockerfile.{{ package_slug }}"
   docker-compose.yml.jinja: docker-compose.yml
   .dockerignore.jinja: .dockerignore
   .envrc.jinja: .envrc

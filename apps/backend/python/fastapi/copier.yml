@@ -1,5 +1,5 @@
 _defaults:
-  service_name: "my-fastapi-service"
+  package_name: "my-fastapi-service"
   description: "A FastAPI backend service"
   python_version: "3.11"
   port: 8000
@@ -7,7 +7,7 @@ _defaults:
 _templates_suffix: ".tmpl"
 _subdirectory: files
 
-service_name:
+package_name:
   type: str
   help: "Service name (kebab-case; used for container, logs, and Docker service name)"
 

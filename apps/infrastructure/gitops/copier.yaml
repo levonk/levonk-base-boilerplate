@@ -3,7 +3,7 @@ _subdirectory: files
 _templates_suffix: .jinja
 
 # Project Information
-project_name:
+package_name:
   type: str
   help: "Project name (kebab-case)"
   default: "my-gitops-project"
@@ -43,7 +43,7 @@ app_port:
 chart_name:
   type: str
   help: "Helm chart name"
-  default: "{{ project_name }}"
+  default: "{{ package_name }}"
 
 chart_version:
   type: str
@@ -201,7 +201,7 @@ author_email:
 repo_url:
   type: str
   help: "Repository URL"
-  default: "https://github.com/myorg/{{ project_name }}"
+  default: "https://github.com/myorg/{{ package_name }}"
 
 # License
 license:

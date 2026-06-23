@@ -1,0 +1,62 @@
+# Docker Service Boilerplate - Nix-based
+# Generates secure, production-ready Docker services using Nix
+
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+package_name:
+  type: str
+  help: Name of the service (used for container names, directories, etc.)
+  default: my-service
+
+package_slug:
+  type: str
+  default: "{{ _service_name | lower | replace(' ', '-') }}"
+  help: Slug of service name used in directory and resource naming.
+
+_service_description:
+  type: str
+  help: Brief description of what this service does
+  default: "A secure Docker service built with Nix"
+
+_service_port:
+  type: str
+  help: Primary port the service listens on (e.g., "8080")
+  default: "8080"
+
+_env_prefix:
+  type: str
+  help: Environment variable prefix in CATEGORY_SERVICE_SUB form (e.g., SECURITY_TUGTAINER_MAIN)
+  default: "CATEGORY_SERVICE_SUB"
+
+_service_health_endpoint:
+  type: str
+  help: Health check endpoint path (e.g., "/health", "/status")
+  default: "/health"
+
+templates_suffix: ".jinja"
+
+_nix_system:
+  type: str
+  help: Target Nix system (e.g., x86_64-linux, aarch64-linux)
+  default: "x86_64-linux"
+
+_include_tests:
+  type: bool
+  help: Include test scripts and test targets in Makefile
+  default: true
+
+_include_ui:
+  type: bool
+  help: Include web UI component (additional container)
+  default: false
+
+_ui_port:
+  type: str
+  help: Port for web UI (only used if include_ui is true)
+  default: "3000"
+
+_templates:
+  - package.json.jinja
+  - tsconfig.json.jinja

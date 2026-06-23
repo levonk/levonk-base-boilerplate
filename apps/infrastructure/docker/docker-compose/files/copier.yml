@@ -1,0 +1,74 @@
+# Docker Compose Boilerplate
+# Generates secure docker-compose configurations for services
+
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: .jinja
+
+package_name:
+  type: str
+  help: Name of the service (used for container names, networks, etc.)
+  default: my-service
+
+package_slug:
+  type: str
+  help: Slugified service name for resource naming (networks, containers, files)
+  default: "{{ _service_name | lower | replace(' ', '-') }}"
+
+_service_description:
+  type: str
+  help: Brief description of what this service does
+  default: "A secure Docker service"
+
+_service_port:
+  type: str
+  help: Primary port the service listens on (e.g., "8080")
+  default: "8080"
+
+_service_health_endpoint:
+  type: str
+  help: Health check endpoint path (e.g., "/health", "/status")
+  default: "/health"
+
+_env_prefix:
+  type: str
+  help: Environment variable prefix in CATEGORY_SERVICE_SUB form (e.g., SECURITY_TUGTAINER_MAIN)
+  default: "CATEGORY_SERVICE_SUB"
+
+_include_ui:
+  type: bool
+  help: Include web UI component (additional container)
+  default: false
+
+_ui_port:
+  type: str
+  help: Port for web UI (only used if include_ui is true)
+  default: "3000"
+
+_use_traefik:
+  type: bool
+  help: Configure Traefik reverse proxy labels
+  default: false
+
+_domain:
+  type: str
+  help: Domain name for Traefik routing (only used if use_traefik is true)
+  default: "example.com"
+
+_enable_monitoring:
+  type: bool
+  help: Include Prometheus metrics and monitoring labels
+  default: false
+
+_templates:
+  README.md.jinja: README.md
+  package.json.jinja: package.json
+  docker-compose.yml.jinja: docker-compose.yml
+  docker-compose.override.yml.jinja: docker-compose.override.yml
+  scripts/ensure-network.py: scripts/ensure-network.py
+  scripts/run-quality-checks.sh.jinja: scripts/run-quality-checks.sh
+  flake.nix.jinja: flake.nix
+  .envrc.jinja: .envrc
+  Makefile.jinja: Makefile
+  .githooks/pre-commit.jinja: .githooks/pre-commit
+  .github/workflows/quality.yml.jinja: .github/workflows/quality.yml

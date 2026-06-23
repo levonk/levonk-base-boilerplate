@@ -4,7 +4,7 @@
 _min_copier_version: "9.0.0"
 
 # Questions for template
-project_name:
+package_name:
   type: str
   help: "Project/directory name for the generated samples"
   default: "ai-ollama-samples"

@@ -1,7 +1,7 @@
 # Template variables
 _subdirectory: "files"
 
-extension_name:
+package_name:
   type: str
   help: "The human-readable name of the extension"
   default: "VSCode Recents"

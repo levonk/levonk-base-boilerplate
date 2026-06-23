@@ -6,7 +6,7 @@ _min_copier_version: "9.0.0"
 _subdirectory: files
 _templates_suffix: .jinja
 
-project_name:
+package_name:
   type: str
   help: "Project name (kebab-case)"
   default: "paperclip"

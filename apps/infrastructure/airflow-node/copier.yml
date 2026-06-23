@@ -4,7 +4,7 @@
 
 _min_copier_version: '9.0.0'
 
-project_name:
+package_name:
   type: str
   help: 'Airflow node image project name'
   default: 'airflow-node'
