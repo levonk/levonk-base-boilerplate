@@ -3,7 +3,7 @@ package_name:
   help: What is the project name?
   default: "my-cli-tool"
 
-project_slug:
+package_slug:
   type: str
   help: What is the project slug? (e.g. my-tool)
   default: "{{ project_name | lower | replace(' ', '-') }}"

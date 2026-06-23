@@ -8,7 +8,7 @@ package_name:
   help: "Project name (kebab-case)"
   default: "my-gitops-project"
 
-project_slug:
+package_slug:
   type: str
   help: "Project slug for file names (snake_case)"
   default: "my_gitops_project"
