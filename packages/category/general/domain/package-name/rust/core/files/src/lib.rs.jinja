@@ -1,67 +1,53 @@
-//! # {{ crate_name }}
-//!
-//! {{ description }}
-//!
-//! ## Features
-//!
-//! - Feature 1
-//! - Feature 2
-//! - Feature 3
-//!
-//! ## Example
-//!
-//! ```rust
-//! use {{ crate_name }}::*;
-//!
-//! fn main() {
-//!     // Your code here
-//! }
-//! ```
-
-#![warn(missing_docs)]
-#![warn(clippy::all)]
-#![warn(clippy::pedantic)]
-#![allow(clippy::module_name_repetitions)]
-
-{% if include_async %}
-#[cfg(feature = "async")]
-pub mod {{ module_name }};
-{% else %}
-pub mod {{ module_name }};
+{% if include_thiserror -%}
+use thiserror::Error;
 {% endif %}
 
-{% if include_cli %}
-#[cfg(feature = "cli")]
-pub mod cli;
+{% if include_thiserror -%}
+#[derive(Error, Debug)]
+pub enum {{ package_name | title_case | replace('-', '') }}Error {
+    #[error("An error occurred: {0}")]
+    Generic(String),
+}
 {% endif %}
 
-// Re-export main types for convenience
-{% if include_async %}
-#[cfg(feature = "async")]
-pub use {{ module_name }}::*;
-{% else %}
-pub use {{ module_name }}::*;
-{% endif %}
+/// Main library functionality for {{ package_name }}
+pub struct {{ package_name | title_case | replace('-', '') }} {
+    // Add your fields here
+}
 
-{% if include_cli %}
-#[cfg(feature = "cli")]
-pub use cli::*;
-{% endif %}
+impl {{ package_name | title_case | replace('-', '') }} {
+    /// Create a new instance
+    pub fn new() -> Self {
+        Self {
+            // Initialize fields
+        }
+    }
 
-/// Library version
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+    /// Example method
+    pub fn do_something(&self) -> Result<String{% if include_thiserror %}, {{ package_name | title_case | replace('-', '') }}Error{% endif %}> {
+        Ok("Hello from {{ package_name }}!".to_string())
+    }
+}
+
+impl Default for {{ package_name | title_case | replace('-', '') }} {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_library_version() {
-        assert!(!VERSION.is_empty());
+    fn test_creation() {
+        let instance = {{ package_name | title_case | replace('-', '') }}::new();
+        assert!(instance.do_something().is_ok());
     }
 
     #[test]
-    fn test_basic_functionality() {
-        // Add basic functionality tests here
+    fn test_default() {
+        let instance = {{ package_name | title_case | replace('-', '') }}::default();
+        assert!(instance.do_something().is_ok());
     }
 }
