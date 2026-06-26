@@ -1,0 +1,27 @@
+# Rust dependency synchronization
+# Automatically syncs Cargo.lock when Cargo.toml is modified
+
+sync-deps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Synchronize Cargo.lock with Cargo.toml
+    # Called by pre-commit target when Cargo.toml is modified
+    echo "🔄 Syncing Cargo.lock with Cargo.toml..."
+    cargo update
+    git add Cargo.lock
+    echo "✅ Cargo.lock synchronized and staged"
+
+pre-commit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Pre-commit hook orchestration - called by git pre-commit hook
+    # This target can call multiple validation targets
+    echo "🔍 Running pre-commit checks..."
+    
+    # Check if Cargo.toml is modified and sync dependencies if needed
+    if git diff --cached --name-only | grep -q "Cargo.toml"; then
+        echo "Cargo.toml modified, syncing dependencies..."
+        just sync-deps
+    fi
+    
+    echo "✅ Pre-commit checks complete"

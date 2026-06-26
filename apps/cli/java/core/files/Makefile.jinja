@@ -1,4 +1,4 @@
-.PHONY: doctor bootstrap profile help clean clean-inner build build-inner build-release build-release-inner debug debug-inner run run-inner run-debug run-debug-inner deploy deploy-inner lint lint-inner test test-inner docker-build docker-run
+.PHONY: doctor bootstrap profile help clean clean-inner build build-inner build-release build-release-inner debug debug-inner run run-inner run-debug run-debug-inner deploy deploy-inner lint lint-inner test test-inner docker-build docker-run sync-deps sync-deps-inner pre-commit pre-commit-inner
 
 PROJECT_SLUG := {{ project_slug }}
 NIX := $(shell if [ -x /nix/var/nix/profiles/default/bin/nix ]; then echo /nix/var/nix/profiles/default/bin/nix; else echo nix; fi)
@@ -85,6 +85,26 @@ lint: doctor bootstrap ## Placeholder for format/lint (via nix dev shell)
 
 lint-inner: ## Placeholder for format/lint
 	@echo "No lint configured for Java template"
+
+# Dependency synchronization
+sync-deps: doctor bootstrap ## Validate Maven dependencies when pom.xml is modified
+	@$(NIX_DEV) $(MAKE) sync-deps-inner
+
+sync-deps-inner: ## Validate Maven dependencies
+	@echo "🔄 Validating Maven dependencies..."
+	mvn dependency:resolve
+	@echo "✅ Maven dependencies validated"
+
+pre-commit: doctor bootstrap ## Run pre-commit checks
+	@$(NIX_DEV) $(MAKE) pre-commit-inner
+
+pre-commit-inner: ## Pre-commit hook orchestration
+	@echo "🔍 Running pre-commit checks..."
+	@if git diff --cached --name-only | grep -q "pom.xml"; then \
+		echo "pom.xml modified, validating dependencies..."; \
+		$(MAKE) sync-deps-inner; \
+	fi
+	@echo "✅ Pre-commit checks complete"
 
 
 test: doctor bootstrap ## Run tests (via nix dev shell)

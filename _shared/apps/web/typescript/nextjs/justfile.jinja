@@ -265,6 +265,9 @@ logs-internal:
     echo "NextJS logs:"
     tail -f .next/server.log 2>/dev/null || echo "No server logs found"
 
+# Dependency synchronization
+{% include '_shared/partials/justfile-partials/typescript-deps-sync.jinja' %}
+
 # Development setup (OPTIONAL)
 setup:
     @just bootstrap
@@ -296,6 +299,8 @@ help:
     echo "  just test-watch    - Run tests in watch mode"
     echo "  just lint-fix      - Lint and fix issues"
     echo "  just format        - Format code"
+    echo "  just sync-deps     - Sync lock file with package.json"
+    echo "  just pre-commit    - Run pre-commit checks"
     echo "  just start         - Start production server"
     echo "  just storybook     - Run Storybook"
     echo "  just e2e           - Run E2E tests"

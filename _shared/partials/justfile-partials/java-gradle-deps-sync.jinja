@@ -1,0 +1,28 @@
+# Java Gradle dependency synchronization
+# Automatically syncs gradle.lockfile when build.gradle is modified
+# Requires dependency locking to be enabled in the project
+
+sync-deps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Synchronize Gradle lock file with build.gradle
+    # Called by pre-commit target when build.gradle is modified
+    echo "🔄 Syncing Gradle dependencies..."
+    ./gradlew dependencies --write-locks
+    git add gradle.lockfile
+    echo "✅ Gradle lock file synchronized and staged"
+
+pre-commit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Pre-commit hook orchestration - called by git pre-commit hook
+    # This target can call multiple validation targets
+    echo "🔍 Running pre-commit checks..."
+    
+    # Check if build.gradle is modified and sync dependencies if needed
+    if git diff --cached --name-only | grep -q "build.gradle"; then
+        echo "build.gradle modified, syncing dependencies..."
+        just sync-deps
+    fi
+    
+    echo "✅ Pre-commit checks complete"

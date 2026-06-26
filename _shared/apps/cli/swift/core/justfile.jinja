@@ -90,7 +90,32 @@ run:
 update:
     swift package update
 
+# Dependency synchronization
+{% include '_shared/partials/justfile-partials/swift-deps-sync.jinja' %}
+
 # Development setup
 setup:
     @just bootstrap
     echo "✅ Swift CLI development environment ready!"
+
+# Help target
+help:
+    @echo "🦉 Swift CLI Application"
+    @echo ""
+    @echo "Standard commands:"
+    @echo "  just bootstrap    - Initialize the development environment"
+    @echo "  just build        - Build the project"
+    @echo "  just test         - Run tests"
+    @echo "  just lint         - Run linting"
+    @echo "  just typecheck    - Run type checking"
+    @echo "  just dev           - Run in development mode"
+    @echo "  just clean         - Clean build artifacts"
+    @echo "  just doctor        - Check environment health"
+    @echo ""
+    @echo "Swift-specific commands:"
+    @echo "  just resolve       - Resolve Swift packages"
+    @echo "  just update        - Update dependencies"
+    @echo "  just format        - Format code"
+    @echo "  just test-coverage - Run tests with coverage"
+    @echo "  just sync-deps     - Sync Package.resolved with Package.swift"
+    @echo "  just pre-commit    - Run pre-commit checks"

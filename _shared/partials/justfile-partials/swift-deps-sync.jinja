@@ -1,0 +1,27 @@
+# Swift dependency synchronization
+# Automatically syncs Package.resolved when Package.swift is modified
+
+sync-deps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Synchronize Package.resolved with Package.swift
+    # Called by pre-commit target when Package.swift is modified
+    echo "🔄 Syncing Package.resolved with Package.swift..."
+    swift package resolve
+    git add Package.resolved
+    echo "✅ Package.resolved synchronized and staged"
+
+pre-commit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Pre-commit hook orchestration - called by git pre-commit hook
+    # This target can call multiple validation targets
+    echo "🔍 Running pre-commit checks..."
+    
+    # Check if Package.swift is modified and sync dependencies if needed
+    if git diff --cached --name-only | grep -q "Package.swift"; then
+        echo "Package.swift modified, syncing dependencies..."
+        just sync-deps
+    fi
+    
+    echo "✅ Pre-commit checks complete"

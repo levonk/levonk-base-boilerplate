@@ -57,3 +57,29 @@ doctor:
     @echo "  Node: $(node --version)"
     @echo "  pnpm: $(pnpm --version)"
     @echo "  NX: {% if NX_AVAILABLE %}$(nx --version){% else %}not installed{% endif %}"
+
+# Dependency synchronization
+{% include '_shared/partials/justfile-partials/typescript-deps-sync.jinja' %}
+
+# Help target
+help:
+    @echo "📦 TypeScript CLI Application"
+    @echo ""
+    @echo "Standard commands:"
+    @echo "  just bootstrap    - Initialize the development environment"
+    @echo "  just build        - Build the project"
+    @echo "  just test         - Run tests"
+    @echo "  just lint         - Run linting"
+    @echo "  just typecheck    - Run type checking"
+    @echo "  just dev          - Run in development mode"
+    @echo "  just doctor       - Check environment health"
+    @echo ""
+    @echo "NX commands (if available):"
+    @echo "  just nx-build     - Build with NX"
+    @echo "  just nx-test      - Test with NX"
+    @echo "  just nx-lint      - Lint with NX"
+    @echo "  just nx-typecheck - Typecheck with NX"
+    @echo ""
+    @echo "TypeScript-specific commands:"
+    @echo "  just sync-deps    - Sync lock file with package.json"
+    @echo "  just pre-commit   - Run pre-commit checks"

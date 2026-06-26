@@ -1,0 +1,28 @@
+# Java Maven dependency synchronization
+# Validates Maven dependencies when pom.xml is modified
+# Note: Maven doesn't use lock files, but this validates dependency resolution
+
+sync-deps:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Validate Maven dependencies
+    # Called by pre-commit target when pom.xml is modified
+    echo "🔄 Validating Maven dependencies..."
+    mvn dependency:resolve
+    # Maven doesn't have a lock file, but this ensures dependencies are resolvable
+    echo "✅ Maven dependencies validated"
+
+pre-commit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Pre-commit hook orchestration - called by git pre-commit hook
+    # This target can call multiple validation targets
+    echo "🔍 Running pre-commit checks..."
+    
+    # Check if pom.xml is modified and validate dependencies
+    if git diff --cached --name-only | grep -q "pom.xml"; then
+        echo "pom.xml modified, validating dependencies..."
+        just sync-deps
+    fi
+    
+    echo "✅ Pre-commit checks complete"

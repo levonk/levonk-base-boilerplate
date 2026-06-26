@@ -290,6 +290,9 @@ audit-internal:
     # Audit dependencies
     command cargo audit
 
+# Dependency synchronization
+{% include '_shared/partials/justfile-partials/rust-deps-sync.jinja' %}
+
 # Man page generation and installation
 generate-man-pages:
     @echo "📄 Generating man pages..."
@@ -413,6 +416,8 @@ help:
     echo "  just format        - Format code"
     echo "  just doc           - Generate documentation"
     echo "  just audit         - Audit dependencies"
+    echo "  just sync-deps     - Sync Cargo.lock with Cargo.toml"
+    echo "  just pre-commit    - Run pre-commit checks"
     echo ""
     echo "Internal commands (for devbox scripts):"
     echo "  just *-internal    - Internal implementations"

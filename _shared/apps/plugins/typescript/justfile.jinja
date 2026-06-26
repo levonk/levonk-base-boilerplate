@@ -85,3 +85,26 @@ clean-artifacts:
 setup:
     @just bootstrap
     echo "✅ TypeScript plugin development environment ready!"
+
+# Dependency synchronization
+{% include '_shared/partials/justfile-partials/typescript-deps-sync.jinja' %}
+
+# Help target
+help:
+    @echo "🔌 TypeScript Plugin - Available Commands"
+    @echo ""
+    @echo "Standard commands:"
+    @echo "  just bootstrap    - Initialize the development environment"
+    @echo "  just build        - Build the project"
+    @echo "  just test         - Run tests"
+    @echo "  just lint         - Run linting"
+    @echo "  just typecheck    - Run type checking"
+    @echo "  just dev          - Run in development mode"
+    @echo "  just clean         - Clean build artifacts"
+    @echo "  just doctor        - Check environment health"
+    @echo ""
+    @echo "TypeScript-specific commands:"
+    @echo "  just install       - Install dependencies"
+    @echo "  just format        - Format code"
+    @echo "  just sync-deps     - Sync lock file with package.json"
+    @echo "  just pre-commit    - Run pre-commit checks"

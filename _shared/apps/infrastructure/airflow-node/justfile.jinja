@@ -79,3 +79,29 @@ doctor:
     @echo "📊 NX: {{ if NX_AVAILABLE }}$(nx --version){{ else }}not installed{{ endif }}"
     @echo ""
     @echo "✅ Airflow Node environment is ready!"
+
+# Dependency synchronization
+{% include '_shared/partials/justfile-partials/typescript-deps-sync.jinja' %}
+
+# Help target
+help:
+    @echo "🐳 Airflow Node - Available Commands"
+    @echo ""
+    @echo "Standard commands:"
+    @echo "  just bootstrap    - Initialize the development environment"
+    @echo "  just build        - Build the project"
+    @echo "  just test         - Run tests"
+    @echo "  just lint         - Run linting"
+    @echo "  just typecheck    - Run type checking"
+    @echo "  just dev          - Run in development mode"
+    @echo "  just clean         - Clean build artifacts"
+    @echo "  just doctor        - Check environment health"
+    @echo ""
+    @echo "NX commands (if available):"
+    @echo "  just nx-build     - Build with NX"
+    @echo "  just nx-up        - Start services with NX"
+    @echo "  just nx-down      - Stop services with NX"
+    @echo ""
+    @echo "TypeScript-specific commands:"
+    @echo "  just sync-deps    - Sync lock file with package.json"
+    @echo "  just pre-commit   - Run pre-commit checks"
