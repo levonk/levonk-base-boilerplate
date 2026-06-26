@@ -1,17 +1,17 @@
 {
     "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
-    "packages": [
-        "dotnet-sdk",
-        "dotnet-runtime",
-        "just"
+    "packages": {
+        "dotnet-sdk": "",
+        "dotnet-runtime": "",
+        "just": ""
         {% if include_efcore %},
-        "postgresql",
-        "sqlite"
+        "postgresql": "",
+        "sqlite": ""
         {% endif %}
         {% if include_grpc %},
-        "protobuf"
+        "protobuf": ""
         {% endif %}
-    ],
+    },
     "shell": {
         "init_hook": [
             "echo '� C# environment initialized'",
@@ -38,5 +38,5 @@
         "PACKAGE_NAME": "{{ package_name | default('csharp-package') }}",
         "NAMESPACE_NAME": "{{ namespace_name | default('CSharpPackage') }}"
     },
-    {% include "partials.bak/partials/devbox-partials/devbox-hooks-dotnet.jinja" %}
+    {% include "_shared/partials/devbox-partials/devbox-hooks-dotnet.jinja" %}
 }

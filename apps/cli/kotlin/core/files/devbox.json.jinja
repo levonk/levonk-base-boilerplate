@@ -2,15 +2,15 @@
   "name": "{{ project_name | default('kotlin-cli-app') }}",
   "version": "0.1.0",
   "description": "{{ description | default('A Kotlin CLI application') }}",
-  "packages": [
-    "openjdk@17",
-    "gradle",
-    "kotlin",
-    "just"
+  "packages": {
+    "openjdk": "17",
+    "gradle": "",
+    "kotlin": "",
+    "just": ""
     {% if include_postgres %},
-    "postgresql"
+    "postgresql": ""
     {% endif %}
-  ],
+  },
   "shell": {
     "init_hook": [
       "just bootstrap-internal"
@@ -37,5 +37,5 @@
     "DATABASE_URL": "jdbc:sqlite:./{{ project_name | default('kotlin-cli-app') }}.db",
     {% endif %}
   },
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-kotlin.jinja" %}
+  {% include "_shared/partials/devbox-partials/devbox-hooks-kotlin.jinja" %}
 }

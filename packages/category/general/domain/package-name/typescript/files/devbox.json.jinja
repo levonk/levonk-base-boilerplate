@@ -1,6 +1,5 @@
 {"$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json"}
-,"packages": ["nodejs@{{ node_version }}", "pnpm", "git", "curl", "vim", "just"]
-,"packages": ["nodejs@{{ node_version }}", "pnpm", "git", "curl", "vim", "just"]
+,"packages": {"nodejs": "{{ node_version }}", "pnpm": "", "git": "", "curl": "", "vim": "", "just": ""}
 ,"shell": {"init_hook": ["echo '🟨 TypeScript environment initialized'", "echo '📦 Project: {{ package_name }}'", "echo '🔧 Node.js version: {{ node_version }}'", "echo '🛠️  Use: just test && just lint'"], "scripts": {"bootstrap": "just bootstrap-internal", "doctor": "just doctor-internal", "clean": "just clean-internal", "build": "just build-internal", "test": "just test-internal", "lint": "just lint-internal", "typecheck": "just typecheck-internal", "dev": "just dev-internal"}}
 ,"env": {"NODE_ENV": "development", "PACKAGE_NAME": "{{ package_name }}", "PACKAGE_SLUG": "{{ package_slug }}", "MODULE_NAME": "{{ module_name }}", "NODE_VERSION": "{{ node_version }}", "TYPESCRIPT_VERSION": "{{ typescript_version }}"}
 ,{% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}

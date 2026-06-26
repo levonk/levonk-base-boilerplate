@@ -1,6 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
-  "packages": ["go@{{ go_version }}", "git", "curl", "vim", "just", "golangci-lint"],
+  "packages": {
+    "go": "{{ go_version }}",
+    "git": "",
+    "curl": "",
+    "vim": "",
+    "just": "",
+    "golangci-lint": ""
+  },
   "shell": {
     "init_hook": [
       "echo '🐹 Go environment initialized'",

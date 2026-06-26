@@ -1,6 +1,19 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
-  "packages": ["python{{ python_version | default(311) }}", "pip", "poetry", "just", "black", "isort", "flake8", "mypy", "pytest", "pytest-cov", "build", "twine"],
+  "packages": {
+    "python": "{{ python_version | default(311) }}",
+    "pip": "",
+    "poetry": "",
+    "just": "",
+    "black": "",
+    "isort": "",
+    "flake8": "",
+    "mypy": "",
+    "pytest": "",
+    "pytest-cov": "",
+    "build": "",
+    "twine": ""
+  },
   "shell": {
     "init_hook": [
       "echo '🐍 Python environment initialized'",

@@ -2,31 +2,31 @@
   "name": "{{ project_name | default('rust-cli-app') }}",
   "version": "0.1.0",
   "description": "{{ description | default('A Rust CLI application') }}",
-  "packages": [
-    "rustc",
-    "cargo",
-    "rust-analyzer",
-    "clippy",
-    "rustfmt",
-    "just",
-    "cargo-watch",
-    "cargo-tarpaulin",
-    "cargo-audit",
-    "pkg-config"
+  "packages": {
+    "rustc": "",
+    "cargo": "",
+    "rust-analyzer": "",
+    "clippy": "",
+    "rustfmt": "",
+    "just": "",
+    "cargo-watch": "",
+    "cargo-tarpaulin": "",
+    "cargo-audit": "",
+    "pkg-config": ""
     {%- if include_openssl -%},
-    "openssl",
-    "openssl.dev"
+    "openssl": "",
+    "openssl.dev": ""
     {%- endif -%}
     {%- if include_postgres -%},
-    "postgresql"
+    "postgresql": ""
     {%- endif -%}
     {%- if include_sqlite -%},
-    "sqlite"
+    "sqlite": ""
     {%- endif -%}
     {%- if include_redis -%},
-    "redis"
+    "redis": ""
     {%- endif -%}
-  ],
+  },
   "shell": {
     "init_hook": [
       "just bootstrap-internal"
@@ -65,5 +65,5 @@
     "HTTP_HOST": "0.0.0.0"
     {%- endif -%}
   },
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-rust.jinja" %}
+  {% include "_shared/partials/devbox-partials/devbox-hooks-rust.jinja" %}
 }

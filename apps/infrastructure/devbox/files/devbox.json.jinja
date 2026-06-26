@@ -1,12 +1,17 @@
 {
-  "packages": [
-    "{{ language }}@latest",
-    {% if language == 'go' %}"golangci-lint@latest",{% endif %}
-    {% if language == 'python3' %}"python3Packages.pytest", "python3Packages.flake8",{% endif %}
+  "packages": {
+    "{{ language }}": "latest"
+    {% if language == 'go' %},
+    "golangci-lint": "latest"
+    {% endif %}
+    {% if language == 'python3' %},
+    "python3Packages.pytest": "",
+    "python3Packages.flake8": ""
+    {% endif %}
     {% for dep in dependencies %}
-    "{{ dep }}@latest"{{ "," if not loop.last }}
+    "{{ dep }}": "latest"{{ "," if not loop.last }}
     {% endfor %}
-  ],
+  },
   "env": {
     "APP_NAME": "{{ project_name }}",
     {% if 'postgresql' in dependencies %}"DATABASE_URL": "postgres://localhost:5432/{{ project_name }}",{% endif %}
@@ -25,10 +30,10 @@
   }
   {% if language in ('go', 'python3', 'nodejs') %},{% endif %}
   {% if language == 'go' %}
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-go.jinja" %}
+  {% include "_shared/partials/devbox-partials/devbox-hooks-go.jinja" %}
   {% elif language == 'python3' %}
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-python.jinja" %}
+  {% include "_shared/partials/devbox-partials/devbox-hooks-python.jinja" %}
   {% elif language == 'nodejs' %}
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
+  {% include "_shared/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
   {% endif %}
 }

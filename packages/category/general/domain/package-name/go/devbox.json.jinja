@@ -1,6 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
-  "packages": ["go@{{ go_version }}", "git", "curl", "vim", "just", "golangci-lint"],
+  "packages": {
+    "go": "{{ go_version }}",
+    "git": "",
+    "curl": "",
+    "vim": "",
+    "just": "",
+    "golangci-lint": ""
+  },
   "shell": {
     "init_hook": [
       "echo '🐹 Go environment initialized'",
@@ -27,5 +34,5 @@
     "MODULE_NAME": "{{ module_name }}",
     "GO_VERSION": "{{ go_version }}"
   },
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-go.jinja" %}
+  {% include "_shared/partials/devbox-partials/devbox-hooks-go.jinja" %}
 }

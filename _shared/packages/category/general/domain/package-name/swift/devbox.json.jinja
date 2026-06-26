@@ -1,18 +1,18 @@
 {
     "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
-    "packages": [
-        "swift",
-        "swiftlint",
-        "swiftformat",
-        "just"
+    "packages": {
+        "swift": "",
+        "swiftlint": "",
+        "swiftformat": "",
+        "just": ""
         {% if include_docker %},
-        "docker",
-        "docker-compose"
+        "docker": "",
+        "docker-compose": ""
         {% endif %}
         {% if include_ci %},
-        "github-cli"
+        "github-cli": ""
         {% endif %}
-    ],
+    },
     "shell": {
         "init_hook": [
             "echo '📦 {{ package_name | default('swift-package') }} environment initialized'",

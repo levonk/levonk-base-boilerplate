@@ -87,5 +87,5 @@
     "REDIS_URL": "{{ redis_url | default('redis://localhost:6379') }}",
     {% endif %}
   },
-  {% include "partials.bak/partials/devbox-partials/devbox-hooks-ruby.jinja" %}
+  {% include "_shared/partials/devbox-partials/devbox-hooks-ruby.jinja" %}
 }

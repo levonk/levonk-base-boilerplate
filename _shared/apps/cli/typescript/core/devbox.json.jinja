@@ -23,15 +23,15 @@
     "type-check": "tsc --noEmit",
     "check": "eslint . --ext .ts,.js && tsc --noEmit"
   },
-  "packages": [
-    "nixpkgs#nodejs",
-    "nixpkgs#typescript",
-    "nixpkgs#tsx",
-    "nixpkgs#eslint",
-    "nixpkgs#prettier",
-    "nixpkgs#pnpm",
-    "nixpkgs#just"
-  ],
+  "packages": {
+    "nixpkgs#nodejs": "",
+    "nixpkgs#typescript": "",
+    "nixpkgs#tsx": "",
+    "nixpkgs#eslint": "",
+    "nixpkgs#prettier": "",
+    "nixpkgs#pnpm": "",
+    "nixpkgs#just": ""
+  },
   "env": {
     "TS_NODE_PROJECT": "{{ ts_node_project | default('./tsconfig.json') }}"{% if include_development %},
     "LOG_LEVEL": "{{ log_level | default('info') }}",
