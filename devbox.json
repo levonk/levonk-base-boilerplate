@@ -2,19 +2,20 @@
   "name": "levonk-base-boilerplate",
   "version": "0.1.0",
   "description": "Development environment for boilerplate scaffolding",
-  "packages": [
-    "copier@latest",
-    "git",
-    "eza",
-    "zoxide",
-    "fzf",
-    "github:levonk/levonk-packages#devbox-rtk-nodejs-pnpm-force",
-    "github:levonk/levonk-packages#devbox-rtk-python-uv-force",
-    "github:levonk/levonk-packages#bundle-rtk-core",
-    "github:levonk/levonk-packages#bundle-rtk-cloud",
-    "github:levonk/smartfo",
-    "rtk"
-  ],
+  "packages": {
+    "copier": "latest",
+    "git": "",
+    "eza": "",
+    "zoxide": "",
+    "fzf": "",
+    "github:levonk/levonk-packages#devbox-rtk-nodejs-pnpm-force": "",
+    "github:levonk/levonk-packages#devbox-rtk-python-uv-force": "",
+    "github:levonk/levonk-packages#bundle-rtk-core": "",
+    "github:levonk/levonk-packages#bundle-rtk-cloud": "",
+    "github:levonk/smartfo": "",
+    "jujutsu": "",
+    "rtk": ""
+  },
   "shell": {
     "init_hook": []
   }

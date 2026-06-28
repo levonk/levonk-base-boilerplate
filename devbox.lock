@@ -81,6 +81,30 @@
       "last_modified": "2026-05-25T07:42:19Z",
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b?lastModified=1779694939"
     },
+    "github:levonk/levonk-packages#bundle-rtk-cloud": {
+      "last_modified": "2026-06-27T16:54:13Z",
+      "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#bundle-rtk-cloud"
+    },
+    "github:levonk/levonk-packages#bundle-rtk-core": {
+      "last_modified": "2026-06-27T16:54:13Z",
+      "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#bundle-rtk-core"
+    },
+    "github:levonk/levonk-packages#devbox-rtk-nodejs-pnpm-force": {
+      "last_modified": "2026-06-27T16:54:13Z",
+      "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#devbox-rtk-nodejs-pnpm-force"
+    },
+    "github:levonk/levonk-packages#devbox-rtk-python-uv-force": {
+      "last_modified": "2026-06-27T16:54:13Z",
+      "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#devbox-rtk-python-uv-force"
+    },
+    "github:levonk/smartfo": {
+      "last_modified": "2026-06-26T21:07:45Z",
+      "resolved": "github:levonk/smartfo/8eeb1ed3cb2a2b6b247770790186388e871b3914?lastModified=1782508065"
+    },
+    "jujutsu": {
+      "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#jujutsu",
+      "source": "nixpkg"
+    },
     "rtk": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#rtk",
       "source": "nixpkg"
