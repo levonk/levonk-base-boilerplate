@@ -90,3 +90,4 @@ log_level:
   default: "debug"
 
 _subdirectory: files
+_templates_suffix: .jinja

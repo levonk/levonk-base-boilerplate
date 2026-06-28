@@ -116,3 +116,4 @@ _templates:
   internal-docs/: internal-docs/
   scripts/: scripts/
   tests/: tests/
+  .pre-commit-config.yaml.jinja: .pre-commit-config.yaml

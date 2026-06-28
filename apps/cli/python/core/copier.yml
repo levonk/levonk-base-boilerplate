@@ -1,4 +1,5 @@
 _subdirectory: files
+_templates_suffix: .jinja
 
 package_name:
   type: str

@@ -72,3 +72,4 @@ _templates:
   Makefile.jinja: Makefile
   .githooks/pre-commit.jinja: .githooks/pre-commit
   .github/workflows/quality.yml.jinja: .github/workflows/quality.yml
+  .pre-commit-config.yaml.jinja: .pre-commit-config.yaml

@@ -24,3 +24,4 @@ port:
 
 _templates:
   - tsconfig.json.jinja
+  - .pre-commit-config.yaml.jinja

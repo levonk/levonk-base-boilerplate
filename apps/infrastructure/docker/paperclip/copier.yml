@@ -71,3 +71,4 @@ _templates:
   .dockerignore.jinja: .dockerignore
   .envrc.jinja: .envrc
   .env.example.jinja: .env.example
+  .pre-commit-config.yaml.jinja: .pre-commit-config.yaml

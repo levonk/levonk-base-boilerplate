@@ -29,3 +29,4 @@ _templates_suffix: .jinja
 _templates:
   - package.json.jinja
   - tsconfig.json.jinja
+  - .pre-commit-config.yaml.jinja

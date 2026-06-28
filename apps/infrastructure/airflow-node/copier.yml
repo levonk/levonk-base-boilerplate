@@ -37,3 +37,4 @@ _templates:
   - devbox.json.jinja
   - package.json.jinja
   - tsconfig.json.jinja
+  - .pre-commit-config.yaml.jinja

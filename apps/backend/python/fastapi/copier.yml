@@ -4,7 +4,7 @@ _defaults:
   python_version: "3.11"
   port: 8000
 
-_templates_suffix: ".tmpl"
+_templates_suffix: ".jinja"
 _subdirectory: files
 
 package_name:

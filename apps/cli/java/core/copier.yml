@@ -1,5 +1,6 @@
 package_name:
 _subdirectory: files
+_templates_suffix: .jinja
   type: str
   help: What is the project name?
   default: "my-cli-tool"

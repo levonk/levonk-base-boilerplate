@@ -80,8 +80,10 @@ config_path:
   default: "./config.json"
 
 _subdirectory: files
+_templates_suffix: .jinja
 _templates:
   - nx.json.jinja
   - justfile.jinja
   - devbox.json.jinja
   - tsconfig.json.jinja
+  - .pre-commit-config.yaml.jinja

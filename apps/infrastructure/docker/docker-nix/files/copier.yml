@@ -60,3 +60,4 @@ _ui_port:
 _templates:
   - package.json.jinja
   - tsconfig.json.jinja
+  - .pre-commit-config.yaml.jinja

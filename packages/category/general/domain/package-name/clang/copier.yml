@@ -1,6 +1,6 @@
 _min_copier_version: "9.0.0"
 _subdirectory: files
-_templates_suffix: ".tmpl"
+_templates_suffix: ".jinja"
 
 package_name:
   type: str
