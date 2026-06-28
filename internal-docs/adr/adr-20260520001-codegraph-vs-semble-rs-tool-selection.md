@@ -849,8 +849,8 @@ needs_refresh() {
 
 Two complementary code intelligence tools are available in the ecosystem:
 
-- **CodeGraph** (`/Users/micro/p/gh/levonk/codegraph`) — A Node.js/TypeScript MCP server that builds a persistent semantic knowledge graph of codebases using tree-sitter AST extraction, SQLite storage, and FTS5 full-text search.
-- **semble_rs** (`/Users/micro/p/gh/levonk/semble_rs`) — A Rust CLI tool that performs hybrid BM25 + Model2Vec semantic search over codebases with an ephemeral index, plus build/CI log compression.
+- **CodeGraph** (`~/p/gh/levonk/codegraph`) — A Node.js/TypeScript MCP server that builds a persistent semantic knowledge graph of codebases using tree-sitter AST extraction, SQLite storage, and FTS5 full-text search.
+- **semble_rs** (`~/p/gh/levonk/semble_rs`) — A Rust CLI tool that performs hybrid BM25 + Model2Vec semantic search over codebases with an ephemeral index, plus build/CI log compression.
 
 Both tools aim to reduce token consumption and tool-call overhead for AI coding agents, but they differ fundamentally in architecture, integration model, and optimal use cases. Without clear guidance, agents and developers may choose the wrong tool for the task, leading to unnecessary setup overhead or missed capabilities.
 
@@ -990,9 +990,9 @@ This decision is validated when:
 
 ## References
 
-- CodeGraph repository: `/Users/micro/p/gh/levonk/codegraph` — README with MCP tools, benchmarks, and framework support matrix.
-- semble_rs repository: `/Users/micro/p/gh/levonk/semble_rs` — README with search modes, digest benchmarks, and language support matrix.
-- ADR process background: `/Users/micro/p/gh/levonk/dotfiles/home/current/.chezmoitemplates/config/ai/workflows/software-dev/architecture/adr.md`
+- CodeGraph repository: `~/p/gh/levonk/codegraph` — README with MCP tools, benchmarks, and framework support matrix.
+- semble_rs repository: `~/p/gh/levonk/semble_rs` — README with search modes, digest benchmarks, and language support matrix.
+- ADR process background: `~/p/gh/levonk/dotfiles/home/current/.chezmoitemplates/config/ai/workflows/software-dev/architecture/adr.md`
 - https://github.com/momokun7/xgrep https://pypi.org/project/xgrep/ 
 - https://github.com/tobi/qmd
 - https://github.com/junegunn/fzf

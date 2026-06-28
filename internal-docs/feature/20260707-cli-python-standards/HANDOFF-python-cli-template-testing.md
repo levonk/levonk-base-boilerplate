@@ -85,7 +85,7 @@ To validate all fixes, re-materialize the template and run tests:
 
 ```bash
 # From the levonk-base-boilerplate directory
-cd /Users/micro/p/gh/levonk/levonk-base-boilerplate
+cd ~/p/gh/levonk/levonk-base-boilerplate
 
 # Clean previous test
 rm -rf /tmp/test-python-cli
@@ -292,7 +292,7 @@ PydanticDeprecatedSince20: The `dict` method is deprecated; use `model_dump` ins
 
 ```bash
 # Materialize the template
-cd /Users/micro/p/gh/levonk/levonk-base-boilerplate
+cd ~/p/gh/levonk/levonk-base-boilerplate
 rm -rf /tmp/test-python-cli
 copier copy apps/cli/python/core /tmp/test-python-cli --defaults
 
@@ -330,7 +330,7 @@ python3 -m pytest tests/ -v
 
 ## Important Files
 
-- **Template source**: `/Users/micro/p/gh/levonk/levonk-base-boilerplate/apps/cli/python/core/`
+- **Template source**: `~/p/gh/levonk/levonk-base-boilerplate/apps/cli/python/core/`
 - **Materialized project**: `/tmp/test-python-cli/`
 - **Key template files**:
   - `files/{{project_slug}}/__main__.py.jinja` - Main CLI entry point

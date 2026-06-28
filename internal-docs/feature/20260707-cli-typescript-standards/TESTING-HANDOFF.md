@@ -298,7 +298,7 @@ To verify the current state:
 
 ```bash
 # Materialize boilerplate
-cd /Users/micro/p/gh/levonk/levonk-base-boilerplate
+cd ~/p/gh/levonk/levonk-base-boilerplate
 devbox run -- ./copier-wrapper.sh copy apps/cli/typescript/core /tmp/test-typescript-cli --defaults
 
 # Install dependencies
@@ -338,7 +338,7 @@ To verify the current state:
 
 ```bash
 # Materialize boilerplate
-cd /Users/micro/p/gh/levonk/levonk-base-boilerplate
+cd ~/p/gh/levonk/levonk-base-boilerplate
 devbox run -- ./copier-wrapper.sh copy apps/cli/typescript/core /tmp/test-typescript-cli --defaults
 
 # Install dependencies
