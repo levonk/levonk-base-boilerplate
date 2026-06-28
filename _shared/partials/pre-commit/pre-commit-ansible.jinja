@@ -1,0 +1,8 @@
+# Ansible: ansible-lint for playbooks and roles.
+# Pair with pre-commit-yaml.jinja (ansible IS yaml) — listed explicitly per
+# boilerplate to avoid duplicate yamllint if a project composes multiple
+# yaml-bearing partials.
+-   repo: https://github.com/ansible/ansible-lint
+    rev: v24.7.0
+    hooks:
+    -   id: ansible-lint

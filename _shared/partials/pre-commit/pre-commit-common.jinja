@@ -1,0 +1,15 @@
+# Common pre-commit hooks: file hygiene that applies to every project
+# (yaml/json validation, whitespace, EOF, merge-conflict markers, large files).
+# Included under the top-level `repos:` key by each boilerplate's
+# .pre-commit-config.yaml.jinja.
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+    -   id: check-yaml
+    -   id: check-json
+    -   id: check-merge-conflict
+    -   id: end-of-file-fixer
+    -   id: trailing-whitespace
+    -   id: mixed-line-ending
+        args: [--fix=lf]
+    -   id: check-added-large-files

@@ -1,0 +1,15 @@
+# Rust: local hooks against the project's toolchain (cargo fmt + clippy).
+-   repo: local
+    hooks:
+    -   id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --
+        language: system
+        types: [rust]
+        pass_filenames: false
+    -   id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false

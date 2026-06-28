@@ -1,0 +1,8 @@
+# Docker: hadolint for Dockerfiles.
+# Pair with pre-commit-yaml.jinja (docker-compose.yml is yaml) — listed
+# explicitly per boilerplate to avoid duplicate yamllint if a project composes
+# multiple yaml-bearing partials.
+-   repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+    -   id: hadolint

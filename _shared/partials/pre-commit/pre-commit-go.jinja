@@ -1,0 +1,10 @@
+# Go: gofmt via the local toolchain (always available with go).
+# Add golangci-lint per-project once a .golangci.yml is pinned.
+-   repo: local
+    hooks:
+    -   id: go-fmt
+        name: go fmt
+        entry: gofmt -l -w
+        language: system
+        types: [go]
+        pass_filenames: true
