@@ -88,10 +88,11 @@ boilerplate/
 │                   └── typescript/ # TypeScript packages (logical template root)
 │
 ├── _shared/                       # Global shared templates and partials
+│   ├── .npmrc.jinja               # Shared .npmrc (supply-chain hygiene settings)
 │   ├── partials/
-│   │   ├── nx-partials/           # Nx monorepo configuration partials
+│   │   ├── nx-partials/           # Nx target partials (per-language, per-tool)
 │   │   └── devbox-partials/       # Devbox configuration partials
-│   └── nx.json.template.jinja     # Base Nx workspace configuration
+│   └── ...                        # Other shared files referenced via partials.bak/
 │
 └── internal-docs/                 # Boilerplate system documentation
     └── adr/
@@ -146,7 +147,7 @@ All boilerplate templates include **Nx monorepo build orchestration** support. N
 
 Each generated project includes Nx configuration:
 
-- **`nx.json`**: Workspace-level configuration (generated from `_shared/nx.json.template.jinja`)
+- **`nx.json`**: Workspace-level configuration (each template that uses Nx has its own `nx.json.jinja` with language-specific plugins and namedInputs)
 - **`project.json`**: Project-specific tasks and targets (or `nx` key in `package.json`)
 - **Nx plugins**: Technology-specific plugins (`@nx/js`, `@nx/docker`, `@nx/python`, etc.)
 
@@ -169,15 +170,39 @@ The boilerplate system includes reusable Nx configuration partials in `_shared/p
 - `nx-plugins-python.jinja`: Python plugin configuration
 
 #### Target Definitions
-- `nx-target-docker-build.jinja`: Docker build target
-- `nx-target-docker-compose.jinja`: Docker Compose target
-- `nx-target-nextjs-build.jinja`: Next.js build target
-- `nx-target-nextjs-dev.jinja`: Next.js dev server target
-- `nx-target-nodejs-lint.jinja`: Node.js linting target
-- `nx-target-nodejs-test.jinja`: Node.js testing target
-- `nx-target-python-lint.jinja`: Python linting target
-- `nx-target-python-serve.jinja`: Python serve target
-- `nx-target-python-test.jinja`: Python testing target
+
+**Language targets** (build/test/lint/format per language):
+- `nx-target-rust.jinja`: Rust (cargo build/test/clippy/fmt)
+- `nx-target-go.jinja`: Go (go build/test/golangci-lint/fmt)
+- `nx-target-bash.jinja`: Bash (bats/shellcheck/shfmt)
+- `nx-target-swift.jinja`: Swift (swift build/test/swiftlint)
+- `nx-target-clang.jinja`: C/C++ (cmake/ctest/clang-tidy/clang-format)
+- `nx-target-java.jinja`: Java (mvn package/test/spotless)
+- `nx-target-kotlin.jinja`: Kotlin (gradle build/test/ktlint)
+- `nx-target-csharp.jinja`: C# (dotnet build/test/format)
+- `nx-target-ruby.jinja`: Ruby (bundle/rspec/rubocop)
+- `nx-target-powershell.jinja`: PowerShell (Pester/ScriptAnalyzer/Formatter)
+- `nx-target-nodejs-lint.jinja`: Node.js linting target (@nx/eslint:lint)
+- `nx-target-nodejs-test.jinja`: Node.js testing target (@nx/vite:test)
+- `nx-target-python-lint.jinja`: Python linting target (ruff via @nxlv/python)
+- `nx-target-python-serve.jinja`: Python serve target (uvicorn via @nxlv/python)
+- `nx-target-python-test.jinja`: Python testing target (pytest via @nxlv/python)
+
+**Framework targets**:
+- `nx-target-nextjs-build.jinja`: Next.js build target (@nx/next:build)
+- `nx-target-nextjs-dev.jinja`: Next.js dev server target (@nx/next:server)
+
+**Infrastructure targets**:
+- `nx-target-docker-build.jinja`: Docker build + push target (@nx-tools/nx-container)
+- `nx-target-docker-compose.jinja`: Docker Compose up/down target
+- `nx-target-ansible.jinja`: Ansible lint + validate targets
+- `nx-target-helm.jinja`: Helm lint/template/package targets
+- `nx-target-kustomize.jinja`: Kustomize build + kubeconform lint targets
+- `nx-target-packer.jinja`: Packer validate/build/fmt targets
+- `nx-target-fluxcd.jinja`: Flux CD lint/build targets
+- `nx-target-argocd.jinja`: ArgoCD validate/diff targets
+- `nx-target-gitops.jinja`: GitOps validate (kustomize + kubeconform) + lint (yamllint) targets
+- `nx-target-bootc.jinja`: bootc install + hadolint targets
 
 ### Template-Specific Nx Configuration
 
@@ -204,29 +229,49 @@ When creating or modifying boilerplate templates:
 - [ADR: Nx Monorepo Build Tool](../internal-docs/adr/adr-20260419001-nx-monorepo-build-tool.md)
 - [Nx Plugin Ecosystem](https://nx.dev/packages)
 
-## Shared Partials System
+## Shared Partials System (`.npmrc` and other shared files)
 
 ### Overview
 
-The boilerplate system includes a **shared partials solution** that allows multiple Copier templates to reuse common Jinja2 partials. This addresses Copier's limitations with template includes:
+All boilerplate templates share common configuration through the **partials.bak** system. This is mandatory for any file that should be identical across templates — `.npmrc`, `.pre-commit-config.yaml`, `.envrc`, etc.
+
+The shared partials solution addresses Copier's limitations with template includes:
 
 - **Symlinks don't work**: Copier's Jinja2 sandbox cannot resolve symlinks to templates
 - **Relative parent/sibling paths don't work**: Copier only searches within the template subdirectory
 - **External paths don't work**: Copier's template rendering is sandboxed to the template directory
 
-### Current Implementation
+### How it works
 
-The boilerplate system uses a **wrapper script approach**:
+1. **Write shared content to `_shared/`** — this is the single source of truth. Shared files live at the root of `_shared/` (e.g. `_shared/.npmrc.jinja`) or in `_shared/partials/nx-partials/` (for Nx target partials).
+2. **`copier-wrapper.sh` copies `_shared/` into each template's `partials.bak/`** directory before running copier (hard links on Linux, copies on macOS). This works around Copier's Jinja2 sandbox, which cannot resolve symlinks or parent/sibling paths.
+3. **Templates reference shared partials via Jinja includes**: `{% include "partials.bak/.npmrc.jinja" %}`.
+4. **NEVER write to `partials.bak/` directly** — it is nuked and recreated on every `copier-wrapper.sh` run, and deleted again after copier finishes so it never lingers in the template tree. The source of truth is always `_shared/`.
 
-```bash
-# Instead of running copier directly:
-./copier-wrapper.sh copy [template-name] /tmp/my-project --defaults
+### `.npmrc` convention
+
+Since all projects use **Nx** as their build tool, every template that has a `package.json.jinja` (i.e., uses npm/pnpm) MUST include a `.npmrc.jinja` that includes the shared partial:
+
+```jinja
+{% include "partials.bak/.npmrc.jinja" %}
 ```
 
-The wrapper script:
-1. **Copies shared partials** from `_shared/` to each template's `partials.bak/` directory
-2. **Runs Copier** with all provided arguments
-3. **Ensures fresh copies** by removing and recreating partials each time
+The shared partial at `_shared/.npmrc.jinja` enforces supply-chain hygiene and reproducibility settings (`save-exact`, `min-release-age`, `engine-strict`, `audit-signature-strict`, etc.). To change `.npmrc` behavior across all templates, edit the shared partial — do not duplicate settings in individual template `.npmrc.jinja` files.
+
+Templates that currently include the shared `.npmrc` partial:
+- `repo/pnpm-monorepo/files/` (monorepo root)
+- `apps/web/typescript/nextjs/files/`
+- `apps/cli/typescript/core/files/`
+- `apps/plugins/vscode/typescript/files/`
+- `apps/plugins/browser-extension/files/`
+- `apps/infrastructure/airflow-node/files/`
+- `apps/infrastructure/docker/docker-compose/files/`
+- `apps/infrastructure/docker/docker-linux/files/`
+- `apps/infrastructure/docker/docker-nix/files/`
+- `packages/category/general/domain/package-name/typescript/files/`
+- `packages/category/web/domain/package-name/typescript/files/`
+
+When adding a new template that uses npm/pnpm, add a `.npmrc.jinja` with the include line above. Do not hardcode `.npmrc` settings in individual templates.
 
 ### Example Usage in Templates
 
