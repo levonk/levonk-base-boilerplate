@@ -2,84 +2,124 @@
   "lockfile_version": "1",
   "packages": {
     "copier@latest": {
-      "last_modified": "2026-05-23T11:35:32Z",
-      "resolved": "github:NixOS/nixpkgs/3d8f0f3f72a6cd4d93d0ad13203f2ea1cb7e1456#copier",
+      "last_modified": "2026-06-14T16:21:05Z",
+      "resolved": "github:NixOS/nixpkgs/9eac87a12312b8f60dd52e1c6e1a265f6fc7f5fc#copier",
       "source": "devbox-search",
-      "version": "9.15.1",
+      "version": "9.15.2",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/fy6kmr7a8rbwbz8s85hs2mjz9wxwdd5k-python3.13-copier-9.15.1",
+              "path": "/nix/store/gkw5jymg706mn6pfri1rhs0dn6djzfzy-python3.13-copier-9.15.2",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/vn47vjc81qxy9hac184nmd3gll9dnkds-python3.13-copier-9.15.1-dist"
+              "path": "/nix/store/4gvsyxcx4p6babhl804356vlqzvgkqid-python3.13-copier-9.15.2-dist"
             }
           ],
-          "store_path": "/nix/store/fy6kmr7a8rbwbz8s85hs2mjz9wxwdd5k-python3.13-copier-9.15.1"
+          "store_path": "/nix/store/gkw5jymg706mn6pfri1rhs0dn6djzfzy-python3.13-copier-9.15.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/ary2mr0zp4vq2j6h0a6945bw8rnd1b5v-python3.13-copier-9.15.1",
+              "path": "/nix/store/gf6q4i7lsqn6rppass2p1czlwdav9klh-python3.13-copier-9.15.2",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/7mvfbxwzhwrprn81sm7qmkww61lbf0rz-python3.13-copier-9.15.1-dist"
+              "path": "/nix/store/dl1pxn1s0q10412gxflshb8hlb3d55ax-python3.13-copier-9.15.2-dist"
             }
           ],
-          "store_path": "/nix/store/ary2mr0zp4vq2j6h0a6945bw8rnd1b5v-python3.13-copier-9.15.1"
+          "store_path": "/nix/store/gf6q4i7lsqn6rppass2p1czlwdav9klh-python3.13-copier-9.15.2"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/r4cs2xdc1lfa9rld1p6nwkqjvy830lly-python3.13-copier-9.15.1",
+              "path": "/nix/store/rmc8fk3nn20w7nns6hq3y86ddick0c9f-python3.13-copier-9.15.2",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/x3kn1z550ffmsbspzk7shhz5whvapv4r-python3.13-copier-9.15.1-dist"
+              "path": "/nix/store/9qjhj0fxs1kaza9whnih8k585l6dc66v-python3.13-copier-9.15.2-dist"
             }
           ],
-          "store_path": "/nix/store/r4cs2xdc1lfa9rld1p6nwkqjvy830lly-python3.13-copier-9.15.1"
+          "store_path": "/nix/store/rmc8fk3nn20w7nns6hq3y86ddick0c9f-python3.13-copier-9.15.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/718sa7fgnv8naxd0hwn0smq5sv89s8ff-python3.13-copier-9.15.1",
+              "path": "/nix/store/99k9ncmhmz4205hr62l41i2n48rymq8c-python3.13-copier-9.15.2",
               "default": true
             },
             {
               "name": "dist",
-              "path": "/nix/store/8yhfv2mk2z8cmqb2kylf9g18x4pic96y-python3.13-copier-9.15.1-dist"
+              "path": "/nix/store/zhhzkqg0s7zns9z07dvpwyvwmihd1ykg-python3.13-copier-9.15.2-dist"
             }
           ],
-          "store_path": "/nix/store/718sa7fgnv8naxd0hwn0smq5sv89s8ff-python3.13-copier-9.15.1"
+          "store_path": "/nix/store/99k9ncmhmz4205hr62l41i2n48rymq8c-python3.13-copier-9.15.2"
         }
       }
     },
     "eza": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#eza",
-      "source": "nixpkg"
+      "source": "nixpkg",
+      "systems": {
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "man",
+              "path": "/nix/store/1pvkh2ly8glv9ymw78gxqa7r41l5fv5i-eza-0.23.4-man",
+              "default": true
+            },
+            {
+              "path": "/nix/store/wbbip9wkmiq4cxnzj628jziqgpfafj0v-eza-0.23.4",
+              "default": true
+            }
+          ]
+        }
+      }
     },
     "fzf": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#fzf",
-      "source": "nixpkg"
+      "source": "nixpkg",
+      "systems": {
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "man",
+              "path": "/nix/store/ba87gn3a044jklgmw3bdhy7hmdb7fg5a-fzf-0.72.0-man",
+              "default": true
+            },
+            {
+              "path": "/nix/store/xwx1qd5vxddakglfhazqn4jpis1lbgrq-fzf-0.72.0",
+              "default": true
+            }
+          ]
+        }
+      }
     },
     "git": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#git",
-      "source": "nixpkg"
+      "source": "nixpkg",
+      "systems": {
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "path": "/nix/store/s9lsrlgwr3sabw9a2dl3laykas0ijk85-git-2.54.0",
+              "default": true
+            }
+          ]
+        }
+      }
     },
     "github:NixOS/nixpkgs/nixpkgs-unstable": {
-      "last_modified": "2026-05-25T07:42:19Z",
-      "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b?lastModified=1779694939"
+      "last_modified": "2026-06-27T07:37:20Z",
+      "resolved": "github:NixOS/nixpkgs/3d46470bb3030020f7e1361f33514854f5bfa86d?lastModified=1782545840"
     },
     "github:levonk/levonk-packages#bundle-rtk-cloud": {
       "last_modified": "2026-06-27T16:54:13Z",
@@ -103,15 +143,45 @@
     },
     "jujutsu": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#jujutsu",
-      "source": "nixpkg"
+      "source": "nixpkg",
+      "systems": {
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "path": "/nix/store/qm317pz9n39qzl2pdd50vrlyy3al5l2b-jujutsu-0.41.0",
+              "default": true
+            }
+          ]
+        }
+      }
     },
     "rtk": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#rtk",
-      "source": "nixpkg"
+      "source": "nixpkg",
+      "systems": {
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "path": "/nix/store/854hwgy4npbg1gc3673gfs4cqdlv4khm-rtk-0.41.0",
+              "default": true
+            }
+          ]
+        }
+      }
     },
     "zoxide": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#zoxide",
-      "source": "nixpkg"
+      "source": "nixpkg",
+      "systems": {
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "path": "/nix/store/qnb8d85niiz0ibjrrfm4bilnfi9yxrrl-zoxide-0.9.9",
+              "default": true
+            }
+          ]
+        }
+      }
     }
   }
 }
