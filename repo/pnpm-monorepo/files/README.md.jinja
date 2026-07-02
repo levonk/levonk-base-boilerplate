@@ -2,9 +2,9 @@
 
 {{ description }}
 
-## 🚀 Quick Start
+## Quick Start
 
-This is a pnpm-based monorepo powered by Turbo for optimal build performance and developer experience.
+This is a pnpm-based monorepo powered by Nx for build orchestration, caching, and task running.
 
 ### Prerequisites
 
@@ -28,7 +28,7 @@ pnpm prepare
 pnpm dev
 
 # Start specific app
-pnpm --filter <app-name> dev
+pnpm nx dev web
 ```
 
 ### Building
@@ -38,7 +38,7 @@ pnpm --filter <app-name> dev
 pnpm build
 
 # Build specific package
-pnpm --filter <package-name> build
+pnpm nx build ui
 ```
 
 ### Testing
@@ -79,64 +79,60 @@ pnpm format
 pnpm format:check
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 {{ monorepo_name }}/
 ├── apps/                    # Applications (Next.js, Express, etc.)
-│   └── web/                # Web applications
+│   └── web/                # Web application
+│       └── project.json    # Nx project config (build/dev/test/lint targets)
 ├── packages/               # Shared packages and utilities
-│   ├── ui/                # UI components
-│   ├── config/            # Shared configuration
-│   └── utils/             # Utility functions
-├── docs/                   # Documentation
-├── .github/                # GitHub workflows
-├── turbo.json             # Turbo configuration
-├── pnpm-workspace.yaml    # pnpm workspace configuration
-└── package.json           # Root package configuration
+│   └── ui/                 # UI components
+│       └── project.json    # Nx project config (build/test/lint targets)
+├── nx.json                 # Nx workspace configuration (plugins, caching, target defaults)
+├── pnpm-workspace.yaml     # pnpm workspace configuration
+└── package.json            # Root package configuration
 ```
 
-## 🛠️ Technologies
+## Technologies
 
 - **Package Manager**: pnpm
-- **Build System**: Turbo
+- **Build System**: Nx
 - **Language**: TypeScript
 - **Linting**: ESLint + Prettier
 - **Testing**: Vitest
 - **Git Hooks**: Husky + lint-staged
 - **Version Management**: Changesets
 
-## 📦 Adding New Packages
+## Adding New Packages
 
 ### Adding an Application
 
 ```bash
-# Create new app directory
+# Generate a new Next.js app
+pnpm nx g @nx/next:app apps/my-app
+
+# Or manually:
 mkdir -p apps/my-app
 cd apps/my-app
-
-# Initialize package
 pnpm init
-
-# Add to workspace
-# The workspace will automatically detect the new package
+# Add a project.json with Nx targets (see apps/web/project.json for reference)
 ```
 
 ### Adding a Shared Package
 
 ```bash
-# Create new package directory
+# Generate a new JS library
+pnpm nx g @nx/js:lib packages/my-package
+
+# Or manually:
 mkdir -p packages/my-package
 cd packages/my-package
-
-# Initialize package
 pnpm init
-
-# Add to workspace
-# The workspace will automatically detect the new package
+# Add a project.json with Nx targets (see packages/ui/project.json for reference)
 ```
 
-## 🔄 Dependency Management
+## Dependency Management
 
 ### Adding Dependencies
 
@@ -158,7 +154,7 @@ pnpm --filter <package-name> add -D <dependency>
 pnpm --filter <package-name> add <internal-package>@workspace:*
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Build for Production
 
@@ -167,7 +163,7 @@ pnpm --filter <package-name> add <internal-package>@workspace:*
 pnpm build
 
 # Build specific app
-pnpm --filter <app-name> build
+pnpm nx build <app-name>
 ```
 
 ### Version Management
@@ -185,13 +181,13 @@ pnpm version-packages
 pnpm release
 ```
 
-## 🧪 Testing Strategy
+## Testing Strategy
 
 - **Unit Tests**: Fast tests for individual functions and components
 - **Integration Tests**: Tests for package interactions
 - **E2E Tests**: End-to-end application tests
 
-## 📋 Available Scripts
+## Available Scripts
 
 | Script | Description |
 |--------|-------------|
@@ -210,7 +206,7 @@ pnpm release
 | `pnpm clean` | Clean build artifacts |
 | `pnpm clean:hard` | Clean everything including node_modules |
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -218,6 +214,6 @@ pnpm release
 4. Run tests and linting
 5. Submit a pull request
 
-## 📄 License
+## License
 
 MIT License - see LICENSE file for details.

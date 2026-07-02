@@ -1,0 +1,19 @@
+{
+  "name": "web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-nextjs-build.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-nextjs-dev.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-nodejs-test.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-nodejs-lint.jinja" %}
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

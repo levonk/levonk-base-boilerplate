@@ -3,7 +3,7 @@ _defaults:
   monorepo_name: "my-monorepo"
   package_name: "my-monorepo"
   boilerplate_name: "pnpm-monorepo"
-  description: "A pnpm-based monorepo with turbo"
+  description: "A pnpm-based monorepo with Nx"
 
 # Questions
 monorepo_name:
