@@ -4,26 +4,6 @@
   "sourceRoot": ".",
   "projectType": "application",
   "targets": {
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "bats tests/",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "shellcheck *.sh",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "format": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "shfmt -w *.sh",
-        "cwd": "{projectRoot}"
-      }
-    }
+    {% include "partials.bak/partials/nx-partials/nx-target-bash.jinja" %}
   }
 }

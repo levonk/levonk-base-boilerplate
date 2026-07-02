@@ -4,34 +4,7 @@
   "sourceRoot": "src/main/java",
   "projectType": "application",
   "targets": {
-    "build": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "mvn package -DskipTests",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "mvn test",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "mvn spotless:check",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "format": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "mvn spotless:apply",
-        "cwd": "{projectRoot}"
-      }
-    },
+    {% include "partials.bak/partials/nx-partials/nx-target-java.jinja" %}
     "run": {
       "executor": "nx:run-commands",
       "options": {

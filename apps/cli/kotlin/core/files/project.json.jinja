@@ -1,14 +1,14 @@
 {
-  "name": "{{ project_name | default('ruby-cli') }}",
+  "name": "{{ package_name }}",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "lib",
+  "sourceRoot": "src",
   "projectType": "application",
   "targets": {
-    {% include "partials.bak/partials/nx-partials/nx-target-ruby.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-kotlin.jinja" %}
     "run": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "ruby bin/{{ project_name | default('ruby-cli') }}",
+        "command": "gradle run",
         "cwd": "{projectRoot}"
       }
     }

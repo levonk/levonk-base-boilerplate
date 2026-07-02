@@ -4,26 +4,6 @@
   "sourceRoot": ".",
   "projectType": "application",
   "targets": {
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "Invoke-Pester",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "Invoke-ScriptAnalyzer -Path . -Recurse",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "format": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "Get-ChildItem -Filter '*.ps1' -Recurse | ForEach-Object { Invoke-Formatter -ScriptDefinition (Get-Content $_.FullName -Raw) }",
-        "cwd": "{projectRoot}"
-      }
-    }
+    {% include "partials.bak/partials/nx-partials/nx-target-powershell.jinja" %}
   }
 }

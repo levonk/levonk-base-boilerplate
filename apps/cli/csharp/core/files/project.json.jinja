@@ -4,34 +4,7 @@
   "sourceRoot": "src",
   "projectType": "application",
   "targets": {
-    "build": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "dotnet build",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "dotnet test",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "lint": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "dotnet format --verify-no-changes",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "format": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "dotnet format",
-        "cwd": "{projectRoot}"
-      }
-    },
+    {% include "partials.bak/partials/nx-partials/nx-target-csharp.jinja" %}
     "run": {
       "executor": "nx:run-commands",
       "options": {
