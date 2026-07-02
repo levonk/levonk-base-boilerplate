@@ -1,0 +1,27 @@
+{
+  "name": "{{ package_name }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "src",
+  "projectType": "library",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-nodejs-test.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-nodejs-lint.jinja" %}
+    "build": {
+      "executor": "@nx/js:build",
+      "options": {
+        "outputPath": "dist/{{ package_name }}",
+        "main": "{projectRoot}/src/index.ts",
+        "tsConfig": "{projectRoot}/tsconfig.json"
+      },
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

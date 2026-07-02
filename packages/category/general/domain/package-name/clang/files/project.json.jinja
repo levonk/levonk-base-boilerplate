@@ -1,0 +1,9 @@
+{
+  "name": "{{ package_name }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "src",
+  "projectType": "library",
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-clang.jinja" %}
+  }
+}

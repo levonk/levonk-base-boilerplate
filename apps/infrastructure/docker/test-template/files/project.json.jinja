@@ -1,0 +1,15 @@
+{
+  "name": "{{ package_name }}",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "targets": {
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "echo 'Template validation placeholder'",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}
