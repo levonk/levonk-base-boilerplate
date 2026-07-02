@@ -1,1 +1,18 @@
+# pin the exact installed version in package.json instead of a caret/tilde range (^1.2.3) — reproducibility over auto-patch pickup.
+save-exact=true
+# write no version prefix on save, so `npm install pkg@latest` also pins exactly; belt-and-braces with save-exact.
+save-prefix=
+# avoid same-day dependency releases during npm resolution.
+min-release-age=2
+# fail install if the active Node/npm version doesn't satisfy `engines` in package.json.
 engine-strict=true
+# enforce valid registry signatures (sigstore/tuf) — npm ci fails on unsigned or bad-signature tarballs.
+audit-signature-strict
+# require TLS for registry traffic; default is on, pinned explicitly so a proxy env can't silently weaken it.
+strict-ssl=true
+# suppress the "X packages are looking for funding" notice on install.
+fund=false
+# commit package-lock.json and use `npm ci` in CI for reproducible installs.
+package-lock=true
+# fail `npm audit`/`npm ci --audit` on high or critical advisories; low/moderate print but don't break CI.
+audit-level=high
