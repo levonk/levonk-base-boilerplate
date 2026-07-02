@@ -173,7 +173,18 @@ echo ""
 # Ensure copier is available before running
 ensure_copier
 
-# Now run the actual copier command with all arguments
-exec copier "$@"
+# Clean up every generated partials.bak/ directory so it doesn't linger in the
+# template tree. The source of truth is _shared/; a leftover partials.bak/ is a
+# footgun that invites people to edit generated copies instead of the source.
+# Runs on EXIT (covers success, failure, and signals) — see the `copier "$@"`
+# call below which intentionally does NOT use `exec` so this trap can fire.
+cleanup_partials_bak() {
+    find "$SCRIPT_DIR" -type d -name "partials.bak" -prune -exec rm -rf {} + 2>/dev/null || true
+}
+trap cleanup_partials_bak EXIT
+
+# Run the actual copier command (no exec — we need the trap to fire afterward)
+copier "$@"
+exit $?
 
 # vim: set ft=sh:
