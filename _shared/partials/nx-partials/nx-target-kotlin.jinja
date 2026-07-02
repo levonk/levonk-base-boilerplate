@@ -1,0 +1,32 @@
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "gradle build -x test",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "gradle test",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ktlint check",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ktlint -F",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },

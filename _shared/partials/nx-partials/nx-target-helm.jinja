@@ -1,0 +1,24 @@
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "helm lint .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "template": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "helm template . --output-dir dist",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "package": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "helm package . --destination dist",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },

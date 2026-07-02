@@ -1,0 +1,32 @@
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go build -o dist/{{ project_name | default(package_name) | default('go-package') }}",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go test ./...",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "golangci-lint run",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "go fmt ./...",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },

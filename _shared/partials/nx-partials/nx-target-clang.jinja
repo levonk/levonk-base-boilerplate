@@ -1,0 +1,32 @@
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cmake --build build",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ctest --test-dir build --output-on-failure",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "clang-tidy src/**/*.cpp -- -std=c++20",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "clang-format -i src/**/*.cpp src/**/*.h",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },

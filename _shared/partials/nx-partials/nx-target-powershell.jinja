@@ -1,0 +1,24 @@
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "Invoke-Pester",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "Invoke-ScriptAnalyzer -Path . -Recurse",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "Get-ChildItem -Filter '*.ps1' -Recurse | ForEach-Object { Invoke-Formatter -ScriptDefinition (Get-Content $_.FullName -Raw) }",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },

@@ -1,0 +1,16 @@
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "flux lint --path .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "flux build kustomization --path . --output dist/",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },

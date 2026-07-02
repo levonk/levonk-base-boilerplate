@@ -1,0 +1,16 @@
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ansible-lint",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ansible-playbook --check --diff",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },

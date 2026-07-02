@@ -1,0 +1,32 @@
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "packer validate .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "packer build .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "packer fmt -check .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "packer fmt .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },

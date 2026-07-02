@@ -1,0 +1,16 @@
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "argocd app validate .",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "argocd app diff . --local",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },

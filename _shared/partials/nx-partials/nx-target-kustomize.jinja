@@ -1,0 +1,16 @@
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "kustomize build . --output dist/",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "kustomize build . | kubeconform -strict",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
