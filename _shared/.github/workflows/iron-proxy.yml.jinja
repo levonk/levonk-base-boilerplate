@@ -1,0 +1,53 @@
+name: Iron Proxy Egress Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iron-proxy-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  egress-check:
+    name: Secure Egress Build Check
+    runs-on: ubuntu-latest
+    if: vars.IRON_PROXY_ENABLED == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0
+        with:
+          enable-cache: true
+
+      - name: Start iron-proxy egress firewall
+        uses: ironsh/iron-proxy-action@v1
+        with:
+          egress-rules: egress-rules.yaml
+          warn: true
+
+      - name: Bootstrap
+        run: devbox run -- just bootstrap
+
+      - name: Build
+        run: devbox run -- just build
+
+      - name: Lint
+        run: devbox run -- just lint
+
+      - name: Test
+        run: devbox run -- just test
+
+      - name: Iron Proxy traffic summary
+        uses: ironsh/iron-proxy-action/summary@v1
+        if: always()

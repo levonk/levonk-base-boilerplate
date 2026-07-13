@@ -151,6 +151,38 @@ Nx target definitions live in `_shared/partials/nx-partials/` as composable part
 - **CLI templates** add a `run` target inline (it's 5 lines and CLI-specific).
 - **Package/library templates** use `projectType: library` and `{{ package_name }}`. CLI/application templates use `projectType: application` and `{{ project_name | default(...) }}`.
 
+## Iron Proxy Egress Security
+
+Selected boilerplate templates include an **initially disabled** GitHub Actions workflow that wraps the build process with [iron-proxy-action](https://github.com/ironsh/iron-proxy-action) — an egress firewall for CI pipelines that intercepts and validates all outbound network traffic against an allowlist.
+
+### How it works
+
+- The workflow file (`.github/workflows/iron-proxy.yml`) is generated from the shared partial at `_shared/.github/workflows/iron-proxy.yml.jinja`
+- An `egress-rules.yaml` file defines the allowed domains (npm registry, Node.js, GitHub)
+- The job is gated by `if: vars.IRON_PROXY_ENABLED == 'true'` — it will not run until the repository variable `IRON_PROXY_ENABLED` is set to `true`
+- When enabled, the action installs iron-proxy, redirects all DNS through it, and locks down outbound traffic with iptables
+- A summary step prints every domain the job contacted and whether requests were allowed or denied
+
+### Enabling iron-proxy in a generated project
+
+1. Review the `egress-rules.yaml` file and add any additional domains your build requires
+2. Set the repository variable: **Settings → Secrets and variables → Actions → Variables → New repository variable** → Name: `IRON_PROXY_ENABLED`, Value: `true`
+3. Run the workflow (it triggers on push, PR, and manual dispatch)
+4. Start with `warn: true` (the default) to see all traffic without blocking
+5. Once the allowlist is dialed in, set `warn: false` in the workflow to enforce blocking
+
+### Templates with iron-proxy support
+
+- `repo/pnpm-monorepo/` — pnpm monorepo with Nx build orchestration
+
+### Adding iron-proxy to additional templates
+
+To add iron-proxy egress security to another boilerplate template:
+
+1. Create `.github/workflows/iron-proxy.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/.github/workflows/iron-proxy.yml.jinja" %}`
+2. Create `egress-rules.yaml.jinja` in the template's `files/` directory with: `{% include "partials.bak/egress-rules.yaml.jinja" %}`
+3. Adjust the build steps in the shared partial if the template uses a different build tool (the default uses pnpm + Nx)
+
 ## For Developers
 
 If you need to create or modify boilerplate templates, see the **[Boilerplate Developer Guide](.agents/rules/boilerplate-developer-guide.md)** for detailed conventions and technical requirements, including the **shared partials system** (`partials.bak/` convention) used to keep shared files identical across templates.
