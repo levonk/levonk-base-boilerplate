@@ -5,6 +5,8 @@
   "packages": {
     "copier": "latest",
     "git": "",
+    "difftastic": "",
+    "delta": "",
     "eza": "",
     "zoxide": "",
     "fzf": "",
