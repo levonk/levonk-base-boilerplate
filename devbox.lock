@@ -65,6 +65,14 @@
         }
       }
     },
+    "delta": {
+      "resolved": "github:NixOS/nixpkgs/3d46470bb3030020f7e1361f33514854f5bfa86d#delta",
+      "source": "nixpkg"
+    },
+    "difftastic": {
+      "resolved": "github:NixOS/nixpkgs/3d46470bb3030020f7e1361f33514854f5bfa86d#difftastic",
+      "source": "nixpkg"
+    },
     "eza": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#eza",
       "source": "nixpkg",
@@ -116,10 +124,6 @@
           ]
         }
       }
-    },
-    "github:NixOS/nixpkgs/nixpkgs-unstable": {
-      "last_modified": "2026-06-27T07:37:20Z",
-      "resolved": "github:NixOS/nixpkgs/3d46470bb3030020f7e1361f33514854f5bfa86d?lastModified=1782545840"
     },
     "github:levonk/levonk-packages#bundle-rtk-cloud": {
       "last_modified": "2026-06-27T16:54:13Z",
