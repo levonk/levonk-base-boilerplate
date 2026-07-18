@@ -1,2 +1,2 @@
-- Run the skill ~/p/gh/levonk/dotfiles/home/current/.chezmoitemplates/config/ai/skills/software-dev/git-repository-management/SKILL.md 
+- Run the skill https://github.com/levonk/skills-releases/blob/main/skills/software-dev/git-repository-management/SKILL.md 
 - on the levonk-base-boilerplate project
