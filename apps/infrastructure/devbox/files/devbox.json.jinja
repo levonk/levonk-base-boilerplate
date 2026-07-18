@@ -30,10 +30,10 @@
   }
   {% if language in ('go', 'python3', 'nodejs') %},{% endif %}
   {% if language == 'go' %}
-  {% include "_shared/partials/devbox-partials/devbox-hooks-go.jinja" %}
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-go.jinja" %}
   {% elif language == 'python3' %}
-  {% include "_shared/partials/devbox-partials/devbox-hooks-python.jinja" %}
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-python.jinja" %}
   {% elif language == 'nodejs' %}
-  {% include "_shared/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
+  {% include "partials.bak/partials/devbox-partials/devbox-hooks-typescript.jinja" %}
   {% endif %}
 }

@@ -24,6 +24,7 @@ description:
 
 # Template configuration
 _templates_suffix: ".jinja"
+_subdirectory: files
 _ignore:
   - "node_modules"
   - ".next"

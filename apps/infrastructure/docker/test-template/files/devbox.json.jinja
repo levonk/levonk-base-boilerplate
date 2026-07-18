@@ -2,15 +2,15 @@
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
   "packages": {
     # Insert your packages here
-    {% include "_shared/partials/devbox-partials/devbox-packages-common.jinja" %}
+    {% include "partials.bak/partials/devbox-partials/devbox-packages-common.jinja" %}
   },
   "shell": {
     "init_hook": [
       # Insert your init commands here
-      {% include "_shared/partials/devbox-partials/devbox-shell-init_hook.jinja" %}
+      {% include "partials.bak/partials/devbox-partials/devbox-shell-init_hook.jinja" %}
     ]
   },
   "scripts": {
-    {% include "_shared/partials/devbox-partials/devbox-scripts-common.jinja" %}
+    {% include "partials.bak/partials/devbox-partials/devbox-scripts-common.jinja" %}
   }
 }

@@ -1,4 +1,4 @@
-name: Iron Proxy Egress Check
+{% raw %}name: Iron Proxy Egress Check
 
 on:
   pull_request:
@@ -51,3 +51,4 @@ jobs:
       - name: Iron Proxy traffic summary
         uses: ironsh/iron-proxy-action/summary@v1
         if: always()
+{% endraw %}

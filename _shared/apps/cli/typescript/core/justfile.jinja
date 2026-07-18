@@ -59,7 +59,7 @@ doctor:
     @echo "  NX: {% if NX_AVAILABLE %}$(nx --version){% else %}not installed{% endif %}"
 
 # Dependency synchronization
-{% include '_shared/partials/justfile-partials/typescript-deps-sync.jinja' %}
+{% include 'partials.bak/partials/justfile-partials/typescript-deps-sync.jinja' %}
 
 # Help target
 help:

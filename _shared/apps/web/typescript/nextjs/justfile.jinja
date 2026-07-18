@@ -266,7 +266,7 @@ logs-internal:
     tail -f .next/server.log 2>/dev/null || echo "No server logs found"
 
 # Dependency synchronization
-{% include '_shared/partials/justfile-partials/typescript-deps-sync.jinja' %}
+{% include 'partials.bak/partials/justfile-partials/typescript-deps-sync.jinja' %}
 
 # Development setup (OPTIONAL)
 setup:
