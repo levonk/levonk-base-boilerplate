@@ -125,6 +125,10 @@
         }
       }
     },
+    "github:NixOS/nixpkgs/nixpkgs-unstable": {
+      "last_modified": "2026-07-17T09:58:13Z",
+      "resolved": "github:NixOS/nixpkgs/a47c123a609287a012dfc44d281de2dd4ed13394?lastModified=1784282293"
+    },
     "github:levonk/levonk-packages#bundle-rtk-cloud": {
       "last_modified": "2026-06-27T16:54:13Z",
       "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#bundle-rtk-cloud"
