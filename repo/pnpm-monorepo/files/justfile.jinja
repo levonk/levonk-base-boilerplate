@@ -1,0 +1,361 @@
+# pnpm Monorepo Development Commands
+# Standard justfile following ADR-20260131001
+
+# Set default shell and recipe settings
+set shell := ["bash", "-euo", "pipefail"]
+
+# Default recipe
+default:
+    @just --list
+
+# Normal targets - Developer interface (REQUIRED)
+clean:
+    devbox shell clean
+
+dev:
+    devbox shell dev
+
+build:
+    devbox shell build
+
+test:
+    devbox shell test
+
+lint:
+    devbox shell lint
+
+typecheck:
+    devbox shell typecheck
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    devbox shell bootstrap
+
+bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # Install dependencies synchronously so eslint/prettier are available
+    # in node_modules/.bin before any quality checks run.
+    if [ ! -d node_modules/ ]; then
+      echo "[bootstrap] Installing dependencies with pnpm..."
+      # Use --no-frozen-lockfile for initial install since no lockfile exists yet.
+      # The shared .npmrc enables frozen-lockfile for CI reproducibility.
+      if [ ! -f pnpm-lock.yaml ]; then
+        pnpm install --no-frozen-lockfile
+      else
+        pnpm install
+      fi
+      echo "[bootstrap] Dependencies installed."
+    else
+      echo "[bootstrap] node_modules/ already present."
+    fi
+
+    # Initialize tkr for task management
+    if command -v tkr >/dev/null 2>&1; then
+      if [ ! -d ".tickets" ]; then
+        echo "[bootstrap] Initializing tkr..."
+        tkr init || echo "[bootstrap] tkr init failed"
+      else
+        echo "[bootstrap] tkr already initialized"
+      fi
+    fi
+
+    # Create memory directory structure for Obsidian
+    echo "[bootstrap] Setting up memory structure..."
+    mkdir -p memory/{00-inbox,01-projects,02-decisions,03-patterns,04-learnings,05-references,98-logs,99-daily}
+
+    if [ ! -d ".obsidian" ]; then
+      mkdir -p .obsidian
+      echo "# Obsidian configuration" > .obsidian/config.md
+    fi
+
+    # Verify eslint/prettier are now available via node_modules/.bin
+    if command -v eslint >/dev/null 2>&1; then
+      echo "[bootstrap] eslint available: $(eslint --version)"
+    else
+      echo "[bootstrap] WARNING: eslint not found on PATH after pnpm install"
+    fi
+    if command -v prettier >/dev/null 2>&1; then
+      echo "[bootstrap] prettier available: $(prettier --version)"
+    else
+      echo "[bootstrap] WARNING: prettier not found on PATH after pnpm install"
+    fi
+
+    echo "✅ pnpm monorepo bootstrap complete!"
+
+# Prime recipes (REQUIRED)
+prime:
+    @echo "🚀 Priming code indexing and analysis tools..."
+    @devbox run prime
+
+prime-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "[prime] Updating repository..."
+    git fetch || echo "[prime] git fetch failed (check remote connectivity)"
+
+    # qmd memory indexing
+    if command -v qmd >/dev/null 2>&1; then
+        echo "[prime] Indexing documentation with qmd..."
+        qmd index docs/ internal-docs/ memory/ README.md || echo "[prime] qmd indexing failed"
+        echo "[prime] qmd indexing complete."
+    else
+        echo "[prime] Skipping qmd (not installed)"
+    fi
+
+    echo "[prime] pnpm monorepo priming complete!"
+
+# Health and diagnostics (REQUIRED)
+doctor:
+    devbox shell doctor
+
+doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Checking pnpm monorepo development environment..."
+
+    if ! command -v pnpm >/dev/null 2>&1; then
+        echo "❌ Error: pnpm not found" >&2
+        exit 1
+    fi
+    if ! command -v node >/dev/null 2>&1; then
+        echo "❌ Error: node not found" >&2
+        exit 1
+    fi
+    if [ ! -f package.json ]; then
+        echo "❌ Error: package.json not found (expected in monorepo root)" >&2
+        exit 1
+    fi
+    echo "✅ OK: Node.js + pnpm + package.json present"
+
+    # Check for installed dependencies
+    if [ -d node_modules/ ]; then
+        echo "✅ OK: node_modules/ present (dependencies installed)"
+    else
+        echo "⚠️  WARNING: node_modules/ missing — run 'just bootstrap' to install"
+    fi
+
+    # Check eslint/prettier availability (from node_modules/.bin after pnpm install)
+    if command -v eslint >/dev/null 2>&1; then
+        echo "✅ OK: eslint available ($(eslint --version))"
+    else
+        echo "⚠️  WARNING: eslint not on PATH — run 'just bootstrap' to install dependencies"
+    fi
+    if command -v prettier >/dev/null 2>&1; then
+        echo "✅ OK: prettier available ($(prettier --version))"
+    else
+        echo "⚠️  WARNING: prettier not on PATH — run 'just bootstrap' to install dependencies"
+    fi
+
+    # Check for nx
+    if [ -f node_modules/.bin/nx ]; then
+        echo "✅ OK: nx available (via node_modules/.bin)"
+    else
+        echo "⚠️  WARNING: nx not installed — run 'just bootstrap' to install dependencies"
+    fi
+
+    # Check for memory management tools
+    if command -v qmd >/dev/null 2>&1; then
+        echo "✅ OK: qmd available for memory search"
+    else
+        echo "⚠️  WARNING: qmd not found (install with: cargo install qmd)"
+    fi
+
+    if command -v tkr >/dev/null 2>&1; then
+        echo "✅ OK: tkr available for task management"
+    else
+        echo "⚠️  WARNING: tkr not found (install from: https://github.com/levonk/tkr)"
+    fi
+
+    if [ -d memory ]; then
+        echo "✅ OK: memory/ directory found"
+    else
+        echo "⚠️  WARNING: memory/ directory missing (run 'just bootstrap' to create)"
+    fi
+
+    echo "🚀 Ready to develop pnpm monorepo!"
+
+# Quality checks (OPTIONAL but RECOMMENDED)
+quality:
+    just lint
+    just test
+    just typecheck
+
+# Memory and task management targets (NEW)
+doc-search:
+    @echo "🔍 Searching documentation and memory..."
+    @devbox run doc-search
+
+doc-search-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if command -v qmd >/dev/null 2>&1; then
+        query="${1:-.}"
+        qmd search "$query" | head -20
+    else
+        echo "qmd not found - falling back to ripgrep..."
+        rg --type md "$query" docs/ internal-docs/ memory/ || true
+    fi
+
+tasks:
+    @echo "📋 Listing current tasks..."
+    @devbox run tasks
+
+tasks-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if command -v tkr >/dev/null 2>&1; then
+        tkr list --status=open
+    else
+        echo "tkr not found"
+    fi
+
+task-ready:
+    @echo "🎯 Getting next available task..."
+    @devbox run task-ready
+
+task-ready-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if command -v tkr >/dev/null 2>&1; then
+        tkr ready
+    else
+        echo "tkr not found"
+    fi
+
+task-start:
+    @echo "🚀 Starting available task..."
+    @devbox run task-start
+
+task-start-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if command -v tkr >/dev/null 2>&1; then
+        task_id=$(tkr ready | head -1 | cut -d' ' -f1)
+        if [ -n "$task_id" ]; then
+            tkr start "$task_id"
+            echo "Started task: $task_id"
+        else
+            echo "No available tasks"
+        fi
+    else
+        echo "tkr not found"
+    fi
+
+# Internal implementations - pnpm monorepo with Nx
+clean-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    rm -rf .next out dist .nx/cache
+    echo "🧹 Build artifacts removed"
+
+build-internal:
+    # Build all packages and apps via Nx
+    pnpm build
+
+test-internal:
+    # Run all tests via Nx
+    pnpm test
+
+lint-internal:
+    # Lint all packages via Nx (uses eslint from node_modules/.bin)
+    pnpm lint
+
+typecheck-internal:
+    # Type check all packages via Nx
+    pnpm typecheck
+
+dev-internal:
+    # Start all apps in development mode via Nx
+    pnpm dev
+
+release-internal:
+    # Release: build all, then publish via changesets
+    pnpm release
+
+deploy-internal:
+    @echo "ℹ️  No deploy target configured for pnpm monorepo"
+    @echo "   Add deployment commands to justfile if needed"
+
+# Additional pnpm monorepo targets
+lint-fix-internal:
+    # Fix linting issues via Nx
+    pnpm lint:fix
+
+format-internal:
+    # Format code with prettier
+    pnpm format
+
+format-check-internal:
+    # Check formatting with prettier
+    pnpm format:check
+
+test-unit-internal:
+    # Run unit tests only via Nx
+    pnpm test:unit
+
+test-coverage-internal:
+    # Generate coverage reports via Nx
+    pnpm test:coverage
+
+clean-hard-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    rm -rf .next out dist .nx/cache node_modules
+    echo "🧹 Hard clean: removed build artifacts and node_modules"
+
+# Nx-specific targets
+nx-graph:
+    pnpm nx graph
+
+nx-affected:
+    pnpm nx affected
+
+nx-clear-cache:
+    pnpm nx reset
+
+# Dependency synchronization
+{% include 'partials.bak/partials/justfile-partials/typescript-deps-sync.jinja' %}
+
+# Development setup (OPTIONAL)
+setup:
+    @just bootstrap
+    echo "✅ pnpm monorepo development environment ready!"
+
+# Help target
+help:
+    @echo "📦 pnpm Monorepo - Available Commands"
+    @echo ""
+    @echo "Standard commands:"
+    @echo "  just bootstrap    - Initialize the development environment (runs pnpm install)"
+    @echo "  just build        - Build all packages and apps"
+    @echo "  just test         - Run all tests"
+    @echo "  just lint         - Run linting"
+    @echo "  just typecheck    - Run type checking"
+    @echo "  just dev          - Start all apps in development mode"
+    @echo "  just clean        - Clean build artifacts"
+    @echo "  just doctor       - Check environment health"
+    @echo "  just quality      - Run all quality checks (lint + test + typecheck)"
+    @echo "  just prime        - Index documentation and update repository"
+    @echo ""
+    @echo "Memory & Task Management:"
+    @echo "  just doc-search   - Search documentation and memory"
+    @echo "  just tasks        - List current tasks"
+    @echo "  just task-ready   - Get next available task"
+    @echo "  just task-start   - Start working on available task"
+    @echo ""
+    @echo "pnpm monorepo commands:"
+    @echo "  just format       - Format code with prettier"
+    @echo "  just lint-fix     - Fix linting issues"
+    @echo "  just test-unit    - Run unit tests only"
+    @echo "  just test-coverage- Generate coverage reports"
+    @echo "  just clean-hard   - Remove build artifacts and node_modules"
+    @echo ""
+    @echo "Nx commands:"
+    @echo "  just nx-graph     - Show Nx project graph"
+    @echo "  just nx-affected  - Run affected projects"
+    @echo "  just nx-clear-cache - Clear Nx cache"
+    @echo ""
+    @echo "TypeScript-specific commands:"
+    @echo "  just sync-deps    - Sync lock file with package.json"
+    @echo "  just pre-commit   - Run pre-commit checks"
