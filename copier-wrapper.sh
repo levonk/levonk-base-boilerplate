@@ -183,6 +183,37 @@ cleanup_partials_bak() {
 }
 trap cleanup_partials_bak EXIT
 
+# Detect the Nix target architecture triple for the current platform.
+# Used to pin nixpkgs.commit in devbox.json when scaffolding on x86_64-darwin
+# (Intel Mac), since nixpkgs-unstable dropped x86_64-darwin support in 26.11.
+detect_nix_target_arch() {
+    local os arch
+    os="$(uname -s | tr '[:upper:]' '[:lower:]')"   # darwin, linux
+    arch="$(uname -m)"                                # x86_64, arm64, aarch64
+    case "$os/$arch" in
+        darwin/x86_64)  echo "x86_64-darwin" ;;
+        darwin/arm64)   echo "aarch64-darwin" ;;
+        darwin/aarch64) echo "aarch64-darwin" ;;
+        linux/x86_64)   echo "x86_64-linux" ;;
+        linux/aarch64)  echo "aarch64-linux" ;;
+        linux/arm64)    echo "aarch64-linux" ;;
+        *)              echo "unknown" ;;
+    esac
+}
+
+# Inject --data nix_target_arch=<triple> unless the caller already provided it.
+# Copier accepts --data as either "--data key=value" or "--data=key=value",
+# so we check if any existing argument already sets nix_target_arch.
+nix_arch_already_set=false
+for arg in "$@"; do
+    case "$arg" in
+        nix_target_arch=*|*nix_target_arch=*) nix_arch_already_set=true; break ;;
+    esac
+done
+if [ "$nix_arch_already_set" = false ]; then
+    set -- "$@" --data "nix_target_arch=$(detect_nix_target_arch)"
+fi
+
 # Run the actual copier command (no exec — we need the trap to fire afterward)
 copier "$@"
 exit $?

@@ -1,4 +1,9 @@
 {
+{% if nix_target_arch | default("") == "x86_64-darwin" %}
+  "nixpkgs": {
+    "commit": "293d6abedf0478e681a4dfcfcb35b30fc796a32f"
+  },
+{% endif %}
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
   "packages": {
     "python": "{{ python_version | default(311) }}",

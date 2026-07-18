@@ -1,4 +1,9 @@
 {
+{% if nix_target_arch | default("") == "x86_64-darwin" %}
+  "nixpkgs": {
+    "commit": "293d6abedf0478e681a4dfcfcb35b30fc796a32f"
+  },
+{% endif %}
   "packages": {
     "{{ language }}": "latest"
     {% if language == 'go' %},

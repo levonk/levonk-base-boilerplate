@@ -20,5 +20,8 @@
   },
   "shell": {
     "init_hook": []
+  },
+  "nixpkgs": {
+    "commit": "293d6abedf0478e681a4dfcfcb35b30fc796a32f"
   }
 }

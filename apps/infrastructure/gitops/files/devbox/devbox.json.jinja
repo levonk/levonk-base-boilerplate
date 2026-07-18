@@ -1,4 +1,9 @@
 {
+{% if nix_target_arch | default("") == "x86_64-darwin" %}
+  "nixpkgs": {
+    "commit": "293d6abedf0478e681a4dfcfcb35b30fc796a32f"
+  },
+{% endif %}
   "$schema": "https://json-schema.org/draft-07/schema#",
   "name": "{{ project_name }}",
   "description": "{{ project_description }}",
