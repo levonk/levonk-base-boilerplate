@@ -24,7 +24,7 @@ Changesets are a way to track changes to packages in your repository. Each chang
 After making changes, create a changeset by running:
 
 ```bash
-npx changeset
+pnpm exec changeset
 ```
 
 This will:
@@ -89,7 +89,7 @@ git push
 When it's time to make a release:
 
 1. Ensure all desired changesets are merged
-2. Run `npx changeset version` to update package versions and changelog
+2. Run `pnpm exec changeset version` to update package versions and changelog
 3. Review and commit the changes
 4. Run `npm publish` to publish to npm
 

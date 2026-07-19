@@ -38,11 +38,11 @@ jobs:
 
       - name: Enter RC mode
         run: |
-          npx changeset pre exit || true
-          npx changeset pre enter rc
+          pnpm exec changeset pre exit || true
+          pnpm exec changeset pre enter rc
 
       - name: Version RC packages
-        run: npx changeset version
+        run: pnpm exec changeset version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -56,7 +56,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Exit RC mode
-        run: npx changeset pre exit
+        run: pnpm exec changeset pre exit
 
       - name: Commit & Push changes
         uses: actions-js/push@master

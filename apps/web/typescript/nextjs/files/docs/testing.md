@@ -102,16 +102,16 @@ pnpm test:coverage
 
 ```bash
 # Run specific test file
-npx vitest run basic.test.mts
+pnpm exec vitest run basic.test.mts
 
 # Run tests matching pattern
-npx vitest run --grep "should render"
+pnpm exec vitest run --grep "should render"
 
 # Run tests with specific reporter
-npx vitest run --reporter=verbose
+pnpm exec vitest run --reporter=verbose
 
 # Run tests in specific project
-npx vitest run --project unit
+pnpm exec vitest run --project unit
 ```
 
 ## Writing Tests
@@ -537,7 +537,7 @@ pnpm test:coverage
 open coverage/index.html
 
 # Check coverage thresholds
-npx vitest run --coverage --reporter=verbose
+pnpm exec vitest run --coverage --reporter=verbose
 ```
 
 This comprehensive testing setup provides a solid foundation for maintaining code quality and reliability in your Next.js applications.

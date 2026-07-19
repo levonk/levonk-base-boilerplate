@@ -28,7 +28,7 @@ jobs:
         run: node docs/scripts/models-json-to-markdown.js
 
       - name: Format Markdown with Prettier
-        run: npx prettier --write docs/models.md
+        run: pnpm dlx prettier --write docs/models.md
 
       - name: Stage docs/models.md
         run: git add docs/models.md

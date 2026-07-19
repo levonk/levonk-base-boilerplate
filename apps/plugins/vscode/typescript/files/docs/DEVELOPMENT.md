@@ -197,7 +197,7 @@ This creates a `.vsix` file in the project root that can be:
 
 3. **Login with vsce**:
    ```bash
-   npx vsce login {{ publisher }}
+   pnpm exec vsce login {{ publisher }}
    ```
 
 4. **Publish**:

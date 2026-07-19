@@ -38,7 +38,7 @@ jobs:
         timeout-minutes: 2
 
       - name: Exit pre-release mode (safety check)
-        run: npx changeset pre exit || true
+        run: pnpm exec changeset pre exit || true
 
       - name: Create Release Pull Request or Publish to npm
         uses: changesets/action@v1
