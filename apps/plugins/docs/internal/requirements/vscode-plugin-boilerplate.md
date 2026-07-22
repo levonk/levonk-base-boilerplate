@@ -1,4 +1,4 @@
-This is a sophisticated stack. Using **Copier** inside a **Nix-managed monorepo** with **Turbo** provides an extremely robust developer experience. It ensures that any "clone" or fork of your project has the exact same environment.
+This is a sophisticated stack. Using **Copier** inside a **Nix-managed monorepo** with **Nx** provides an extremely robust developer experience. It ensures that any "clone" or fork of your project has the exact same environment.
 
 Below is the architecture and the core files for your boilerplate.
 
@@ -13,7 +13,7 @@ Below is the architecture and the core files for your boilerplate.
 ├── .envrc                      # direnv config
 ├── Makefile                    # Task runner
 ├── pnpm-workspace.yaml         # Monorepo config
-├── turbo.json                  # Task orchestration
+├── nx.json                     # Task orchestration
 ├── packages/
 │   └── {{ extension_id }}/     # The template directory
 │       ├── package.json
@@ -70,13 +70,13 @@ This ensures every developer has `pnpm`, `node`, `ovsx`, and `vsce` without manu
 ---
 
 ### 3. The Root `Makefile`
-This is your entry point. It wraps Turbo and Nix commands.
+This is your entry point. It wraps Nx and Nix commands.
 
 ```makefile
 .PHONY: help bootstrap clean doctor lint build test run deploy publish
 
 # Variables
-TURBO := pnpm exec turbo
+NX := pnpm exec nx
 EXT_PATH := packages/vscode-recents
 
 help: ## Show this help
@@ -90,20 +90,20 @@ doctor: ## Check if all required tools are installed
 	@command -v pnpm >/dev/null 2>&1 || echo "Missing pnpm"
 	@command -v node >/dev/null 2>&1 || echo "Missing node"
 	@command -v vsce >/dev/null 2>&1 || echo "Missing vsce"
-	@pnpm exec turbo --version
+	@pnpm exec nx --version
 
 lint: ## Lint all packages
-	$(TURBO) lint
+	$(NX) run-many -t lint
 
 build: ## Build all packages
-	$(TURBO) build
+	$(NX) run-many -t build
 
 test: ## Run tests
-	$(TURBO) test
+	$(NX) run-many -t test
 
 clean: ## Clean build artifacts
 	rm -rf node_modules
-	$(TURBO) clean
+	$(NX) run-many -t clean
 
 run: ## Run the extension in a host (defaults to first package)
 	cd $(EXT_PATH) && code --extensionDevelopmentPath=$(PWD)/$(EXT_PATH)
@@ -144,7 +144,7 @@ description:
 
 ---
 
-### 5. Turbo & PNPM Setup
+### 5. Nx & PNPM Setup
 
 **`pnpm-workspace.yaml`**
 ```yaml
@@ -152,20 +152,18 @@ packages:
   - 'packages/*'
 ```
 
-**`turbo.json`**
+**`nx.json`**
 ```json
 {
-  "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "targetDefaults": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["out/**", "dist/**"]
+      "cache": true,
+      "outputs": ["{projectRoot}/out/**", "{projectRoot}/dist/**"]
     },
-    "lint": {},
-    "test": {},
-    "clean": {
-      "cache": false
-    }
+    "lint": { "cache": true },
+    "test": { "cache": true }
   }
 }
 ```
@@ -217,7 +215,7 @@ To ensure it works in **VSCodium, Cursor, and Theia**, your `package.json` insid
 ```
 
 ### 7. Why this solves your requirements:
-1.  **Monorepo (Turbo/PNPM):** If you later decide to build a companion CLI or a shared UI component library, the monorepo is already set up.
+1.  **Monorepo (Nx/PNPM):** If you later decide to build a companion CLI or a shared UI component library, the monorepo is already set up.
 2.  **Nix + Direnv:** You won't have "works on my machine" issues with `node` or `pnpm` versions.
 3.  **Makefile:** Provides a universal interface. `make publish` handles the complexity of hitting both Microsoft and the Open VSX (Eclipse Foundation) registries.
 4.  **Boilerplate:** Using Copier allows you to spin up specialized versions of this tool (e.g., one for a team, one for public use) with different default configs.
