@@ -1,18 +1,5 @@
-# Template variables
-_defaults:
-  package_name: "my-next-app"
-  description: "A Next.js application"
-
-# Questions
-package_name:
-  type: str
-  help: "What is your package name?"
-
-description:
-  type: str
-  help: "Project description"
-
 # Template configuration
+_min_copier_version: "9.0.0"
 _subdirectory: files
 _templates_suffix: ".jinja"
 _ignore:
@@ -23,3 +10,54 @@ _ignore:
   - ".git"
   - "__pycache__"
   - "*.pyc"
+
+# Questions
+# NOTE: Do not use a top-level `_defaults:` block — Copier ignores it
+# (only `_`-prefixed keys Copier recognizes are honored:
+# `_templates_suffix`, `_subdirectory`, `_tasks`, `_exclude`, etc.).
+# Put defaults on each question via the `default:` key instead.
+package_name:
+  type: str
+  help: "What is your package name?"
+  default: "my-next-app"
+
+project_name:
+  type: str
+  help: "Display name used in rendered files (.envrc, README, devbox.json)"
+  default: "{{ package_name }}"
+
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# partial as the project root path. At copy time the project root is the
+# destination directory itself, so "." is the correct portable value.
+REPO_ROOT:
+  type: str
+  help: "Project root path used inside .envrc (relative to the .envrc file)"
+  default: "."
+
+description:
+  type: str
+  help: "Project description"
+  default: "A Next.js application"
+
+# Post-copy validation: fail if any rendered file still contains
+# unrendered Jinja artifacts ({{ ... }} or {% ... %}). This catches
+# missing question definitions and broken template variables before
+# the generated project ships.
+_tasks:
+  - |
+    bash -c '
+    set -euo pipefail
+    offenders="$(grep -rIn --include="*" \
+      -e "{{[[:space:]]*[^}]*}}" \
+      -e "{%[[:space:]]*[^%]*%}" \
+      . 2>/dev/null | grep -v -E "/(\.git|node_modules|\.next|dist|out|__pycache__)/" || true)"
+    if [ -n "$offenders" ]; then
+      echo "ERROR: Unrendered Jinja artifacts found in generated project:" >&2
+      echo "$offenders" >&2
+      echo "" >&2
+      echo "This means a copier.yml question is missing or a template variable is undefined." >&2
+      echo "Fix the source template copier.yml and re-run copier." >&2
+      exit 1
+    fi
+    echo "OK: No unrendered Jinja artifacts in generated project."
+    '

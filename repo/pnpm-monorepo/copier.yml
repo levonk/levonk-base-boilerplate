@@ -1,28 +1,5 @@
-# Template variables
-_defaults:
-  monorepo_name: "my-monorepo"
-  package_name: "my-monorepo"
-  boilerplate_name: "pnpm-monorepo"
-  description: "A pnpm-based monorepo with Nx"
-
-# Questions
-monorepo_name:
-  type: str
-  help: "What is your monorepo name?"
-
-package_name:
-  type: str
-  help: "Project name (defaults to monorepo_name)"
-
-boilerplate_name:
-  type: str
-  help: "Boilerplate name (for documentation)"
-
-description:
-  type: str
-  help: "Monorepo description"
-
 # Template configuration
+_min_copier_version: "9.0.0"
 _templates_suffix: ".jinja"
 _subdirectory: files
 _ignore:
@@ -33,3 +10,68 @@ _ignore:
   - ".git"
   - "__pycache__"
   - "*.pyc"
+
+# Questions
+# NOTE: Do not use a top-level `_defaults:` block — Copier ignores it
+# (only keys prefixed with `_` that Copier recognizes are honored:
+# `_templates_suffix`, `_subdirectory`, `_tasks`, `_exclude`, etc.).
+# Put defaults on each question via the `default:` key instead.
+monorepo_name:
+  type: str
+  help: "What is your monorepo name?"
+  default: "my-monorepo"
+
+package_name:
+  type: str
+  help: "Project name (defaults to monorepo_name)"
+  default: "{{ monorepo_name }}"
+
+project_name:
+  type: str
+  help: "Display name used in rendered files (.envrc, README, devbox.json)"
+  default: "{{ monorepo_name }}"
+
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# partial as the project root path. At copy time the project root is the
+# destination directory itself, so "." is the correct portable value.
+# (Hardcoding an absolute path would make the generated .envrc
+# non-portable across machines.)
+REPO_ROOT:
+  type: str
+  help: "Project root path used inside .envrc (relative to the .envrc file)"
+  default: "."
+
+boilerplate_name:
+  type: str
+  help: "Boilerplate name (for documentation)"
+  default: "pnpm-monorepo"
+
+description:
+  type: str
+  help: "Monorepo description"
+  default: "A pnpm-based monorepo with Nx"
+
+# Post-copy validation: fail if any rendered file still contains
+# unrendered Jinja artifacts ({{ ... }} or {% ... %}). This catches
+# missing question definitions and broken template variables before
+# the generated project ships.
+_tasks:
+  - |
+    bash -c '
+    set -euo pipefail
+    # Search rendered files for unrendered Jinja delimiters.
+    # Skip binary files and common noise directories.
+    offenders="$(grep -rIn --include="*" \
+      -e "{{[[:space:]]*[^}]*}}" \
+      -e "{%[[:space:]]*[^%]*%}" \
+      . 2>/dev/null | grep -v -E "/(\.git|node_modules|\.next|dist|out|__pycache__)/" || true)"
+    if [ -n "$offenders" ]; then
+      echo "ERROR: Unrendered Jinja artifacts found in generated project:" >&2
+      echo "$offenders" >&2
+      echo "" >&2
+      echo "This means a copier.yml question is missing or a template variable is undefined." >&2
+      echo "Fix the source template copier.yml and re-run copier." >&2
+      exit 1
+    fi
+    echo "OK: No unrendered Jinja artifacts in generated project."
+    '
