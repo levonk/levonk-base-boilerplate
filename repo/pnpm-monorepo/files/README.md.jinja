@@ -110,26 +110,26 @@ pnpm format:check
 
 ```bash
 # Generate a new Next.js app
-pnpm nx g @nx/next:app apps/my-app
+pnpm nx g @nx/next:app apps/active/my-app
 
 # Or manually:
-mkdir -p apps/my-app
-cd apps/my-app
+mkdir -p apps/active/my-app
+cd apps/active/my-app
 pnpm init
-# Add a project.json with Nx targets (see apps/web/project.json for reference)
+# Add a project.json with Nx targets (see apps/active/web/project.json for reference)
 ```
 
 ### Adding a Shared Package
 
 ```bash
 # Generate a new JS library
-pnpm nx g @nx/js:lib packages/my-package
+pnpm nx g @nx/js:lib packages/active/my-package
 
 # Or manually:
-mkdir -p packages/my-package
-cd packages/my-package
+mkdir -p packages/active/my-package
+cd packages/active/my-package
 pnpm init
-# Add a project.json with Nx targets (see packages/ui/project.json for reference)
+# Add a project.json with Nx targets (see packages/active/ui/project.json for reference)
 ```
 
 ## Dependency Management
