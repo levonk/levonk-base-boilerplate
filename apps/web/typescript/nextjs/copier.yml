@@ -45,7 +45,7 @@ description:
 # the generated project ships.
 _tasks:
   - |
-    bash -c '
+    bash -c '{% raw %}
     set -euo pipefail
     offenders="$(grep -rIn --include="*" \
       -e "{{[[:space:]]*[^}]*}}" \
@@ -60,4 +60,4 @@ _tasks:
       exit 1
     fi
     echo "OK: No unrendered Jinja artifacts in generated project."
-    '
+    {% endraw %}'
