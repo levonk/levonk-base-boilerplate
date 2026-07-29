@@ -4,11 +4,11 @@ title: "ADR: CLI Tool Standards"
 adr-id: "20260607001"
 slug: "20260607001-cli-tool-standards"
 url: "/internal-docs/adr/adr-20260607001-cli-tool-standards.md"
-synopsis: "Defines comprehensive cross-language standards for CLI programs: standard arguments, configuration management with auto-initialization and auto-migration, install/uninstall functionality, input/output discipline with color control (--color=auto|always|never, config setting, NO_COLOR support), logging modes with structured logging and format auto-detection, signal handling including config reload, TUI mode, dry-run, progress indicators, daemon processes (--daemon/--no-daemon flags with auto-spawning and explicit control) with platform fallback, error formatting, shell completion, man pages, pager integration, cross-platform compatibility, security, resource management, collection vs processing separation, health checks for containers, privacy mode with anonymous lists, audit logging with retention, legacy deprecation policy, and agent mode standards (AXI: token-efficient TOON output, minimal schemas, content truncation, pre-computed aggregates, definitive empty states, structured errors, session integrations, content-first no-args, contextual disclosure)."
+synopsis: "Defines comprehensive cross-language standards for CLI programs: standard arguments, configuration management with auto-initialization and auto-migration, install/uninstall functionality, input/output discipline with color control (--color=auto|always|never, config setting, NO_COLOR support), logging modes with structured logging and format auto-detection, signal handling including config reload, TUI mode, dry-run, progress indicators, daemon processes (--daemon/--no-daemon flags with auto-spawning and explicit control) with platform fallback, error formatting, shell completion, man pages, pager integration, cross-platform compatibility, security, resource management, collection vs processing separation, health checks for containers, privacy mode with anonymous lists, audit logging with retention, legacy deprecation policy, and agent mode standards (AXI: token-efficient TOON output, minimal schemas, content truncation, pre-computed aggregates, definitive empty states, structured errors, session integrations, content-first no-args, contextual disclosure, skill emission via --gen-skill, coding-agent hook wiring with per-agent config.toml preferences, and non-user-identifiable telemetry toggleable via env var and config)."
 author: "https://github.com/levonk"
 date-created: "2026-06-07"
-date-updated: "2026-06-07"
-version: "4.0.0"
+date-updated: "2026-07-29"
+version: "5.0.0"
 status: "accepted"
 aliases: []
 tags: ["doc/architecture/adr", "adr", "cli", "boilerplate", "tooling", "standard"]
@@ -76,7 +76,7 @@ All CLI programs **must** provide:
 24. **Cross-Platform Path Handling**: Consistent path handling across Windows/Linux/macOS. Use platform-appropriate separators and handle both forward and backward slashes.
 25. **Credential/Secret Handling**: Secure handling of sensitive data with no logging of secrets, secure storage options, and clear warnings about insecure config methods.
 26. **Resource Limits**: Memory/CPU usage guidelines for long-running operations. Provide `--max-memory` and `--max-cpu` flags where applicable.
-27. **Testing**: Language-appropriate tests covering help output, globbing, stdin, config precedence, json vs human output, exit-code behavior, standard arguments, config file initialization, shell completion, error handling, daemon mode, and agent mode (TOON output, minimal schemas, content truncation, pre-computed aggregates, empty states, structured errors, content-first no-args, contextual disclosure) where feasible.
+27. **Testing**: Language-appropriate tests covering help output, globbing, stdin, config precedence, json vs human output, exit-code behavior, standard arguments, config file initialization, shell completion, error handling, daemon mode, and agent mode (TOON output, minimal schemas, content truncation, pre-computed aggregates, empty states, structured errors, content-first no-args, contextual disclosure, skill emission idempotency, agent-hook install/uninstall idempotency, telemetry dry-run payload safety) where feasible.
 28. **Collection vs Processing Separation**: For CLIs that collect data and perform analysis, separate collection (daemon/background) from processing (offline analysis). Allow data collection in one environment and processing in another. Provide export commands for collected data and analysis commands that operate on exported data without requiring the collection daemon.
 29. **Config File Auto-Migration**: When config schema evolves, auto-migrate legacy configs to new format on first run. Create backup of old config (`.bak` suffix), log migration actions, and validate migrated config before use. Support both legacy and new formats for at least one release cycle with deprecation warnings.
 30. **Structured Logging with Format Auto-Detection**: Use structured logging (JSON or structured text) with format auto-detection based on TTY. Support language-native env filters (e.g., `RUST_LOG`, `NODE_ENV`, `LOG_LEVEL`). Log level resolution: env vars > CLI flags > config file > defaults.
@@ -201,6 +201,34 @@ All CLI programs **must** support agent mode as the default behavior, following 
    - **Actionable**: every suggestion is a complete command (or template) carrying forward any disambiguating flags from the current invocation (e.g., `--repo`, `--source`)
    - **Concise**: 2-4 suggestions maximum, ranked by relevance
    - **Structured**: use a `help[]` array in TOON output for machine parsing
+
+46. **Skill Emission via `--gen-skill`**: Provide a `--gen-skill` flag that prints a complete, installable [Agent Skill](https://agentskills.io) prompt to stdout, explaining how to use the tool. The emitted skill is the canonical, distributable companion to the session hook (§42) and the installable skill (§43) — it lets an agent or user install the tool's guidance into any agent that supports the skill format, without a global binary install.
+   - **Recommendation order**: the emitted skill prompt must recommend the integration paths in this order: (1) hooks (lowest per-session token cost, ambient context), (2) CLI use (explicit invocation), (3) MCP server if the tool exposes one. State the trade-off for each so the agent can choose.
+   - **Single source of truth**: generate the skill body from the same content the no-args home view (§44) prints, so the skill never drifts from the CLI's own guidance. Add a `--gen-skill --check` mode that exits non-zero if the committed skill is stale relative to the CLI's current home view (for CI).
+   - **Strip live state**: a skill is static, so omit dynamic data (open sessions, current items) that only the hook can show.
+   - **Non-interactive commands**: rewrite command examples to a form the agent can run without a global install (e.g. `npx -y mytool ...`, `uvx mytool ...`, `pnpm dlx mytool ...`), since a skill may be installed without the binary on PATH.
+   - **Trigger-shaped frontmatter**: include `name` and a `description` written as a trigger — terse and outcome-focused so the agent loads it on the right intent.
+   - **Output discipline**: print only the skill prompt to stdout (no progress, no logs) so it pipes cleanly into a file: `mytool --gen-skill > SKILL.md`. Diagnostics go to stderr.
+   - **Idempotent**: re-running `--gen-skill` with no CLI changes produces byte-identical output, so CI can diff cleanly.
+
+47. **Coding-Agent Hook Wiring with Per-Agent Config**: Extend §42 (Session Integrations) beyond Claude Code, Codex, and OpenCode to cover the broader coding-agent ecosystem (Devin, Cursor, Continue, Aider, etc. where the agent exposes a hook/plugin mechanism). The tool must ship a `--install-agent-hooks` (or `--install` subcommand) that wires the tool into the user's chosen agents, and must read per-agent preferences from `${XDG_CONFIG_HOME:-$HOME/.config}/{app-name}/config.toml`.
+   - **Default app targets**: by default support Claude Code, Codex, and OpenCode (per §42). Treat Devin, Cursor, Continue, and Aider as opt-in targets — wire them only when the user explicitly enables them in config or passes them to the install command. Do not hard-code a single agent integration.
+   - **Per-agent config**: the config.toml must contain an `[agent-hooks]` table (or per-agent sub-tables like `[agent-hooks.claude-code]`, `[agent-hooks.devin]`) where the user sets: which agents to wire (`enabled = ["claude-code", "codex"]`), the hook event to use (`session-start`, `pre-tool`, `post-tool`), and the recommendation order (`recommend = ["hooks", "cli", "mcp"]`). Defaults: `enabled = ["claude-code", "codex", "opencode"]`, `recommend = ["hooks", "cli"]`.
+   - **Explicit opt-in**: register hooks only from the user-invoked install command, never from ordinary CLI commands. Re-running the install command with the same config is an idempotent no-op.
+   - **Portable commands**: hook commands must use a PATH-verified binary name when it resolves to the current executable, and fall back to the full absolute path otherwise (per §42).
+   - **Path repair**: the install command must check existing hooks and update the executable path if it has changed (e.g., after reinstall or relocation).
+   - **Discovery**: the install command must detect which agents are present on the system (config files exist) and report which were wired, which were skipped (not installed), and which were disabled by config.
+   - **Uninstall counterpart**: `--uninstall-agent-hooks` must remove the hooks the tool registered, without touching hooks from other tools.
+
+48. **Non-User-Identifiable Telemetry**: Tools may collect anonymous usage telemetry (how the tool is called, which subcommands run, exit codes, rough timing buckets) to inform development — but must never collect user-identifiable information, file paths, package names, project names, environment variables, or any data that could identify the user or their work. Telemetry is opt-out by default and toggleable via both an environment variable and a config file setting.
+   - **No identifiers**: never log or transmit user names, host names, account names, email addresses, API keys, tokens, or hashes derived from them.
+   - **No file paths**: never log or transmit absolute or relative file paths, directory paths, repository URLs, or remote names. If a count of files is useful, log only the integer count, not the paths.
+   - **No content**: never log or transmit command arguments, package names, dependency names, code snippets, error message text, or any user-supplied input. Log only the subcommand verb and a coarse exit-code category (success / usage-error / runtime-error).
+   - **Coarse buckets**: timing is logged as a bucket (`<100ms`, `100ms-1s`, `1s-10s`, `>10s`), never a precise duration. Counts are logged as integers, never as lists.
+   - **Toggle precedence**: `MYTOOL_TELEMETRY=off|on` environment variable (highest precedence) > `[telemetry] enabled = true|false` in config.toml > hardcoded default. The hardcoded default must be `off` (opt-in) unless the user explicitly enables telemetry; a first-run prompt may ask the user, but only in human mode (never block agent mode).
+   - **No network without consent**: the tool must not make any network call to transmit telemetry unless telemetry is enabled AND a network endpoint is configured. If no endpoint is configured, telemetry is collected locally to the audit log (§34) but not transmitted.
+   - **Disclosure**: `--version` and `--help` must state whether telemetry is enabled and where the data goes (endpoint URL or "local only"). The config file's `[telemetry]` section must be commented out by default with an explanation of what is and is not collected.
+   - **Testability**: provide a `--telemetry-dry-run` flag that prints what would be collected (the exact payload) without transmitting it, so users and CI can verify no identifying data leaks.
 
 ### Human Mode Preservation
 
@@ -341,6 +369,9 @@ Boilerplates are the enforcement mechanism and reference implementation. Requiri
 
 - Audit existing CLI templates against these standards
 - Test generated projects for compliance with all standards: configuration precedence, I/O behavior, signal handling, standard arguments, config initialization, install/uninstall, logging modes, dry-run, confirmation prompts, progress indicators, daemon processes, error formatting, shell completion, man pages, pager integration, subcommand organization, config validation, terminal awareness, cross-platform paths, credential handling, and resource limits
+- Validate `--gen-skill` output is byte-identical across re-runs, parses as a valid Agent Skill, and that `--gen-skill --check` exits non-zero when the committed skill is stale
+- Validate `--install-agent-hooks` / `--uninstall-agent-hooks` are idempotent, respect per-agent `enabled` config, and do not touch hooks from other tools
+- Validate `--telemetry-dry-run` payload contains no file paths, no user identifiers, no command arguments, and that telemetry makes no network call when disabled or unconfigured
 - Survey developers on UX consistency and onboarding experience
 - Monitor reduction in security review findings related to CLI tools
 - Validate TUI functionality across different terminal emulators and platforms
@@ -355,6 +386,7 @@ Boilerplates are the enforcement mechanism and reference implementation. Requiri
 - Review 6 months after adoption (2026-12-07)
 - Annually thereafter or when major language ecosystem changes occur
 - Review when AXI specification updates or new agent platforms emerge
+- v5.0.0 (2026-07-29): added §46 skill emission (`--gen-skill`), §47 coding-agent hook wiring with per-agent `config.toml` preferences, §48 non-user-identifiable telemetry. Re-review these additions when the Agent Skill spec, Devin/Cursor hook APIs, or telemetry regulations change.
 
 ## Notes
 
