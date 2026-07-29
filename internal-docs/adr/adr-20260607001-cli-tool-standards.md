@@ -225,7 +225,12 @@ All CLI programs **must** support agent mode as the default behavior, following 
    - **No file paths**: never log or transmit absolute or relative file paths, directory paths, repository URLs, or remote names. If a count of files is useful, log only the integer count, not the paths.
    - **No content**: never log or transmit command arguments, package names, dependency names, code snippets, error message text, or any user-supplied input. Log only the subcommand verb and a coarse exit-code category (success / usage-error / runtime-error).
    - **Coarse buckets**: timing is logged as a bucket (`<100ms`, `100ms-1s`, `1s-10s`, `>10s`), never a precise duration. Counts are logged as integers, never as lists.
-   - **Toggle precedence**: `MYTOOL_TELEMETRY=off|on` environment variable (highest precedence) > `[telemetry] enabled = true|false` in config.toml > hardcoded default. The hardcoded default must be `off` (opt-in) unless the user explicitly enables telemetry; a first-run prompt may ask the user, but only in human mode (never block agent mode).
+   - **Toggle precedence** (highest to lowest):
+     1. Universal opt-out env vars — `DO_NOT_TRACK=1` (the cross-tool standard inspired by the HTTP Do Not Track header) and `DISABLE_TELEMETRY=1` (the widely-used generic opt-out). If **either** is set to `1` (or any truthy value: `1`, `true`, `TRUE`, `yes`), telemetry is disabled regardless of any other setting. These are honored first so a single env var disables telemetry across every conforming tool on the system.
+     2. Tool-specific env var — `MYTOOL_TELEMETRY=off|on` (overrides config but not the universal opt-outs).
+     3. Config file — `[telemetry] enabled = true|false` in config.toml.
+     4. Hardcoded default — `off` (opt-in) unless the user explicitly enables telemetry.
+     A first-run prompt may ask the user, but only in human mode (never block agent mode). The universal opt-outs must be documented in `--help` so users discover them without reading the source.
    - **No network without consent**: the tool must not make any network call to transmit telemetry unless telemetry is enabled AND a network endpoint is configured. If no endpoint is configured, telemetry is collected locally to the audit log (§34) but not transmitted.
    - **Disclosure**: `--version` and `--help` must state whether telemetry is enabled and where the data goes (endpoint URL or "local only"). The config file's `[telemetry]` section must be commented out by default with an explanation of what is and is not collected.
    - **Testability**: provide a `--telemetry-dry-run` flag that prints what would be collected (the exact payload) without transmitting it, so users and CI can verify no identifying data leaks.
@@ -372,6 +377,7 @@ Boilerplates are the enforcement mechanism and reference implementation. Requiri
 - Validate `--gen-skill` output is byte-identical across re-runs, parses as a valid Agent Skill, and that `--gen-skill --check` exits non-zero when the committed skill is stale
 - Validate `--install-agent-hooks` / `--uninstall-agent-hooks` are idempotent, respect per-agent `enabled` config, and do not touch hooks from other tools
 - Validate `--telemetry-dry-run` payload contains no file paths, no user identifiers, no command arguments, and that telemetry makes no network call when disabled or unconfigured
+- Validate that `DO_NOT_TRACK=1` and `DISABLE_TELEMETRY=1` each disable telemetry regardless of `MYTOOL_TELEMETRY=on` or `[telemetry] enabled = true` in config
 - Survey developers on UX consistency and onboarding experience
 - Monitor reduction in security review findings related to CLI tools
 - Validate TUI functionality across different terminal emulators and platforms
