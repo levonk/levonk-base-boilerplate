@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Development environment for boilerplate scaffolding",
   "packages": {
-    "copier": "latest",
+    "copier": "",
     "git": "",
     "difftastic": "",
     "delta": "",

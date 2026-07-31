@@ -1,77 +1,47 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "copier@latest": {
-      "last_modified": "2026-06-14T16:21:05Z",
-      "resolved": "github:NixOS/nixpkgs/9eac87a12312b8f60dd52e1c6e1a265f6fc7f5fc#copier",
-      "source": "devbox-search",
-      "version": "9.15.2",
+    "copier": {
+      "resolved": "github:NixOS/nixpkgs/293d6abedf0478e681a4dfcfcb35b30fc796a32f#copier",
+      "source": "nixpkg",
       "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/gkw5jymg706mn6pfri1rhs0dn6djzfzy-python3.13-copier-9.15.2",
-              "default": true
-            },
-            {
-              "name": "dist",
-              "path": "/nix/store/4gvsyxcx4p6babhl804356vlqzvgkqid-python3.13-copier-9.15.2-dist"
-            }
-          ],
-          "store_path": "/nix/store/gkw5jymg706mn6pfri1rhs0dn6djzfzy-python3.13-copier-9.15.2"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/gf6q4i7lsqn6rppass2p1czlwdav9klh-python3.13-copier-9.15.2",
-              "default": true
-            },
-            {
-              "name": "dist",
-              "path": "/nix/store/dl1pxn1s0q10412gxflshb8hlb3d55ax-python3.13-copier-9.15.2-dist"
-            }
-          ],
-          "store_path": "/nix/store/gf6q4i7lsqn6rppass2p1czlwdav9klh-python3.13-copier-9.15.2"
-        },
         "x86_64-darwin": {
           "outputs": [
             {
-              "name": "out",
-              "path": "/nix/store/rmc8fk3nn20w7nns6hq3y86ddick0c9f-python3.13-copier-9.15.2",
+              "path": "/nix/store/jpwrmay2kg4ncf5y9cdig2imivxq7bag-python3.13-copier-9.15.1",
               "default": true
-            },
-            {
-              "name": "dist",
-              "path": "/nix/store/9qjhj0fxs1kaza9whnih8k585l6dc66v-python3.13-copier-9.15.2-dist"
             }
-          ],
-          "store_path": "/nix/store/rmc8fk3nn20w7nns6hq3y86ddick0c9f-python3.13-copier-9.15.2"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/99k9ncmhmz4205hr62l41i2n48rymq8c-python3.13-copier-9.15.2",
-              "default": true
-            },
-            {
-              "name": "dist",
-              "path": "/nix/store/zhhzkqg0s7zns9z07dvpwyvwmihd1ykg-python3.13-copier-9.15.2-dist"
-            }
-          ],
-          "store_path": "/nix/store/99k9ncmhmz4205hr62l41i2n48rymq8c-python3.13-copier-9.15.2"
+          ]
         }
       }
     },
     "delta": {
       "resolved": "github:NixOS/nixpkgs/3d46470bb3030020f7e1361f33514854f5bfa86d#delta",
-      "source": "nixpkg"
+      "source": "nixpkg",
+      "systems": {
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "path": "/nix/store/wcyakzs3rr0cx987ib506f8hrblisgzy-delta-0.19.2",
+              "default": true
+            }
+          ]
+        }
+      }
     },
     "difftastic": {
       "resolved": "github:NixOS/nixpkgs/3d46470bb3030020f7e1361f33514854f5bfa86d#difftastic",
-      "source": "nixpkg"
+      "source": "nixpkg",
+      "systems": {
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "path": "/nix/store/yyzak9d2bqdla9a4xax6bfv2hi5axd90-difftastic-0.69.0",
+              "default": true
+            }
+          ]
+        }
+      }
     },
     "eza": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#eza",
@@ -130,24 +100,24 @@
       "resolved": "github:NixOS/nixpkgs/293d6abedf0478e681a4dfcfcb35b30fc796a32f"
     },
     "github:levonk/levonk-packages#bundle-rtk-cloud": {
-      "last_modified": "2026-06-27T16:54:13Z",
-      "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#bundle-rtk-cloud"
+      "last_modified": "2026-07-30T10:00:18Z",
+      "resolved": "github:levonk/levonk-packages/4101d7483b3f65a5157ee6eee53b5665733887e1?lastModified=1785405618#bundle-rtk-cloud"
     },
     "github:levonk/levonk-packages#bundle-rtk-core": {
-      "last_modified": "2026-06-27T16:54:13Z",
-      "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#bundle-rtk-core"
+      "last_modified": "2026-07-30T10:00:18Z",
+      "resolved": "github:levonk/levonk-packages/4101d7483b3f65a5157ee6eee53b5665733887e1?lastModified=1785405618#bundle-rtk-core"
     },
     "github:levonk/levonk-packages#devbox-rtk-nodejs-pnpm-force": {
-      "last_modified": "2026-06-27T16:54:13Z",
-      "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#devbox-rtk-nodejs-pnpm-force"
+      "last_modified": "2026-07-30T10:00:18Z",
+      "resolved": "github:levonk/levonk-packages/4101d7483b3f65a5157ee6eee53b5665733887e1?lastModified=1785405618#devbox-rtk-nodejs-pnpm-force"
     },
     "github:levonk/levonk-packages#devbox-rtk-python-uv-force": {
-      "last_modified": "2026-06-27T16:54:13Z",
-      "resolved": "github:levonk/levonk-packages/2899d4e3dc0d397f16feb3765566ee03f9cce374?lastModified=1782579253#devbox-rtk-python-uv-force"
+      "last_modified": "2026-07-30T10:00:18Z",
+      "resolved": "github:levonk/levonk-packages/4101d7483b3f65a5157ee6eee53b5665733887e1?lastModified=1785405618#devbox-rtk-python-uv-force"
     },
     "github:levonk/smartfo": {
-      "last_modified": "2026-06-26T21:07:45Z",
-      "resolved": "github:levonk/smartfo/8eeb1ed3cb2a2b6b247770790186388e871b3914?lastModified=1782508065"
+      "last_modified": "2026-07-18T18:55:50Z",
+      "resolved": "github:levonk/smartfo/cb4673fb0706f49ecc370dc5e83c5418c15106cb?lastModified=1784400950"
     },
     "jujutsu": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#jujutsu",
