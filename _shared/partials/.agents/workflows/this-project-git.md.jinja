@@ -1,2 +1,5 @@
-- Run the skill ~/p/gh/levonk/dotfiles/home/current/.chezmoitemplates/config/ai/skills/software-dev/git-repository-management/SKILL.md 
-- on the {{package_name}} project
+- Read ~/p/gh/levonk/{{ package_name }}/AGENTS.md
+- Run the skill git-repository-management, if it's missing do a `devbox run -- pnpm skills add levonk/skills-releases --all`
+- on ~/p/gh/levonk/{{ package_name }}/internal-docs/feature/
+- do not use `npx` or `npm` we use `devbox run -- pnpm dlx` or `devbox run -- pnpm`
+- on the {{ package_name }} project
