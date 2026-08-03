@@ -133,53 +133,9 @@
         }
       }
     },
-    "rtk@latest": {
-      "last_modified": "2026-06-28T17:12:19Z",
-      "resolved": "github:NixOS/nixpkgs/534ee3d8beb1737b5342995f8837e2b2705ce0d8#rtk",
-      "source": "devbox-search",
-      "version": "0.43.0",
-      "systems": {
-        "aarch64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/qkgj3san80r7izrmy42p4yh3n4hx5v0i-rtk-0.43.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/qkgj3san80r7izrmy42p4yh3n4hx5v0i-rtk-0.43.0"
-        },
-        "aarch64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/2jmj752crn39sy6cx3gmzp059i5llram-rtk-0.43.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/2jmj752crn39sy6cx3gmzp059i5llram-rtk-0.43.0"
-        },
-        "x86_64-darwin": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/mb6k4gg4pjdg0aynngmrv8gfk9r9ii4m-rtk-0.43.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/mb6k4gg4pjdg0aynngmrv8gfk9r9ii4m-rtk-0.43.0"
-        },
-        "x86_64-linux": {
-          "outputs": [
-            {
-              "name": "out",
-              "path": "/nix/store/pxzh83k8y806iwkgms3i1lr2n4ja62x1-rtk-0.43.0",
-              "default": true
-            }
-          ],
-          "store_path": "/nix/store/pxzh83k8y806iwkgms3i1lr2n4ja62x1-rtk-0.43.0"
-        }
-      }
+    "rtk": {
+      "resolved": "github:NixOS/nixpkgs/293d6abedf0478e681a4dfcfcb35b30fc796a32f#rtk",
+      "source": "nixpkg"
     },
     "zoxide": {
       "resolved": "github:NixOS/nixpkgs/f9d8b65950353691ab56561e7c73d2e1063d810b#zoxide",

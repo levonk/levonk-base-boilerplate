@@ -16,7 +16,7 @@
     "github:levonk/levonk-packages#bundle-rtk-cloud":             "",
     "github:levonk/smartfo":                                      "",
     "jujutsu":                                                    "",
-    "rtk":                                                        "latest"
+    "rtk":                                                        ""
   },
   "shell": {
     "init_hook": []
