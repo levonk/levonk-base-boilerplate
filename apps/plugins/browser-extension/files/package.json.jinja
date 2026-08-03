@@ -32,14 +32,9 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/node": "catalog:",
+    {% include "partials.bak/partials/package-json-partials/package-json-global-devdependencies.partial.json.jinja" %}
     "@types/chrome": "catalog:",
     "@job-aide/tools-lint-eslint-config": "workspace:*",
-    "typescript": "catalog:",
-    "eslint": "catalog:",
-    "fallow": "catalog:",
-    "vitest": "catalog:",
-    "@antfu/ni": "catalog:",
     "@playwright/test": "catalog:",
     "@browserbasehq/stagehand": "catalog:",
     "tsx": "catalog:",
@@ -47,6 +42,6 @@
     "bestzip": "catalog:",
     "copyfiles": "catalog:"
   },
-  "packageManager": "pnpm@*",
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
   "modeline": "/* vim: set ft=json: */"
 }

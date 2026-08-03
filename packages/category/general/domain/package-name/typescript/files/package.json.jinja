@@ -30,7 +30,6 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@antfu/ni": "catalog:",
 {% if include_workspace_deps %}
     "@job-aide/tools-lint-eslint-config": "workspace:*",
     "@job-aide/tools-playwright-config": "workspace:*",
@@ -40,17 +39,13 @@
     "@typescript-eslint/parser": "catalog:",
 {% endif %}
     "@playwright/test": "catalog:",
-    "@types/node": "catalog:",
-    "eslint": "catalog:",
-    "fallow": "catalog:",
+    {% include "partials.bak/partials/package-json-partials/package-json-global-devdependencies.partial.json.jinja" %}
     "jiti": "catalog:",
     "only-allow": "catalog:",
     "prettier": "catalog:",
     "skillman": "catalog:",
     "skills-detector": "catalog:",
-    "tsup": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "tsup": "catalog:"
   },
   "lint-staged": {
     "*.{js,ts}": [

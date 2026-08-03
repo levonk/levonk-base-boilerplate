@@ -29,17 +29,12 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@antfu/ni": "catalog:",
     "@job-aide/tools-lint-eslint-config": "workspace:*",
     "@job-aide/tools-playwright-config": "workspace:*",
     "@playwright/test": "catalog:",
-    "@types/node": "catalog:",
-    "eslint": "catalog:",
-    "fallow": "catalog:",
-	"prettier": "catalog:",
-    "tsup": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    {% include "partials.bak/partials/package-json-partials/package-json-global-devdependencies.partial.json.jinja" %}
+    "prettier": "catalog:",
+    "tsup": "catalog:"
   },
   "lint-staged": {
     "*.{js,ts}": [
@@ -47,6 +42,6 @@
       "prettier --write"
     ],
     "*.{md,json}": "prettier --write"
-  }
+  },
   "modeline": "vim: set ft=json:"
 }

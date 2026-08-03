@@ -61,7 +61,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@antfu/ni": "catalog:",
+    {% include "partials.bak/partials/package-json-partials/package-json-global-devdependencies.partial.json.jinja" %}
     "@browserbasehq/stagehand": "catalog:",
     "@job-aide/tools-lint-eslint-config": "workspace:*",
     "@job-aide/tools-css-config": "workspace:*",
@@ -70,14 +70,11 @@
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/user-event": "catalog:",
     "@tobilu/qmd": "catalog:",
-    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "autoprefixer": "catalog:",
     "boneyard-js": "catalog:",
-    "eslint": "catalog:",
     "eslint-config-next": "catalog:",
-    "fallow": "catalog:",
     "globby": "catalog:",
     "imagemin": "catalog:",
     "imagemin-mozjpeg": "catalog:",
@@ -98,24 +95,8 @@
     "skillman": "catalog:",
     "skills-detector": "catalog:",
     "tailwindcss": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
     "yakbak": "catalog:"
   },
-  "devEngines": {
-    "runtime": {
-      "name": "node",
-      "version": "*"
-    },
-    "packageManager": {
-      "name": "pnpm",
-      "version": "*"
-    }
-  },
-  "engines": {
-    "node": "*",
-    "pnpm": "*"
-  },
-  "packageManager": "pnpm@*",
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
   "modeline": "/* vim: set ft=json: */"
 }
