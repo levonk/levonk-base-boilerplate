@@ -1,4 +1,4 @@
-_subdirectory: "{{category}}/web/{{domain}}/{{package_name}}/typescript/"
+_subdirectory: files
 _templates_suffix: ".jinja"
 
 package_name:

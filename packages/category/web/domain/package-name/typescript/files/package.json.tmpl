@@ -11,11 +11,12 @@
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
       "default": "./dist/index.mjs"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
     "clean": "rm -rf dist",
     "clean:hard": "rm -rf dist node_modules",
     "lint": "eslint .",
@@ -36,6 +37,7 @@
     "eslint": "*",
     "fallow": "*",
 	"prettier": "*",
+    "tsup": "*",
     "typescript": "*",
     "vitest": "*"
   },

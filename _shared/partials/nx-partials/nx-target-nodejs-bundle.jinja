@@ -1,0 +1,9 @@
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsup",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["^build"],
+      "cache": true
+    },

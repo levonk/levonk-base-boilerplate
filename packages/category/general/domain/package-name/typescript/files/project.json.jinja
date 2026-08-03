@@ -6,16 +6,7 @@
   "targets": {
     {% include "partials.bak/partials/nx-partials/nx-target-nodejs-test.jinja" %}
     {% include "partials.bak/partials/nx-partials/nx-target-nodejs-lint.jinja" %}
-    "build": {
-      "executor": "@nx/js:build",
-      "options": {
-        "outputPath": "dist/{{ package_name }}",
-        "main": "{projectRoot}/src/index.ts",
-        "tsConfig": "{projectRoot}/tsconfig.json"
-      },
-      "dependsOn": ["^build"],
-      "cache": true
-    },
+    {% include "partials.bak/partials/nx-partials/nx-target-nodejs-bundle.jinja" %}
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
