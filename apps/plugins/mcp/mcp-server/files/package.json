@@ -18,12 +18,12 @@
   },
   "devDependencies": {
     "@job-aide/tools-lint-eslint-config": "workspace:*",
-    "@types/node": "*",
-    "eslint": "*",
-    "fallow": "*",
-    "typescript": "*",
-    "vitest": "*",
-    "@antfu/ni": "*"
+    "@types/node": "catalog:",
+    "eslint": "catalog:",
+    "fallow": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "@antfu/ni": "catalog:"
   },
   "modeline": "/* vim: set ft=json: */",
   "packageManager": "pnpm@*",

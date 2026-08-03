@@ -99,9 +99,6 @@ _build_language:
   help: "Programming language for build stage (only used if build_stage is enabled)"
   default: "go"
 
-_subdirectory: files
-_templates_suffix: .jinja
-
 _templates:
   README.md.jinja: README.md
   package.json.jinja: package.json
