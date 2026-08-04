@@ -71,7 +71,7 @@
     "@antfu/ni": "catalog:"
   },
   "modeline": "/* vim: set ft=json: */",
-  "packageManager": "pnpm@*",
+  "packageManager": "pnpm@11.20.0",
   "devEngines": {
     "runtime": {
       "name": "node",
