@@ -10,12 +10,12 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "typescript": "catalog:",
-    "tsup": "catalog:",
-    "vitest": "catalog:"
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/web-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/library-typescript-dev-deps.partial.json.jinja" %}
+    "@total-typescript/shoehorn": "catalog:"
   },
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
   "exports": {
     ".": "./src/index.ts",
     "./components/*": "./src/components/*.tsx",

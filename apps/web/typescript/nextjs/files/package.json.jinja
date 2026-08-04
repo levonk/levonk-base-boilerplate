@@ -61,41 +61,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    {% include "partials.bak/partials/package-json-partials/package-json-global-devdependencies.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/web-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/nextjs-app-dev-deps.partial.json.jinja" %}
     "@browserbasehq/stagehand": "catalog:",
     "@job-aide/tools-lint-eslint-config": "workspace:*",
-    "@job-aide/tools-css-config": "workspace:*",
-    "@tailwindcss/postcss": "catalog:",
-    "@testing-library/react": "catalog:",
-    "@testing-library/jest-dom": "catalog:",
-    "@testing-library/user-event": "catalog:",
-    "@tobilu/qmd": "catalog:",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "autoprefixer": "catalog:",
-    "boneyard-js": "catalog:",
-    "eslint-config-next": "catalog:",
-    "globby": "catalog:",
-    "imagemin": "catalog:",
-    "imagemin-mozjpeg": "catalog:",
-    "imagemin-pngquant": "catalog:",
-    "imagemin-webp": "catalog:",
-    "jsdom": "catalog:",
-    "modern-errors": "catalog:",
-    "modern-errors-beautiful": "catalog:",
-    "modern-errors-bugs": "catalog:",
-    "modern-errors-clean": "catalog:",
-    "modern-errors-cli": "catalog:",
-    "modern-errors-process": "catalog:",
-    "modern-errors-serialize": "catalog:",
-    "modern-errors-winston": "catalog:",
-    "only-allow": "catalog:",
-    "portless": "catalog:",
-    "postcss": "catalog:",
-    "skillman": "catalog:",
-    "skills-detector": "catalog:",
-    "tailwindcss": "catalog:",
-    "yakbak": "catalog:"
+    "@job-aide/tools-css-config": "workspace:*"
   },
   {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
   "modeline": "/* vim: set ft=json: */"

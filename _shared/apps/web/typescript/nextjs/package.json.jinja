@@ -18,17 +18,12 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "autoprefixer": "catalog:",
-    "eslint": "catalog:",
-    "eslint-config-next": "catalog:",
-    "postcss": "catalog:",
-    "tailwindcss": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
-  }
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/web-typescript-dev-deps.partial.json.jinja" %}
+    "only-allow": "catalog:"
+  },
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
+  "modeline": "/* vim: set ft=json: */"
 }
 
 {# vim: set ft=json: #}

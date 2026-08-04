@@ -24,27 +24,10 @@
     "release": "nx run-many -t build && changeset publish"
   },
   "devDependencies": {
-    "@changesets/cli": "catalog:",
-    "@nx/eslint": "catalog:",
-    "@nx/js": "catalog:",
-    "@nx/next": "catalog:",
-    "@total-typescript/shoehorn": "catalog:",
-    "@typescript-eslint/eslint-plugin": "catalog:",
-    "@typescript-eslint/parser": "catalog:",
-    "eslint": "catalog:",
-    "eslint-config-prettier": "catalog:",
-    "eslint-plugin-import": "catalog:",
-    "husky": "catalog:",
-    "lint-staged": "catalog:",
-    "nx": "catalog:",
-    "prettier": "catalog:",
-    "typescript": "catalog:"
+    {% include "partials.bak/partials/package-json-partials/monorepo-root-dev-deps.partial.json.jinja" %}
+    "only-allow": "catalog:"
   },
-  "packageManager": "pnpm@11.20.0",
-  "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=9.5.0"
-  },
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "eslint --fix",

@@ -11,9 +11,9 @@
     "clean": "docker compose down -v"
   },
   "devDependencies": {
-    "@nx-tools/nx-container": "catalog:",
-    "@nx/js": "catalog:",
-    "nx": "catalog:"
+    {% include "partials.bak/partials/package-json-partials/infrastructure-nx-dev-deps.partial.json.jinja" %}
+    "@nx-tools/nx-container": "catalog:"
   },
-  "packageManager": "pnpm@11.20.0"
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
+  "modeline": "/* vim: set ft=json: */"
 }

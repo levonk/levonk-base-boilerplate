@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.20.0",
   "description": "{{package_description}}",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
@@ -31,10 +30,10 @@
   "devDependencies": {
     "@job-aide/tools-lint-eslint-config": "workspace:*",
     "@job-aide/tools-playwright-config": "workspace:*",
-    "@playwright/test": "catalog:",
-    {% include "partials.bak/partials/package-json-partials/package-json-global-devdependencies.partial.json.jinja" %}
-    "prettier": "catalog:",
-    "tsup": "catalog:"
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/web-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/library-typescript-dev-deps.partial.json.jinja" %}
+    "@total-typescript/shoehorn": "catalog:"
   },
   "lint-staged": {
     "*.{js,ts}": [
@@ -43,5 +42,6 @@
     ],
     "*.{md,json}": "prettier --write"
   },
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
   "modeline": "vim: set ft=json:"
 }

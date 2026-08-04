@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.20.0",
   "description": "{{description}}",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
@@ -33,19 +32,10 @@
 {% if include_workspace_deps %}
     "@job-aide/tools-lint-eslint-config": "workspace:*",
     "@job-aide/tools-playwright-config": "workspace:*",
-{% else %}
-    "@eslint/js": "catalog:",
-    "@typescript-eslint/eslint-plugin": "catalog:",
-    "@typescript-eslint/parser": "catalog:",
 {% endif %}
-    "@playwright/test": "catalog:",
-    {% include "partials.bak/partials/package-json-partials/package-json-global-devdependencies.partial.json.jinja" %}
-    "jiti": "catalog:",
-    "only-allow": "catalog:",
-    "prettier": "catalog:",
-    "skillman": "catalog:",
-    "skills-detector": "catalog:",
-    "tsup": "catalog:"
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/library-typescript-dev-deps.partial.json.jinja" %}
+    "@total-typescript/shoehorn": "catalog:"
   },
   "lint-staged": {
     "*.{js,ts}": [
@@ -54,5 +44,6 @@
     ],
     "*.{md,json}": "prettier --write"
   },
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
   "modeline": "vim: set ft=json:"
 }

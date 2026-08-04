@@ -8,9 +8,9 @@
     "lint": "flake8 dags/"
   },
   "devDependencies": {
-    "@nx/js": "catalog:",
-    "@nxlv/python": "catalog:",
-    "nx": "catalog:"
+    {% include "partials.bak/partials/package-json-partials/infrastructure-nx-dev-deps.partial.json.jinja" %}
+    "@nxlv/python": "catalog:"
   },
-  "packageManager": "pnpm@11.20.0"
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
+  "modeline": "/* vim: set ft=json: */"
 }

@@ -37,15 +37,11 @@
     "type": "git",
     "url": "{{ repository_url }}"
   },
-  "engines": {
-    "node": ">={{ node_version }}"
-  },
-  "packageManager": "pnpm@11.20.0",
   "devDependencies": {
-    "@types/node": "catalog:",
-    "eslint": "catalog:",
-    "tsup": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
-  }
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/library-typescript-dev-deps.partial.json.jinja" %}
+    "@total-typescript/shoehorn": "catalog:"
+  },
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
+  "modeline": "/* vim: set ft=json: */"
 }

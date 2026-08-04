@@ -46,18 +46,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@eslint/js": "catalog:",
-    "@types/cli-progress": "catalog:",
-    "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "@typescript-eslint/eslint-plugin": "catalog:",
-    "@typescript-eslint/parser": "catalog:",
-    "eslint": "catalog:",
-    "ts-node": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+    {% include "partials.bak/partials/package-json-partials/cli-typescript-dev-deps.partial.json.jinja" %}
+    "only-allow": "catalog:"
   },
-  "engines": {
-    "node": "*"
-  }
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
+  "modeline": "/* vim: set ft=json: */"
 }
