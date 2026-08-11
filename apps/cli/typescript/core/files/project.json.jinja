@@ -18,9 +18,10 @@
       "cache": true
     },
     "test": {
-      "executor": "@nx/vite:test",
+      "executor": "nx:run-commands",
       "options": {
-        "config": "vitest.config.mts"
+        "command": "pnpm exec vitest run",
+        "cwd": "{projectRoot}"
       },
       "dependsOn": ["^build"],
       "cache": true

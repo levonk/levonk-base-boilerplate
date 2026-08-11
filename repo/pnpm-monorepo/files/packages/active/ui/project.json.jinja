@@ -7,11 +7,10 @@
     {% include "partials.bak/partials/nx-partials/nx-target-nodejs-test.jinja" %}
     {% include "partials.bak/partials/nx-partials/nx-target-nodejs-lint.jinja" %}
     "build": {
-      "executor": "@nx/js:build",
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/packages/active/ui",
-        "main": "{projectRoot}/src/index.ts",
-        "tsConfig": "{projectRoot}/tsconfig.json"
+        "command": "tsc -p tsconfig.json",
+        "cwd": "{projectRoot}"
       },
       "dependsOn": ["^build"],
       "cache": true

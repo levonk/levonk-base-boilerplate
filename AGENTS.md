@@ -121,7 +121,7 @@ Nx target definitions live in `_shared/partials/nx-partials/` as composable part
 - `nx-target-csharp.jinja` — dotnet build/test/format
 - `nx-target-ruby.jinja` — bundle/rspec/rubocop
 - `nx-target-powershell.jinja` — Pester/ScriptAnalyzer/Formatter
-- `nx-target-nodejs-test.jinja` — @nx/vite:test
+- `nx-target-nodejs-test.jinja` — nx:run-commands + pnpm exec vitest run
 - `nx-target-nodejs-lint.jinja` — @nx/eslint:lint
 - `nx-target-python-test.jinja` — pytest via @nxlv/python
 - `nx-target-python-lint.jinja` — ruff check/format via @nxlv/python

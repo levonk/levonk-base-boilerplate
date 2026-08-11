@@ -183,7 +183,7 @@ The boilerplate system includes reusable Nx configuration partials in `_shared/p
 - `nx-target-ruby.jinja`: Ruby (bundle/rspec/rubocop)
 - `nx-target-powershell.jinja`: PowerShell (Pester/ScriptAnalyzer/Formatter)
 - `nx-target-nodejs-lint.jinja`: Node.js linting target (@nx/eslint:lint)
-- `nx-target-nodejs-test.jinja`: Node.js testing target (@nx/vite:test)
+- `nx-target-nodejs-test.jinja`: Node.js testing target (nx:run-commands + pnpm exec vitest run)
 - `nx-target-python-lint.jinja`: Python linting target (ruff via @nxlv/python)
 - `nx-target-python-serve.jinja`: Python serve target (uvicorn via @nxlv/python)
 - `nx-target-python-test.jinja`: Python testing target (pytest via @nxlv/python)
