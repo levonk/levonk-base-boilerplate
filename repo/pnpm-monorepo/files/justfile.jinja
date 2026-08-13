@@ -173,6 +173,14 @@ doctor-internal:
         echo "⚠️  WARNING: memory/ directory missing (run 'just bootstrap' to create)"
     fi
 
+    # Check versioned git hooks path (submodule-integrity pre-commit).
+    hooks_path="$(git config core.hooksPath 2>/dev/null || true)"
+    if [ "$hooks_path" = "scripts/hooks" ] && [ -x scripts/hooks/pre-commit ]; then
+        echo "✅ OK: git hooks configured (core.hooksPath=scripts/hooks)"
+    else
+        echo "⚠️  WARNING: git hooks not configured (run 'just setup' to enable submodule-integrity check)"
+    fi
+
     echo "🚀 Ready to develop pnpm monorepo!"
 
 # Quality checks (OPTIONAL but RECOMMENDED)
@@ -320,6 +328,12 @@ nx-clear-cache:
 # Development setup (OPTIONAL)
 setup:
     @just bootstrap
+    # Configure versioned git hooks (submodule-integrity pre-commit check).
+    # scripts/hooks/pre-commit prevents submodules from being tracked as
+    # trees (040000) instead of gitlinks (160000). See the hook file header
+    # for coexistence notes with the pre-commit framework.
+    git config core.hooksPath scripts/hooks
+    echo "✅ Git hooks path configured (core.hooksPath=scripts/hooks)"
     echo "✅ pnpm monorepo development environment ready!"
 
 # Help target

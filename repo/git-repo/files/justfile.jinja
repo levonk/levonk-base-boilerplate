@@ -64,11 +64,24 @@ doctor-internal:
       echo "[doctor] Missing $MISSING required tool(s). Run 'just bootstrap' to install."
       exit 1
     fi
+    # Check versioned git hooks path (submodule-integrity pre-commit).
+    hooks_path="$(git config core.hooksPath 2>/dev/null || true)"
+    if [ "$hooks_path" = "scripts/hooks" ] && [ -x scripts/hooks/pre-commit ]; then
+      printf "[doctor] %-8s OK (core.hooksPath=scripts/hooks)\n" "hooks"
+    else
+      printf "[doctor] %-8s NOT CONFIGURED (run 'just setup' to enable)\n" "hooks"
+    fi
     echo "[doctor] Environment looks good."
 
 # Development setup (OPTIONAL)
 setup:
     # Project-specific setup
+    # Configure versioned git hooks (submodule-integrity pre-commit check).
+    # scripts/hooks/pre-commit prevents submodules from being tracked as
+    # trees (040000) instead of gitlinks (160000). See the hook file header
+    # for coexistence notes with the pre-commit framework.
+    git config core.hooksPath scripts/hooks
+    echo "✅ Git hooks path configured (core.hooksPath=scripts/hooks)"
     echo "Development environment ready!"
 
 # Clean up (OPTIONAL)
