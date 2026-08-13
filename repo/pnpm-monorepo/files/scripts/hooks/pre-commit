@@ -8,6 +8,13 @@
 # directly in the parent repo instead of the parent pointing to a submodule
 # commit hash.
 #
+# Why this hook exists: AI agents repeatedly ran `git add` on submodule
+# directories (instead of using `git submodule add` or letting git track
+# the gitlink), silently converting submodules from gitlinks to regular
+# trees and leaking the submodule's files into the parent repo. This hook
+# was added to make that mistake fail loudly at commit time instead of
+# shipping a broken tree.
+#
 # Works for ANY submodule declared in .gitmodules — not hardcoded to a
 # specific submodule.
 #
