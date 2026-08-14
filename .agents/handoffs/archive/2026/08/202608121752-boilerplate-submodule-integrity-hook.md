@@ -2,7 +2,7 @@
 
 **Date**: 2026-08-12
 **Session**: Post-incident — infrahub levonk submodule was accidentally converted from `160000 commit` to `040000 tree`. A pre-commit hook was added to infrahub manually. This handoff updates the two `repo/` boilerplate templates so new projects generated from them start with submodule-integrity protection.
-**Status**: In progress — handoff created, awaiting implementation
+**Status**: Done — implemented, verified, and committed (commit `ae4655c`). Ready to archive.
 
 ## Current State
 
@@ -16,9 +16,9 @@
 
 ## Git State
 
-- **Repo HEAD**: `6791c2a0c96598c7104841234a3edee860f616e4`
+- **Repo HEAD**: `ae4655c` (work committed); handoff was captured at `6791c2a0c96598c7104841234a3edee860f616e4`
 - **Branch**: `main`
-- **Date captured**: 2026-08-12 17:52 PT
+- **Date captured**: 2026-08-12 17:52 PT (handoff); 2026-08-12 18:09 PT (completion)
 
 ## Required Reading
 
@@ -136,18 +136,18 @@ Both need a `git config core.hooksPath scripts/hooks` line added to `setup`, and
 - `[!]` — task blocked (cannot proceed; note the blocker inline)
 
 ```markdown
-- [ ] Read AGENTS.md and the boilerplate template structure (repo/git-repo, repo/pnpm-monorepo)
-- [ ] Read the infrahub reference implementation at ~/p/gh/levonk/infrahub/scripts/hooks/pre-commit
-- [ ] Create repo/git-repo/files/scripts/hooks/pre-commit (static file, chmod +x)
-- [ ] Update repo/git-repo/files/justfile.jinja setup recipe (add git config core.hooksPath scripts/hooks)
-- [ ] Update repo/git-repo/files/justfile.jinja doctor recipe (add core.hooksPath status check)
-- [ ] Create repo/pnpm-monorepo/files/scripts/hooks/pre-commit (same static file, chmod +x)
-- [ ] Update repo/pnpm-monorepo/files/justfile.jinja setup recipe (add git config core.hooksPath scripts/hooks)
-- [ ] Update repo/pnpm-monorepo/files/justfile.jinja doctor recipe (add core.hooksPath status check)
-- [ ] Test: generate a project from repo/git-repo template, verify hook file exists and just setup configures core.hooksPath
-- [ ] Test: generate a project from repo/pnpm-monorepo template, verify hook file exists and just setup configures core.hooksPath
-- [ ] Test: simulate a submodule-as-tree violation in a generated project, verify the hook blocks the commit
-- [ ] Commit the changes
+- [x] Read AGENTS.md and the boilerplate template structure (repo/git-repo, repo/pnpm-monorepo)
+- [x] Read the infrahub reference implementation at ~/p/gh/levonk/infrahub/scripts/hooks/pre-commit
+- [x] Create repo/git-repo/files/scripts/hooks/pre-commit (static file, chmod +x)
+- [x] Update repo/git-repo/files/justfile.jinja setup recipe (add git config core.hooksPath scripts/hooks)
+- [x] Update repo/git-repo/files/justfile.jinja doctor recipe (add core.hooksPath status check)
+- [x] Create repo/pnpm-monorepo/files/scripts/hooks/pre-commit (same static file, chmod +x)
+- [x] Update repo/pnpm-monorepo/files/justfile.jinja setup recipe (add git config core.hooksPath scripts/hooks)
+- [x] Update repo/pnpm-monorepo/files/justfile.jinja doctor recipe (add core.hooksPath status check)
+- [x] Test: generate a project from repo/git-repo template, verify hook file exists and just setup configures core.hooksPath
+- [x] Test: generate a project from repo/pnpm-monorepo template, verify hook file exists and just setup configures core.hooksPath
+- [x] Test: simulate a submodule-as-tree violation in a generated project, verify the hook blocks the commit
+- [x] Commit the changes
 ```
 
 **Maintenance protocol (receiving session):**
@@ -160,13 +160,13 @@ Both need a `git config core.hooksPath scripts/hooks` line added to `setup`, and
 
 ## Definition of Done
 
-- [ ] **[manual]** Every Task List item is `[x]` or marked `[x]` with an obsolete note
-- [ ] **[script]** `git status --porcelain` shows no uncommitted changes (all work committed)
-- [ ] **[manual]** The handoff document's Git State commit SHA matches `git rev-parse HEAD`
-- [ ] **[manual]** Each completed task's deliverable matches what was described
-- [ ] **[manual]** `repo/git-repo` template generates a project with `scripts/hooks/pre-commit` and `just setup` sets `core.hooksPath`
-- [ ] **[manual]** `repo/pnpm-monorepo` template generates a project with `scripts/hooks/pre-commit` and `just setup` sets `core.hooksPath`
-- [ ] **[manual]** The generated pre-commit hook detects submodule-as-tree violations (tested with a simulated broken state)
+- [x] **[manual]** Every Task List item is `[x]` or marked `[x]` with an obsolete note
+- [x] **[script]** `git status --porcelain` shows no uncommitted changes for this task's files (the 4 hook/justfile files are committed in `ae4655c`; pre-existing unrelated devbox changes in the repo were not touched)
+- [x] **[manual]** The handoff document's Git State commit SHA matches `git rev-parse HEAD` (`ae4655c`)
+- [x] **[manual]** Each completed task's deliverable matches what was described
+- [x] **[manual]** `repo/git-repo` template generates a project with `scripts/hooks/pre-commit` and `just setup` sets `core.hooksPath`
+- [x] **[manual]** `repo/pnpm-monorepo` template generates a project with `scripts/hooks/pre-commit` and `just setup` sets `core.hooksPath`
+- [x] **[manual]** The generated pre-commit hook detects submodule-as-tree violations (tested with a simulated broken state — `040000 tree` blocked with exit 1; proper `160000 commit` allowed with exit 0)
 
 ## Open Questions/Blockers
 - Should the hook script be shared via `_shared/partials/` or duplicated in both templates? **Recommendation**: duplicate for now (simpler, avoids Copier include complexity for a single static file). Refactor to `_shared/` only if a third repo template is added. — Impact: minimal duplication (one file, ~140 lines).
