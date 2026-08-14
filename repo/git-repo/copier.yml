@@ -7,6 +7,14 @@ package_name:
   help: "Project name (kebab-case)"
   default: "my-git-repo"
 
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# partial as the project root path. At copy time the project root is the
+# destination directory itself, so "." is the correct portable value.
+REPO_ROOT:
+  type: str
+  help: "Project root path used inside .envrc (relative to the .envrc file)"
+  default: "."
+
 project_description:
   type: str
   help: "Short description of the project"
@@ -29,13 +37,39 @@ create_gh_pages:
 
 _tasks:
   - |
-    bash -c '
+    bash -c '{% raw %}
+    set -euo pipefail
+
     # Run git-config-defaults if available
     if [ -x ~/.local/bin/git-config-defaults.sh ]; then
-      ~/.local/bin/git-config-defaults.sh
+      ~/.local/bin/git-config-defaults.sh || true
     fi
 
-    # Initialize devbox+direnv dev env if available
+    # --- Ensure devbox.json has the x86_64-darwin nixpkgs pin -----------------
+    # nixpkgs dropped x86_64-darwin (Intel Mac) support in the 26.11 cycle.
+    # If copier was run without copier-wrapper.sh (which passes
+    # nix_target_arch as data), the conditional nixpkgs.commit pin in
+    # devbox.json.jinja is skipped. Detect x86_64-darwin at runtime and
+    # inject the pin if it is missing so `devbox install` does not fail.
+    # Commit 293d6abedf0478e681a4dfcfcb35b30fc796a32f is the last nixpkgs
+    # commit with x86_64-darwin support.
+    _os="$(uname -s | tr "[:upper:]" "[:lower:]")"
+    _arch="$(uname -m)"
+    if [ "$_os" = "darwin" ] && [ "$_arch" = "x86_64" ]; then
+      if [ -f devbox.json ]; then
+        if ! grep -q "\"nixpkgs\"" devbox.json 2>/dev/null || \
+           ! grep -q "\"commit\"" devbox.json 2>/dev/null; then
+          # Insert nixpkgs.commit pin after the opening "{" brace using sed.
+          # This matches the pattern used in devbox.json.jinja templates.
+          _tmp="$(mktemp)"
+          sed '1s|^{|{\n  "nixpkgs": {\n    "commit": "293d6abedf0478e681a4dfcfcb35b30fc796a32f"\n  },|' \
+            devbox.json > "$_tmp"
+          mv "$_tmp" devbox.json
+        fi
+      fi
+    fi
+
+    # --- Initialize devbox+direnv dev env if available ------------------------
     if command -v direnv >/dev/null 2>&1; then
       direnv allow . || true
       if command -v devbox >/dev/null 2>&1; then
@@ -46,13 +80,24 @@ _tasks:
       fi
     fi
 
-    # Initialize git if not already
+    # --- Initialize git if not already ---------------------------------------
     if [ ! -d .git ]; then
       git init
     fi
 
-    # Create gh-pages branch if requested and it doesnt exist (non-destructive)
-    create_gh_pages_normalized=$(printf "%s" "{{ create_gh_pages }}" | tr "[:upper:]" "[:lower:]")
+    # --- Create a token initial commit if none exist -------------------------
+    # Ensures the generated project has a clean git baseline that users can
+    # branch from immediately. Non-destructive: if commits already exist,
+    # this is a no-op.
+    if ! git rev-parse --verify HEAD 2>/dev/null 1>/dev/null; then
+      git add -A
+      if ! git commit -m "Initial commit (scaffolded from boilerplate)"; then
+        git commit --allow-empty -m "Initial commit (scaffolded from boilerplate)"
+      fi
+    fi
+
+    # --- Create gh-pages branch if requested (non-destructive) ---------------
+    {% endraw %}create_gh_pages_normalized=$(printf "%s" "{{ create_gh_pages }}" | tr "[:upper:]" "[:lower:]"){% raw %}
     if [ "$create_gh_pages_normalized" = "true" ]; then
       if ! git rev-parse --verify gh-pages >/dev/null 2>&1; then
         current_branch=$(git branch --show-current)
@@ -77,4 +122,4 @@ _tasks:
         git checkout "$current_branch" >/dev/null 2>&1 || true
       fi
     fi
-    '
+    {% endraw %}'
