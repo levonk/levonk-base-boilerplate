@@ -9,6 +9,14 @@ package_name:
   help: "Project/directory name for the generated samples"
   default: "ai-ollama-samples"
 
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# partial as the project root path. At copy time the project root is the
+# destination directory itself, so "." is the correct portable value.
+REPO_ROOT:
+  type: str
+  help: "Project root path used inside .envrc (relative to the .envrc file)"
+  default: "."
+
 ollama_base_url:
   type: str
   help: "Base URL for Ollama service"

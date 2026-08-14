@@ -15,6 +15,14 @@ package_slug:
   help: Slugified service name for resource naming (networks, containers, files)
   default: "{{ _service_name | lower | replace(' ', '-') }}"
 
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# partial as the project root path. At copy time the project root is the
+# destination directory itself, so "." is the correct portable value.
+REPO_ROOT:
+  type: str
+  help: "Project root path used inside .envrc (relative to the .envrc file)"
+  default: "."
+
 _service_description:
   type: str
   help: Brief description of what this service does
