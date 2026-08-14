@@ -1,0 +1,36 @@
+# Example: Relationships analysis for Flask
+# This is the output format expected from the analyze-relationships prompt
+
+summary: |
+  **Flask** is a lightweight web framework that makes building web applications
+  simple. At its core, a *Flask Application* receives web requests, uses
+  **Routing** to find the right handler function, and returns responses.
+
+  The framework uses **Request Context** to safely handle multiple users at once,
+  **Blueprints** to organize large applications into modules, and **Templates**
+  to generate dynamic HTML pages.
+
+relationships:
+  - from_abstraction: 0 # Flask Application
+    to_abstraction: 3 # Routing
+    label: 'Registers routes'
+
+  - from_abstraction: 3 # Routing
+    to_abstraction: 1 # Request Context
+    label: 'Creates context'
+
+  - from_abstraction: 0 # Flask Application
+    to_abstraction: 2 # Blueprints
+    label: 'Registers'
+
+  - from_abstraction: 2 # Blueprints
+    to_abstraction: 3 # Routing
+    label: 'Defines routes'
+
+  - from_abstraction: 0 # Flask Application
+    to_abstraction: 4 # Templates
+    label: 'Renders'
+
+  - from_abstraction: 1 # Request Context
+    to_abstraction: 4 # Templates
+    label: 'Provides data'

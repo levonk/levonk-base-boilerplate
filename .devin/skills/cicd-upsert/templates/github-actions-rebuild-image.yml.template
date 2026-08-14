@@ -1,0 +1,76 @@
+# Template: Rebuild CI Image Workflow (GitHub Actions)
+#
+# This workflow rebuilds a pre-built CI environment image when the environment
+# definition changes (Dockerfile.ci, devbox.json, Justfile, lock files) and
+# publishes it to GitHub Container Registry (GHCR).
+#
+# Usage: Copy to .github/workflows/rebuild-ci-image.yml and customize:
+#   - IMAGE_NAME: the name for the CI image
+#   - PATHS: the files that trigger a rebuild
+#   - DOCKERFILE: the path to the CI Dockerfile
+
+name: Rebuild CI Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Dockerfile.ci'
+      - 'Dockerfile.act'
+      - 'devbox.json'
+      - 'devbox.lock'
+      - 'Justfile'
+      - 'justfile'
+      - '.github/workflows/rebuild-ci-image.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: rebuild-ci-image
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ci-image
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-
+            type=raw,value={{date:YYYYMMDD}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.ci
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

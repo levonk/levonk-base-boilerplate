@@ -1,0 +1,13 @@
+# Build artifacts
+build/
+bin/
+dist/
+*.pyc
+__pycache__/
+.DS_Store
+
+# Eval workspace (created during evaluation)
+*-workspace/
+
+# Local environment
+.local/

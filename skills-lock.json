@@ -1,0 +1,311 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-file-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/agent-file-upsert/SKILL.md",
+      "computedHash": "f35bb31734f27637fa3d51fe3c127d7f3ba8688d46dcd8d7548e0f640b799353"
+    },
+    "agent-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/agent-upsert/SKILL.md",
+      "computedHash": "dca1ffa3a332699e692b6b1e1f33583f3d0a93ff7c7c590d74b04580bf91dd20"
+    },
+    "ai-development-loop": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/ai-development-loop/SKILL.md",
+      "computedHash": "27d3c79781ad3197b11b5b0b6d8639d936348043ca976647a7543199b8213411"
+    },
+    "ai-guidance-improver": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/ai-guidance-improver/SKILL.md",
+      "computedHash": "0907ef920e8f5bbcee68146f4ba1f13d57babb695d69732af15552fbf4c77aae"
+    },
+    "ai-skill-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/ai-skill-upsert/SKILL.md",
+      "computedHash": "52652811c867f937b253e0c077e616ff0ccd2941265128712713e0d7fd791f47"
+    },
+    "ai-workflow-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/ai-workflow-upsert/SKILL.md",
+      "computedHash": "f39731dde1f3f6bb0bcf712f2f81b0f033a9231182f12546a6a3bdf1ed8093cd"
+    },
+    "biz-email-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/business/biz-email-upsert/SKILL.md",
+      "computedHash": "01f246c718fe03be4f34910902b29d8b6b3d4332db45c0255e8915c760457819"
+    },
+    "briefingmemo": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/execution/briefingmemo/SKILL.md",
+      "computedHash": "00362c1c7f0304f4d941739548f96c00d12d74d70026d4c2d96269b053b8dd86"
+    },
+    "career-advancement": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/business/career-advancement/SKILL.md",
+      "computedHash": "98bd3786ecf320fb06d0c933d4b4c4e969cb22dc81bc2bf5d6473b53ebf32d3a"
+    },
+    "cicd-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/cicd-upsert/SKILL.md",
+      "computedHash": "ebca19d0fa0cf81e9aaaec55164e8e3592cce72838646a2f64b42f9348016f35"
+    },
+    "code-quality-validation": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/code-quality-validation/SKILL.md",
+      "computedHash": "56440ff8b1e165a53c3608eca1c8c1bf8c24698011e3c298a94ea4b0c0e6c132"
+    },
+    "code-review-guidance": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/code-review-guidance/SKILL.md",
+      "computedHash": "de971a42546260f90ae510f0300d676f38ad3813a452842918f661997330c48b"
+    },
+    "codebase-tutorial": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/codebase-tutorial/SKILL.md",
+      "computedHash": "582fcc42a4b18bcdad1a23cf9cb1d48dd1e228cafcbf26f6a79f84c53bc337dd"
+    },
+    "container-service-deploy": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/container-service-deploy/SKILL.md",
+      "computedHash": "a8795ff7c9b39182fb6a599b52d3c8f15fe42d067581a1080de9715f45940d51"
+    },
+    "data-pipeline-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/data-pipeline-upsert/SKILL.md",
+      "computedHash": "6c7d05137579232bca7412a220cb24108b0f4efa647d4c67d26ca3c1000d5aa4"
+    },
+    "dev-env-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/dev-env-upsert/SKILL.md",
+      "computedHash": "58d481339da785825af89460a4b611df11f61c83f2b932a06561a80f8d44dde1"
+    },
+    "diagram-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/content/diagram-upsert/SKILL.md",
+      "computedHash": "6de9d0c78d6d7e74df8906234ad54b097447754d52772d23dbc2291180492574"
+    },
+    "execute-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/execution/execute-upsert/SKILL.md",
+      "computedHash": "7170afd5bcc794ea8b21259323eb1b5e9fe8c79b7ac104380305e5492a4170ac"
+    },
+    "git-repository-management": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/git-repository-management/SKILL.md",
+      "computedHash": "d4e25c633b78e07f2df78b24554f07d54f18f75284b38bf6768b34624309c294"
+    },
+    "github-issue": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/github-issue/SKILL.md",
+      "computedHash": "0d174e07fadf3afda5da551a6f6ab1b02f22f8f7c08936f90eac1d7beaaec4a7"
+    },
+    "github-pr": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/github-pr/SKILL.md",
+      "computedHash": "96054df3a3a7ae1bea68f034b0b1a63468760fbe6693d3dd4d008a35f92f89ba"
+    },
+    "handoff": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/handoff/SKILL.md",
+      "computedHash": "c4773ec829456c2808875300895797605fbe2c5d7b110a4a1fc7d306cacd554e"
+    },
+    "ignorefile-manager": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/general/ignorefile-manager/SKILL.md",
+      "computedHash": "15a5870899345c6262e62c4887fe946a46fc52c017a1bae36e3032123927f4ed"
+    },
+    "java-app-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/java-app-upsert/SKILL.md",
+      "computedHash": "4afebad239b4dbb813a13e80b6d50471ae694e5c966eb5f720c7ce29e8785c0b"
+    },
+    "knowledge-bundle-lifecycle": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/knowledge-bundle-lifecycle/SKILL.md",
+      "computedHash": "d9026e254ba11fa525ddf372f149e447cceaeecec0773e3222b930981e0296ba"
+    },
+    "monorepo-extractor": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/monorepo-extractor/SKILL.md",
+      "computedHash": "b801c43467e278454c8a0e4d28c21505fdbc31b2f4eb8603338171871c11c95e"
+    },
+    "nixify": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/nixify/SKILL.md",
+      "computedHash": "84037a338844a972f86377cd7181020519b98c7571c57ee5754e629b660ceda1"
+    },
+    "peer-review": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/general/peer-review/SKILL.md",
+      "computedHash": "0d7e5e3fb419939dfc5ae75c5e480205a718bdf79dcc1a2acc4662ee8947b577"
+    },
+    "professional-communication": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/business/professional-communication/SKILL.md",
+      "computedHash": "20fd62156afc11405f5798f40ca3131f8f10a5cb51cd4b7262d047e47ef82703"
+    },
+    "project-adopter": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/project-adopter/SKILL.md",
+      "computedHash": "6c6fafde915fbe56a22837d5f784e3b6e606709233238cfc95a5f768988db0fb"
+    },
+    "project-comparison": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/project-comparison/SKILL.md",
+      "computedHash": "1ad404b6be6d1b6d8c788577f284f9f10b3751d2964d6d4498b508b7cde776dc"
+    },
+    "project-configuration": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/project-configuration/SKILL.md",
+      "computedHash": "379fb1e6e0a3e61448ef342f8ba7b4e794c29e616ef106f370da7c85ec151048"
+    },
+    "project-detection": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/project-detection/SKILL.md",
+      "computedHash": "01ac3c5d8b71baf3c139055cf7611cae346dcc9acb5f09f4219f3a4a26023b68"
+    },
+    "prompt-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/prompt-upsert/SKILL.md",
+      "computedHash": "6805cd8ba5a78c03af81fe9add68a2f8bc9c738c2f6b1d71e2cce363d9538ad7"
+    },
+    "readme-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/readme-upsert/SKILL.md",
+      "computedHash": "bcf1e82812ba2d0a257828fd7287cd1c7a5ca6cb2470cec21818e97cd92c6439"
+    },
+    "refactor-planning": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/refactor-planning/SKILL.md",
+      "computedHash": "d632841fca8cc2356ee50414b14b2dc9385ec6e8e63431b030bf71a70fb5e1d9"
+    },
+    "regression-test-mining": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/regression-test-mining/SKILL.md",
+      "computedHash": "44a1fc620226c1983649be70bcec653a90ad786713ee4a158cba3acd69d88513"
+    },
+    "repository-health-review": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/repository-health-review/SKILL.md",
+      "computedHash": "66a4de45e44dad6ca226cd68928b66e7d7a54ff55781f3d8a36a619eef30bef0"
+    },
+    "rule-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/rule-upsert/SKILL.md",
+      "computedHash": "162283e3a0499d4c13eb771e40bc3cb9c97bdd17ce8c0232db0e8bf5fe14859f"
+    },
+    "shell-wrapper": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/shell-wrapper/SKILL.md",
+      "computedHash": "7445485d8cadc7409fbefb5326cf006716e31df6e5bb12e49851bb1cdcebd769"
+    },
+    "shopping-acquisition": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/commerce/acquisition/SKILL.md",
+      "computedHash": "e36cee28ee64d06bc9d61c6f2d23987b1626c7a28b2f3d24169de5fa353bf294"
+    },
+    "shopping-deal-intelligence": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/commerce/deal-intelligence/SKILL.md",
+      "computedHash": "3c5557153b4c57a21736d624f58c52c9c942a5addb9dc4ba1acabef1f307eb17"
+    },
+    "shopping-needs-discovery": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/commerce/needs-discovery/SKILL.md",
+      "computedHash": "a2ce6085524b3fb7d6563d34e8a4f650a13ea1cda006db6dc2a81c1f2b3ad02e"
+    },
+    "surgical-config": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/surgical-config/SKILL.md",
+      "computedHash": "59e3ec77f0738044312963d5d5cc660f6e6758f54ffb94c0f37ba05952d9540e"
+    },
+    "task-triage": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/business/task-triage/SKILL.md",
+      "computedHash": "d798fa45f296c57501db2ea7a1c4be0cb7c154815e98f49181e6d3d1f75b277d"
+    },
+    "tech-maturity": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/tech-maturity/SKILL.md",
+      "computedHash": "f93162e07135fc0bf64f7349c705274e85f61c52f51013558f0d120808b1dd5e"
+    },
+    "template-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/ai/template-upsert/SKILL.md",
+      "computedHash": "1e2bbec94ef9ed3daecfc5427c577b535696e8b030467778f1cd7ede98a6f34c"
+    },
+    "think-assist": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/general/think-assist/SKILL.md",
+      "computedHash": "83e521326e09310f76a5cbd20d248fa0bf5809a34892a81388098348a00e244e"
+    },
+    "ui-ux-test-upsert": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/ui-ux-test-upsert/SKILL.md",
+      "computedHash": "5eaf2f62d2f78508f91681a59807b516c08201c74631c543f2a9a4e558d8f263"
+    },
+    "unit-test-writing": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/software-dev/unit-test-writing/SKILL.md",
+      "computedHash": "15305ef1471099c9aff51d7096d660f2fe746550def912efa9dfd6364ce3050f"
+    },
+    "youtube-content-analysis": {
+      "source": "levonk/skills-releases",
+      "sourceType": "github",
+      "skillPath": "skills/content/youtube/SKILL.md",
+      "computedHash": "f6b805c82fbe0da8cf2de8cf4be6c2a5a5b478bccdfb4803d5dad0f7ce9c9cc9"
+    }
+  }
+}

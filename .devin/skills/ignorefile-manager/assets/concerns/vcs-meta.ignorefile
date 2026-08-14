@@ -1,0 +1,17 @@
+# VCS metadata — internal state of version control systems.
+# Never committed (except .gitignore itself) or indexed.
+
+## Git
+.git/
+.git/config
+COMMIT
+versioninfo.json
+
+## Mercurial
+.hg/
+
+## Subversion
+.svn/*
+
+## Jujutsu
+.jj/

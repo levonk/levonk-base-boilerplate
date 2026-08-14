@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft-2020-12/schema",
+  "name": "surgical-config-env",
+  "description": "Development environment with surgical configuration management tools",
+  "packages": {
+    "yq": "4.44.2",
+    "jq": "1.7.1",
+    "sd": "1.0.0",
+    "python3": "3.11.9",
+    "go": "1.23.1",
+    "node": "22.11.0",
+    "rust": "1.83.0",
+    "git-secrets": ""
+  },
+  "shell": {
+    "init_hook": [
+      "echo '🔧 Surgical configuration environment loaded'",
+      "echo '📁 Cache directory: .cache/'",
+      "echo '🛠️  Primary tools: yq-go, jq, sd'",
+      "echo '📋 Run: ./skills/surgical-config/scripts/ensure-environment.sh --validate'"
+    ]
+  },
+  "nixpkgs": {
+    "unstable": true
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "skill_name": "agent-upsert",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a tax strategist agent that can analyze tax situations and recommend strategies",
+      "expected_output": "A new agent definition file at internal-docs/agents/tax-strategist.md with complete frontmatter (agent, description, use, personality with name/role/color/icon, categories, capabilities, model-level, tools, tags), body sections (Goal, Role, i/o, Primary Workflow, Tools, Instructions, Templates, Guardrails, Design By Contract, Quality Evaluation, Handoffs, References), and date fields set to the current date. The scaffolder script should be used to create the initial structure.",
+      "files": [],
+      "assertions": [
+        "Runs scripts/init-agent.py tax-strategist --path internal-docs/agents to scaffold the agent file",
+        "The scaffolded file uses references/agent-scaffold-template.md as the template (not an embedded template in the script)",
+        "Frontmatter has all required fields: agent, description, use, personality, categories, capabilities, model-level, version, date, tags",
+        "personality has required sub-fields: name, role, color, icon",
+        "date.created, date.updated, date.last-used are set to YYYY-MM-DD format",
+        "agent-status is set to 'draft' initially",
+        "Body has required sections: Goal, i/o, Primary Workflow, Guardrails",
+        "Runs scripts/verify-agent.py and it passes (no missing fields, no invalid values)",
+        "The agent embodies tax strategy expertise with clear capabilities and boundaries"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Update the tax-strategist agent — we need to add a new capability for international tax analysis",
+      "expected_output": "Should read the existing agent file, audit it against the agent guidelines, propose adding the new capability (with confirmation), and apply the change. Should NOT rewrite the agent from scratch. Should update date.updated and date.last-used.",
+      "files": [],
+      "assertions": [
+        "Reads the existing agent file fully before proposing changes",
+        "Audits the existing agent against the agent-specific audit checklist (capabilities still relevant, template still valid, model level appropriate, tools up to date)",
+        "Proposes the new capability addition with before/after — does NOT apply without confirmation",
+        "Updates date.updated and date.last-used in the frontmatter",
+        "Preserves existing content that is still accurate",
+        "Runs scripts/verify-agent.py after the update and it passes",
+        "Does NOT recreate the agent from scratch"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Audit the code-reviewer agent and check if it's still up to date",
+      "expected_output": "Should read the existing agent file, run the full audit checklist (capabilities still relevant, template still valid, agent still used, model level appropriate, tools up to date, personality and voice still appropriate, frontmatter compliance), and present findings as a prioritized list (Critical / Important / Nice to have). Should NOT apply changes without confirmation.",
+      "files": [],
+      "assertions": [
+        "Reads the existing agent file fully",
+        "Checks all audit checklist items: capabilities relevance, template conformance, usage recency (date.last-used), model-level appropriateness, tool contract validity, personality/voice, frontmatter compliance",
+        "Flags the agent as a deprecation candidate if date.last-used is old (sets agent-status to 'deprecated' only with confirmation)",
+        "Presents findings as a prioritized list (Critical / Important / Nice to have) with before/after for each change",
+        "Does NOT apply any changes without user confirmation",
+        "Runs scripts/verify-agent.py to check current state"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Create AGENTS.md documentation for this codebase",
+      "expected_output": "Should NOT trigger agent-upsert. This is an AGENTS.md documentation task, not an agent definition task. The trigger guard should explain that agent-file-upsert handles AGENTS.md, not agent-upsert.",
+      "files": [],
+      "assertions": [
+        "Does NOT run the agent-upsert workflow",
+        "Explains that agent-file-upsert is the correct skill for AGENTS.md documentation",
+        "Does not create or modify agent definition files"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Create a new skill for PDF rotation",
+      "expected_output": "Should NOT trigger agent-upsert. This is a skill creation task, not an agent definition task. The trigger guard should explain that ai-upsert handles skill creation, not agent-upsert.",
+      "files": [],
+      "assertions": [
+        "Does NOT run the agent-upsert workflow",
+        "Explains that ai-upsert is the correct skill for skill creation",
+        "Does not create or modify agent definition files"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Create a software architect agent that can review code architecture and propose improvements",
+      "expected_output": "A new agent definition file with complete frontmatter and body. The agent should embody software architecture expertise with clear capabilities (code review, architecture analysis, improvement proposals), appropriate model-level (reasoning for complex analysis), and defined tool contracts.",
+      "files": [],
+      "assertions": [
+        "Runs scripts/init-agent.py to scaffold the agent file",
+        "Frontmatter has all required fields with non-empty values",
+        "model-level is set to 'reasoning' (appropriate for architecture analysis)",
+        "capabilities include code review and architecture analysis",
+        "tools are declared with explicit contracts (inputs, outputs, constraints)",
+        "personality.role is set to 'Architect' or similar",
+        "Boundaries are clearly defined (what the agent will and will not do)",
+        "Runs scripts/verify-agent.py and it passes",
+        "The agent definition includes Design By Contract section with preconditions and postconditions"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Skip research and just create a data-scientist agent",
+      "expected_output": "Should skip the research phase (user explicitly said 'skip research') and proceed directly to scaffolding and customizing the agent. Should NOT search for existing agents or patterns.",
+      "files": [],
+      "assertions": [
+        "Skips the research phase (does not search for existing agents or patterns)",
+        "Proceeds directly to running init-agent.py to scaffold the agent",
+        "Creates a complete agent definition with all required fields",
+        "Runs scripts/verify-agent.py and it passes"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "The spiritual-advisor agent has an outdated model level — it's using 'default' but should use 'long' for deeper conversations",
+      "expected_output": "Should read the existing agent, identify the model-level issue, propose the change (default -> long) with explanation, and apply only after confirmation. Should update date.updated.",
+      "files": [],
+      "assertions": [
+        "Reads the existing agent file and identifies model-level as 'default'",
+        "Proposes changing model-level from 'default' to 'long' with justification",
+        "Does NOT apply the change without user confirmation",
+        "Updates date.updated after applying the change",
+        "Runs scripts/verify-agent.py after the update and it passes (model-level 'long' is valid)",
+        "Does NOT rewrite the entire agent — only the model-level field changes"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "skill_name": "ai-skill-upsert",
+  "should_trigger": [
+    {
+      "query": "Create a new skill for PDF processing",
+      "expected": true,
+      "rationale": "Direct request to create a skill"
+    },
+    {
+      "query": "I need to package my skill for distribution",
+      "expected": true,
+      "rationale": "Skill packaging is part of skill creation workflow"
+    },
+    {
+      "query": "Help me test my skill",
+      "expected": true,
+      "rationale": "Skill testing/evaluation is part of skill creation"
+    },
+    {
+      "query": "Optimize my skill description",
+      "expected": true,
+      "rationale": "Description optimization is part of skill creation"
+    },
+    {
+      "query": "I want to improve my existing skill",
+      "expected": true,
+      "rationale": "Skill improvement is part of skill creation workflow"
+    },
+    {
+      "query": "Benchmark my skill performance",
+      "expected": true,
+      "rationale": "Benchmarking is part of skill evaluation"
+    },
+    {
+      "query": "How do I create a skill?",
+      "expected": true,
+      "rationale": "Question about skill creation process"
+    },
+    {
+      "query": "Turn this workflow into a skill",
+      "expected": true,
+      "rationale": "Converting workflow to skill"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "Use my pdf-rotator skill to rotate this file",
+      "expected": false,
+      "rationale": "Using an existing skill, not creating one"
+    },
+    {
+      "query": "What is a skill?",
+      "expected": false,
+      "rationale": "Informational question about skills, not creation"
+    },
+    {
+      "query": "List all available skills",
+      "expected": false,
+      "rationale": "Listing skills, not creating them"
+    },
+    {
+      "query": "Delete my skill",
+      "expected": false,
+      "rationale": "Deleting a skill, not creating or improving one"
+    },
+    {
+      "query": "Write a document about skills",
+      "expected": false,
+      "rationale": "Writing documentation, not creating a skill"
+    }
+  ]
+}

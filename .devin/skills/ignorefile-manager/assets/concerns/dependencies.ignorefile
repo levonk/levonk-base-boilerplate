@@ -1,0 +1,32 @@
+# Dependencies — third-party packages installed by package managers.
+# Regenerated from lockfiles; never committed or indexed.
+
+## Node
+node_modules/
+
+## Python
+.venv/
+ENV/
+venv/
+
+## Ruby
+.bundle
+
+## Java
+.gradle/
+
+## .NET
+packages/
+
+## Ansible Galaxy
+collections/ansible_collections/*
+roles/external/
+
+## Ansible downloads
+downloads/
+
+## Rust (external clones, not Cargo deps)
+# Note: Cargo.lock IS committed for binaries, target/ is in build-artifacts
+
+## Maven local repo
+.m2/

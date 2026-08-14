@@ -1,0 +1,26 @@
+{
+  "skill_name": "ai-skill-upsert",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a skill for rotating PDF files",
+      "expected_output": "A new skill directory with SKILL.md containing instructions for PDF rotation, scripts/rotate_pdf.py for the rotation logic, and proper frontmatter",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "prompt": "I want to improve my existing bigquery skill to add better error handling",
+      "expected_output": "Updated SKILL.md with improved error handling guidance, possibly new reference files for error patterns, and updated evals to test the improvements",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 3,
+      "prompt": "Test my docx-editor skill to see if it's working correctly",
+      "expected_output": "Test cases run with-skill and baseline, timing data captured, eval viewer generated showing comparison results",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}

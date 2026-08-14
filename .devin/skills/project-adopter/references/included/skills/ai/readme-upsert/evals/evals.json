@@ -1,0 +1,64 @@
+{
+  "skill_name": "readme-upsert",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a README for this project",
+      "expected_output": "A README.md with project name (H1), overview, Quick Start, Build/Test Commands, Project Structure, and AI Agent Documentation sections. The consistency checker should pass with no broken links or AGENTS.md conflicts.",
+      "files": [],
+      "assertions": [
+        "Creates README.md at repo root",
+        "Includes H1 with project name",
+        "Includes Quick Start section with copy-paste ready commands",
+        "Includes Project Structure section",
+        "Includes AI Agent Documentation section linking to AGENTS.md",
+        "README is 100-250 lines",
+        "All markdown links point to existing files",
+        "Runs scripts/verify_consistency.py and it passes (no broken links, no phantom commands, no missing directories)",
+        "Does NOT duplicate content from AGENTS.md or developer guide",
+        "Performs full-surface semantic consistency check across code, AGENTS.md tree, README.md, and docs: project description, tech stack, commands, directory structure, concrete values, ADRs, OOS claims, and patterns all agree wherever stated in more than one source"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Update the README — we renamed the project and switched from npm to pnpm",
+      "expected_output": "Should update the existing README.md: change the project name (H1), update package manager references from npm to pnpm, and preserve sections that are still accurate. Should NOT rewrite from scratch. Should verify the project name matches AGENTS.md after the update.",
+      "files": [],
+      "assertions": [
+        "Updates H1 to the new project name",
+        "Updates package manager references from npm to pnpm",
+        "Preserves sections that are still accurate (reports what was left unchanged)",
+        "Project name in README matches project name in AGENTS.md (if AGENTS.md exists)",
+        "Runs scripts/verify_consistency.py and it passes (no broken links, no phantom commands, no missing directories)",
+        "Performs full-surface semantic consistency check: tech stack in README matches config files (devbox.json, package.json), commands referenced exist in Justfile/Makefile, directories named exist on disk, ADRs match code, OOS claims still hold"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Create AGENTS.md documentation for this codebase",
+      "expected_output": "Should NOT trigger readme-upsert. This is an AGENTS.md task, not a README task. The trigger guard should explain that agent-file-upsert handles AGENTS.md, not readme-upsert.",
+      "files": [],
+      "assertions": [
+        "Does NOT run the readme-upsert workflow",
+        "Explains that agent-file-upsert is the correct skill for AGENTS.md generation",
+        "Does not create or modify README.md"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "The README has a 'JIT Index' section and a 'Definition of Done' section that should be in AGENTS.md. Also the project name doesn't match AGENTS.md. Fix it.",
+      "expected_output": "Should remove AGENTS.md-style sections from README.md (JIT Index, Definition of Done), fix the project name to match AGENTS.md, and run the consistency checker to verify no audience separation violations or conflicts remain.",
+      "files": [],
+      "assertions": [
+        "Removes JIT Index section from README.md (belongs in AGENTS.md)",
+        "Removes Definition of Done section from README.md (belongs in developer guide)",
+        "Fixes project name (H1) to match AGENTS.md",
+        "Runs scripts/verify_consistency.py to identify and confirm fixes",
+        "Performs full-surface semantic consistency check: fixes any facts that disagree across code, AGENTS.md tree, README.md, and docs (e.g., different package managers, different port numbers, different project descriptions, ADRs that don't match code, OOS claims that are stale)",
+        "Verifies commands referenced in README exist in Justfile/Makefile/package.json",
+        "Verifies directories referenced in README exist on disk",
+        "Re-runs scripts/verify_consistency.py to confirm all structural issues are resolved"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+# Editor / IDE files — per-developer settings that vary by machine.
+# Not shared project content.
+
+## JetBrains (IntelliJ, PyCharm, etc.)
+*.iml
+*.ipr
+*.iws
+.idea/
+# Per-user files inside .idea/ (teams often commit some .idea/ config but
+# not these — listed explicitly so they're caught even if .idea/ is tracked)
+.idea/shelf/
+.idea/workspace.xml
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.idea/httpRequests/
+.idea/codestream.xml
+deploymentTargetDropDown.xml
+misc.xml
+render.experimental.xml
+
+## Visual Studio
+*.aps
+*.ilk
+*.ncb
+*.sdf
+*.sbr
+*.suo
+*.user
+*.vssscc
+*.vspscc
+*_i.c
+*_p.c
+Ankh.NoLoad
+ipch/
+
+## Sublime
+*.sublime-*
+
+## Vim
+*.swo
+*.swp
+*~
+
+## Emacs
+\#*\#
+.\#*
+*.elc
+auto-save-list/
+tramp
+.emacs.desktop
+.emacs.desktop.lock
+
+## Eclipse
+.metadata/
+.project
+.classpath
+.settings/
+.factorypath
+.springBeans
+*.launch
+bin/
+
+## NetBeans
+nbproject/private/
+nbactions.xml
+nb-configuration.xml
+catalog.xml
+
+## Xcode
+*.xcuserstate
+*.xcuserdata/
+*.xcworkspace/xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM/
+DerivedData/
+
+## Zed
+.zed/
+
+## Nova
+.nova/
+
+## Fleet
+.fleet/
+
+## Cursor (per-user settings; .cursor/rules/ is often shared project config)
+.cursor/settings.json
+.cursor/cache/
+
+## Atom
+.apm/
+.atom-build.json
+
+## Brackets
+.brackets.json
+
+## TextMate
+*.tmproj
+*.tmproject
+.tm_properties
+
+## VS Code (per-user settings, not shared workspace config)
+.vscode/settings.json
+
+## Code-workspace files (per-developer, not shared)
+*.code-workspace
+
+## Global rules (per-developer AI guidance)
+*global_rules.md

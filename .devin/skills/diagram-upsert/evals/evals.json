@@ -1,0 +1,50 @@
+{
+  "skill_name": "diagram-upsert",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a Mermaid flowchart to this ADR showing the decision tree for picking between Mermaid, PlantUML, and Excalidraw.",
+      "expected_output": "A Mermaid fenced code block with a flowchart, all decision node labels quoted (because they contain <br/> or special chars), validated by rendering, embedded in the ADR at the requested location.",
+      "files": [],
+      "assertions": [
+        "Output includes a ```mermaid fenced code block",
+        "All decision node labels containing <br/> are wrapped in {\"...\"}",
+        "validate-diagram.py was run and reported success (or tool-unavailable warning)",
+        "Diagram is embedded at the requested location in the ADR"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Fix this broken Mermaid diagram: flowchart TD\n    Q1{What kind of<br/>question?} --> A1[Answer 1]",
+      "expected_output": "The decision node label is quoted: Q1{\"What kind of<br/>question?\"}. The fix is explained by referencing the bundle's mermaidjs.md quoting rule. The fixed diagram is validated by rendering.",
+      "files": [],
+      "assertions": [
+        "Fixed diagram uses {\"...\"} quoting for the decision node",
+        "Explanation references the <br/>-stripping behavior of markdown pre-processors",
+        "validate-diagram.py was run on the fixed diagram and reported success"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Draw a class diagram for the User, Order, and Product classes with their relationships.",
+      "expected_output": "PlantUML is selected (class diagram = precise UML). The diagram uses @startuml/@enduml. The diagram is validated via local plantuml.jar if available, or validation is reported as skipped with a clear reason.",
+      "files": [],
+      "assertions": [
+        "PlantUML is selected (not Mermaid) for a class diagram",
+        "Diagram is wrapped in @startuml / @enduml",
+        "validate-diagram.py was run; if plantuml.jar unavailable, a clear warning is reported (not silent skip)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Create a whiteboard sketch of the proposed architecture for the new billing service.",
+      "expected_output": "Excalidraw is selected (whiteboard sketch = hand-drawn WIP aesthetic). The .excalidraw JSON file is created with valid structure (type=excalidraw, elements array, appState). An SVG export is referenced in the markdown.",
+      "files": [],
+      "assertions": [
+        "Excalidraw is selected (not Mermaid/PlantUML) for a whiteboard sketch",
+        ".excalidraw JSON is valid with type=excalidraw and elements array",
+        "Markdown embeds an SVG export reference"
+      ]
+    }
+  ]
+}

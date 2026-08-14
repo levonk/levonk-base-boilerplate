@@ -1,0 +1,59 @@
+{
+  "skill_name": "project-comparison",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Compare Hugo, Gatsby, and Eleventy as static site generators. Are they in the same category? Build a feature matrix.",
+      "expected_output": "A feature matrix with all three projects across the top, meta-features (license, stars, forks, last commit, tech stack, platform support, maintainability), category-specific features (templating, content model, build performance, plugins, themes, i18n), identical-value rows at the bottom, and a recommendation section. Category membership should be confirmed explicitly.",
+      "files": [],
+      "assertions": [
+        "Confirms all three are in the 'static site generators' category",
+        "Includes meta-features: license, stars, forks, last commit, tech stack",
+        "Uses icons: at least ✅, ➖, ❌ in the matrix",
+        "Has category-specific feature rows (not just meta-features)",
+        "Identical-value rows are at the bottom of the table",
+        "Includes a recommendation section with per-use-case guidance",
+        "Recommendations are ordered progressively (least to most demanding, or most to least)",
+        "Recommendations are structured by use case (not by project), naming the best project per context",
+        "Links to project repositories inline in the table header"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Compare these three repos:BurntSushi/ripgrep, sharkdp/fd, and cli/cli. Are they in the same category?",
+      "expected_output": "Should identify that ripgrep and fd are in the same category (file search tools / find alternatives) but cli (GitHub CLI) is NOT in that category. Should flag the mismatch, explain why, and offer options (narrow, broaden, or cross-category comparison). Should NOT produce a full feature matrix without confirming category membership first.",
+      "files": [],
+      "assertions": [
+        "Identifies ripgrep and fd as file search tools",
+        "Identifies cli as GitHub CLI (different category)",
+        "Flags the category mismatch explicitly",
+        "Offers options: narrow, broaden, or cross-category",
+        "Does NOT blindly produce a feature matrix without addressing the mismatch"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to compare AI coding agents. Can you find projects in that category and compare them?",
+      "expected_output": "Should use the 3-tier category discovery process: identify known names, search by category, check adjacent categories. Should produce a list of candidate projects, filter by activity/stars, confirm membership, then build the feature matrix.",
+      "files": [],
+      "assertions": [
+        "Discovers multiple AI coding agent projects (not just one)",
+        "Filters candidates by activity or stars",
+        "Confirms category membership before building the matrix",
+        "Produces a feature matrix with meta-features and category-specific features",
+        "Includes maintainability assessment"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "What does the project at /Users/micro/p/gh/levonk/Archon do?",
+      "expected_output": "Should NOT trigger the project-comparison skill. This is a single-project analysis question, not a comparison. The trigger guard should answer directly and explain that project-comparison is for multi-project comparison.",
+      "files": [],
+      "assertions": [
+        "Does NOT run the full comparison workflow",
+        "Answers the question directly without the skill",
+        "Explains why the skill was not used (single project, not a comparison)"
+      ]
+    }
+  ]
+}

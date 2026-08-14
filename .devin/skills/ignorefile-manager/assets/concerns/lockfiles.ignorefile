@@ -1,0 +1,23 @@
+# Lockfiles — package manager lockfiles that MUST be committed but should not
+# litter IDE search results or trigger file watchers.
+# These are NOT in .gitignore (lockfiles must be checked in for reproducible
+# builds). They ARE in VS Code search.exclude, files.watcherExclude, and
+# ripgrep ignore to keep search results and watchers clean.
+
+## Package manager lockfiles
+*.lock
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
+bun.lock
+Cargo.lock
+composer.lock
+Gemfile.lock
+poetry.lock
+uv.lock
+pubspec.lock
+mix.lock
+conan.lock
+flake.lock
+go.sum

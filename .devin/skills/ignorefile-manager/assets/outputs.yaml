@@ -1,0 +1,140 @@
+# Ignorefile composition config — maps output files to concern sources.
+# Edit this to change which concerns are included in each output.
+#
+# Syntax modes:
+#   gitignore        — standard gitignore syntax (supports ! negation)
+#   gitignore-no-neg — strips ! patterns (for .dockerignore which has limited
+#                      negation support); warns about removed patterns
+#   json-glob        — transforms to {"**/pattern": true} objects for VS Code
+#                      settings (files.exclude, search.exclude, watcherExclude)
+#
+# Concerns available (see assets/concerns/):
+#   secrets, build-artifacts, os-files, editor-files, dependencies,
+#   ai-generated, dev-local, binaries, vcs-meta, logs, lockfiles
+#
+# lockfiles is special: lockfiles MUST be committed (not in .gitignore) but
+# should not litter IDE search results or trigger file watchers. It is only
+# included in VS Code search.exclude, files.watcherExclude, and ripgrep ignore.
+
+outputs:
+  # --- VCS ignore files ---
+  .gitignore:
+    syntax: gitignore
+    concerns: [secrets, build-artifacts, os-files, editor-files,
+               dependencies, vcs-meta, dev-local, logs, binaries]
+    excludes: [ai-generated]
+    # AI tool dirs (.claude, .cursor, etc.) ARE committed in most repos
+    # so collaborators see the same AI guidance. Add ai-generated to
+    # concerns for repos where AI exhaust should not be committed.
+
+  .chezmoiignore:
+    syntax: gitignore
+    concerns: [secrets, build-artifacts, os-files, editor-files,
+               dependencies, vcs-meta, dev-local, logs, binaries]
+    excludes: [ai-generated]
+
+  # --- AI indexing ignores ---
+  .codeiumignore:
+    syntax: gitignore
+    concerns: [secrets, build-artifacts, dependencies, vcs-meta,
+               dev-local, logs, binaries, ai-generated]
+    excludes: [os-files, editor-files]
+    # AI doesn't need to index OS files or per-editor settings, but
+    # it SHOULD see ai-generated (to avoid indexing its own exhaust).
+
+  .cursorignore:
+    syntax: gitignore
+    concerns: [secrets, build-artifacts, dependencies, vcs-meta,
+               dev-local, logs, binaries, ai-generated]
+    excludes: [os-files, editor-files]
+
+  .aiexclude:
+    syntax: gitignore
+    concerns: [secrets, build-artifacts, dependencies, vcs-meta,
+               dev-local, logs, binaries, ai-generated]
+    excludes: [os-files, editor-files]
+
+  # --- Packaging ignores ---
+  .npmignore:
+    syntax: gitignore
+    concerns: [secrets, build-artifacts, os-files, editor-files,
+               dependencies, vcs-meta, dev-local, logs, binaries,
+               ai-generated]
+    # npm packages should exclude everything not needed at runtime.
+    # Note: if package.json "files" field is used, .npmignore is ignored.
+    extra:
+      patterns: |
+        # Source files not needed in the published package
+        src/
+        test/
+        tests/
+        __tests__/
+        scripts/tests/
+        docs/
+        internal-docs/
+        examples/
+        .editorconfig
+        .travis.yml
+        .gitlab-ci.yml
+        tsconfig.json
+        jest.config.js
+        CONTRIBUTING.md
+
+  # --- Docker ignores ---
+  .dockerignore:
+    syntax: gitignore-no-neg
+    concerns: [secrets, build-artifacts, os-files, editor-files,
+               dependencies, vcs-meta, dev-local, logs, binaries,
+               ai-generated]
+    extra:
+      patterns: |
+        # Docker-specific
+        .docker/
+        Dockerfile
+        Dockerfile.*
+        docker-compose.yml
+        docker-compose.*.yml
+
+  # --- VS Code workspace settings (JSON glob, not gitignore syntax) ---
+  vscode-files-exclude:
+    syntax: json-glob
+    concerns: [build-artifacts, dependencies, vcs-meta, dev-local,
+               logs, ai-generated]
+    keys: [files.exclude]
+    # Controls Explorer visibility + indexer scope.
+    # Does NOT include secrets (VS Code can't hide files by pattern
+    # without also hiding them in terminal — use .gitignore for that).
+    # Does NOT include os-files or editor-files (low impact on indexer).
+
+  vscode-search-exclude:
+    syntax: json-glob
+    concerns: [build-artifacts, dependencies, vcs-meta, logs, lockfiles]
+    keys: [search.exclude]
+    # Controls Find in Files scope. Narrower than files.exclude —
+    # only excludes things that would pollute search results.
+    # Includes lockfiles (must be committed but shouldn't litter search).
+
+  vscode-watcher-exclude:
+    syntax: json-glob
+    concerns: [build-artifacts, dependencies, vcs-meta, dev-local,
+               logs, ai-generated, lockfiles]
+    keys: [files.watcherExclude]
+    # Controls file watcher scope. Critical for CPU — without this,
+    # every file change in node_modules/ triggers re-indexing.
+    # Uses **/pattern/** form (directory glob) for watcher.
+    # Includes lockfiles (watching lockfile changes wastes CPU).
+
+  # --- Ripgrep config (global search ignore) ---
+  # Updates ~/.config/ripgrep/ripgrepignore with patterns that should never
+  # appear in search results. Lockfiles, build artifacts, binaries, etc.
+  # The ripgrep mode also ensures ~/.config/ripgrep/config has the
+  # --ignore-file= line pointing to ripgrepignore.
+  ripgrep-ignore:
+    syntax: gitignore
+    concerns: [secrets, build-artifacts, dependencies, vcs-meta,
+               dev-local, logs, binaries, lockfiles]
+    excludes: [os-files, editor-files, ai-generated]
+    # Broader than vscode-search-exclude: includes secrets and binaries
+    # since ripgrep should never search inside .env files or .png files.
+    # Excludes ai-generated (AI tool dirs may contain searchable content)
+    # and os-files/editor-files (low impact on search).

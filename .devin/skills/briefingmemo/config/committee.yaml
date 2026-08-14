@@ -1,0 +1,135 @@
+committee:
+  cso:
+    model: "opus-4.6"
+    role: "Chief of Strategy"
+    expertise_file: "expertise/cso_expertise.md"
+    leadership_style: "transformational"
+  
+  members:
+    - name: "Financial/Investment Agent"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/financial_expertise.md"
+      persona: "ROI-focused analyst"
+      leadership_style: "transactional"
+      
+    - name: "Legal/Compliance Agent"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/legal_expertise.md"
+      persona: "Risk-averse compliance expert"
+      leadership_style: "autocratic"
+      
+    - name: "Customer/User Advocate"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/customer_expertise.md"
+      persona: "Customer champion"
+      leadership_style: "servant"
+      
+    - name: "Market Analyst"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/market_expertise.md"
+      persona: "Data-driven market researcher"
+      leadership_style: "transformational"
+      
+    - name: "Statistician"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/statistics_expertise.md"
+      persona: "Rigorous data analyst"
+      leadership_style: "transactional"
+      
+    - name: "Operations/Execution Agent"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/operations_expertise.md"
+      persona: "Pragmatic implementer"
+      leadership_style: "autocratic"
+      
+    - name: "Culture Agent"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/culture_expertise.md"
+      persona: "Team culture guardian"
+      leadership_style: "servant"
+      
+    - name: "Futurist"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/futurist_expertise.md"
+      persona: "Long-term trend spotter"
+      leadership_style: "transformational"
+      
+    - name: "Risk Management Agent"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/risk_expertise.md"
+      persona: "Risk identifier"
+      leadership_style: "transactional"
+      
+    - name: "Innovation/R&D Agent"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/innovation_expertise.md"
+      persona: "Innovation driver"
+      leadership_style: "transformational"
+      
+    - name: "Compounder"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/compounder_expertise.md"
+      persona: "Long-term compounder"
+      leadership_style: "transactional"
+      
+    - name: "Product Strategist"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/product_expertise.md"
+      persona: "Product strategist"
+      leadership_style: "servant"
+      
+    - name: "Contrarian"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/contrarian_expertise.md"
+      persona: "Devil's advocate"
+      leadership_style: "autocratic"
+      
+    - name: "Moonshot"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/moonshot_expertise.md"
+      persona: "10x thinker"
+      leadership_style: "transformational"
+      
+    - name: "Technical Architect"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/technical_expertise.md"
+      persona: "Systems architect"
+      leadership_style: "autocratic"
+
+  post_decision_review:
+    - name: "Philanthropic Agent"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/philanthropy_expertise.md"
+      
+    - name: "Environmental Agent"
+      model: "sonnet-4.6"
+      expertise_file: "expertise/environmental_expertise.md"
+
+deliberation:
+  protocol: "situational-analysis"
+  conflict_resolution: "strategic-alignment"
+  time_limit_minutes: 5
+  budget_limit_dollars: 5
+  response_order: "alphabetical"
+  speaking_turns: "round_robin"
+  tie_breaking: "cso_vote"
+  
+research_phase:
+  enabled: true
+  research_agents:
+    - "Data Scientist"
+    - "Market Analyst"
+    - "Industry Analyst"
+  max_research_time_minutes: 10
+  
+output:
+  memo_template: "assets/memo_templates/standard_memo.md"
+  include_transcript: true
+  include_research_package: true
+  include_post_decision_review: true
+  dynamic_sections: true
+  committee_templates:
+    - "leadership-council"
+    - "management-council"
+    - "executive-strategy-committee"
+    - "legendary-ceos"

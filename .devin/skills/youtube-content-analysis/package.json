@@ -1,0 +1,17 @@
+{
+  "name": "@job-aide/skill-youtube-content",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "index.mts",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.1",
+    "youtube-transcript": "^1.2.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "tsx": "^4.15.1",
+    "typescript": "^5.4.5"
+  }
+}

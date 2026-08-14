@@ -1,0 +1,57 @@
+{
+  "skill_name": "think-assist",
+  "should_trigger": [
+    {
+      "query": "Council this: should I pivot my product?",
+      "expected": true,
+      "rationale": "Direct council trigger with a real decision"
+    },
+    {
+      "query": "Pressure-test this decision: should I hire a VA or build automation first?",
+      "expected": true,
+      "rationale": "Pressure-test trigger with a genuine tradeoff"
+    },
+    {
+      "query": "Apply first principles thinking to why we use daily standups",
+      "expected": true,
+      "rationale": "Direct request for a specific thinking method"
+    },
+    {
+      "query": "Use inversion to stress-test my launch plan",
+      "expected": true,
+      "rationale": "Direct request for a specific thinking method"
+    },
+    {
+      "query": "I'm torn between two options, war room this",
+      "expected": true,
+      "rationale": "War-room trigger with a genuine decision"
+    },
+    {
+      "query": "What am I missing in this plan?",
+      "expected": true,
+      "rationale": "Multi-perspective request — council can surface blind spots"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "What's the capital of France?",
+      "expected": false,
+      "rationale": "Factual lookup with one right answer"
+    },
+    {
+      "query": "Write me a tweet about AI",
+      "expected": false,
+      "rationale": "Pure creation task, not a decision"
+    },
+    {
+      "query": "Summarize this article for me",
+      "expected": false,
+      "rationale": "Processing task, not thinking-method application"
+    },
+    {
+      "query": "Help me run a full strategic decision process with research and board governance",
+      "expected": false,
+      "rationale": "This is briefingmemo's domain, not think-assist"
+    }
+  ]
+}

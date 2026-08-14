@@ -1,0 +1,52 @@
+# Example: Identified abstractions for Flask
+# This is the output format expected from the identify-abstractions prompt
+
+- name: |
+    Flask Application
+  description: |
+    The central object that ties everything together. Think of it as the
+    "headquarters" of your web app - it knows about all your routes,
+    configurations, and how to handle requests. Like a restaurant manager
+    who coordinates between the kitchen (your code) and customers (web requests).
+  file_indices:
+    - 0 # src/flask/app.py
+    - 5 # src/flask/globals.py
+
+- name: |
+    Request Context
+  description: |
+    A temporary workspace created for each web request. Imagine a desk that
+    appears when a customer walks in and disappears when they leave. It holds
+    all the information about that specific request - what URL they visited,
+    what data they sent, their cookies, etc.
+  file_indices:
+    - 2 # src/flask/ctx.py
+    - 5 # src/flask/globals.py
+
+- name: |
+    Blueprints
+  description: |
+    A way to organize your app into smaller, reusable pieces. Like departments
+    in a company - each blueprint handles a specific area (user accounts,
+    products, admin panel) and can be plugged into any Flask app.
+  file_indices:
+    - 1 # src/flask/blueprints.py
+
+- name: |
+    Routing
+  description: |
+    The system that maps URLs to functions. Like a phone directory that says
+    "if someone calls extension 100, connect them to Sales." When a user visits
+    /login, routing figures out which function should handle that request.
+  file_indices:
+    - 0 # src/flask/app.py
+    - 4 # src/flask/wrappers.py
+
+- name: |
+    Templates
+  description: |
+    HTML files with placeholders that get filled in with data. Like a form
+    letter where you write "Dear {name}" and the system fills in actual names.
+    Templates let you separate your HTML design from your Python logic.
+  file_indices:
+    - 3 # src/flask/templating.py

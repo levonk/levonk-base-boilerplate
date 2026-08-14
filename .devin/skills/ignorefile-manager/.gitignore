@@ -1,0 +1,3 @@
+# Skill-specific gitignore
+__pycache__/
+*.pyc

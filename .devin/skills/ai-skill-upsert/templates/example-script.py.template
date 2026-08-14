@@ -1,0 +1,142 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# ///
+"""
+Example script for the skill.
+
+TODO: Replace this with actual script content or delete if not needed.
+
+This template includes the PEP 723 inline script metadata header (for uv) and
+devbox/rtk/uv detection patterns that should be preserved in all scripts created
+by this skill. Run with: uv run --script example.py  (or ./example.py)
+"""
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+
+# ---------------------------------------------------------------------------
+# Devbox detection — use `devbox run --` to execute commands when devbox
+# is available and a devbox.json exists, unless already inside a devbox shell.
+# ---------------------------------------------------------------------------
+def is_devbox_available() -> bool:
+    """Check if devbox is available and not already in a devbox shell."""
+    if os.environ.get("DEVBOX_SHELL") or os.environ.get("IN_DEVBOX_SHELL"):
+        return False
+    if not shutil.which("devbox"):
+        return False
+    return os.path.isfile("devbox.json")
+
+
+def devbox_run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
+    """Run a command through devbox if available, otherwise directly."""
+    if is_devbox_available():
+        return subprocess.run(["devbox", "run", "--", *cmd], **kwargs)
+    return subprocess.run(cmd, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# uv detection — prefer uv for PEP 723 scripts; fall back to pip and add uv
+# to the nearest devbox.json when uv is missing.
+# ---------------------------------------------------------------------------
+def _walk_up_find(*patterns: str) -> Path | None:
+    """Walk up from cwd looking for any of the given filenames."""
+    cwd = Path.cwd()
+    for d in [cwd, *cwd.parents]:
+        for p in patterns:
+            if (d / p).is_file():
+                return d
+    return None
+
+
+def _ensure_devbox_uv() -> None:
+    """Add 'uv' to the nearest devbox.json if present and missing."""
+    devbox_dir = _walk_up_find("devbox.json")
+    if not devbox_dir:
+        return
+    devbox_json = devbox_dir / "devbox.json"
+    try:
+        with open(devbox_json, "r") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError):
+        return
+    packages = data.get("packages", {})
+    if isinstance(packages, dict):
+        if "uv" in packages:
+            return
+        packages["uv"] = ""
+        data["packages"] = packages
+    elif isinstance(packages, list):
+        if "uv" in packages:
+            return
+        packages.append("uv")
+        data["packages"] = packages
+    else:
+        return
+    try:
+        with open(devbox_json, "w") as f:
+            json.dump(data, f, indent=2)
+            f.write("\n")
+    except OSError:
+        pass
+
+
+def resolve_uv() -> str | None:
+    """Return the uv command to use, or a pip fallback if uv is missing."""
+    if shutil.which("uv"):
+        return "uv"
+    # Record the need for uv in devbox.json if one exists.
+    _ensure_devbox_uv()
+    # Fall back to pip if available.
+    if shutil.which("pip3"):
+        return "pip3"
+    if shutil.which("pip"):
+        return "pip"
+    if shutil.which("python3"):
+        return "python3 -m pip"
+    return None
+
+
+# ---------------------------------------------------------------------------
+# RTK (Rust Token Killer) Usage
+# ---------------------------------------------------------------------------
+def is_rtk_available() -> bool:
+    """Check if rtk is available on the system."""
+    return shutil.which("rtk") is not None
+
+
+def rtk_wrap(tool: str, *args: str, **kwargs) -> subprocess.CompletedProcess:
+    """Run a command through rtk if available, otherwise directly."""
+    if is_rtk_available():
+        return devbox_run(["rtk", tool, *args], **kwargs)
+    return devbox_run([tool, *args], **kwargs)
+
+
+def main():
+    # TODO: Implement script logic
+    #
+    # Use devbox_run() for any subprocess calls that should respect the
+    # devbox environment:
+    #   devbox_run(["python", "--version"])
+    #
+    # Use rtk_wrap() for git and other supported commands:
+    #   rtk_wrap("git", "status")
+    #   rtk_wrap("git", "diff")
+    #   rtk_wrap("eslint", ".")
+    #
+    # Use resolve_uv() when you need uv specifically:
+    #   uv_cmd = resolve_uv()
+    #   if uv_cmd == "uv":
+    #       subprocess.run(["uv", "run", "--script", "some-script.py"])
+    #   else:
+    #       # uv missing; uv_cmd is a pip command — install deps manually or warn
+    pass
+
+
+if __name__ == "__main__":
+    main()

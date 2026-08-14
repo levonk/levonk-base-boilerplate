@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "optimization_rounds": [
+    {
+      "round": 1,
+      "focus": "description-precision",
+      "current_description": "Create, audit, and improve CI/CD pipelines with incremental builds, pre-built CI images, security scans, guardrails, versioning, provenance, and deployment validation. CI-provider-agnostic (GitHub Actions default, also GitLab CI, Jenkins, CircleCI, Buildkite, Azure Pipelines). Use when setting up CI/CD from scratch, optimizing slow CI, adding security gates, implementing filtered/incremental builds, publishing pre-built CI container images, adding provenance/SBOM to builds, improving git tagging/versioning hygiene, or aligning devbox/Justfile/CI/deployment tooling versions. Do NOT trigger on general DevOps questions, Kubernetes manifest authoring, Dockerfile writing (use container-image-build), or Ansible playbook writing (use container-service-deploy) — this skill is for the CI/CD pipeline itself, not the things the pipeline deploys.",
+      "issues": [
+        "Description is long but covers the right triggers",
+        "Negative triggers could be more specific about what 'general DevOps questions' means",
+        "Missing trigger: 'CI is slow' as a leading phrase"
+      ],
+      "optimized_description": "Create, audit, and improve CI/CD pipelines with incremental builds, pre-built CI images, security scans, guardrails, versioning, provenance, and deployment validation. CI-provider-agnostic (GitHub Actions default, also GitLab CI, Jenkins, CircleCI, Buildkite, Azure Pipelines). Use when setting up CI/CD from scratch, fixing slow CI ('CI takes forever', 'build is too slow'), adding security gates, implementing filtered/incremental builds, publishing pre-built CI container images, adding provenance/SBOM to builds, improving git tagging/versioning hygiene, aligning devbox/Justfile/CI/deployment tooling versions, or auditing an existing pipeline for missing best practices. Do NOT trigger on Kubernetes manifest authoring (use container-service-deploy), Dockerfile writing for services (use container-image-build), Ansible playbook writing (use container-service-deploy), or general 'what is CI/CD' questions — this skill is for building and improving the pipeline itself, not explaining CI/CD concepts."
+    }
+  ]
+}

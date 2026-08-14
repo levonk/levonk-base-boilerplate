@@ -1,0 +1,43 @@
+{
+  "skill_name": "tech-maturity",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Assess the technical maturity of my web application project. I want to understand how mature our development practices are across code quality, testing, CI/CD, and operations.",
+      "expected_output": "The skill should conduct an automated AI-driven assessment by generating an analysis guide, examining the project codebase and configuration files, systematically scoring each of the 42 capabilities based on evidence, and generating a maturity report with scores, compliance status, and recommendations.",
+      "files": [],
+      "assertions": [
+        "Response mentions the six assessment dimensions",
+        "Response explains the automated assessment process",
+        "Response examines project artifacts (code, configs, docs)",
+        "Response provides specific scores for capabilities",
+        "Response generates or references a maturity report",
+        "Response includes compliance status and recommendations"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to evaluate our DevOps maturity for a microservices architecture. We have 12 services and want to know where we stand compared to industry standards.",
+      "expected_output": "The skill should recognize this as a tech maturity assessment request, explain how the rubric applies to microservices (highlighting relevant capabilities like deployment strategy, monitoring, configuration management), and guide the user through the assessment process with attention to distributed systems concerns.",
+      "files": [],
+      "assertions": [
+        "Response addresses microservices-specific concerns",
+        "Response mentions relevant capabilities for distributed systems",
+        "Response explains the assessment process",
+        "Response offers concrete next steps for evaluation"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our engineering team wants to improve our technical practices. Where should we start? We currently have basic CI/CD but no automated testing beyond unit tests.",
+      "expected_output": "The skill should recommend starting with a tech maturity assessment to establish a baseline, identify current capability levels, highlight gaps (especially in testing coverage based on the user's description), and provide prioritized recommendations focusing on quick wins and critical gaps.",
+      "files": [],
+      "assertions": [
+        "Response recommends conducting a maturity assessment",
+        "Response identifies likely current maturity levels based on description",
+        "Response provides specific recommendations for improvement",
+        "Response references the rubric's minimum level requirements"
+      ]
+    }
+  ]
+}

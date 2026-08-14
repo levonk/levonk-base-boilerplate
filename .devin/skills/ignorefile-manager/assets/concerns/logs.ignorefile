@@ -1,0 +1,19 @@
+# Logs — application and server log files.
+# Runtime output, not source content.
+
+## Log files
+*.log
+__logs__/
+log/
+logs/
+output/logs/
+.out/logs/
+tmp/logs/
+.tmp/logs/
+var/logs/
+.var/logs/
+
+## Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

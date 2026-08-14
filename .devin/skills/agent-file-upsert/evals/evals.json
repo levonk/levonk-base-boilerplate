@@ -1,0 +1,137 @@
+{
+  "skill_name": "agent-file-upsert",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create AGENTS.md documentation for this codebase",
+      "expected_output": "A hierarchical AGENTS.md system: root AGENTS.md (user-facing, <250 lines), .agents/knowledge/developer.md (developer-facing), sub-folder AGENTS.md files for major directories, and internal-docs/oos/ directory. The consistency checker should pass with no broken links or README conflicts.",
+      "files": [],
+      "assertions": [
+        "Runs Phase 0 convention detection: checks for existing AGENTS.md, CLAUDE.md, AGENT.md and classifies the relationship",
+        "Creates root AGENTS.md with Project Snapshot, Setup, JIT Index, Out of Scope, Improvements, Anti-Patterns, Universal Contracts, and Developer Guide sections",
+        "Creates .agents/knowledge/developer.md with workflow, key directories, patterns, boundaries, known gotchas, and Definition of Done — JIT Index includes OOS, improvements, and anti-patterns entries",
+        "Creates sub-folder AGENTS.md files for major directories (apps/, packages/, etc.)",
+        "Creates internal-docs/oos/ directory with date-stamped files",
+        "Root AGENTS.md is under 250 lines",
+        "All markdown links in AGENTS.md files point to existing files",
+        "Runs scripts/verify_consistency.py and it passes (no broken links, no phantom commands, no missing directories, CLAUDE.md/AGENT.md convention checks pass if those files exist)",
+        "README.md (if it exists) is not modified — agent-file-upsert does not touch README",
+        "Performs full-surface semantic consistency check across code, AGENTS.md tree, README.md, and docs: project description, tech stack, commands, directory structure, concrete values, ADRs, OOS claims, anti-pattern claims, improvement status, and patterns all agree wherever stated in more than one source"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Update the AGENTS.md files in this repo — we added a new packages/auth/ directory",
+      "expected_output": "Should update the existing AGENTS.md hierarchy: add a sub-folder AGENTS.md for packages/auth/, update the root JIT Index to point to it, and run the maintenance protocol closeout checklist. Should NOT rewrite existing AGENTS.md files from scratch.",
+      "files": [],
+      "assertions": [
+        "Creates packages/auth/AGENTS.md with Purpose, Ownership, Local Contracts, Patterns, Key Files, Search Hints, Verification, and JIT Index sections",
+        "Updates root AGENTS.md JIT Index to include the new packages/auth/ entry",
+        "Preserves existing AGENTS.md content that is still accurate",
+        "Runs the maintenance protocol closeout checklist",
+        "Runs scripts/verify_consistency.py and it passes (no broken links, no phantom commands, no missing directories, convention checks pass)",
+        "Performs full-surface semantic consistency check: tech stack in AGENTS.md matches config files (devbox.json, package.json), commands referenced exist in Justfile/Makefile, directories named exist on disk, ADRs match code, OOS claims still hold, anti-pattern claims verified against code, improvement status verified against code"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Generate a README for this project",
+      "expected_output": "Should NOT trigger agent-file-upsert. This is a README task, not an AGENTS.md task. The trigger guard should explain that readme-upsert handles README.md, not agent-file-upsert.",
+      "files": [],
+      "assertions": [
+        "Does NOT run the agent-file-upsert workflow",
+        "Explains that readme-upsert is the correct skill for README generation",
+        "Does not create or modify AGENTS.md files"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "The README and AGENTS.md in this repo have conflicting project names and duplicated content. Fix it.",
+      "expected_output": "Should fix the AGENTS.md hierarchy and run the consistency checker to verify no conflicts with README.md. Should ensure project name (H1) matches, no content is duplicated, and README doesn't contain AGENTS.md-style sections. May need to coordinate with readme-upsert if README also needs fixes.",
+      "files": [],
+      "assertions": [
+        "Runs scripts/verify_consistency.py to identify conflicts",
+        "Fixes project name mismatch between AGENTS.md and README.md",
+        "Removes duplicated paragraph blocks between AGENTS.md and README.md",
+        "Ensures README.md doesn't contain AGENTS.md-style sections (JIT Index, Universal Contracts, etc.)",
+        "Performs full-surface semantic consistency check: fixes any facts that disagree across code, AGENTS.md tree, README.md, and docs (e.g., different package managers, different port numbers, different project descriptions, ADRs that don't match code, OOS claims that are stale)",
+        "Verifies commands referenced in docs exist in Justfile/Makefile/package.json",
+        "Verifies directories referenced in docs exist on disk",
+        "Re-runs scripts/verify_consistency.py to confirm all structural issues are resolved"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Create CLAUDE.md for this codebase",
+      "expected_output": "Should trigger agent-file-upsert (description mentions CLAUDE.md). Should detect the convention: if no AGENTS.md exists, create AGENTS.md as primary and CLAUDE.md as a referral (@AGENTS.md). If AGENTS.md already exists, create CLAUDE.md as a referral or symlink to it. Should NOT create independent CLAUDE.md content.",
+      "files": [],
+      "assertions": [
+        "Triggers agent-file-upsert (not rejected as out of scope)",
+        "Creates AGENTS.md as the primary file (with full hierarchy: root, developer guide, sub-folders, OOS)",
+        "Creates CLAUDE.md as a referral (@AGENTS.md) or symlink to AGENTS.md — NOT independent content",
+        "Does NOT create CLAUDE.md with independent agent documentation content",
+        "Runs scripts/verify_consistency.py and it passes including convention checks (CLAUDE.md referral/symlink valid)",
+        "If CLAUDE.md already existed with independent content, asks the user before consolidating"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "This repo has both AGENTS.md and CLAUDE.md with different content. Update the agent docs.",
+      "expected_output": "Should detect the independent convention and ask the user whether to consolidate (merge unique CLAUDE.md content into AGENTS.md, replace CLAUDE.md with referral) or keep both independent. Should NOT silently overwrite either file.",
+      "files": [],
+      "assertions": [
+        "Detects both AGENTS.md and CLAUDE.md exist with independent content",
+        "Asks the user whether to consolidate or keep both independent (does NOT silently overwrite)",
+        "If user chooses consolidate: merges unique CLAUDE.md content into AGENTS.md, converts CLAUDE.md to referral or symlink",
+        "If user chooses keep both: updates both files but warns about divergence risk",
+        "Runs scripts/verify_consistency.py and it passes including convention checks"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Update the AGENTS.md files — we've made significant changes since they were last updated",
+      "expected_output": "Should run delta analysis: script generates a structured report of changes since the AGENTS.md was last updated, then a subagent interprets the report to extract positive findings, anti-pattern candidates, and improvement candidates. Should update AGENTS.md with positive findings, create anti-pattern files for negative findings, and create improvement files for improvement candidates.",
+      "files": [],
+      "assertions": [
+        "Runs scripts/analyze_git_delta.py to generate a structured delta report (determines cutoff from AGENTS.md frontmatter date.updated or last git commit)",
+        "Spawns a subagent to interpret the delta report and extract POSITIVE, NEGATIVE, and IMPROVEMENTS lists",
+        "Updates AGENTS.md files with positive findings (new patterns, directories, dependencies)",
+        "Creates internal-docs/anti-patterns/INDEX.md with 🛑 entries for anti-pattern candidates",
+        "Creates detailed anti-pattern files in internal-docs/anti-patterns/YYYY/MM/ with 🛑 Anti-Pattern: title, DO NOT DO THIS preamble, what not to do, why it's wrong, what to do instead, and origin",
+        "Creates internal-docs/improvements/INDEX.md with improvement entries (one-line summaries, status, links)",
+        "Creates detailed improvement files in internal-docs/improvements/YYYY/MM/ with full rationale and origin",
+        "Anti-patterns are triple-marked as negative: in AGENTS.md reference, in INDEX.md preamble, and in detailed file title/preamble",
+        "Updates root AGENTS.md with Improvements and Anti-Patterns sections pointing to the INDEX.md files",
+        "Updates developer guide JIT Index with improvements and anti-patterns entries",
+        "Runs scripts/verify_consistency.py and it passes including improvements/anti-patterns INDEX.md checks"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Update the AGENTS.md for the src/auth/ package only",
+      "expected_output": "Should scope delta analysis to src/auth/ path. Improvements and anti-patterns specific to that package go in internal-docs/improvements/{package}/ and internal-docs/anti-patterns/{package}/ with package-specific INDEX.md files. Should NOT analyze the whole repo.",
+      "files": [],
+      "assertions": [
+        "Scopes delta analysis to src/auth/ path (analyze_git_delta.py --path src/auth/)",
+        "Creates or updates src/auth/AGENTS.md with package-specific findings",
+        "Creates package-specific improvements in internal-docs/improvements/src-auth/INDEX.md if improvement candidates found",
+        "Creates package-specific anti-patterns in internal-docs/anti-patterns/src-auth/INDEX.md if anti-pattern candidates found",
+        "Does NOT create root-level improvements or anti-patterns for this scoped request",
+        "Runs scripts/verify_consistency.py and it passes"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Skip research and just update the AGENTS.md files I pointed you at",
+      "expected_output": "Should skip the research phase (user explicitly said 'skip research') and skip delta analysis if user says 'just update the docs I pointed you at'. Should update only the specified AGENTS.md files without running the full workflow.",
+      "files": [],
+      "assertions": [
+        "Skips the research phase (does not search for existing artifacts or anti-patterns)",
+        "Skips delta analysis if user says 'just update the docs I pointed you at'",
+        "Updates only the specified AGENTS.md files",
+        "Does NOT create improvements or anti-patterns files (no delta analysis to populate them)",
+        "Runs scripts/verify_consistency.py on the updated files"
+      ]
+    }
+  ]
+}

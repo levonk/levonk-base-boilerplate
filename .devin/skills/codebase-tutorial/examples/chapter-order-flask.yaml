@@ -1,0 +1,15 @@
+# Example: Chapter ordering for Flask tutorial
+# This is the output format expected from the order-chapters prompt
+
+# Order rationale:
+# 1. Flask Application - Entry point, most foundational
+# 2. Routing - How requests find handlers (depends on App)
+# 3. Request Context - How data flows (depends on Routing)
+# 4. Templates - How responses are generated (uses Context)
+# 5. Blueprints - Advanced organization (builds on everything)
+
+- 0 # Flask Application
+- 3 # Routing
+- 1 # Request Context
+- 4 # Templates
+- 2 # Blueprints

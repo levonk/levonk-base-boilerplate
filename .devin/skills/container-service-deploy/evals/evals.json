@@ -1,0 +1,12 @@
+{
+  "skill_name": "container-service-deploy",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "[TODO: Add a realistic test prompt]",
+      "expected_output": "[TODO: Describe expected result]",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}

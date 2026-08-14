@@ -1,0 +1,2480 @@
+# Sourcing Sources — Structured Metadata
+#
+# Machine-readable catalog of all sourcing channels referenced in
+# sourcing-guide.md. Each entry uses [[source]] array-of-tables syntax.
+#
+# Attribute reference:
+#   name              = display name
+#   url               = primary URL
+#   type              = "auction" | "fixed-price" | "marketplace" | "price-history" | "aggregator" | "directory" | "direct-seller" | "free-gifting" | "service-referral"
+#   auction_type      = "timed" | "sealed-bid" | "live" | "ascending" | "live+online" | "none"
+#   buy_it_now        = true if fixed-price/BIN option exists alongside auctions
+#   api               = true if a public API is available
+#   government_level  = "federal" | "state" | "local" | "none"
+#   categories        = array of product categories
+#   condition         = array of condition grades: "new", "refurbished", "open-box", "used", "salvage", "as-is", "mixed"
+#   buyer_premium     = string (e.g. "0%", "7.5-12.5%", "varies")
+#   online            = true if bidding/buying is online
+#   in_person         = true if in-person attendance or inspection is available
+#   local_pickup      = true if local pickup is required or available
+#   ships             = true if shipping is available
+#   sold_price_history= true if past sold prices are viewable
+#   notes             = short note
+#   requires_dealer_license = true if a dealer license is required for some/all sales
+#   requires_reseller = true if reseller registration (EIN/tax ID) is required
+#   export_only_sales = true if some sales are export-only (cannot be titled in US)
+#   salvage_sales     = true if some sales are salvage-title only
+#   redirects_to      = name of platform this site redirects to (if it's an index/portal)
+#   aggregator        = true if this site only aggregates listings from other platforms (do not actively search — use the underlying platforms instead)
+#
+# Used by: shopping-deal-intelligence skill, sourcing phase
+# Companion to: sourcing-guide.md (human-readable strategy and context)
+# Companion to: auction-constraints.md (vehicle smog/export/salvage, property buildability, locale/travel, dealer-only gating)
+
+# ── Federal Government ──────────────────────────────────────────────────────
+
+[[source]]
+name = "GSA Auctions"
+url = "https://gsaauctions.gov/"
+type = "auction"
+auction_type = "sealed-bid"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["electronics", "vehicles", "equipment", "real-estate", "tools", "furniture", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "No buyer's premium; federal surplus; largest no-fee government auction"
+
+[[source]]
+name = "GSA Real Estate Sales"
+url = "https://realestatesales.gov/"
+type = "auction"
+auction_type = "ascending"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["real-estate"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = true
+notes = "Surplus federal buildings and land; reserve sales"
+
+[[source]]
+name = "US Marshals Service"
+url = "https://www.usmarshals.gov/what-we-do/asset-forfeiture"
+type = "auction"
+auction_type = "varies"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "vessels", "aircraft", "jewelry", "art", "real-estate", "crypto", "domain-names", "collectibles"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Seized/forfeited property; sold via contracted auctioneers (Bid4Assets, Apple Auctioneering, AJ Willner, TXAuction, RealLook)"
+
+[[source]]
+name = "Treasury / IRS (TEOAF)"
+url = "https://www.treasury.gov/auctions/treasury/gp/"
+type = "auction"
+auction_type = "sealed-bid"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["real-estate", "vehicles", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Tax-forfeiture property; real property at treasury.gov/auctions/treasury/rp/"
+
+[[source]]
+name = "HUD HomeStore"
+url = "https://www.hudhomestore.gov/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["real-estate"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "FHA foreclosed homes; must use HUD-registered agent; Dollar Homes initiative"
+
+[[source]]
+name = "Fannie Mae HomePath"
+url = "https://homepath.fanniemae.com/"
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "federal"
+categories = ["real-estate"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "REO foreclosed homes; 3% down HomePath mortgage available"
+
+[[source]]
+name = "Freddie Mac HomeSteps"
+url = "https://www.homesteps.com/"
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "federal"
+categories = ["real-estate"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "REO foreclosed homes; 2-year home protection plan"
+
+[[source]]
+name = "DLA Disposition Services"
+url = "https://www.dla.mil/Disposition-Services/Offers/Public-Sales-Offerings/"
+type = "auction"
+auction_type = "varies"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "equipment", "medical", "generators", "military-gear", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = false
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Military surplus; in-person at disposition sites; sale methods vary"
+
+[[source]]
+name = "USPS Mail Recovery Center"
+url = "https://www.govdeals.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["electronics", "gift-cards", "general"]
+condition = ["mixed", "as-is"]
+buyer_premium = "7.5-12.5%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Undeliverable mail lots; sold via GovDeals; search 'Atlanta Surplus Center'; pickup in Atlanta GA"
+
+[[source]]
+name = "GSA Fleet Vehicle Sales"
+url = "https://www.gsafleet.gov/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = true
+api = false
+government_level = "federal"
+categories = ["vehicles"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Federal fleet vehicles (cars, trucks); no auction fees, no registration fees; online via GSAFleet.gov + live auctions + fixed-price sales; separate from GSA Auctions (which sells all surplus)"
+
+[[source]]
+name = "IRS Auctions (irsauctions.gov)"
+url = "https://www.irsauctions.gov/"
+type = "auction"
+auction_type = "sealed-bid"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["real-estate", "vehicles", "general", "antiques"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "IRS seized property from tax delinquency; public auction and sealed bid; some mail-in bids accepted; no buyer's premium; separate from Treasury TEOAF"
+
+[[source]]
+name = "Treasury Real Property Seized Sales"
+url = "https://www.treasury.gov/auctions/treasury/rp/"
+type = "auction"
+auction_type = "sealed-bid"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["real-estate"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Tax-forfeiture real property; sealed bid; separate URL from general property (treasury/gp/); often conducted via CWS Marketing"
+
+[[source]]
+name = "Treasury Auctions Portal"
+url = "https://home.treasury.gov/services/treasury-auctions"
+type = "directory"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["general"]
+condition = ["mixed"]
+buyer_premium = "n/a"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Index to all Treasury auction types: Treasury bills/notes (financial), seized real property (rp/), seized general property (gp/); portal to the specific auction pages"
+
+[[source]]
+name = "USA.gov Buy From Government"
+url = "https://www.usa.gov/buy-from-government"
+type = "directory"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["general"]
+condition = ["mixed"]
+buyer_premium = "n/a"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Portal to GSA Advantage, GSA eBuy, GSA Global Supply, and other federal procurement/surplus platforms; informational — redirects to actual platforms"
+
+# ── US Marshals Contracted Auctioneers ──────────────────────────────────────
+
+[[source]]
+name = "Bid4Assets (USMS)"
+url = "https://www.bid4assets.com/storefront/usms"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["real-estate", "vehicles", "jewelry", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "US Marshals forfeited property; also runs county tax deed/lien sales"
+
+[[source]]
+name = "Apple Auctioneering Co."
+url = "https://www.appleauctioneeringco.com/usmarshals"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "vessels"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "US Marshals seized vehicle & vessel auctions across 84 districts"
+
+[[source]]
+name = "AJ Willner Auctions"
+url = "https://www.ajwillnerauctions.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "industrial", "commercial"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "NJ-based; US Marshals seized vehicle auctions; industrial/commercial"
+
+[[source]]
+name = "TXAuction (USMS)"
+url = "https://www.txauction.com/USM"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["coins", "bullion", "precious-metals"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "US Marshals coins, bullion, precious metals"
+
+[[source]]
+name = "RealLook.com"
+url = "https://www.reallook.com/"
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "federal"
+categories = ["real-estate"]
+condition = ["used"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "US Marshals Real Property National Contractor (RPNC); also on Realtor.com/Zillow/Redfin"
+
+# ── Federal Auctioneer Contractors (Treasury, USMS, CBP) ─────────────────────
+
+[[source]]
+name = "CWS Marketing Group"
+url = "https://cwsmarketing.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["real-estate", "vehicles", "vessels", "aircraft", "luxury", "firearms", "general", "industrial"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Government contractor for U.S. Treasury (real property, general property, Customs), USMS, and other agencies; no buyer's premium for Treasury sales; varies (up to 15%) for other sales"
+
+[[source]]
+name = "Apple Towing / RBEX Auctions"
+url = "https://www.appletowing.com/auctions"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "vessels", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Largest liquidator of federally seized vehicles; weekly auctions for US Marshals, Treasury, USPS, CBP; online via HiBid; no buyer's premium; pickup at multiple nationwide storage facilities by appointment; keep both this and Apple Auctioneering Co. as sources"
+
+[[source]]
+name = "GovLiquidation"
+url = "https://www.govliquidation.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "military-gear", "aircraft-parts", "equipment", "scrap", "uniforms", "general"]
+condition = ["used", "as-is", "salvage"]
+buyer_premium = "10%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "DOD surplus contractor (Liquidity Services subsidiary); military surplus, vehicles, aircraft parts; EUC required for demilitarization-coded items (Q/F); 10% buyer's premium; pickup at liquidation centers nationwide"
+
+[[source]]
+name = "PPMS (GSA Auctions Fleet)"
+url = "https://ppms.gov/auctions/auctions-list?target=fleet"
+type = "auction"
+auction_type = "varies"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "equipment"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "GSA Personal Property Management System; federal fleet vehicles and equipment; online, live, sealed bid, and spot bid; no buyer's premium; requires Tax ID (SSN or EIN) and identity verification; same inventory as GSA Fleet and GSA Auctions"
+
+# ── Government Auction Contractor Platforms ──────────────────────────────────
+
+[[source]]
+name = "GovDeals"
+url = "https://www.govdeals.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "electronics", "furniture", "tools", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "7.5-12.5%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Largest state/local platform; 5,300+ government clients; owned by Liquidity Services; mobile app"
+
+[[source]]
+name = "Public Surplus"
+url = "https://www.publicsurplus.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "furniture", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "0-10%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "State/local/universities/school districts; no mobile app; buyer's premium set per seller"
+
+[[source]]
+name = "Municibid"
+url = "https://www.municibid.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["vehicles", "equipment", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Small-town municipal surplus; no buyer's premium (seller-paid); 13 states"
+
+[[source]]
+name = "GovPlanet"
+url = "https://www.govplanet.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "military-gear", "equipment", "generators", "medical"]
+condition = ["used", "as-is"]
+buyer_premium = "10-15%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Military surplus from DLA; Humvees; owned by Ritchie Bros; IronClad Assurance inspection reports"
+
+[[source]]
+name = "PropertyRoom"
+url = "https://www.propertyroom.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["jewelry", "watches", "electronics", "vehicles", "coins", "art", "fashion"]
+condition = ["used", "as-is"]
+buyer_premium = "16.5%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = true
+notes = "Largest online police auction; 4,300+ law enforcement agencies; most start at $1 no reserve"
+
+[[source]]
+name = "Bid4Assets"
+url = "https://www.bid4assets.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["real-estate", "vehicles", "tax-liens", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Federal (US Marshals, Treasury) + county tax sales; deposit often required"
+
+[[source]]
+name = "Purple Wave"
+url = "https://www.purplewave.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "construction", "agriculture"]
+condition = ["used", "as-is"]
+buyer_premium = "capped fee"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Government fleet and equipment; fully online; no-reserve; inspection by appointment"
+
+[[source]]
+name = "Ritchie Bros. Auctioneers"
+url = "https://www.rbauction.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["equipment", "trucks", "construction", "agriculture", "oil-gas", "cranes", "mining"]
+condition = ["used", "as-is"]
+buyer_premium = "12-15%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Heavy equipment; no reserve; global reach; owns GovPlanet and IronPlanet"
+
+[[source]]
+name = "IronPlanet"
+url = "https://www.ironplanet.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["equipment", "trucks", "trailers", "construction"]
+condition = ["used", "as-is"]
+buyer_premium = "10-15%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Ritchie Bros subsidiary; IronClad Assurance inspection reports"
+
+[[source]]
+name = "USGovBid"
+url = "https://www.usgovbid.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["vehicles", "equipment"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Smaller platform; federal and municipal"
+
+# ── Aggregators ─────────────────────────────────────────────────────────────
+
+[[source]]
+name = "GovAuctions.app"
+url = "https://govauctions.app/"
+type = "aggregator"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["vehicles", "electronics", "equipment", "real-estate", "general"]
+condition = ["mixed"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = true
+notes = "Aggregates 36,000+ listings from GSA, GovDeals, Public Surplus, HUD; free; shows sold prices"
+
+[[source]]
+name = "BidProwl"
+url = "https://bidprowl.com/"
+type = "aggregator"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["vehicles", "electronics", "equipment", "general"]
+condition = ["mixed"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = true
+notes = "Searches 25+ government auction sites; free; compare prices across platforms"
+
+[[source]]
+name = "USA.gov Auctions Portal"
+url = "https://www.usa.gov/auctions-and-sales"
+type = "directory"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "federal"
+categories = ["general"]
+condition = ["mixed"]
+buyer_premium = "n/a"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Cross-agency index of federal auctions; portal to GSA, USMS, Treasury, HUD"
+
+[[source]]
+name = "GovernmentAuctions.org"
+url = "https://www.governmentauctions.org/"
+type = "aggregator"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general"]
+condition = ["mixed"]
+buyer_premium = "n/a"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+aggregator = true
+notes = "Paid membership directory ($19.95/month after free trial); aggregates government auction listings from across the web; do not actively search — use the underlying platforms (GSA, GovDeals, etc.) directly"
+
+[[source]]
+name = "Gov-Auctions.org"
+url = "https://www.gov-auctions.org/"
+type = "aggregator"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general"]
+condition = ["mixed"]
+buyer_premium = "n/a"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+aggregator = true
+notes = "Informational aggregator; provides educational content and links to government auction platforms; do not actively search — use the underlying platforms directly"
+
+# ── State Surplus Programs ──────────────────────────────────────────────────
+
+[[source]]
+name = "Texas State Surplus"
+url = "https://surplus.tfc.texas.gov/public/state-surplus-store"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "state"
+categories = ["furniture", "equipment", "vehicles", "tools", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = false
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Retail store open to public; unclaimed airport property"
+
+[[source]]
+name = "GSA State Agency Contacts"
+url = "https://www.gsa.gov/buy-through-us/government-property-for-sale-or-lease/office-of-personnel-property-management/for-state-agencies-and-public-organizations/state-agencies-for-surplus-property-contacts"
+type = "directory"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["general"]
+condition = ["mixed"]
+buyer_premium = "n/a"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Lists surplus property agency for every state; use to find your state's program"
+
+[[source]]
+name = "Arizona State Surplus"
+url = "https://doa.az.gov/about/services/public-auctions"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "general", "office-supplies"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "AZ Dept. of Administration surplus; vehicles, equipment, office supplies; online auctions via third-party platforms; may redirect to GovDeals or Sierra Auction"
+
+[[source]]
+name = "Michigan DTMB Surplus"
+url = "https://www.michigan.gov/dtmb/services/surplusprogram"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "furniture", "tools", "jewelry", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "3%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "MI Dept. of Technology, Management & Budget; MiBid online platform + quarterly in-person sales in Lansing; 3% buyer's fee; includes confiscated property from MSP, DNR, TSA; free MiLogin registration"
+
+[[source]]
+name = "Utah State Surplus"
+url = "https://purchasing.utah.gov/general-services/state-surplus-property/"
+type = "auction"
+auction_type = "sealed-bid"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "real-estate", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "UT Division of Purchasing; online auctions and sealed bids; real estate requires 10% escrow deposit; open to public"
+
+[[source]]
+name = "Wisconsin State Surplus"
+url = "https://datcp.wi.gov/Pages/Publications/GovernmentSalesSurplus176.aspx"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["real-estate", "vehicles", "equipment", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "WI Surplus Online Auction; surplus land from DNR/DOT + general state agency and university surplus; buyer's fee varies by bid amount; pickup by appointment"
+
+[[source]]
+name = "New York State Store (OGS)"
+url = "https://ogs.ny.gov/nysstore"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "furniture", "technology", "tools", "real-estate"]
+condition = ["used", "as-is"]
+buyer_premium = "8%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+redirects_to = "GovDeals"
+notes = "NY Office of General Services; vehicles/equipment via GovDeals (8% buyer's premium, reduced from 13% in-person); real estate via separate process; free registration; inspections by appointment"
+
+[[source]]
+name = "North Carolina State Surplus"
+url = "https://www.doa.nc.gov/divisions/state-surplus-property"
+type = "auction"
+auction_type = "timed"
+buy_it_now = true
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "supplies", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "NC State Surplus Property Agency; retail store + auction; vehicles, equipment, supplies; open to public"
+
+[[source]]
+name = "Virginia DGS Surplus"
+url = "https://dgs.virginia.gov/office-of-surplus-property-management/public/public-auctions2"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "equipment", "furniture", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+redirects_to = "GovDeals"
+notes = "VA Dept. of General Services Office of Surplus Property; auctions via GovDeals; open to public"
+
+# ── Local / Municipal / County Auctions ─────────────────────────────────────
+
+[[source]]
+name = "Bexar County TX Surplus"
+url = "https://www.bexar.org/591/Surplus-Items-for-Sale"
+type = "directory"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["vehicles", "equipment", "firearms"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Bexar County (San Antonio) surplus declaration page per TX Local Gov Code §263.152; redirects to actual auction platforms; firearms sold to retired officers only; keep both this and the auction platform it redirects to as sources"
+
+[[source]]
+name = "Seattle Fleet Vehicle Auction"
+url = "https://www.seattle.gov/fleet-management/vehicle-auction"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["vehicles", "heavy-equipment"]
+condition = ["used", "as-is"]
+buyer_premium = "10%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+redirects_to = "James G. Murphy Co."
+notes = "City of Seattle fleet vehicles; online via James G. Murphy Co. auctioneer; 10% buyer's premium + 3% credit card fee; pickup in Marysville, WA; keep both this and Murphy as sources"
+
+[[source]]
+name = "Cook County IL Public Surplus"
+url = "https://www.cookcountyil.gov/service/public-surplus-auction"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["vehicles", "heavy-equipment", "materials", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "10%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+redirects_to = "Public Surplus"
+notes = "Cook County (Chicago) surplus; online via Public Surplus platform; ~9.5-10% buyer's premium; 5-10 business days to remove; scrap vehicle auctions require specific licenses"
+
+[[source]]
+name = "Iowa DOT Auctions"
+url = "https://iowadot.gov/general-procurement-auctions/iowa-dot-auctions"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "road-maintenance-equipment", "trailers", "tractors", "real-estate"]
+condition = ["used", "as-is"]
+buyer_premium = "7.5-12.5%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+redirects_to = "GovDeals"
+notes = "Iowa DOT vehicles and equipment; online via GovDeals + in-person at Ames, IA auction building; inspection before sale; keep both this and GovDeals as sources"
+
+[[source]]
+name = "Norfolk VA Auctions"
+url = "https://www.norfolk.gov/2732/Auctions"
+type = "directory"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["real-estate", "vehicles"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "City of Norfolk, VA; real estate via GovDeals (Shared Vision Auction, $1,500 bidder deposit); vehicles via BidWrangler (Towing & Recovery monthly auctions); keep both this and the platforms it redirects to as sources"
+
+[[source]]
+name = "Orange County CA Public Administrator/Guardian (OPGLA)"
+url = "http://www.opgla.com/Auctions"
+type = "auction"
+auction_type = "live"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["real-estate", "furniture", "jewelry", "tools", "art"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = false
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "LA County Public Administrator/Guardian; probate/conservatorship estate auctions; real estate requires in-person attendance ($10,000 cashier's check to bid); personal property via sealed bid at county warehouse or independent auction companies"
+
+[[source]]
+name = "Sierra Auction (Government Surplus)"
+url = "https://www.sierraauction.com/pages/seller/government-surplus/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "heavy-equipment", "commercial-trucks", "construction", "electronics", "restaurant-equipment", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "12%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Liquidity Services subsidiary; sole auction outlet for 150+ AZ government agencies (AG, DPS, Phoenix, Mesa); tiered buyer's premium ($99-$699 flat by price tier, then 12% above $6000) + 2% online bidding fee; some government assets flat 10-12%; live webcast available"
+
+# ── Canadian Government Auctions ─────────────────────────────────────────────
+
+[[source]]
+name = "GovDeals Canada"
+url = "https://www.govdeals.ca/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["vehicles", "heavy-equipment", "furniture", "computers", "electronics", "appliances", "parks-recreation", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "7.5-12.5%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Canadian municipal surplus auction platform (e.g., City of Hamilton, Norfolk County); same platform as US GovDeals but for Canadian government clients; buyer's premium set by individual seller, capped at 12.5%"
+
+# ── Repossession & Tow Yards ────────────────────────────────────────────────
+
+[[source]]
+name = "RepoFinder.com"
+url = "https://www.repofinder.com/"
+type = "directory"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["vehicles", "boats", "rvs", "motorcycles"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Aggregates bank/credit union repo listings; direct-from-lender; no premium"
+
+[[source]]
+name = "Credit Union Repos (direct)"
+url = ""
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["vehicles", "boats", "rvs", "motorcycles"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Check local CU websites; e.g. America First (repos.americafirst.com), Golden West (cars.gwcu.org); call loss mitigation dept"
+
+[[source]]
+name = "Copart"
+url = "https://www.copart.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = true
+government_level = "none"
+categories = ["vehicles", "salvage", "repo"]
+condition = ["salvage", "used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = true
+requires_dealer_license = true
+export_only_sales = true
+salvage_sales = true
+notes = "Salvage/repo/impound vehicles; dealer license required for some sales (Public/Basic/Advanced memberships for public buyers); some sales are export-only (cannot be titled in US); title brands vary; see auction-constraints.md for smog/export/salvage/dealer gating"
+
+[[source]]
+name = "IAAI"
+url = "https://www.iaai.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = true
+government_level = "none"
+categories = ["vehicles", "salvage", "repo"]
+condition = ["salvage", "used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = true
+requires_dealer_license = true
+export_only_sales = true
+salvage_sales = true
+notes = "Insurance and repo auction; similar to Copart; dealer license required for some sales; some sales are export-only; title issues; see auction-constraints.md for smog/export/salvage/dealer gating"
+
+# ── Public-Access Brokers for Copart/IAAI (no dealer license needed) ─────────
+
+[[source]]
+name = "AutoBidMaster"
+url = "https://www.autobidmaster.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["vehicles", "salvage", "motorcycles", "boats", "rvs", "equipment"]
+condition = ["salvage", "used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = false
+redirects_to = "Copart"
+notes = "Registered broker and market maker for Copart; public can bid without dealer license; membership tiers (Basic $35, Advanced $189/yr, Premium $349/yr) affect fees; multiple fees: AutoBidMaster transaction fee + Copart auction fee + processing fees; shipping available; see auction-constraints.md for salvage/export/dealer gating"
+
+[[source]]
+name = "SCA Auction"
+url = "https://sca.auction/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["vehicles", "salvage"]
+condition = ["salvage", "used", "as-is"]
+buyer_premium = "3-9%"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = false
+redirects_to = "IAAI"
+notes = "Broker/marketplace for IAA inventory; 300,000+ vehicles; public can bid without dealer license; transaction fees by membership (Basic free: $299 or 9%, Premier $199/yr: $250 or 5%, Expert $549/yr: $200 or 3%) + IAA buyer fees + broker/service/env/mailing fees; buyer cannot pick up vehicle themselves — must use licensed transporter; LA branch at sca.auction/locations/branch-ca-los-angeles-134; see auction-constraints.md for salvage/export/dealer gating"
+
+# ── Dealer-Only Wholesale Auctions ───────────────────────────────────────────
+
+[[source]]
+name = "ACV Auctions"
+url = "https://www.acvauctions.com/"
+type = "auction"
+auction_type = "live"
+buy_it_now = false
+api = true
+government_level = "none"
+categories = ["vehicles"]
+condition = ["used", "as-is"]
+buyer_premium = "2-10%"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+requires_dealer_license = true
+notes = "B2B wholesale dealer auction; 20-minute live online auctions via mobile/desktop app; off-lease, off-rental, repo, fleet vehicles; buyer fee 2-10% capped at $350; requires state dealer license, resale certificate, federal tax ID, and POA; ACV Transportation services available; 7-day pickup window; see auction-constraints.md for dealer license gating"
+
+[[source]]
+name = "CarMax Auctions"
+url = "https://www.carmaxauctions.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["vehicles"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+requires_dealer_license = true
+notes = "Dealer-only wholesale auction; CarMax-owned vehicles (trade-ins, repo, fleet) — no consignment; simulcast online bidding + in-person; tiered buyer's fee ($225–$625+ by sale price) + $50-100 internet fee; dealer must be registered and approved by CarMax; CarMax Auction Vehicle Moves transport available; see auction-constraints.md for dealer license gating"
+
+# ── Rental Fleet Sales (Fixed-Price, Public) ────────────────────────────────
+
+[[source]]
+name = "Hertz Car Sales"
+url = "https://www.hertzcarsales.com/"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["vehicles"]
+condition = ["used"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "Hertz rental fleet vehicles (Hertz Certified); fixed-price retail sales — no auction; open to public; home delivery nationwide; online purchasing with financing; also has Hertz Dealer Direct for B2B; good source for well-maintained former rental cars with known history"
+
+[[source]]
+name = "Auto Liquidators Plus"
+url = "https://www.autoliquidatorsplus.com/"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["vehicles"]
+condition = ["used"]
+buyer_premium = "0%"
+online = false
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Buy Here Pay Here dealership (Dallas, Tyler, Waco TX); fixed-price retail — no auction; open to public; in-house financing; $225 doc fee; in-person purchase only"
+
+# ── Commercial Liquidation Auctions (Public) ────────────────────────────────
+
+[[source]]
+name = "Local Liquidators"
+url = "https://localliquidators.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["vehicles", "automotive-equipment", "body-shop", "dealership-liquidation", "estate", "business-equipment"]
+condition = ["used", "as-is"]
+buyer_premium = "10-13%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Commercial liquidation auctions; vehicles, auto repair shop equipment, body shop assets, dealership liquidations, estate items; online bidding via LocalAuctions.com platform; open to public; live preview/open house events; buyer's premium ~10% (13% for invoices under $500)"
+
+[[source]]
+name = "Autura Marketplace"
+url = "https://marketplace.autura.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["vehicles"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Tow yard and impound lot auctions; abandoned vehicles; mobile app"
+
+[[source]]
+name = "TOWLOT.com"
+url = "https://www.towlot.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["vehicles"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Tow yard lien sale auctions; unclaimed vehicles"
+
+[[source]]
+name = "BidNDrive"
+url = "https://www.bidndrive.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["vehicles", "repo", "impound"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Online repo and impound auctions; pre-bid and live bidding"
+
+[[source]]
+name = "Abetter.bid"
+url = "https://abetter.bid/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["vehicles", "repo"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Repossessed cars; state-filtered"
+
+[[source]]
+name = "OAI Auctions"
+url = "https://oaikc.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["vehicles"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "City impound auctions (e.g. Kansas City); in-person viewing on scheduled days"
+
+# ── Storage Unit Auctions ───────────────────────────────────────────────────
+
+[[source]]
+name = "StorageTreasures"
+url = "https://www.storagetreasures.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general", "furniture", "electronics", "tools", "collectibles"]
+condition = ["mixed", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Largest storage auction platform; nationwide; contents unseen (photos only)"
+
+[[source]]
+name = "Lockerfox"
+url = "https://www.lockerfox.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general", "furniture", "electronics", "tools", "collectibles"]
+condition = ["mixed", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Online storage unit auctions; app + website; most states"
+
+[[source]]
+name = "StorageAuctions.com"
+url = "https://www.storageauctions.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general"]
+condition = ["mixed", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Online storage lien sales; nationwide"
+
+[[source]]
+name = "Bid13"
+url = "https://www.bid13.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general"]
+condition = ["mixed", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Storage unit auctions; Canadian + US listings"
+
+# ── Community & Neighborhood Marketplaces ───────────────────────────────────
+
+[[source]]
+name = "Facebook Marketplace"
+url = "https://www.facebook.com/marketplace/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "furniture", "vehicles", "electronics", "clothing", "free"]
+condition = ["new", "used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "Largest local marketplace; 2.9B users; Facebook identity; in-app messaging; Free Stuff category"
+
+[[source]]
+name = "Craigslist"
+url = "https://www.craigslist.org/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "furniture", "vehicles", "jobs", "services", "free"]
+condition = ["new", "used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "700+ local sites; no account needed to browse; no app; high scam density — meet in public"
+
+[[source]]
+name = "OfferUp"
+url = "https://offerup.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "furniture", "electronics", "vehicles"]
+condition = ["new", "used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "Mobile-first; 20M+ monthly actives; TruYou identity verification; buyer/seller reviews; Community MeetUp Spots"
+
+[[source]]
+name = "Nextdoor"
+url = "https://nextdoor.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "services", "local-recommendations"]
+condition = ["new", "used"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Hyper-local; verified addresses; best for service referrals and neighbor-to-neighbor sales"
+
+[[source]]
+name = "VarageSale"
+url = "https://www.varagesale.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general"]
+condition = ["new", "used"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Member-vetted; safer than Craigslist; garage-sale-style local groups"
+
+# ── Free-Gifting Platforms ──────────────────────────────────────────────────
+
+[[source]]
+name = "Buy Nothing Project"
+url = "https://buynothingproject.org/"
+type = "free-gifting"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "furniture", "clothing", "appliances", "kids"]
+condition = ["used"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Hyperlocal free gifting; app + Facebook groups; neighborhood-level"
+
+[[source]]
+name = "Freecycle"
+url = "https://www.freecycle.org/"
+type = "free-gifting"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "furniture", "appliances", "books"]
+condition = ["used"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Oldest reuse community (2003); 5,000+ local groups; website only, no app; Wanted posts"
+
+[[source]]
+name = "Trash Nothing"
+url = "https://trashnothing.com/"
+type = "free-gifting"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "furniture", "clothing", "appliances", "books"]
+condition = ["used"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Aggregates Freecycle, Freegle, Full Circles; 8M+ users; modern app; posts across multiple groups"
+
+# ── Thrift Stores ───────────────────────────────────────────────────────────
+
+[[source]]
+name = "ShopGoodwill.com"
+url = "https://shopgoodwill.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["art", "books", "vinyl", "clothing", "jewelry", "electronics", "instruments", "toys", "collectibles"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = true
+notes = "150+ Goodwill regions; 5-day auctions; new items daily; authenticated designer items; main online thrift auction site"
+
+[[source]]
+name = "St. Vincent de Paul (online)"
+url = ""
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "collectibles", "vintage", "antiques", "furniture"]
+condition = ["used"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "eBay, Etsy, Poshmark storefronts per regional council; search 'St. Vincent de Paul' on each platform"
+
+[[source]]
+name = "Salvation Army (online)"
+url = "https://www.satruck.com/"
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "furniture", "housewares", "electronics"]
+condition = ["used"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "SATruck.com lists select items; eBay storefronts per region; in-person stores are primary channel"
+
+[[source]]
+name = "Habitat ReStore"
+url = "https://www.habitat.org/restores"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["appliances", "building-materials", "furniture", "tools"]
+condition = ["used", "new"]
+buyer_premium = "0%"
+online = false
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Donated items; condition varies; some ReStores list on Craigslist/FB Marketplace"
+
+[[source]]
+name = "Savers / Value Village"
+url = "https://www.savers.com/"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "housewares", "books", "electronics"]
+condition = ["used"]
+buyer_premium = "0%"
+online = false
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Large chain; for-profit recycler; buys goods from nonprofits; weekly discount days"
+
+# ── Online Consignment & Secondhand ─────────────────────────────────────────
+
+[[source]]
+name = "ThredUp"
+url = "https://www.thredup.com/"
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "accessories", "shoes"]
+condition = ["used", "like-new"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Women's & kids' clothing; professionally photographed; quality-checked; 60k new arrivals/day; returns accepted"
+
+[[source]]
+name = "Poshmark"
+url = "https://poshmark.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "shoes", "handbags", "home-decor", "beauty"]
+condition = ["new", "used"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Designer & contemporary brands; offer system; authentication for luxury over $500; $7.67 flat-rate shipping"
+
+[[source]]
+name = "Depop"
+url = "https://www.depop.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "vintage", "streetwear"]
+condition = ["new", "used", "vintage"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Vintage/Y2K/streetwear; Gen Z focused; Instagram-like interface; quality varies by seller"
+
+[[source]]
+name = "Mercari"
+url = "https://www.mercari.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = true
+government_level = "none"
+categories = ["electronics", "toys", "clothing", "home-goods", "general"]
+condition = ["new", "used"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = true
+notes = "Not fashion-focused; lowest prices due to less competition; flexible shipping; 10% seller fee"
+
+[[source]]
+name = "ThriftBooks"
+url = "https://www.thriftbooks.com/"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["books"]
+condition = ["used", "like-new"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "13M+ titles; graded condition; free shipping over $20; out-of-print and rare; Wish List notifications"
+
+[[source]]
+name = "BetterWorldBooks"
+url = "https://www.betterworldbooks.com/"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["books"]
+condition = ["used", "like-new"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Carbon-neutral shipping; funds literacy programs worldwide"
+
+[[source]]
+name = "eBay"
+url = "https://www.ebay.com/"
+type = "marketplace"
+auction_type = "timed"
+buy_it_now = true
+api = true
+government_level = "none"
+categories = ["general", "electronics", "vehicles", "clothing", "collectibles", "art", "everything"]
+condition = ["new", "refurbished", "used", "salvage", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = true
+notes = "Largest secondhand marketplace; auction + BIN; sold listings for price benchmarks; buyer protection; certified refurbished with Allstate warranty"
+
+[[source]]
+name = "Back Market"
+url = "https://www.backmarket.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["electronics", "phones", "laptops", "tablets"]
+condition = ["refurbished"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Graded condition system; 20-50% off; refurbished marketplace"
+
+[[source]]
+name = "Swappa"
+url = "https://swappa.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["phones", "laptops", "watches", "electronics"]
+condition = ["used", "refurbished"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Verified devices; no junk; 15-35% off"
+
+# ── Estate Sales & Liquidation ──────────────────────────────────────────────
+
+[[source]]
+name = "EstateSales.net"
+url = "https://www.estatesales.net/"
+type = "directory"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["furniture", "art", "jewelry", "tools", "kitchenware", "vintage", "collectibles"]
+condition = ["used", "vintage", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Largest estate sale directory; iOS/Android apps; date + location search; on-site sales Fri-Sun"
+
+[[source]]
+name = "MaxSold"
+url = "https://www.maxsold.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["furniture", "art", "general", "kitchenware", "tools"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Online estate auction platform; everything sold in lots; managed end-to-end; good for downsizing"
+
+[[source]]
+name = "AuctionZip"
+url = "https://www.auctionzip.com/"
+type = "directory"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general", "equipment", "estate", "farm", "antiques"]
+condition = ["mixed"]
+buyer_premium = "n/a"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Largest live auction calendar; find auctions by date, location, category; links to auctioneers"
+
+[[source]]
+name = "HiBid"
+url = "https://www.hibid.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general", "equipment", "estate", "farm", "industrial", "vehicles"]
+condition = ["mixed", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = true
+notes = "Hosts online auctions for various auction companies; one account bids across many auctioneers"
+
+# ── Corporate Liquidation ───────────────────────────────────────────────────
+
+[[source]]
+name = "B-Stock"
+url = "https://bstock.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["electronics", "general", "returns", "overstock", "home-goods"]
+condition = ["new", "open-box", "used", "as-is", "salvage"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = false
+requires_reseller = true
+notes = "Largest B2B liquidation marketplace; $15B+ transactions; per-retailer storefronts (Amazon, Walmart, Target); must register as reseller with EIN/tax ID; see auction-constraints.md for reseller registration gating"
+
+[[source]]
+name = "Liquidation.com"
+url = "https://www.liquidation.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["electronics", "general", "returns", "overstock", "tools", "home-goods"]
+condition = ["new", "open-box", "used", "as-is", "salvage"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "One of the oldest liquidation sites; warehouses nationwide; lot sizes from single pallet to truckload"
+
+[[source]]
+name = "Direct Liquidation"
+url = "https://www.directliquidation.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["electronics", "general", "returns", "overstock"]
+condition = ["new", "open-box", "used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "Best for Amazon FBA sellers; manifested lots; ships from Lenexa, KS"
+
+[[source]]
+name = "BULQ"
+url = "https://www.bulq.com/"
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["electronics", "general", "returns", "overstock", "home-goods"]
+condition = ["new", "like-new", "uninspected", "salvage"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Run by Optoro; fixed price (no bidding); easiest for beginners; no returns/exchanges; 30+ categories"
+
+[[source]]
+name = "BoxFox"
+url = "https://www.boxfox.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general", "returns", "overstock"]
+condition = ["new", "open-box", "used"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "Auction-style; manifested lots; good for smaller resellers"
+
+[[source]]
+name = "888Lots"
+url = "https://www.888lots.com/"
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "returns", "overstock"]
+condition = ["new", "open-box", "used"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = true
+ships = true
+sold_price_history = false
+notes = "Fixed price per lot; per-item manifests available; good for eBay/Amazon sellers"
+
+[[source]]
+name = "Via Trading"
+url = "https://www.viatrading.com/"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["general", "returns", "overstock"]
+condition = ["new", "open-box", "used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "In-person warehouse shopping (CA, NV); minimum order $300; good for West Coast buyers"
+
+# ── Enterprise ITAD ─────────────────────────────────────────────────────────
+
+[[source]]
+name = "Liquis"
+url = "https://liquis.com/"
+type = "direct-seller"
+auction_type = "varies"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["it-equipment", "servers", "office-furniture", "data-center", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Full facility liquidation and data center decommissioning; Fortune 500 clients; contact for auction schedules"
+
+[[source]]
+name = "Surplus Liquidation Solutions (SLS)"
+url = "https://surplusliquidationsolutions.com/"
+type = "direct-seller"
+auction_type = "varies"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["it-equipment", "servers", "networking", "laptops", "capital-equipment", "general"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Fortune 1000 IT and capital equipment; direct purchase + auction; contact for inventory lists"
+
+# ── Industrial & B2B Surplus ────────────────────────────────────────────────
+
+[[source]]
+name = "AllSurplus (Liquidity Services)"
+url = "https://liquidityservices.com/marketplaces/allsurplus"
+type = "auction"
+auction_type = "timed"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["equipment", "vehicles", "materials", "inventory", "industrial"]
+condition = ["used", "as-is"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "600+ industrial categories; 15,000+ sellers; $15B+ transactions; also owns GovDeals"
+
+[[source]]
+name = "Salvex"
+url = "https://www.salvex.com/"
+type = "auction"
+auction_type = "timed"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["equipment", "commodities", "inventory", "commercial-equipment"]
+condition = ["used", "as-is", "salvage"]
+buyer_premium = "varies"
+online = true
+in_person = false
+local_pickup = true
+ships = false
+sold_price_history = false
+notes = "Global marketplace; insurance claims, bankruptcies, plant closures"
+
+# ── Real Estate & Foreclosures ──────────────────────────────────────────────
+
+[[source]]
+name = "County Courthouse Steps (trustee sales)"
+url = ""
+type = "auction"
+auction_type = "live"
+buy_it_now = false
+api = false
+government_level = "local"
+categories = ["real-estate"]
+condition = ["as-is"]
+buyer_premium = "0%"
+online = false
+in_person = true
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Foreclosure auctions; cash/cashier's check; no financing; no inspection; highest risk; search '<county> trustee sale'"
+
+# ── Unclaimed & Lost Goods ──────────────────────────────────────────────────
+
+[[source]]
+name = "Unclaimed Baggage"
+url = "https://www.unclaimedbaggage.com/"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "electronics", "jewelry", "general", "luggage"]
+condition = ["used", "as-is"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Nation's only retailer of lost luggage; Scottsboro, AL retail store + online"
+
+[[source]]
+name = "NAUPA / MissingMoney.com"
+url = "https://www.missingmoney.com/"
+type = "directory"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "state"
+categories = ["financial"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Search all states for unclaimed property (bank accounts, stocks, uncashed checks); free claims, not auctions"
+
+# ── Luxury & Specialty ──────────────────────────────────────────────────────
+
+[[source]]
+name = "Jomashop"
+url = "https://www.jomashop.com/"
+type = "direct-seller"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["watches", "bags", "luxury"]
+condition = ["new", "grey-market"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Authorized grey market; watches and bags; 10-30% off"
+
+[[source]]
+name = "Chrono24"
+url = "https://www.chrono24.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["watches", "luxury"]
+condition = ["new", "used"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Global watch marketplace; dealer and private sellers"
+
+[[source]]
+name = "The RealReal"
+url = "https://www.therealreal.com/"
+type = "fixed-price"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "accessories", "luxury", "jewelry", "watches"]
+condition = ["used", "like-new"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Designer consignment; authenticated; 30-60% off"
+
+[[source]]
+name = "Vestiaire Collective"
+url = "https://www.vestiairecollective.com/"
+type = "marketplace"
+auction_type = "none"
+buy_it_now = true
+api = false
+government_level = "none"
+categories = ["clothing", "accessories", "luxury"]
+condition = ["used", "like-new"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = true
+sold_price_history = false
+notes = "Designer consignment; authenticated; global"
+
+[[source]]
+name = "Christie's"
+url = "https://www.christies.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["art", "collectibles", "jewelry", "watches", "luxury"]
+condition = ["used", "new"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = false
+ships = true
+sold_price_history = true
+notes = "High-end auction house; collectibles and fine art"
+
+[[source]]
+name = "Heritage Auctions"
+url = "https://www.ha.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["coins", "comics", "art", "collectibles", "cards", "jewelry"]
+condition = ["used", "new"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = false
+ships = true
+sold_price_history = true
+notes = "Largest collectibles auction house; coins, comics, cards, art"
+
+[[source]]
+name = "Sotheby's"
+url = "https://www.sothebys.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["art", "collectibles", "jewelry", "luxury", "real-estate"]
+condition = ["used", "new"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = false
+ships = true
+sold_price_history = true
+notes = "High-end auction house; fine art, jewelry, luxury"
+
+[[source]]
+name = "Bonhams"
+url = "https://www.bonhams.com/"
+type = "auction"
+auction_type = "live+online"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["art", "collectibles", "cars", "jewelry", "luxury"]
+condition = ["used", "new"]
+buyer_premium = "varies"
+online = true
+in_person = true
+local_pickup = false
+ships = true
+sold_price_history = true
+notes = "International auction house; art, cars, collectibles"
+
+# ── Services ────────────────────────────────────────────────────────────────
+
+[[source]]
+name = "Thumbtack"
+url = "https://www.thumbtack.com/"
+type = "service-referral"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["services", "home-services", "events", "lessons"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Compare quotes from multiple pros; instant quotes"
+
+[[source]]
+name = "Angi"
+url = "https://www.angi.com/"
+type = "service-referral"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["services", "contractors", "plumbing", "electrical", "hvac"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Reviews and background checks; cost guides by project type"
+
+[[source]]
+name = "HomeAdvisor"
+url = "https://www.homeadvisor.com/"
+type = "service-referral"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["services", "home-services"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = true
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Cost guides by zip code; large home projects"
+
+# ── Price History Sources ───────────────────────────────────────────────────
+
+[[source]]
+name = "CamelCamelCamel"
+url = "https://camelcamelcamel.com/"
+type = "price-history"
+auction_type = "none"
+buy_it_now = false
+api = true
+government_level = "none"
+categories = ["amazon-products"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = true
+notes = "Amazon price history; all-time low, average; establish price floor and fair-market baseline"
+
+[[source]]
+name = "Wayback Machine"
+url = "https://web.archive.org/"
+type = "price-history"
+auction_type = "none"
+buy_it_now = false
+api = true
+government_level = "none"
+categories = ["general"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = true
+notes = "Archived retailer pages; verify historical MSRP, detect price inflation before sales"
+
+[[source]]
+name = "Slickdeals"
+url = "https://slickdeals.net/"
+type = "price-history"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = true
+notes = "Community-sourced deals and historical deal threads; find recurring deal patterns"
+
+[[source]]
+name = "Google Shopping"
+url = "https://shopping.google.com/"
+type = "price-history"
+auction_type = "none"
+buy_it_now = false
+api = true
+government_level = "none"
+categories = ["general"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Cross-retailer price comparison; current lowest price across retailers"
+
+[[source]]
+name = "Keepa"
+url = "https://keepa.com/"
+type = "price-history"
+auction_type = "none"
+buy_it_now = false
+api = true
+government_level = "none"
+categories = ["amazon-products"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = true
+notes = "Amazon price drop alerts, price history; supplementary price tracking"
+
+[[source]]
+name = "Honey"
+url = "https://www.joinhoney.com/"
+type = "price-history"
+auction_type = "none"
+buy_it_now = false
+api = false
+government_level = "none"
+categories = ["general"]
+condition = ["n/a"]
+buyer_premium = "0%"
+online = true
+in_person = false
+local_pickup = false
+ships = false
+sold_price_history = false
+notes = "Price drop alerts, coupon aggregation; browser extension"

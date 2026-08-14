@@ -1,0 +1,168 @@
+{
+  "skill_name": "shell-wrapper",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run git status in this repo",
+      "expected_output": "The command is wrapped as 'devbox run -- rtk git status' (if devbox.json exists and rtk is installed) or 'rtk git status' (if no devbox.json) before execution. The wrapped command runs and returns compact output.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-rtk-for-git",
+          "description": "git is rtk-supported, so rtk prefix should be applied",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk git"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Open vim to edit the config file",
+      "expected_output": "vim is excluded from rtk (interactive TUI), so the command is wrapped as 'devbox run -- vim config.yml' (devbox only) or 'vim config.yml' (no devbox). rtk is NOT applied.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-rtk-for-vim",
+          "description": "vim is excluded by rtk rewrite (interactive TUI), so rtk must not be prefixed",
+          "check": "content_not_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk vim"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Run echo hello world",
+      "expected_output": "echo is not rtk-supported, so the command is wrapped as 'devbox run -- echo hello world' (devbox only) or 'echo hello world' (no devbox). rtk is NOT applied.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-rtk-for-echo",
+          "description": "echo is not rtk-supported (rtk rewrite exits 1), so rtk must not be prefixed",
+          "check": "content_not_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk echo"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Run the tests with pytest",
+      "expected_output": "pytest is rtk-supported, so the command is wrapped as 'devbox run -- rtk pytest' (if devbox.json exists) or 'rtk pytest' (no devbox). Token-compressed test output is returned.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-rtk-for-pytest",
+          "description": "pytest is rtk-supported, so rtk prefix should be applied",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk pytest"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Show me the raw git log output, don't compress it",
+      "expected_output": "User explicitly asked for raw output. The command is wrapped as 'devbox run -- git log' (devbox only, rtk skipped) or 'git log' (no devbox). The --raw flag or equivalent is honored.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "raw-request-skips-rtk",
+          "description": "When user asks for raw output, rtk must not be prefixed even for supported commands",
+          "check": "content_not_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk git"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Run ls -la to list files",
+      "expected_output": "ls is rtk-supported (token-optimized directory tree), so the command is wrapped as 'devbox run -- rtk ls -la' (if devbox.json exists) or 'rtk ls -la' (no devbox).",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-rtk-for-ls",
+          "description": "ls is rtk-supported — even basic shell operations should use rtk",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk ls"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Run git fetch && git status",
+      "expected_output": "Chained command detected. Wrapped as 'devbox run -- bash -c \"rtk git fetch && rtk git status\"' (if devbox.json exists). Both git commands get rtk prefix because git is rtk-supported. The shell operators are interpreted inside bash -c, not by the parent shell.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-bash-c-for-chain",
+          "description": "Chained commands must be wrapped with bash -c so operators are interpreted inside devbox",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "bash -c"
+        },
+        {
+          "name": "rtk-on-both-chain-commands",
+          "description": "Both git fetch and git status in the chain should get rtk prefix",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk git fetch"
+        },
+        {
+          "name": "rtk-on-second-chain-command",
+          "description": "The second command in the chain (git status) should also get rtk prefix",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk git status"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Run git log | grep fix",
+      "expected_output": "Piped command detected. Wrapped as 'devbox run -- bash -c \"rtk git log | grep fix\"' (if devbox.json exists). Only the first command in a pipe gets rtk prefix (per rtk's design — filtering the piped input of the second command would be redundant). The pipe is interpreted inside bash -c.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-bash-c-for-pipe",
+          "description": "Piped commands must be wrapped with bash -c so the pipe is interpreted inside devbox",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "bash -c"
+        },
+        {
+          "name": "rtk-on-both-pipe-commands",
+          "description": "First command in pipe (git log) gets rtk prefix; rtk rewrite only prefixes the first command in a pipe",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk git log"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "Run vim file.txt && ls",
+      "expected_output": "Chained command with an excluded command. vim is excluded (TUI), ls is rtk-supported. Wrapped as 'devbox run -- bash -c \"vim file.txt && rtk ls\"'. vim does NOT get rtk; ls does.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "no-rtk-for-vim-in-chain",
+          "description": "vim is excluded even in a chain — rtk must not prefix vim",
+          "check": "content_not_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk vim"
+        },
+        {
+          "name": "rtk-for-ls-in-chain",
+          "description": "ls is rtk-supported, so it gets rtk prefix even after vim in the chain",
+          "check": "content_contains",
+          "target": "outputs/command.txt",
+          "value": "rtk ls"
+        }
+      ]
+    }
+  ]
+}

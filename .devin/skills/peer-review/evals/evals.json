@@ -1,0 +1,53 @@
+{
+  "skill_name": "peer-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have three advisors who gave me different takes on whether to pivot my SaaS from a $297 course to a $97 workshop. Peer-review these blind so I can see which is strongest without bias.",
+      "expected_output": "An anonymized A-C bundle, three reviews answering the three fixed questions, and a de-anonymized transcript with the mapping revealed for synthesis",
+      "files": [],
+      "assertions": [
+        {
+          "name": "anonymized-bundle-created",
+          "description": "The anonymized bundle file should be created with A-N labels",
+          "check": "file_exists",
+          "target": "outputs/peer-review-anonymized-*.md"
+        },
+        {
+          "name": "mapping-file-created",
+          "description": "The mapping JSON file should be created for the synthesizer",
+          "check": "file_exists",
+          "target": "outputs/peer-review-mapping-*.json"
+        },
+        {
+          "name": "reviews-contain-three-questions",
+          "description": "Each review should answer all three fixed questions (strongest, blind spot, all-missed)",
+          "check": "content_contains",
+          "target": "outputs/peer-review-transcript-*.md",
+          "value": "strongest"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Three of my engineers proposed different approaches to migrating our auth from JWT to session cookies. Review them blind so no one defers to the senior engineer's proposal just because of seniority.",
+      "expected_output": "Anonymized bundle of the three approaches, three blind reviews using the three-question framework, de-anonymized transcript for the tech lead to synthesize",
+      "files": [],
+      "assertions": [
+        {
+          "name": "anonymized-bundle-created",
+          "description": "The anonymized bundle should be created",
+          "check": "file_exists",
+          "target": "outputs/peer-review-anonymized-*.md"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "What's the capital of France?",
+      "expected_output": "Skill should NOT trigger — this is a factual lookup with one right answer, not a multi-perspective evaluation",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}

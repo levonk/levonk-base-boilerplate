@@ -1,0 +1,53 @@
+{
+  "skill_name": "think-assist",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Council this: I'm thinking of pivoting from a $297 course to a $97 live workshop for my audience of non-technical solopreneurs. Is that the right move?",
+      "expected_output": "5 advisor responses (Contrarian, First Principles, Expansionist, Outsider, Executor) in parallel, blind peer review round, chairman verdict with 5-part structure including 'one thing to do first', HTML report + markdown transcript",
+      "files": [],
+      "assertions": [
+        {
+          "name": "transcript-created",
+          "description": "Council transcript markdown should be created",
+          "check": "file_exists",
+          "target": "outputs/council-transcript-*.md"
+        },
+        {
+          "name": "html-report-created",
+          "description": "HTML report should be created",
+          "check": "file_exists",
+          "target": "outputs/council-report-*.html"
+        },
+        {
+          "name": "verdict-has-one-thing-to-do-first",
+          "description": "Chairman verdict should contain the 'one thing to do first' section",
+          "check": "content_contains",
+          "target": "outputs/council-transcript-*.md",
+          "value": "One Thing to Do First"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Apply first principles thinking to: why do we use daily standup meetings, and is there a better alternative?",
+      "expected_output": "Single-method application of first principles thinking, following the operation steps in references/first-principles-thinking.md",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 3,
+      "prompt": "Apply inversion to: I want to launch a successful product in 6 months with a small team and limited budget.",
+      "expected_output": "Inversion analysis identifying failure modes and mitigation strategies",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 4,
+      "prompt": "What's the capital of France?",
+      "expected_output": "Skill should NOT trigger — factual lookup with one right answer",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}

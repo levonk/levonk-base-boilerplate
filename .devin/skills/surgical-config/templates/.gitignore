@@ -1,0 +1,9 @@
+# Surgical configuration backups
+.cache/
+
+# Tool outputs
+*.backup.*
+
+# Temporary files
+*.tmp
+*.processed

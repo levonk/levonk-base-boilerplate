@@ -1,0 +1,90 @@
+# Local development — per-developer overrides and local environment state.
+# Not shared; varies by machine.
+
+## Local override files (any extension)
+*.local.bash
+*.local.cjs
+*.local.csv
+*.local.cue
+*.local.cts
+*.local.cjsx
+*.local.ctsx
+*.local.dhall
+*.local.env
+*.local.hcl
+*.local.ini
+*.local.js
+*.local.json
+*.local.jsonc
+*.local.jsx
+*.local.kdl
+*.local.md
+*.local.mjs
+*.local.mts
+*.local.mjsx
+*.local.mtsx
+*.local.properties
+*.local.props
+*.local.py
+*.local.ron
+*.local.sh
+*.local.sql
+*.local.tsv
+*.local.toml
+*.local.ts
+*.local.tsx
+*.local.txt
+*.local.ucl
+*.local.xml
+*.local.yaml
+*.local.yml
+*.local.zsh
+*.override.local.yaml
+*.override.local.yml
+
+## Environment wrappers
+.devbox/
+.direnv/
+.local/
+
+## Cloudflare Wrangler (local state)
+.cflare/
+.wrangler/
+
+## Caches
+.cache/
+
+## Ansible local overrides
+group_vars/local.yaml
+group_vars/local.yml
+host_vars/localhost.yaml
+host_vars/localhost.yml
+local.yaml
+local.yml
+
+## Vagrant
+*.box
+.vagrant/
+Vagrantfile.local
+.vagrantuser
+
+## Pulumi local
+.pulumi/
+Pulumi.dev.yaml
+
+## Packer local
+*.auto.pkvars.hcl
+.pkrvars.hcl
+packer.log
+
+## Serverless local
+.serverless/
+
+## Taskmaster
+.taskmaster/
+
+## Devcontainer
+.devcontainer/
+
+## Obsidian vault config (per-vault, not shared)
+.obsidian/

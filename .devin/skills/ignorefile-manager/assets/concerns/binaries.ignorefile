@@ -1,0 +1,103 @@
+# Binaries — compiled executables, archives, media, and other non-text files.
+# These bloat repos and can't be diffed meaningfully.
+
+## Compiled code
+*.com
+*.dll
+*.dylib
+*.egg
+*.egg-info
+*.exe
+*.img
+*.obj
+*.o
+*.pyc
+*.pyo
+*.so
+*.whl
+
+## Archives
+*.7z
+*.bz2
+*.gz
+*.gzip
+*.rar
+*.tar
+*.tar.bz2
+*.tar.gz
+*.tar.xz
+*.tbz2
+*.tgz
+*.txz
+*.xz
+*.zip
+
+## Images
+*.bmp
+*.gif
+*.ico
+*.jpeg
+*.jpg
+*.png
+*.svg
+*.tif
+*.tiff
+*.webp
+
+## Audio
+*.aac
+*.flac
+*.m4a
+*.mp3
+*.ogg
+*.wav
+
+## Video
+*.avi
+*.mkv
+*.mov
+*.mpe
+*.mpeg
+*.mp4
+*.webm
+*.wmv
+
+## Documents
+*.doc
+*.docx
+*.odp
+*.ods
+*.odt
+*.pdf
+*.ppt
+*.pptx
+*.rtf
+*.xls
+*.xlsx
+
+## Databases
+*.accdb
+*.db
+*.mdb
+*.sqlite
+*.sqlite3
+
+## Fonts
+*.eot
+*.otf
+*.ttf
+*.woff
+*.woff2
+
+## Installers
+*.app
+*.dmg
+*.msi
+
+## Other binary
+*.bin
+*.dat
+*.dump
+*.swp  # Vim swap files
+*.bak  # Backup files
+*.tmp  # Temporary files

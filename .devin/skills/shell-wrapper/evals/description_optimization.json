@@ -1,0 +1,35 @@
+{
+  "skill_name": "shell-wrapper",
+  "current_description": "Wrap bash tool calls with devbox and rtk before execution. Auto-triggers whenever the bash/shell tool is about to be invoked.",
+  "test_prompts": [
+    "Run git status",
+    "List the files in this directory",
+    "Run the test suite",
+    "Build the project",
+    "Show me the git log",
+    "Open vim to edit the file",
+    "Run echo hello",
+    "Check the docker containers",
+    "Run pip list",
+    "Show me the raw git diff, don't compress it"
+  ],
+  "trigger_keywords": [
+    "bash",
+    "shell",
+    "command",
+    "run",
+    "execute",
+    "terminal",
+    "devbox",
+    "rtk",
+    "token optimization",
+    "wrap"
+  ],
+  "negative_trigger_examples": [
+    "Read this file",
+    "Search for foo in the codebase",
+    "Edit line 42 of bar.ts",
+    "Write a new file called baz.py",
+    "What does this function do?"
+  ]
+}

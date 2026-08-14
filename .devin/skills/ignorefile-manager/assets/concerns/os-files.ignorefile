@@ -1,0 +1,28 @@
+# OS-generated files — system metadata, thumbnails, and filesystem artifacts.
+# Not project content; safe to ignore everywhere.
+
+## macOS
+._*
+.AppleDB
+.AppleDesktop
+.AppleDouble
+.apdisk
+.DocumentRevisions-V100
+.fseventsd
+.LSOverride
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+Network Trash Folder
+Temporary Items
+
+## Windows
+$RECYCLE.BIN/
+$RECOCYCLER/
+Desktop.ini
+ehthumbs.db
+hiberfil.sys
+pagefile.sys
+[Tt]humbs.db
+resource_windows_*.syso

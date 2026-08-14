@@ -1,0 +1,40 @@
+{
+  "skill_name": "ignorefile-manager",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Update my ignore files — I added result/ and .direnv/ to my .gitignore manually but forgot .codeiumignore",
+      "expected_output": "Runs reconcile to find result/ and .direnv/ as orphans, suggests build-artifacts and dev-local, then generates all outputs",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "prompt": "Generate .gitignore for this project",
+      "expected_output": "Runs generate --output .gitignore, preserving any existing project-specific content above the marker",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 3,
+      "prompt": "What ignore files am I missing?",
+      "expected_output": "Runs audit and reports which outputs are missing or stale",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 4,
+      "prompt": "Update all my code-workspace files with proper exclude settings",
+      "expected_output": "Runs workspace mode to find *.code-workspace files and auto-merge files.exclude, search.exclude, files.watcherExclude",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 5,
+      "prompt": "My ripgrep search results are full of lockfiles and binary files, fix that",
+      "expected_output": "Runs ripgrep mode to update ~/.config/ripgrep/ripgrepignore with lockfiles, binaries, and other noise patterns",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "skill_name": "diagram-upsert",
+  "description_candidates": [
+    "Create and embed diagrams in technical documentation (ADR, design docs, README, knowledge bundles). Selects the right tool (Mermaid, PlantUML, Excalidraw) from output type and rendering environment, authors the diagram with syntax that survives markdown pre-processing, validates by rendering before returning, and embeds at the correct location. Use when the user asks to 'draw a flowchart', 'add a sequence diagram', 'create an architecture diagram', 'fix a broken mermaid diagram', 'render a PlantUML diagram', or 'add a diagram to this ADR/doc'. Do NOT trigger on general documentation writing, data visualizations/charts (use Chart.js/D3/Plotly), UI mockups (use Figma), or architecture-as-code (C4/Structurizr)."
+  ],
+  "trigger_tests": [
+    {"prompt": "draw a flowchart for the user onboarding flow", "should_trigger": true},
+    {"prompt": "add a sequence diagram to this ADR showing the auth flow", "should_trigger": true},
+    {"prompt": "fix this broken mermaid diagram", "should_trigger": true},
+    {"prompt": "create an architecture diagram for the billing service", "should_trigger": true},
+    {"prompt": "render this PlantUML diagram and check for errors", "should_trigger": true},
+    {"prompt": "write a README for this project", "should_trigger": false},
+    {"prompt": "add a bar chart showing monthly revenue", "should_trigger": false},
+    {"prompt": "design a UI mockup for the login screen", "should_trigger": false},
+    {"prompt": "set up a C4 model in Structurizr", "should_trigger": false},
+    {"prompt": "fix the typo in this paragraph", "should_trigger": false}
+  ]
+}

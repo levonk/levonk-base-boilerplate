@@ -1,0 +1,57 @@
+# Sources for the biz-email-upsert framework
+#
+# Load this file only when you need to attribute, cite, or extend the
+# framework. It is intentionally kept out of the always-loaded SKILL.md and
+# references/email-framework.md to keep AI token use low.
+#
+# Each entry: author, title, url, retrieved (date), and a one-line summary of
+# what the source contributed.
+
+sources:
+  - author: "Danny Castonguay"
+    title: "How to Write an Email"
+    url: "https://blog.dannycastonguay.com"
+    retrieved: "2026-07-11"
+    contributed: "Core directness-first framework — start with the point, put bad news first, one email does one job, write for forwarding."
+
+  - author: "Hacker News"
+    title: "Discussion of 'How to Write an Email'"
+    url: "https://news.ycombinator.com/item?id=48847536"
+    retrieved: "2026-07-11"
+    contributed: "Community refinements and counterpoints to the core framework."
+
+  - author: "Michael Seibel (Y Combinator)"
+    title: "How to Email Early Stage Investors"
+    url: "https://www.ycombinator.com/blog/how-to-email-early-stage-investors/"
+    retrieved: "2026-07-13"
+    contributed: "Cold outreach / investor pitch — 3-sentence structure (what you do, why to be excited, ask), use @company.com email, goal is a reply not a meeting, do not chase warm intros."
+
+  - author: "Jason Freedman (42floors)"
+    title: "Email Introduction Etiquette"
+    url: "https://web.archive.org/web/20201111164601/https://42floors.com/blog/uncategorized/email-introduction-protocol"
+    retrieved: "2026-07-13"
+    contributed: "Three-role introduction protocol — requester sends a fresh forwardable email, introducer forwards (never CCs) with an opt-in request, requester moves introducer to BCC after the intro is made."
+
+  - author: "Hacker News"
+    title: "Discussion of 'Email Introduction Etiquette'"
+    url: "https://news.ycombinator.com/item?id=6901713"
+    retrieved: "2026-07-13"
+    contributed: "Double opt-in refinement (ask both parties, not just the target — Fred Wilson / carterschonwald), context-dependent exception for trusted relationships (bsirkia), the decline-handling dilemma and why shifting it to the introducer is the point (SonicSoul, nrs26, aptwebapps)."
+
+  - author: "Robert Williams (Double Your Freelancing / letsworkshop)"
+    title: "The email line that's client repellent"
+    url: "https://doubleyourfreelancing.com/guide-to-writing-client-emails/"
+    retrieved: "2026-07-13"
+    contributed: "'Let me know how I can help' is a client-repellent default close — it offloads work and signals incompetence. Fix: end with a suggested next step and an alternative."
+
+  - author: "Hacker News"
+    title: "Discussion of 'The email line that's client repellent'"
+    url: "https://news.ycombinator.com/item?id=7156630"
+    retrieved: "2026-07-13"
+    contributed: "Critical nuance — jxf's counter-experiment (the line outperformed suggesting a time for incoming leads), felideon's clarification (suggest a time only when the recipient already expressed a want to meet), bradleyland's synthesis (target what's actually indefinite — time, value, or scope)."
+
+  - author: "The Muse (via Time)"
+    title: "27 Pre-Written Templates for Your Toughest Work Emails"
+    url: "https://time.com/3567460/pre-written-templates-work-emails/"
+    retrieved: "2026-07-13"
+    contributed: "Situation catalog — refusal/rejection, resignation, networking introductions, clarification requests. Templates rewritten to match the framework's directness; warm openings from the original were intentionally excluded."

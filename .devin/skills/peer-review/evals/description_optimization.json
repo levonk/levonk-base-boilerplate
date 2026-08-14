@@ -1,0 +1,52 @@
+{
+  "skill_name": "peer-review",
+  "should_trigger": [
+    {
+      "query": "Peer-review these three proposals without bias",
+      "expected": true,
+      "rationale": "Direct request for blind peer review"
+    },
+    {
+      "query": "Anonymize these advisor responses and tell me which is strongest",
+      "expected": true,
+      "rationale": "Explicit anonymization + comparison request"
+    },
+    {
+      "query": "I have five different takes on this decision — review them blind",
+      "expected": true,
+      "rationale": "Multi-perspective blind review request"
+    },
+    {
+      "query": "Compare these code review comments without knowing who wrote them",
+      "expected": true,
+      "rationale": "Blind code review comparison"
+    },
+    {
+      "query": "Run a blind review round on these design proposals",
+      "expected": true,
+      "rationale": "Direct blind design review request"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "What's the capital of France?",
+      "expected": false,
+      "rationale": "Factual lookup — no perspectives to compare"
+    },
+    {
+      "query": "Write me a tweet about AI",
+      "expected": false,
+      "rationale": "Creation task, not evaluation"
+    },
+    {
+      "query": "Summarize this article",
+      "expected": false,
+      "rationale": "Processing task, not multi-perspective review"
+    },
+    {
+      "query": "Review my single pull request",
+      "expected": false,
+      "rationale": "Single artifact, no comparison or anonymization needed"
+    }
+  ]
+}

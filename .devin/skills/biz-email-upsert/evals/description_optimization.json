@@ -1,0 +1,87 @@
+{
+  "skill_name": "biz-email-upsert",
+  "should_trigger": [
+    {
+      "query": "Draft an email to my manager asking for approval to hire a contractor",
+      "expected": true,
+      "rationale": "Direct request to draft a business email (Action / Decision type)"
+    },
+    {
+      "query": "Review and improve this email before I send it to the client",
+      "expected": true,
+      "rationale": "Explicit request to review and improve a business email (Mode B)"
+    },
+    {
+      "query": "Turn this Slack message into a formal email to the team",
+      "expected": true,
+      "rationale": "Convert notes/chat to email (Mode C)"
+    },
+    {
+      "query": "Help me write a cold email to an investor",
+      "expected": true,
+      "rationale": "Cold Outreach type — explicitly mentions emailing an investor"
+    },
+    {
+      "query": "I need to introduce two people over email, what's the right way?",
+      "expected": true,
+      "rationale": "Introduction type — multi-party introduction workflow"
+    },
+    {
+      "query": "Write a resignation email",
+      "expected": true,
+      "rationale": "Resignation type — structured business communication"
+    },
+    {
+      "query": "How do I say no to this project request politely over email?",
+      "expected": true,
+      "rationale": "Refusal / Rejection type — declining via email"
+    },
+    {
+      "query": "This email I got is really vague, how do I ask for clarification?",
+      "expected": true,
+      "rationale": "Clarification Request type — punting a vague email back"
+    },
+    {
+      "query": "Improve the subject line of this email",
+      "expected": true,
+      "rationale": "Email revision focusing on subject line structure"
+    },
+    {
+      "query": "Draft a status update for the exec team on the migration",
+      "expected": true,
+      "rationale": "Update type — stakeholder status communication"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "query": "Write a marketing newsletter for our 10k subscribers",
+      "expected": false,
+      "rationale": "Bulk marketing email, not structured one-to-one business communication"
+    },
+    {
+      "query": "Set up an SMTP server for our app",
+      "expected": false,
+      "rationale": "Email infrastructure / coding task, not email writing"
+    },
+    {
+      "query": "Reply to this customer support ticket about a refund",
+      "expected": false,
+      "rationale": "Customer support ticket response, excluded by the description"
+    },
+    {
+      "query": "Write a personal note to my friend about the weekend",
+      "expected": false,
+      "rationale": "Personal/informal email, not business communication"
+    },
+    {
+      "query": "Parse this email attachment and extract the invoice data",
+      "expected": false,
+      "rationale": "Data extraction / coding task, not email drafting or review"
+    },
+    {
+      "query": "Fix the bug in our email rendering component",
+      "expected": false,
+      "rationale": "Code bug fix, not email writing"
+    }
+  ]
+}

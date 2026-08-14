@@ -1,0 +1,75 @@
+{
+  "version": "1.0.0",
+  "evals": [
+    {
+      "id": "cicd-create-from-scratch",
+      "description": "Create a CI/CD pipeline for a Go project with devbox.json and Justfile, targeting GitHub Actions",
+      "input": "Set up CI/CD for this Go project. It uses devbox.json for tooling and Justfile for build commands. The repo is on GitHub.",
+      "expected_behavior": "Should detect Go build system, devbox.json tooling, recommend GitHub Actions, create incremental build filters, set up pre-built CI image if needed, add security scans, and propose guardrails interactively",
+      "pass_criteria": [
+        "Detects Go build system and devbox.json",
+        "Recommends GitHub Actions as CI provider",
+        "Creates or proposes path-filter-based incremental builds",
+        "Adds or proposes security scans (at minimum secret + dependency scanning)",
+        "Checks devbox.json for missing CI tools (act, trivy, etc.)",
+        "Does not change build process without confirmation"
+      ]
+    },
+    {
+      "id": "cicd-audit-existing",
+      "description": "Audit an existing GitHub Actions pipeline that lacks incremental builds and security scans",
+      "input": "Audit and improve the CI/CD pipeline in this repo. It has GitHub Actions but builds everything every time and has no security scanning.",
+      "expected_behavior": "Should run analyze_pipeline.py, identify missing incremental builds and security scans, classify changes as automatic vs interactive, propose improvements with before/after",
+      "pass_criteria": [
+        "Runs analyze_pipeline.py or equivalent detection",
+        "Identifies missing incremental builds (Critical/Important)",
+        "Identifies missing security scans (Critical/Important)",
+        "Classifies adding non-blocking security scans as automatic",
+        "Classifies adding blocking gates as interactive",
+        "Presents prioritized changes with before/after",
+        "Does not apply interactive changes without confirmation"
+      ]
+    },
+    {
+      "id": "cicd-prebuilt-image-setup",
+      "description": "Set up a pre-built CI image for a project with slow Nix/devbox installs in CI",
+      "input": "CI takes 15 minutes because it installs Nix and devbox packages every run. The build itself is 30 seconds. Fix this.",
+      "expected_behavior": "Should identify the toolchain install as the bottleneck, propose a pre-built CI image published to GHCR, create a rebuild-trigger workflow, and modify the main workflow to use the image",
+      "pass_criteria": [
+        "Identifies Nix/devbox install as the bottleneck",
+        "Proposes pre-built CI image with Dockerfile.ci",
+        "Creates rebuild-trigger workflow (on Dockerfile.ci/devbox.json/Justfile change)",
+        "Publishes to GHCR using GITHUB_TOKEN",
+        "Modifies main workflow to use the pre-built image",
+        "Removes or makes devbox-install-action conditional"
+      ]
+    },
+    {
+      "id": "cicd-tooling-alignment",
+      "description": "Fix tooling version misalignment between devbox.json, CI, and Dockerfile",
+      "input": "The devbox.json has Go 1.22, but the CI workflow installs Go 1.21 and the Dockerfile uses golang:1.20. Align these.",
+      "expected_behavior": "Should identify the version mismatch, propose devbox.json as single source of truth, update CI and Dockerfile to match, add alignment check",
+      "pass_criteria": [
+        "Identifies Go version mismatch across devbox.json, CI, Dockerfile",
+        "Proposes devbox.json as the single source of truth",
+        "Updates CI workflow to use Go 1.22",
+        "Updates Dockerfile to use golang:1.22",
+        "Classifies as automatic (version alignment within compatible range)"
+      ]
+    },
+    {
+      "id": "cicd-interactive-vs-automatic",
+      "description": "Distinguish between automatic and interactive CI changes when improving a pipeline",
+      "input": "Improve this pipeline. Add caching, add a blocking security gate, optimize the build, and change the deployment from push-to-main to blue-green.",
+      "expected_behavior": "Should classify caching and build optimization as automatic, blocking security gate and deployment strategy change as interactive, and handle each appropriately",
+      "pass_criteria": [
+        "Classifies caching optimization as automatic",
+        "Classifies build optimization as automatic",
+        "Classifies blocking security gate as interactive (requires confirmation)",
+        "Classifies deployment strategy change as interactive (requires confirmation)",
+        "Applies automatic changes directly",
+        "Proposes interactive changes with before/after and waits for confirmation"
+      ]
+    }
+  ]
+}

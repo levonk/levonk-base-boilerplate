@@ -1,0 +1,109 @@
+{
+  "skill_name": "biz-email-upsert",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Draft an email to my manager asking for approval to hire a contractor for 3 months to help with the Q2 migration project. Budget is $45K. I need a decision by Friday.",
+      "expected_output": "A decision-needed email with subject tag, first sentence stating the ask, body with budget and duration, recommendation, and Friday deadline.",
+      "files": [],
+      "assertions": [
+        "Subject line starts with 'Decision needed:' or similar triage tag",
+        "First sentence states the ask (approve contractor hire)",
+        "Includes specific numbers ($45K, 3 months)",
+        "States deadline (Friday)",
+        "No generic filler phrases ('I hope this finds you well', 'I wanted to reach out')"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Review and improve this email: Subject: Quick question. Hi team, I wanted to reach out regarding the deployment issue we've been having. There have been some complications and I think we might need to revisit our approach. Please let me know your thoughts when you get a chance.",
+      "expected_output": "Identifies critical issues (no triage tag, buried ask, vague, no deadline) and proposes a revised email with Risk or Action tag, specific first sentence, and clear next step.",
+      "files": [],
+      "assertions": [
+        "Identifies missing subject triage tag as an issue",
+        "Identifies vagueness ('some complications') as an issue",
+        "Identifies missing deadline/next step as an issue",
+        "Proposes revised email with triage-tagged subject",
+        "Revised email has specific first sentence and clear next step"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Convert this Slack message into a formal email to the client: 'hey the deploy went fine, all tests passed, we're live on prod now. minor thing - the dashboard is loading slow but we're on it, should be fixed by EOD.'",
+      "expected_output": "An Update email with subject tag, first sentence announcing the successful deployment, body with status details, and note about the dashboard issue with ETA.",
+      "files": [],
+      "assertions": [
+        "Subject line starts with 'Update:' or similar triage tag",
+        "First sentence states the headline (deployment successful)",
+        "Includes the dashboard issue with specific ETA (EOD)",
+        "Professional tone without losing the specific information",
+        "No Slack-style informal language in the final email"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Help me write a cold email to a seed investor. We're building a tool that turns meeting transcripts into Jira tickets automatically. We have 200 teams using it, growing 15% MoM, and we're raising a $2M seed round. I want advice on the round structure.",
+      "expected_output": "A Cold Outreach email with a descriptive subject (not a triage tag), 3-sentence structure (what we do, why to be excited, the ask), no meeting request, no compliments or persuasion.",
+      "files": [],
+      "assertions": [
+        "Subject describes what the company does, not a triage tag like 'Action needed'",
+        "First sentence states what the company does in plain language",
+        "Second sentence includes traction (200 teams, 15% MoM growth)",
+        "Third sentence states the ask (advice on round structure), not a meeting request",
+        "No warm opening ('I hope this finds you well') and no compliments or persuasion"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "My advisor Mark offered to introduce me to Suzanne, an investor I want to meet. What should I send Mark so he can forward it to her? We're building a dev tool for observability, 5k DAUs, raising a seed round.",
+      "expected_output": "An Introduction sub-scenario 1 email — a fresh, forwardable email Mark can forward from his phone without editing, written for Suzanne (not Mark), short and specific.",
+      "files": [],
+      "assertions": [
+        "Sends a fresh separate email (not a reply to a long thread) that is forwardable",
+        "The forwardable email is written for the target (Suzanne), not the introducer (Mark)",
+        "Includes what the company does, traction (5k DAUs), and the ask",
+        "Short enough to forward from a phone without editing",
+        "Does not CC both parties cold"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "I need to decline a project a friend asked me to take on. I'm fully booked through March and can't take anything new. I want to keep the door open for later in the year.",
+      "expected_output": "A Refusal / Rejection email with the no stated in the first sentence, a factual reason (booked through March), and a genuine door-left-open line scoped to a specific timeframe (Q2 / later in the year).",
+      "files": [],
+      "assertions": [
+        "Subject includes a refusal/rejection tag or clearly states the decline",
+        "First sentence states the no directly, not buried behind gratitude or context",
+        "Reason is factual and specific (booked through March), not a vague 'not a fit'",
+        "Door-left-open line is genuine and time-scoped (e.g., Q2, later in the year)",
+        "No excessive hedging or over-explanation"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "I got this email from a colleague: 'Hey, so there were some issues with the thing from last week and I think we should probably revisit the approach, maybe loop in a few more people. Let me know what you think.' I have no idea what they're asking. Help me respond.",
+      "expected_output": "A Clarification Request email that punts the vague email back with specific questions (which thing, which issues, which people) and a go-forward plan (will respond within X once clarified, or offers a short call).",
+      "files": [],
+      "assertions": [
+        "Does not guess what the sender meant and answer the wrong question",
+        "Asks specific questions (which thing, which issues, which people to loop in)",
+        "Offers a go-forward plan (respond within a timeframe once clarified, or a short call)",
+        "Questions are short and answerable in a few lines",
+        "No generic 'let me know how I can help' close"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "I'm resigning from my Senior Engineer role. My notice period is two weeks and my last day should be March 15. I want to offer to help with the handoff for the payments service.",
+      "expected_output": "A Resignation email with the resignation and effective date in the first sentence, the notice period and last working day stated, a brief handoff offer, and no grievances.",
+      "files": [],
+      "assertions": [
+        "Subject states 'Resignation' and the sender's name",
+        "First sentence states the resignation and the effective date with no preamble",
+        "States the notice period and last working day (March 15)",
+        "Offers a brief, professional handoff for the payments service",
+        "No grievances, no long gratitude paragraph, no farewell content"
+      ]
+    }
+  ]
+}
