@@ -186,3 +186,17 @@ To add iron-proxy egress security to another boilerplate template:
 ## For Developers
 
 If you need to create or modify boilerplate templates, see the **[Boilerplate Developer Guide](.agents/rules/boilerplate-developer-guide.md)** for detailed conventions and technical requirements, including the **shared partials system** (`partials.bak/` convention) used to keep shared files identical across templates.
+
+## Shared Scripts
+
+The `_shared/scripts/` directory contains reusable bash scripts for post-copy tasks:
+
+- **`_shared/scripts/ensure-devbox-x86-pin.sh`** — Detects x86_64-darwin (Intel Mac) at runtime and injects the nixpkgs commit pin (`293d6abedf0478e681a4dfcfcb35b30fc796a32f`) into `devbox.json` if the pin is missing. This is a fallback for when copier is invoked without `copier-wrapper.sh` (which passes `nix_target_arch` as data). Non-destructive: if a pin already exists, it does nothing. On non-x86_64-darwin platforms, it exits 0 immediately.
+
+- **`_shared/scripts/token-commit.sh`** — Creates an initial git commit in the current directory if no commits exist yet. Initializes git if `.git` is not present. Non-destructive: if commits already exist, it does nothing. Intended for copier post-copy tasks (`_tasks:`) to ensure generated projects have a clean git baseline.
+
+### When adding a new template
+
+- If the template's `.envrc.jinja` references `{{REPO_ROOT}}`, define `REPO_ROOT` in its `copier.yml` with `default: "."`
+- If the template's post-copy task runs `devbox install`, call `ensure-devbox-x86-pin.sh` before `devbox install` (or inline the x86 detection logic)
+- If the template's post-copy task runs `git init`, call `token-commit.sh` after `git init` (or inline the token-commit logic)
