@@ -5,13 +5,15 @@
     "python3": "",
     "airflow": "",
     "docker": "",
-    "just": ""
+    "just": "",
+    "git-secrets": "",
+    "git-imerge": ""
   },
   "shell": {
     "init_hook": [
-      "echo '\ud83e\udd16 AI Ollama Samples environment initialized'",
-      "echo '\ud83d\udce6 Project: {{ project_name }}'",
-      "echo '\ud83d\udee0\ufe0f  Use: just dev && just test'"
+      "echo '🤖 AI Ollama Samples environment initialized'",
+      "echo '📦 Project: {{ project_name }}'",
+      "echo '🛠️  Use: just dev && just test'"
     ]
   }
 }

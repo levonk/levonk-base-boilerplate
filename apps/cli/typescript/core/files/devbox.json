@@ -5,13 +5,15 @@
     "nodejs": "",
     "pnpm": "",
     "typescript": "",
-    "just": ""
+    "just": "",
+    "git-secrets": "",
+    "git-imerge": ""
   },
   "shell": {
     "init_hook": [
-      "echo '\ud83d\udfe8 TypeScript CLI environment initialized'",
-      "echo '\ud83d\udce6 Project: {{ project_name }}'",
-      "echo '\ud83d\udee0\ufe0f  Use: pnpm install && just dev'"
+      "echo '🟨 TypeScript CLI environment initialized'",
+      "echo '📦 Project: {{ project_name }}'",
+      "echo '🛠️  Use: pnpm install && just dev'"
     ]
   }
 }

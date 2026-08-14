@@ -95,6 +95,14 @@
         }
       }
     },
+    "git-imerge": {
+      "resolved": "github:NixOS/nixpkgs/293d6abedf0478e681a4dfcfcb35b30fc796a32f#git-imerge",
+      "source": "nixpkg"
+    },
+    "git-secrets": {
+      "resolved": "github:NixOS/nixpkgs/293d6abedf0478e681a4dfcfcb35b30fc796a32f#git-secrets",
+      "source": "nixpkg"
+    },
     "github:NixOS/nixpkgs/293d6abedf0478e681a4dfcfcb35b30fc796a32f": {
       "last_modified": "1970-01-01T00:00:00Z",
       "resolved": "github:NixOS/nixpkgs/293d6abedf0478e681a4dfcfcb35b30fc796a32f"
