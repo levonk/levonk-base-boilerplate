@@ -296,3 +296,7 @@ downloads/
 *.tar.gz
 roles/external/
 collections/ansible_collections/*
+
+# AI tooling artifacts (installed skills, agent skill caches)
+.devin/
+.agents/skills/

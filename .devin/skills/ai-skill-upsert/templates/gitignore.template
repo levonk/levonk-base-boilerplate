@@ -1,8 +1,0 @@
-# Skill workspace
-*-workspace/
-*.skill
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
