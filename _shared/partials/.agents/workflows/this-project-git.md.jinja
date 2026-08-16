@@ -3,3 +3,18 @@
 - on ~/p/gh/levonk/{{ package_name }}/internal-docs/feature/
 - do not use `npx` or `npm` we use `devbox run -- pnpm dlx` or `devbox run -- pnpm`
 - on the {{ package_name }} project
+
+## Skill Invocation
+
+The `git-repository-management` skill has `disable-model-invocation: true` —
+the `skill` tool will NOT list it. This is intentional (prevents token waste
+from auto-triggering). When this workflow tells you to "run
+git-repository-management", do NOT hand-roll the work. Instead:
+
+1. Locate the skill at `~/.agents/skills/git-repository-management/SKILL.md`
+2. Read `SKILL.md` and follow its workflow (it may instruct you to run
+   `scripts/refresh.sh` first, then read `INSTRUCTIONS.md`)
+3. Execute the skill's scripts, references, and decision tree as directed
+4. The `skill` tool's inability to find it is NOT evidence the skill is
+   unavailable — explicit workflow instructions override
+   `disable-model-invocation`

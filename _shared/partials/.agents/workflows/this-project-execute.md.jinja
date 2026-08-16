@@ -3,3 +3,17 @@
 - on the tasks index file under ~/p/gh/levonk/{{ package_name }}/internal-docs/feature/ for the {{ package_name }} project
 - do not use `npx` or `npm` we use `devbox run -- pnpm dlx` or `devbox run -- pnpm`
 - execute-upsert says to not stop processing, via subagents, until all the stories and tasks are addressed, this means marking things blocked until there is no more work you can do
+
+## Skill Invocation
+
+The `execute-upsert` skill has `disable-model-invocation: true` — the `skill`
+tool will NOT list it. This is intentional (prevents token waste from auto-
+triggering). When this workflow tells you to "run execute-upsert skill", do NOT
+hand-roll the work. Instead:
+
+1. Locate the skill at `~/.agents/skills/execute-upsert/SKILL.md`
+2. Read `SKILL.md` and follow its workflow (it may instruct you to run
+   `scripts/refresh.sh` first, then read `INSTRUCTIONS.md`)
+3. Execute the skill's scripts, references, and decision tree as directed
+4. The `skill` tool's inability to find it is NOT evidence the skill is
+   unavailable — explicit workflow instructions override `disable-model-invocation`
