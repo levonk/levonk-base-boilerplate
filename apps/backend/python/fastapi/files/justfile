@@ -1,35 +1,83 @@
 # FastAPI Backend Development Commands
 
+_log := '
+_jv_has() {
+  local cat="$1"
+  local v="${JUST_LOG:-0}"
+  case "$v" in
+    1|all) return 0 ;;
+    0|"") return 1 ;;
+  esac
+  v="${v//startend/start,end}"
+  echo ",$v," | grep -q ",$cat,"
+}
+log_info()   { _jv_has info   && echo "$*" || true; }
+log_start()  { _jv_has start  && echo "▶ $*" || true; }
+log_end()    { _jv_has end    && echo "✔ $*" || true; }
+log_status() { _jv_has status && echo "$*" || true; }
+log_warn()   { echo "⚠️  $*" >&2; }
+log_error()  { echo "❌ $*" >&2; }
+log_startend() {
+  local msg="$1"; shift
+  local rc
+  _jv_has start && echo "▶ $msg" || true
+  rc=0; "$@" || rc=$?
+  _jv_has end && echo "✔ $msg complete" || true
+  return $rc
+}
+'
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default recipe
 default:
     @just --list
 
 # Standard development recipes (REQUIRED)
 clean:
-    devbox shell clean
+    @just _devbox clean_impl
 
 dev:
-    devbox shell dev
+    @just _devbox dev_impl
 
 build:
-    devbox shell build
+    @just _devbox build_impl
 
 test:
-    devbox shell test
+    @just _devbox test_impl
 
 lint:
-    devbox shell lint
+    @just _devbox lint_impl
 
 typecheck:
-    devbox shell typecheck
+    @just _devbox typecheck_impl
 
 # Bootstrap recipes (REQUIRED)
 bootstrap:
-    devbox shell bootstrap
+    @just _devbox bootstrap_impl
 
-bootstrap-internal:
+[private]
+bootstrap_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Bootstrapping FastAPI"
     uv sync
-    echo "FastAPI bootstrap complete!"
+    log_end "FastAPI bootstrap complete"
 
 # Health and diagnostics (REQUIRED)
 doctor:
@@ -49,61 +97,212 @@ doctor:
 
 # Development server
 dev-server:
+    @just _devbox dev-server_impl
+
+[private]
+dev-server_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Starting FastAPI development server"
     uvicorn {{ service_name }}.{{ service_name }}:app --host 0.0.0.0 --port {{ port }} --reload
+    log_end "FastAPI development server stopped"
 
 # Install dependencies
 install:
+    @just _devbox install_impl
+
+[private]
+install_impl:
     uv sync
 
 # Run tests
 run-test:
+    @just _devbox run-test_impl
+
+[private]
+run-test_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running tests"
     pytest
+    log_end "Tests complete"
 
 # Run tests with coverage
 test-coverage:
+    @just _devbox test-coverage_impl
+
+[private]
+test-coverage_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running tests with coverage"
     pytest --cov={{ service_name }} --cov-report=html
+    log_end "Tests with coverage complete"
 
 # Lint code
 lint-code:
+    @just _devbox lint-code_impl
+
+[private]
+lint-code_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Linting code"
     ruff check .
     ruff format --check .
+    log_end "Lint complete"
 
 # Format code
 format:
+    @just _devbox format_impl
+
+[private]
+format_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Formatting code"
     ruff format .
+    log_end "Format complete"
 
 # Type checking
 mypy:
+    @just _devbox mypy_impl
+
+[private]
+mypy_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Type checking"
     mypy .
+    log_end "Type check complete"
 
 # Build for production
 prod-build:
+    @just _devbox prod-build_impl
+
+[private]
+prod-build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Building for production"
     uv build
+    log_end "Production build complete"
 
 # Clean up
 clean-up:
+    @just _devbox clean-up_impl
+
+[private]
+clean-up_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Cleaning up"
     rm -rf .pytest_cache .coverage htmlcov dist build
+    log_end "Clean complete"
 
 # Database migrations (if using)
 migrate:
+    @just _devbox migrate_impl
+
+[private]
+migrate_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running database migrations"
     alembic upgrade head
+    log_end "Migrations complete"
 
 # Create new migration
-migration:
-    alembic revision --autogenerate -m "$(message)"
+migration message:
+    @just _devbox migration_impl {{message}}
+
+[private]
+migration_impl message:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Creating new migration"
+    alembic revision --autogenerate -m "{{message}}"
+    log_end "Migration created"
 
 # Health check
 health:
-    curl -f http://localhost:{{ port }}/health || echo "Service not running"
+    @just _devbox health_impl
+
+[private]
+health_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    curl -f http://localhost:{{ port }}/health || log_warn "Service not running"
 
 # Docker commands
 docker-build:
+    @just _devbox docker-build_impl
+
+[private]
+docker-build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Building Docker image"
     docker build -t {{ service_name }} .
+    log_end "Docker build complete"
 
 docker-run:
+    @just _devbox docker-run_impl
+
+[private]
+docker-run_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Docker container"
     docker run -p {{ port }}:{{ port }} {{ service_name }}
+    log_end "Docker run complete"
 
 # Development setup
 setup:
-    @just bootstrap
-    echo "✅ FastAPI development environment ready!"
+    @just _devbox setup_impl
+
+[private]
+setup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just bootstrap_impl
+    log_end "FastAPI development environment ready"
+
+# Standard _impl targets (mapped from REQUIRED recipes)
+[private]
+clean_impl:
+    @just clean-up_impl
+
+[private]
+dev_impl:
+    @just dev-server_impl
+
+[private]
+build_impl:
+    @just prod-build_impl
+
+[private]
+test_impl:
+    @just run-test_impl
+
+[private]
+lint_impl:
+    @just lint-code_impl
+
+[private]
+typecheck_impl:
+    @just mypy_impl

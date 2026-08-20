@@ -1,15 +1,21 @@
 clean: ## Remove containers and networks (keeps volumes)
-    @echo RED + "⚠ Removing containers and networks..." + NC
-    @docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} down --remove-orphans
-    @echo GREEN + "✓ Containers and networks removed" + NC
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_warn "Removing containers and networks..."
+    docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} down --remove-orphans
+    log_end "Containers and networks removed"
 
 clean-all: ## Remove containers, networks, and volumes (DESTRUCTIVE)
-    @echo RED + "⚠ WARNING: This will remove all data volumes!" + NC
-    @read -p "Are you sure? [y/N] " -n 1 -r; \
-    echo; \
-    if [[ $REPLY =~ ^[Yy]$ ]]; then \
-        docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} down -v --remove-orphans; \
-        echo GREEN + "✓ All data removed" + NC; \
-    else \
-        echo YELLOW + "Cancelled" + NC; \
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_warn "WARNING: This will remove all data volumes!"
+    read -p "Are you sure? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} down -v --remove-orphans
+        log_end "All data removed"
+    else
+        log_warn "Cancelled"
     fi

@@ -1,62 +1,151 @@
 # Justfile for {{ project_name | default('ts-cli-app') }}
 # NX-friendly configuration for monorepo integration
 
+{% include "partials.bak/partials/justfile-partials/logging.jinja" %}
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Detect NX binary
 NX_BIN := `command -v nx || echo ""`
 NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
 
+# Default recipe
+default:
+    @just --list
+
 # Bootstrap - install pnpm and NX globally
-bootstrap-internal:
-    @echo "📦 Bootstrapping..."
+bootstrap:
+    @just _devbox bootstrap_impl
+
+[private]
+bootstrap_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Bootstrapping"
     # Install dependencies in background if not present
     [ -d node_modules/ ] || pnpm install &
 
-    @echo "📦 Installing pnpm and NX..."
-    @npm install -g pnpm@latest
-    @if [ "{{ NX_AVAILABLE }}" = "false" ]; then pnpm add -g nx@latest; fi
-    @echo "✓ Bootstrap complete"
+    log_info "Installing pnpm and NX..."
+    npm install -g pnpm@latest
+    if [ "{{ NX_AVAILABLE }}" = "false" ]; then pnpm add -g nx@latest; fi
+    log_end "Bootstrap complete"
 
 # NX Commands
 nx-build:
+    @just _devbox nx-build_impl
+
+[private]
+nx-build_impl:
     @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx build; else pnpm run build; fi
 
 nx-test:
+    @just _devbox nx-test_impl
+
+[private]
+nx-test_impl:
     @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx test; else pnpm run test; fi
 
 nx-lint:
+    @just _devbox nx-lint_impl
+
+[private]
+nx-lint_impl:
     @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx lint; else pnpm run lint; fi
 
 nx-typecheck:
+    @just _devbox nx-typecheck_impl
+
+[private]
+nx-typecheck_impl:
     @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx typecheck; else pnpm run typecheck; fi
 
 nx-affected:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx affected; else echo "NX not available"; fi
+    @just _devbox nx-affected_impl
+
+[private]
+nx-affected_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx affected; else log_warn "NX not available"; fi
 
 nx-graph:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx graph; else echo "NX not available"; fi
+    @just _devbox nx-graph_impl
+
+[private]
+nx-graph_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx graph; else log_warn "NX not available"; fi
 
 nx-clear-cache:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx reset; else echo "NX not available"; fi
+    @just _devbox nx-clear-cache_impl
+
+[private]
+nx-clear-cache_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx reset; else log_warn "NX not available"; fi
 
 # Legacy commands (for non-NX usage)
 build:
-    @pnpm run build
+    @just _devbox build_impl
+
+[private]
+build_impl:
+    pnpm run build
 
 test:
-    @pnpm run test
+    @just _devbox test_impl
+
+[private]
+test_impl:
+    pnpm run test
 
 lint:
-    @pnpm run lint
+    @just _devbox lint_impl
+
+[private]
+lint_impl:
+    pnpm run lint
 
 dev:
-    @pnpm run dev
+    @just _devbox dev_impl
+
+[private]
+dev_impl:
+    pnpm run dev
 
 # Doctor - check environment
 doctor:
-    @echo "🔍 Environment check:"
-    @echo "  Node: $(node --version)"
-    @echo "  pnpm: $(pnpm --version)"
-    @echo "  NX: {% if NX_AVAILABLE %}$(nx --version){% else %}not installed{% endif %}"
+    @just _devbox doctor_impl
+
+[private]
+doctor_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    echo "🔍 Environment check:"
+    echo "  Node: $(node --version)"
+    echo "  pnpm: $(pnpm --version)"
+    echo "  NX: {% if NX_AVAILABLE %}$(nx --version){% else %}not installed{% endif %}"
 
 # Dependency synchronization
 {% include 'partials.bak/partials/justfile-partials/typescript-deps-sync.jinja' %}

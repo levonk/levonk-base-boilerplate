@@ -1,38 +1,60 @@
 # Justfile for {{ package_name | default('swift-package') }} Swift Package
 
+{% include "partials.bak/partials/justfile-partials/logging.jinja" %}
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default target
 default: dev
 
-# Internal targets (prefixed with - to avoid showing in help)
--bootstrap-internal:
+# Internal targets
+[private]
+bootstrap_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🚀 Bootstrapping {{ package_name | default('swift-package') }}..."
+    {{_log}}
+    log_start "Bootstrapping {{ package_name | default('swift-package') }}"
 
     # Resolve Swift packages in background if not present
     [ -d .build ] || swift package resolve &
 
     # Check Swift toolchain
     if ! command -v swift >/dev/null 2>&1; then
-        echo "❌ swift not found"
+        log_error "swift not found"
         exit 1
     fi
 
     # Install swiftlint if not available
     if ! command -v swiftlint >/dev/null 2>&1; then
-        echo "⚠️  swiftlint not available"
+        log_warn "swiftlint not available"
     fi
 
     # Install swiftformat if not available
     if ! command -v swiftformat >/dev/null 2>&1; then
-        echo "⚠️  swiftformat not available"
+        log_warn "swiftformat not available"
     fi
 
-    echo "✅ Bootstrap complete"
+    log_end "Bootstrap complete"
 
--doctor-internal:
+[private]
+doctor_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     echo "🔍 Running health checks for {{ package_name | default('swift-package') }}..."
 
     # Check required tools
@@ -54,95 +76,161 @@ default: dev
 
     echo "🏁 Doctor complete"
 
--clean-internal:
+[private]
+clean_impl:
     swift package clean
 
--build-internal:
+[private]
+build_impl:
     swift build
 
--test-internal:
+[private]
+test_impl:
     swift test
 
--lint-internal:
-    @echo "Running SwiftLint..."
+[private]
+lint_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running SwiftLint"
     swiftlint
 
--typecheck-internal:
+[private]
+typecheck_impl:
     swift build
 
--dev-internal:
-    @echo "🚀 Starting development mode..."
+[private]
+dev_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Starting development mode"
     swift run
 
 # Public targets
 bootstrap:
-    @just -f {{ justfile() }} -bootstrap-internal
+    @just _devbox bootstrap_impl
 
 doctor:
-    @just -f {{ justfile() }} -doctor-internal
+    @just _devbox doctor_impl
 
 clean:
-    @just -f {{ justfile() }} -clean-internal
+    @just _devbox clean_impl
 
 build:
-    @just -f {{ justfile() }} -build-internal
+    @just _devbox build_impl
 
 test:
-    @just -f {{ justfile() }} -test-internal
+    @just _devbox test_impl
 
 lint:
-    @just -f {{ justfile() }} -lint-internal
+    @just _devbox lint_impl
 
 typecheck:
-    @just -f {{ justfile() }} -typecheck-internal
+    @just _devbox typecheck_impl
 
 dev:
-    @just -f {{ justfile() }} -dev-internal
+    @just _devbox dev_impl
 
 # Additional utility targets
 build-release:
+    @just _devbox build-release_impl
+
+[private]
+build-release_impl:
     swift build -c release
 
 test-coverage:
+    @just _devbox test-coverage_impl
+
+[private]
+test-coverage_impl:
     swift test --enable-code-coverage
 
 format:
+    @just _devbox format_impl
+
+[private]
+format_impl:
     swiftformat .
 
 format-check:
+    @just _devbox format-check_impl
+
+[private]
+format-check_impl:
     swiftformat --lint .
 
 doc:
+    @just _devbox doc_impl
+
+[private]
+doc_impl:
     swift package generate-documentation
 
 resolve:
+    @just _devbox resolve_impl
+
+[private]
+resolve_impl:
     swift package resolve
 
 update:
+    @just _devbox update_impl
+
+[private]
+update_impl:
     swift package update
 
 reset:
+    @just _devbox reset_impl
+
+[private]
+reset_impl:
     swift package reset
 
 # Quality checks
 quality:
-    @just lint
-    @just test
-    @just build
+    @just _devbox quality_impl
+
+[private]
+quality_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just lint_impl
+    just test_impl
+    just build_impl
 
 # Package for distribution
 package:
-    @just build-release
-    @just clean
+    @just _devbox package_impl
+
+[private]
+package_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just build-release_impl
+    just clean_impl
     mkdir -p dist
     cp -r .build/release/{{ module_name | default('SwiftPackage') }} dist/
 
 # Docker commands (if included)
 {% if include_docker %}
 docker-build:
+    @just _devbox docker-build_impl
+
+[private]
+docker-build_impl:
     docker build -t {{ package_slug | default('swift-package') }} .
 
 docker-run:
+    @just _devbox docker-run_impl
+
+[private]
+docker-run_impl:
     docker run --rm {{ package_slug | default('swift-package') }}
 {% endif %}
 

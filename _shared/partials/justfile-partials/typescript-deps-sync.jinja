@@ -5,10 +5,11 @@
 sync-deps:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Synchronize lock file with package.json
     # Called by pre-commit target when package.json is modified
-    echo "🔄 Syncing lock file with package.json..."
-    
+    log_start "Syncing lock file with package.json"
+
     # Detect package manager and use appropriate command
     if [ -f "pnpm-lock.yaml" ]; then
         pnpm install
@@ -20,24 +21,25 @@ sync-deps:
         yarn install
         git add yarn.lock
     else
-        echo "⚠️  No lock file found, running pnpm install..."
+        log_warn "No lock file found, running pnpm install..."
         pnpm install
         git add pnpm-lock.yaml
     fi
-    
-    echo "✅ Lock file synchronized and staged"
+
+    log_end "Lock file synchronized and staged"
 
 pre-commit:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Pre-commit hook orchestration - called by git pre-commit hook
     # This target can call multiple validation targets
-    echo "🔍 Running pre-commit checks..."
-    
+    log_start "Running pre-commit checks"
+
     # Check if package.json is modified and sync dependencies if needed
     if git diff --cached --name-only | grep -q "package.json"; then
-        echo "package.json modified, syncing dependencies..."
+        log_info "package.json modified, syncing dependencies..."
         just sync-deps
     fi
-    
-    echo "✅ Pre-commit checks complete"
+
+    log_end "Pre-commit checks complete"

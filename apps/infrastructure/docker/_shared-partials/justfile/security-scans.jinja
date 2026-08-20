@@ -1,28 +1,40 @@
 docker-scout: ## Run Docker Scout CVE report against the local image tag
-    @echo BLUE + "Running Docker Scout (requires docker CLI plugin)..." + NC
-    @if command -v docker >/dev/null 2>&1 && docker scout version >/dev/null 2>&1; then
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Docker Scout (requires docker CLI plugin)"
+    if command -v docker >/dev/null 2>&1 && docker scout version >/dev/null 2>&1; then
         {{ SCOUT_BIN }} cves {{ SERVICE_NAME }}:latest
     else
-        echo RED + "✗ docker scout CLI not installed. Run 'docker scout install' first." + NC
+        log_error "docker scout CLI not installed. Run 'docker scout install' first."
         exit 1
     fi
 
 trivy: ## Run Trivy config/image scan (set TRIVY_IMAGE_TARGET=<image> to scan images)
-    @mkdir -p {{ TRIVY_CACHE_DIR }}
-    @if [ -z "{{ TRIVY_IMAGE_TARGET }}" ]; then
-        echo BLUE + "Running Trivy config scan (severity {{ TRIVY_SEVERITY }})..." + NC
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    mkdir -p {{ TRIVY_CACHE_DIR }}
+    if [ -z "{{ TRIVY_IMAGE_TARGET }}" ]; then
+        log_start "Running Trivy config scan (severity {{ TRIVY_SEVERITY }})"
         docker run --rm -v {{ WORKDIR }}:/workspace -v {{ TRIVY_CACHE_DIR }}:/root/.cache/trivy -w /workspace --security-opt=no-new-privileges {{ TRIVY_IMAGE }} config --severity {{ TRIVY_SEVERITY }} --quiet .
     else
-        echo BLUE + "Running Trivy image scan for {{ TRIVY_IMAGE_TARGET }} (severity {{ TRIVY_SEVERITY }})..." + NC
+        log_start "Running Trivy image scan for {{ TRIVY_IMAGE_TARGET }} (severity {{ TRIVY_SEVERITY }})"
         docker run --rm -v {{ TRIVY_CACHE_DIR }}:/root/.cache/trivy --security-opt=no-new-privileges {{ TRIVY_IMAGE }} image --severity {{ TRIVY_SEVERITY }} {{ TRIVY_IMAGE_TARGET }}
     fi
 
 dockle: ## Run Dockle image linting (CIS benchmarks)
-    @echo BLUE + "Running Dockle image scan for {{ DOCKLE_IMAGE_TARGET }}..." + NC
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Dockle image scan for {{ DOCKLE_IMAGE_TARGET }}"
     docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --security-opt=no-new-privileges {{ DOCKLE_IMAGE }} --exit-code 1 {{ DOCKLE_IMAGE_TARGET }}
 
 runtime-scan: ## Run Falco runtime security detector (requires kernel-level access)
-    @echo BLUE + "Starting Falco runtime scan (requires root + BPF permissions)..." + NC
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Starting Falco runtime scan (requires root + BPF permissions)"
     docker run --rm \
         --cap-drop ALL \
         --cap-add BPF --cap-add PERFMON --cap-add NET_ADMIN --cap-add SYS_PTRACE --cap-add SYS_RESOURCE --cap-add SYS_ADMIN \
@@ -34,7 +46,10 @@ runtime-scan: ## Run Falco runtime security detector (requires kernel-level acce
         falco --modern-bpf --pidfile /tmp/falco.pid --cri /run/containerd/containerd.sock
 
 audit: ## Run Docker Bench for Security against the local daemon
-    @echo BLUE + "Running docker-bench-security (read-only host mounts)..." + NC
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running docker-bench-security (read-only host mounts)"
     docker run --rm \
         --net host --pid host --userns host \
         --cap-drop ALL --cap-add AUDIT_CONTROL --cap-add AUDIT_READ --cap-add SYS_ADMIN \
@@ -46,6 +61,9 @@ audit: ## Run Docker Bench for Security against the local daemon
         {{ DOCKER_BENCH_IMAGE }}
 
 security-scan: lint trivy dockle docker-scout ## Generate comprehensive security report bundle
-    @echo BLUE + "Collecting additional scan artifacts..." + NC
-    @./scripts/security-scan.sh
-    @echo GREEN + "✓ Security scan completed" + NC
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Collecting additional scan artifacts"
+    ./scripts/security-scan.sh
+    log_end "Security scan completed"

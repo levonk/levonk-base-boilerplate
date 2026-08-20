@@ -1,54 +1,127 @@
 # Git repository specific implementations
-bootstrap-internal:
+{% include "partials.bak/partials/justfile-partials/logging.jinja" %}
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
     #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
+# Default recipe
+default:
+    @just --list
+
+# Standard development recipes (REQUIRED)
+clean:
+    @just _devbox clean_impl
+
+dev:
+    @just _devbox dev_impl
+
+build:
+    @just _devbox build_impl
+
+test:
+    @just _devbox test_impl
+
+lint:
+    @just _devbox lint_impl
+
+typecheck:
+    @just _devbox typecheck_impl
+
+# Bootstrap recipes (REQUIRED)
+bootstrap:
+    @just _devbox bootstrap_impl
+
+[private]
+bootstrap_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     # Internal bootstrap logic called by devbox init_hook
     if ! command -v nix >/dev/null 2>&1; then
-      echo "[bootstrap] Installing Nix..."
+      log_info "Installing Nix..."
       curl -L https://nixos.org/nix/install | sh -s -- --daemon --yes
-      echo "[bootstrap] Nix installed. Please restart your shell and run 'just bootstrap' again."
+      log_info "Nix installed. Please restart your shell and run 'just bootstrap' again."
       exit 0
     fi
     if ! command -v direnv >/dev/null 2>&1; then
-      echo "[bootstrap] Installing direnv via Nix..."
+      log_info "Installing direnv via Nix..."
       nix profile add nixpkgs#direnv --extra-experimental-features "nix-command flakes"
-      echo "[bootstrap] direnv installed."
+      log_info "direnv installed."
     fi
     if ! command -v devbox >/dev/null 2>&1; then
-      echo "[bootstrap] Installing devbox via Nix..."
+      log_info "Installing devbox via Nix..."
       nix profile add nixpkgs#devbox --extra-experimental-features "nix-command flakes"
-      echo "[bootstrap] devbox installed."
+      log_info "devbox installed."
     fi
     if ! command -v just >/dev/null 2>&1; then
-      echo "[bootstrap] Installing just via Nix..."
+      log_info "Installing just via Nix..."
       nix profile add nixpkgs#just --extra-experimental-features "nix-command flakes"
-      echo "[bootstrap] just installed."
+      log_info "just installed."
     fi
     if [ -f "{{REPO_ROOT}}/.envrc" ]; then
       direnv allow "{{REPO_ROOT}}"
     fi
-    echo "[bootstrap] Project bootstrap complete!"
+    log_info "Project bootstrap complete!"
 
-build-internal:
-    @echo "ℹ️  No build target configured for generic git repository"
-    @echo "   Add language-specific build commands to your justfile if needed"
+[private]
+build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_info "No build target configured for generic git repository"
+    log_info "Add language-specific build commands to your justfile if needed"
 
-test-internal:
-    @echo "ℹ️  No test target configured for generic git repository"
-    @echo "   Add language-specific test commands to your justfile if needed"
+[private]
+test_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_info "No test target configured for generic git repository"
+    log_info "Add language-specific test commands to your justfile if needed"
 
-lint-internal:
-    @echo "ℹ️  No lint target configured for generic git repository"
-    @echo "   Add language-specific lint commands to your justfile if needed"
+[private]
+lint_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_info "No lint target configured for generic git repository"
+    log_info "Add language-specific lint commands to your justfile if needed"
 
-typecheck-internal:
-    @echo "ℹ️  No typecheck target configured for generic git repository"
-    @echo "   Add language-specific typecheck commands to your justfile if needed"
+[private]
+typecheck_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_info "No typecheck target configured for generic git repository"
+    log_info "Add language-specific typecheck commands to your justfile if needed"
 
-dev-internal:
-    @echo "ℹ️  No dev target configured for generic git repository"
-    @echo "   Add language-specific dev commands to your justfile if needed"
+[private]
+dev_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_info "No dev target configured for generic git repository"
+    log_info "Add language-specific dev commands to your justfile if needed"
 
-doctor-internal:
+# Health and diagnostics (REQUIRED)
+doctor:
+    @just _devbox doctor_impl
+
+[private]
+doctor_impl:
     #!/usr/bin/env bash
     set -euo pipefail
     MISSING=0
@@ -75,71 +148,126 @@ doctor-internal:
 
 # Development setup (OPTIONAL)
 setup:
+    @just _devbox setup_impl
+
+[private]
+setup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     # Project-specific setup
     # Configure versioned git hooks (submodule-integrity pre-commit check).
     # scripts/hooks/pre-commit prevents submodules from being tracked as
     # trees (040000) instead of gitlinks (160000). See the hook file header
     # for coexistence notes with the pre-commit framework.
     git config core.hooksPath scripts/hooks
-    echo "✅ Git hooks path configured (core.hooksPath=scripts/hooks)"
-    echo "Development environment ready!"
+    log_end "Git hooks path configured (core.hooksPath=scripts/hooks)"
+    log_info "Development environment ready!"
 
 # Clean up (OPTIONAL)
-clean-internal:
+[private]
+clean_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Cleaning up"
     # Language-specific cleanup
     rm -rf build dist node_modules/.cache
-    echo "Build artifacts removed"
+    log_end "Build artifacts removed"
 
 # Deep clean (OPTIONAL)
-clean-all-internal:
+clean-all:
+    @just _devbox clean-all_impl
+
+[private]
+clean-all_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Deep cleaning"
     rm -rf build dist node_modules .cache
-    echo "All build artifacts and dependencies removed"
+    log_end "All build artifacts and dependencies removed"
 
 # Git repository specific targets
 init-repo:
-    @echo "🔧 Initializing git repository..."
+    @just _devbox init-repo_impl
+
+[private]
+init-repo_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Initializing git repository"
     git init
-    @echo "✅ Git repository initialized"
+    log_end "Git repository initialized"
 
 setup-remote:
-    @echo "🔧 Setting up remote repository..."
-    @if [ -z "$(git remote get-url origin 2>/dev/null)" ]; then \
-        echo "ℹ️  No remote configured. Add one with:"; \
-        echo "   git remote add origin <your-repo-url>"; \
-        echo "   git remote -v"; \
+    @just _devbox setup-remote_impl
+
+[private]
+setup-remote_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Setting up remote repository"
+    if [ -z "$(git remote get-url origin 2>/dev/null)" ]; then \
+        log_info "No remote configured. Add one with:"; \
+        log_info "   git remote add origin <your-repo-url>"; \
+        log_info "   git remote -v"; \
     else \
-        echo "✅ Remote already configured:"; \
+        log_end "Remote already configured:"; \
         git remote -v; \
     fi
 
 create-gh-pages:
-    @echo "📄 Creating gh-pages branch..."
-    @if ! git rev-parse --verify gh-pages >/dev/null 2>&1; then \
+    @just _devbox create-gh-pages_impl
+
+[private]
+create-gh-pages_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Creating gh-pages branch"
+    if ! git rev-parse --verify gh-pages >/dev/null 2>&1; then \
         git checkout --orphan gh-pages; \
         git rm -rf . 2>/dev/null || true; \
         echo "# {{ project_name }} Documentation" > README.md; \
         git add README.md; \
         git commit -m "Initial gh-pages commit"; \
         git checkout main 2>/dev/null || git checkout -b main; \
-        echo "✅ gh-pages branch created"; \
+        log_end "gh-pages branch created"; \
     else \
-        echo "ℹ️  gh-pages branch already exists"; \
+        log_info "gh-pages branch already exists"; \
     fi
 
 check-git-hooks:
-    @echo "🔍 Checking git hooks..."
-    @if [ -d .git/hooks ]; then \
+    @just _devbox check-git-hooks_impl
+
+[private]
+check-git-hooks_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Checking git hooks"
+    if [ -d .git/hooks ]; then \
         find .git/hooks -name "*" -type f -exec echo "  - {}" \;; \
-        echo "✅ Git hooks found"; \
+        log_end "Git hooks found"; \
     else \
-        echo "⚠️  No git hooks found"; \
+        log_warn "No git hooks found"; \
     fi
 
 check-gitignore:
-    @echo "🔍 Checking .gitignore..."
-    @if [ -f .gitignore ]; then \
-        echo "✅ .gitignore found"; \
+    @just _devbox check-gitignore_impl
+
+[private]
+check-gitignore_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Checking .gitignore"
+    if [ -f .gitignore ]; then \
+        log_end ".gitignore found"; \
         wc -l .gitignore; \
     else \
-        echo "⚠️  No .gitignore found"; \
+        log_warn "No .gitignore found"; \
     fi

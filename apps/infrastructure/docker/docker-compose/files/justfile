@@ -1,6 +1,49 @@
 # Docker Compose Development Commands
 # NX Monorepo-compatible Docker Compose Service
 
+_log := '
+_jv_has() {
+  local cat="$1"
+  local v="${JUST_LOG:-0}"
+  case "$v" in
+    1|all) return 0 ;;
+    0|"") return 1 ;;
+  esac
+  v="${v//startend/start,end}"
+  echo ",$v," | grep -q ",$cat,"
+}
+log_info()   { _jv_has info   && echo "$*" || true; }
+log_start()  { _jv_has start  && echo "▶ $*" || true; }
+log_end()    { _jv_has end    && echo "✔ $*" || true; }
+log_status() { _jv_has status && echo "$*" || true; }
+log_warn()   { echo "⚠️  $*" >&2; }
+log_error()  { echo "❌ $*" >&2; }
+log_startend() {
+  local msg="$1"; shift
+  local rc
+  _jv_has start && echo "▶ $msg" || true
+  rc=0; "$@" || rc=$?
+  _jv_has end && echo "✔ $msg complete" || true
+  return $rc
+}
+'
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default recipe
 default:
     @just --list
@@ -15,31 +58,35 @@ NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
 
 # Standard development recipes (REQUIRED)
 clean:
-    devbox run clean-internal
+    @just _devbox clean_impl
 
 dev:
-    devbox run dev-internal
+    @just _devbox dev_impl
 
 build:
-    devbox run build-internal
+    @just _devbox build_impl
 
 test:
-    devbox run test-internal
+    @just _devbox test_impl
 
 lint:
-    devbox run lint-internal
+    @just _devbox lint_impl
 
 typecheck:
-    devbox run typecheck-internal
+    @just _devbox typecheck_impl
 
 # Bootstrap recipes (REQUIRED - ADR-20260131001 compliance)
 bootstrap:
-    devbox run bootstrap-internal
+    @just _devbox bootstrap_impl
 
-bootstrap-internal:
-    @echo "🚀 Bootstrapping NX Monorepo Docker Compose environment..."
-    @# Run all pnpm commands in single shell so PATH persists
-    @export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}" && \
+[private]
+bootstrap_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Bootstrapping NX Monorepo Docker Compose environment"
+    # Run all pnpm commands in single shell so PATH persists
+    export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}" && \
         export PATH="$PNPM_HOME:$PATH" && \
         (rm -f "$PNPM_HOME/global/5/pnpm-lock.yaml"* 2>/dev/null || true) && \
         mkdir -p "$PNPM_HOME/global/5" "$PNPM_HOME/store" && \
@@ -47,8 +94,8 @@ bootstrap-internal:
         pnpm config set global-bin-dir "$PNPM_HOME" && \
         pnpm config set store-dir "$PNPM_HOME/store" && \
         pnpm add -g nx && \
-        pnpm install && \
-        echo "✅ Bootstrap complete - NX is ready"
+        pnpm install
+    log_end "Bootstrap complete - NX is ready"
 
 # Health and diagnostics (REQUIRED)
 doctor:
@@ -79,76 +126,176 @@ doctor:
     @echo ""
     @echo "✅ Doctor check complete"
 
-# Development mode (legacy direct)
-dev-internal:
-    @echo "🚀 Starting Docker Compose development mode..."
+# Development mode
+[private]
+dev_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Starting Docker Compose development mode"
     docker-compose up --build
+    log_end "Docker Compose development mode started"
 
-# Start services (legacy direct)
-up-internal:
-    @echo "🚀 Starting Docker Compose services..."
+# Start services
+up:
+    @just _devbox up_impl
+
+[private]
+up_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Starting Docker Compose services"
     docker-compose up -d
+    log_end "Docker Compose services started"
 
-# Stop services (legacy direct)
-down-internal:
-    @echo "🛑 Stopping Docker Compose services..."
+# Stop services
+down:
+    @just _devbox down_impl
+
+[private]
+down_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Stopping Docker Compose services"
     docker-compose down
+    log_end "Docker Compose services stopped"
 
 # View logs
 logs:
+    @just _devbox logs_impl
+
+[private]
+logs_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker-compose logs -f
 
 # View logs for specific service
 logs-service service:
+    @just _devbox logs-service_impl {{service}}
+
+[private]
+logs-service_impl service:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker-compose logs -f {{service}}
 
 # Build containers
-build:
+[private]
+build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Building Docker Compose containers"
     docker-compose build
+    log_end "Docker Compose build complete"
 
 # Clean up
-clean:
+[private]
+clean_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Cleaning up Docker Compose"
     docker-compose down -v
     docker system prune -f
+    log_end "Docker Compose clean complete"
 
 # Development setup
 setup:
-    @just bootstrap
-    echo "✅ Docker Compose development environment ready!"
+    @just _devbox setup_impl
+
+[private]
+setup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just bootstrap_impl
+    log_end "Docker Compose development environment ready"
 
 # Health check
 health:
+    @just _devbox health_impl
+
+[private]
+health_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker-compose ps
 
 # Execute command in container
 exec service="web" command="/bin/bash":
+    @just _devbox exec_impl {{service}} {{command}}
+
+[private]
+exec_impl service command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker-compose exec {{service}} {{command}}
 
 # Run tests
-test:
+[private]
+test_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running tests"
     docker-compose run --rm {{ _service_name_slug }} pytest
+    log_end "Tests complete"
 
 # Lint Docker files
-lint:
+[private]
+lint_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Linting Docker files"
     docker-compose config
     hadolint Dockerfile
+    log_end "Lint complete"
 
 # Type check
-typecheck:
-    echo "Type checking not applicable for Docker Compose"
+[private]
+typecheck_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_info "Type checking not applicable for Docker Compose"
 
 # Package for distribution
 package:
-    @just build
-    @just clean
+    @just _devbox package_impl
+
+[private]
+package_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Packaging for distribution"
+    just build_impl
+    just clean_impl
     mkdir -p dist
     docker save {{ _service_name_slug }}:latest > dist/{{ _service_name_slug }}.tar
+    log_end "Package complete"
 
 # Quality checks
 quality:
-    @just lint
-    @just test
-    @just health
+    @just _devbox quality_impl
+
+[private]
+quality_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just lint_impl
+    just test_impl
+    just health_impl
 
 # ============================================================================
 # NX Build Orchestration (Monorepo Integration)
@@ -156,71 +303,99 @@ quality:
 
 # NX: Build this service's Docker images via NX
 nx-build:
-    devbox run nx-build-internal
+    @just _devbox nx-build_impl
 
-nx-build-internal:
-    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
-        echo "🔨 NX: Building {{ _service_name_slug }} with smart caching..."; \
+[private]
+nx-build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        log_start "NX: Building {{ _service_name_slug }} with smart caching"; \
         {{NX_BIN}} run {{ _service_name_slug }}:docker:build; \
+        log_end "NX build complete"; \
     else \
-        echo "⚠️  NX not installed. Falling back to docker-compose build..."; \
+        log_warn "NX not installed. Falling back to docker-compose build..."; \
         docker-compose build; \
     fi
 
 # NX: Build and start this service via NX
 nx-up:
-    devbox run nx-up-internal
+    @just _devbox nx-up_impl
 
-nx-up-internal:
-    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
-        echo "🚀 NX: Building and starting {{ _service_name_slug }}..."; \
+[private]
+nx-up_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        log_start "NX: Building and starting {{ _service_name_slug }}"; \
         {{NX_BIN}} run {{ _service_name_slug }}:docker:up; \
+        log_end "NX up complete"; \
     else \
-        echo "⚠️  NX not installed. Using docker-compose directly..."; \
+        log_warn "NX not installed. Using docker-compose directly..."; \
         docker-compose up -d; \
     fi
 
 # NX: Build only affected services (changed since last commit)
 nx-affected:
-    devbox run nx-affected-internal
+    @just _devbox nx-affected_impl
 
-nx-affected-internal:
-    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
-        echo "🔍 NX: Building affected services..."; \
+[private]
+nx-affected_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        log_start "NX: Building affected services"; \
         {{NX_BIN}} affected -t docker:build --base=main --head=HEAD; \
+        log_end "NX affected build complete"; \
     else \
-        echo "❌ NX not installed. Run: just bootstrap"; \
+        log_error "NX not installed. Run: just bootstrap"; \
         exit 1; \
     fi
 
 # NX: Visualize dependency graph
 nx-graph:
-    devbox run nx-graph-internal
+    @just _devbox nx-graph_impl
 
-nx-graph-internal:
-    @if [ "{{NX_AVAILABLE}}" = "true" ]; then \
-        echo "📊 NX: Opening dependency graph..."; \
+[private]
+nx-graph_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{NX_AVAILABLE}}" = "true" ]; then \
+        log_start "NX: Opening dependency graph"; \
         {{NX_BIN}} graph; \
+        log_end "NX graph complete"; \
     else \
-        echo "❌ NX not installed. Run: just bootstrap"; \
+        log_error "NX not installed. Run: just bootstrap"; \
         exit 1; \
     fi
 
 # NX: Clear build cache
 nx-clear-cache:
-    devbox run nx-clear-cache-internal
+    @just _devbox nx-clear-cache_impl
 
-nx-clear-cache-internal:
-    @echo "🧹 Clearing NX build cache..."
-    @rm -rf .nx/cache
-    @docker builder prune -f
-    @echo "✅ NX cache cleared"
+[private]
+nx-clear-cache_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Clearing NX build cache"
+    rm -rf .nx/cache
+    docker builder prune -f
+    log_end "NX cache cleared"
 
 # NX: Install dependencies
 nx-install:
-    devbox run nx-install-internal
+    @just _devbox nx-install_impl
 
-nx-install-internal:
-    @echo "📦 Installing NX dependencies..."
-    @pnpm install
-    @echo "✅ NX dependencies installed"
+[private]
+nx-install_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Installing NX dependencies"
+    pnpm install
+    log_end "NX dependencies installed"

@@ -1,5 +1,5 @@
 - Read ~/p/gh/levonk/{{ package_name }}/AGENTS.md
-- Run the skill git-repository-management, if it's missing do a `devbox run -- pnpm skills add levonk/skills-releases --all`
+- Run the skill git-repository-management, if it's missing do a `devbox run -- pnpm dlx skills add levonk/skills-releases --all && devbox run -- pnpm dlx skills add levonk/skills-releases --all -g` (installs all skills to all agents with symlinks, both project-level and global)
 - on ~/p/gh/levonk/{{ package_name }}/internal-docs/feature/
 - do not use `npx` or `npm` we use `devbox run -- pnpm dlx` or `devbox run -- pnpm`
 - on the {{ package_name }} project

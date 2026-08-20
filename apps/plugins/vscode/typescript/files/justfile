@@ -1,37 +1,83 @@
 # VSCode Extension Development Commands
 
+_log := '
+_jv_has() {
+  local cat="$1"
+  local v="${JUST_LOG:-0}"
+  case "$v" in
+    1|all) return 0 ;;
+    0|"") return 1 ;;
+  esac
+  v="${v//startend/start,end}"
+  echo ",$v," | grep -q ",$cat,"
+}
+log_info()   { _jv_has info   && echo "$*" || true; }
+log_start()  { _jv_has start  && echo "▶ $*" || true; }
+log_end()    { _jv_has end    && echo "✔ $*" || true; }
+log_status() { _jv_has status && echo "$*" || true; }
+log_warn()   { echo "⚠️  $*" >&2; }
+log_error()  { echo "❌ $*" >&2; }
+log_startend() {
+  local msg="$1"; shift
+  local rc
+  _jv_has start && echo "▶ $msg" || true
+  rc=0; "$@" || rc=$?
+  _jv_has end && echo "✔ $msg complete" || true
+  return $rc
+}
+'
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default recipe
 default:
     @just --list
 
 # Standard development recipes (REQUIRED)
 clean:
-    devbox shell clean
+    @just _devbox clean_impl
 
 dev:
-    devbox shell dev
+    @just _devbox dev_impl
 
 build:
-    devbox shell build
+    @just _devbox build_impl
 
 test:
-    devbox shell test
+    @just _devbox test_impl
 
 lint:
-    devbox shell lint
+    @just _devbox lint_impl
 
 typecheck:
-    devbox shell typecheck
+    @just _devbox typecheck_impl
 
 # Bootstrap recipes (REQUIRED)
 bootstrap:
-    devbox shell bootstrap
+    @just _devbox bootstrap_impl
 
-bootstrap-internal:
+[private]
+bootstrap_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     # Install dependencies in background if not present
     [ -d node_modules/ ] || pnpm install &
-
-    echo "VSCode extension bootstrap complete!"
+    log_end "VSCode extension bootstrap complete"
 
 # Health and diagnostics (REQUIRED)
 doctor:
@@ -46,62 +92,110 @@ doctor:
     @echo "✅ VSCode extension environment is ready!"
 
 # Development mode (watch and compile)
-dev:
+[private]
+dev_impl:
     pnpm run dev
 
 # Install dependencies
 install:
+    @just _devbox install_impl
+
+[private]
+install_impl:
     pnpm install
 
 # Compile TypeScript
 compile:
+    @just _devbox compile_impl
+
+[private]
+compile_impl:
     pnpm run compile
 
 # Run tests
-test:
+[private]
+test_impl:
     pnpm test
 
 # Run tests in watch mode
 test-watch:
+    @just _devbox test-watch_impl
+
+[private]
+test-watch_impl:
     pnpm test --watch
 
 # Package extension
 package:
+    @just _devbox package_impl
+
+[private]
+package_impl:
     pnpm run package
 
 # Package in watch mode
 package-watch:
+    @just _devbox package-watch_impl
+
+[private]
+package-watch_impl:
     pnpm run package --watch
 
 # Lint code
-lint:
+[private]
+lint_impl:
     pnpm run lint
 
 # Format code
 format:
+    @just _devbox format_impl
+
+[private]
+format_impl:
     pnpm run format
 
 # Type checking
-typecheck:
+[private]
+typecheck_impl:
     pnpm run typecheck
 
 # Clean build artifacts
-clean:
+[private]
+clean_impl:
     rm -rf out/ dist/ *.vsix
 
 # Publish extension
 publish:
+    @just _devbox publish_impl
+
+[private]
+publish_impl:
     pnpm vsce publish
 
 # Publish in dry-run mode
 publish-dry-run:
+    @just _devbox publish-dry-run_impl
+
+[private]
+publish-dry-run_impl:
     pnpm vsce publish --dry-run
 
 # Development setup
 setup:
-    @just bootstrap
-    echo "✅ VSCode extension development environment ready!"
+    @just _devbox setup_impl
+
+[private]
+setup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just bootstrap_impl
+    log_end "VSCode extension development environment ready"
 
 # Verify extension
 verify:
+    @just _devbox verify_impl
+
+[private]
+verify_impl:
     pnpm run verify
