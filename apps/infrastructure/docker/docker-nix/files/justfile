@@ -4,62 +4,158 @@
 NX_BIN := `command -v nx || echo ""`
 NX_AVAILABLE := if NX_BIN != "" { "true" } else { "false" }
 
+_log := '
+_jv_has() {
+  local cat="$1"
+  local v="${JUST_LOG:-0}"
+  case "$v" in
+    1|all) return 0 ;;
+    0|"") return 1 ;;
+  esac
+  v="${v//startend/start,end}"
+  echo ",$v," | grep -q ",$cat,"
+}
+log_info()   { _jv_has info   && echo "$*" || true; }
+log_start()  { _jv_has start  && echo "▶ $*" || true; }
+log_end()    { _jv_has end    && echo "✔ $*" || true; }
+log_status() { _jv_has status && echo "$*" || true; }
+log_warn()   { echo "⚠️  $*" >&2; }
+log_error()  { echo "❌ $*" >&2; }
+log_startend() {
+  local msg="$1"; shift
+  local rc
+  _jv_has start && echo "▶ $msg" || true
+  rc=0; "$@" || rc=$?
+  _jv_has end && echo "✔ $msg complete" || true
+  return $rc
+}
+'
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default recipe
 default:
     @just --list
 
 # Standard development recipes (REQUIRED)
 clean:
-    devbox shell clean
+    @just _devbox clean_impl
 
 dev:
-    devbox shell dev
+    @just _devbox dev_impl
 
 build:
-    devbox shell build
+    @just _devbox build_impl
 
 test:
-    devbox shell test
+    @just _devbox test_impl
 
 lint:
-    devbox shell lint
+    @just _devbox lint_impl
 
 typecheck:
-    devbox shell typecheck
+    @just _devbox typecheck_impl
 
 # Bootstrap recipes (REQUIRED)
 bootstrap:
-    devbox shell bootstrap
+    @just _devbox bootstrap_impl
 
-bootstrap-internal:
-    @echo "📦 Installing pnpm and NX..."
-    @npm install -g pnpm@latest
-    @if [ "{{ NX_AVAILABLE }}" = "false" ]; then pnpm add -g nx@latest; fi
-    @pnpm install
-    @echo "✓ Bootstrap complete"
+[private]
+bootstrap_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Installing pnpm and NX"
+    npm install -g pnpm@latest
+    if [ "{{ NX_AVAILABLE }}" = "false" ]; then pnpm add -g nx@latest; fi
+    pnpm install
+    log_end "Bootstrap complete"
 
 # NX Commands
+[private]
+nx-build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx build; else docker compose build; fi
+
+[private]
+nx-up_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx up; else docker compose up; fi
+
+[private]
+nx-down_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx down; else docker compose down; fi
+
+[private]
+nx-affected_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx affected; else log_info "NX not available"; fi
+
+[private]
+nx-graph_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx graph; else log_info "NX not available"; fi
+
+[private]
+nx-clear-cache_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx reset; else log_info "NX not available"; fi
+
+[private]
+nx-install_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    pnpm add -g nx@latest
+    log_end "NX installed globally"
+
 nx-build:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx build; else docker compose build; fi
+    @just _devbox nx-build_impl
 
 nx-up:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx up; else docker compose up; fi
+    @just _devbox nx-up_impl
 
 nx-down:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx down; else docker compose down; fi
+    @just _devbox nx-down_impl
 
 nx-affected:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx affected; else echo "NX not available"; fi
+    @just _devbox nx-affected_impl
 
 nx-graph:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx graph; else echo "NX not available"; fi
+    @just _devbox nx-graph_impl
 
 nx-clear-cache:
-    @if [ "{{ NX_AVAILABLE }}" = "true" ]; then nx reset; else echo "NX not available"; fi
+    @just _devbox nx-clear-cache_impl
 
 nx-install:
-    @pnpm add -g nx@latest
-    @echo "✓ NX installed globally"
+    @just _devbox nx-install_impl
 
 # Health and diagnostics (REQUIRED)
 doctor:
@@ -81,74 +177,182 @@ doctor:
     @echo "✅ Docker Nix environment is ready!"
 
 # Development mode
-dev:
-    @just build
-    @just run
+[private]
+dev_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Starting Docker Nix development mode"
+    just build_impl
+    just run
+    log_end "Docker Nix development mode started"
 
 # Build Docker image with Nix
-build:
+[private]
+build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Building Docker image with Nix"
     docker build -t docker-nix .
+    log_end "Docker build complete"
 
 # Run container
 run:
+    @just _devbox run_impl
+
+[private]
+run_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Docker Nix container"
     docker run -p 8080:8080 docker-nix
+    log_end "Docker Nix container started"
 
 # Run container in background
 run-detached:
+    @just _devbox run-detached_impl
+
+[private]
+run-detached_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker run -d -p 8080:8080 docker-nix
 
 # Stop container
 stop:
+    @just _devbox stop_impl
+
+[private]
+stop_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker stop $(docker ps -q --filter "name=docker-nix")
 
 # Remove container
 rm:
+    @just _devbox rm_impl
+
+[private]
+rm_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker rm $(docker ps -aq --filter "name=docker-nix")
 
 # Clean up
-clean:
-    @just stop
-    @just rm
+[private]
+clean_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Cleaning up Docker Nix"
+    just stop
+    just rm
     docker system prune -f
+    log_end "Docker Nix clean complete"
 
 # Development setup
 setup:
-    @just bootstrap
-    echo "✅ Docker Nix development environment ready!"
+    @just _devbox setup_impl
+
+[private]
+setup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just bootstrap_impl
+    log_end "Docker Nix development environment ready"
 
 # Health check
 health:
-    curl -f http://localhost:8080/health || echo "Service not running"
+    @just _devbox health_impl
+
+[private]
+health_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    curl -f http://localhost:8080/health || log_warn "Service not running"
 
 # Execute command in container
 exec command="/bin/bash":
+    @just _devbox exec_impl {{command}}
+
+[private]
+exec_impl command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker exec -it $(docker ps -q --filter "name=docker-nix") {{command}}
 
 # Run tests
-test:
+[private]
+test_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running tests"
     docker run --rm docker-nix pytest
+    log_end "Tests complete"
 
 # Lint Docker files
-lint:
+[private]
+lint_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Linting Docker files"
     hadolint Dockerfile
+    log_end "Lint complete"
 
 # Type check
-typecheck:
-    echo "Type checking not applicable for Docker Nix"
+[private]
+typecheck_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_info "Type checking not applicable for Docker Nix"
 
 # Package for distribution
 package:
-    @just build
-    @just clean
+    @just _devbox package_impl
+
+[private]
+package_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Packaging for distribution"
+    just build_impl
+    just clean_impl
     mkdir -p dist
     docker save docker-nix:latest > dist/docker-nix.tar
+    log_end "Package complete"
 
 # Quality checks
 quality:
-    @just lint
-    @just test
-    @just health
+    @just _devbox quality_impl
+
+[private]
+quality_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just lint_impl
+    just test_impl
+    just health_impl
 
 # View logs
 logs:
+    @just _devbox logs_impl
+
+[private]
+logs_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     docker logs -f $(docker ps -q --filter "name=docker-nix")

@@ -3,6 +3,24 @@
 
 {% include "partials.bak/justfile/common-vars.jinja" %}
 
+{% include "partials.bak/partials/justfile-partials/logging.jinja" %}
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 {% include "partials.bak/justfile/lint-vars.jinja" %}
 
 {% include "partials.bak/justfile/help.jinja" %}
@@ -10,10 +28,17 @@
 {% include "partials.bak/justfile/bootstrap.jinja" %}
 
 build: ## Build {{ _service_name | title }} Docker images (runtime + debug)
-    @echo BLUE + "Building {{ _service_name | title }} Docker images..." + NC
-    @docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} build
-    @docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} --profile debug build
-    @echo GREEN + "✓ Images built" + NC
+    @just _devbox build_impl
+
+[private]
+build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Building {{ _service_name | title }} Docker images"
+    docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} build
+    docker compose -f {{ COMPOSE_FILE }} --env-file {{ ENV_FILE }} --profile debug build
+    log_end "Images built"
 
 {% include "partials.bak/justfile/lifecycle.jinja" %}
 

@@ -1,477 +1,1067 @@
 # Justfile for {{ project_name }}
 # Run `just --list` to see available commands
+#
+# Output is quiet by default (warnings + errors only).
+# Set JUST_LOG=1 for all output, JUST_LOG=startend for start/end markers.
+
+{% include "partials.bak/partials/justfile-partials/logging.jinja" %}
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
 
 # Default recipe
 default:
-    @echo "Available commands:"
     @just --list
 
-# Development environment setup
+# --- public targets (devbox-aware) ------------------------------------------
+
+# Set up development environment.
 setup:
-    @echo "Setting up development environment..."
-    devbox run setup
+    @just _devbox setup_impl
 
-# Validate all configurations
+# Validate all configurations.
 validate:
-    @echo "Validating configurations..."
-    devbox run validate
+    @just _devbox validate_impl
 
-# Run tests
+# Run tests.
 test:
-    @echo "Running tests..."
-    devbox run test
+    @just _devbox test_impl
 
-# Clean up all resources
+# Clean up all resources.
 clean:
-    @echo "Cleaning up resources..."
-    devbox run clean
+    @just _devbox clean_impl
 
-# Deploy to development environment
+# Deploy to development environment.
 deploy-dev:
-    @echo "Deploying to development..."
-    devbox run deploy-dev
+    @just _devbox deploy-dev_impl
 
-# Deploy to staging environment
+# Deploy to staging environment.
 deploy-staging:
-    @echo "Deploying to staging..."
-    devbox run deploy-staging
+    @just _devbox deploy-staging_impl
 
-# Deploy to production environment
+# Deploy to production environment.
 deploy-prod:
-    @echo "Deploying to production..."
-    devbox run deploy-prod
+    @just _devbox deploy-prod_impl
 
-# Check deployment status
+# Check deployment status.
 status:
-    @echo "Checking deployment status..."
+    @just _devbox status_impl
+
+# Get logs.
+logs:
+    @just _devbox logs_impl
+
+# Port forward service.
+port-forward:
+    @just _devbox port-forward_impl
+
+# Build and lint Helm chart.
+helm-lint:
+    @just _devbox helm-lint_impl
+
+# Template Helm chart.
+helm-template:
+    @just _devbox helm-template_impl
+
+# Package Helm chart.
+helm-package:
+    @just _devbox helm-package_impl
+
+# Install Helm chart locally.
+helm-install:
+    @just _devbox helm-install_impl
+
+# Upgrade Helm chart.
+helm-upgrade:
+    @just _devbox helm-upgrade_impl
+
+# Uninstall Helm chart.
+helm-uninstall:
+    @just _devbox helm-uninstall_impl
+
+# Build Kustomize overlays.
+kustomize-build:
+    @just _devbox kustomize-build_impl
+
+# Apply Kustomize overlays.
+kustomize-apply:
+    @just _devbox kustomize-apply_impl
+
+# Diff Kustomize overlays.
+kustomize-diff:
+    @just _devbox kustomize-diff_impl
+
+# Validate with kubeval.
+kubeval:
+    @just _devbox kubeval_impl
+
+# Validate with kubeconform.
+kubeconform:
+    @just _devbox kubeconform_impl
+
+# Score with kube-score.
+kube-score:
+    @just _devbox kube-score_impl
+
+# Generate ArgoCD manifests.
+argocd-generate:
+    @just _devbox argocd-generate_impl
+
+# Sync ArgoCD applications.
+argocd-sync:
+    @just _devbox argocd-sync_impl
+
+# Get ArgoCD application status.
+argocd-status:
+    @just _devbox argocd-status_impl
+
+# Port forward ArgoCD UI.
+argocd-port-forward:
+    @just _devbox argocd-port-forward_impl
+
+# Generate Flux manifests.
+flux-generate:
+    @just _devbox flux-generate_impl
+
+# Sync Flux resources.
+flux-sync:
+    @just _devbox flux-sync_impl
+
+# Get Flux status.
+flux-status:
+    @just _devbox flux-status_impl
+
+{% if enable_docker %}
+# Build Docker image.
+docker-build:
+    @just _devbox docker-build_impl
+
+# Push Docker image.
+docker-push:
+    @just _devbox docker-push_impl
+{% endif %}
+
+# Run pre-commit hooks.
+pre-commit:
+    @just _devbox pre-commit_impl
+
+# Install pre-commit hooks.
+pre-commit-install:
+    @just _devbox pre-commit-install_impl
+
+# Update dependencies.
+deps-update:
+    @just _devbox deps-update_impl
+
+# Security scan.
+security-scan:
+    @just _devbox security-scan_impl
+
+# Generate SBOM.
+sbom:
+    @just _devbox sbom_impl
+
+# Full CI pipeline.
+ci:
+    @just _devbox ci_impl
+
+# Full deployment pipeline.
+deploy:
+    @just _devbox deploy_impl
+
+# Help command.
+help:
+    @just _devbox help_impl
+
+# --- Helm Unit Testing (public) ---------------------------------------------
+
+helm-unittest:
+    @just _devbox helm-unittest_impl
+
+helm-unittest-verbose:
+    @just _devbox helm-unittest-verbose_impl
+
+helm-unittest-watch:
+    @just _devbox helm-unittest-watch_impl
+
+helm-unittest-update:
+    @just _devbox helm-unittest-update_impl
+
+helm-unittest-coverage:
+    @just _devbox helm-unittest-coverage_impl
+
+helm-unittest-format:
+    @just _devbox helm-unittest-format_impl
+
+helm-unittest-specific test_file:
+    @just _devbox helm-unittest-specific_impl "{{test_file}}"
+
+helm-unittest-deployment:
+    @just _devbox helm-unittest-deployment_impl
+
+helm-unittest-service:
+    @just _devbox helm-unittest-service_impl
+
+helm-unittest-ingress:
+    @just _devbox helm-unittest-ingress_impl
+
+helm-unittest-configmap:
+    @just _devbox helm-unittest-configmap_impl
+
+helm-unittest-secret:
+    @just _devbox helm-unittest-secret_impl
+
+helm-unittest-hpa:
+    @just _devbox helm-unittest-hpa_impl
+
+helm-unittest-serviceaccount:
+    @just _devbox helm-unittest-serviceaccount_impl
+
+helm-unittest-helpers:
+    @just _devbox helm-unittest-helpers_impl
+
+# --- test convenience targets ------------------------------------------------
+
+test-dev:
+    @just _devbox test-dev_impl
+
+test-staging:
+    @just _devbox test-staging_impl
+
+test-prod:
+    @just _devbox test-prod_impl
+
+validate-tests:
+    @just _devbox validate-tests_impl
+
+validate-test-structure:
+    @just _devbox validate-test-structure_impl
+
+test-coverage:
+    @just _devbox test-coverage_impl
+
+test-coverage-html:
+    @just _devbox test-coverage-html_impl
+
+debug-tests:
+    @just _devbox debug-tests_impl
+
+debug-specific-test test_file:
+    @just _devbox debug-specific-test_impl "{{test_file}}"
+
+test-performance:
+    @just _devbox test-performance_impl
+
+test-performance-verbose:
+    @just _devbox test-performance-verbose_impl
+
+test-integration:
+    @just _devbox test-integration_impl
+
+test-integration-verbose:
+    @just _devbox test-integration-verbose_impl
+
+test-report:
+    @just _devbox test-report_impl
+
+test-report-html:
+    @just _devbox test-report-html_impl
+
+test-report-junit:
+    @just _devbox test-report-junit_impl
+
+test-cleanup:
+    @just _devbox test-cleanup_impl
+
+test-setup:
+    @just _devbox test-setup_impl
+
+test-help:
+    @just _devbox test-help_impl
+
+# --- implementation targets (assume devbox active) --------------------------
+
+[private]
+setup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Setting up development environment"
+    devbox run setup
+    log_end "Setup complete"
+
+[private]
+validate_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Validating configurations"
+    devbox run validate
+    log_end "Validation complete"
+
+[private]
+test_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running tests"
+    devbox run test
+    log_end "Tests complete"
+
+[private]
+clean_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Cleaning up resources"
+    devbox run clean
+    log_end "Clean complete"
+
+[private]
+deploy-dev_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Deploying to development"
+    devbox run deploy-dev
+    log_end "Development deployment complete"
+
+[private]
+deploy-staging_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Deploying to staging"
+    devbox run deploy-staging
+    log_end "Staging deployment complete"
+
+[private]
+deploy-prod_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Deploying to production"
+    devbox run deploy-prod
+    log_end "Production deployment complete"
+
+[private]
+status_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     devbox run status
 
-# Get logs
-logs:
-    @echo "Fetching logs..."
+[private]
+logs_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     devbox run logs
 
-# Port forward service
-port-forward:
-    @echo "Setting up port forward..."
+[private]
+port-forward_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Setting up port forward"
     devbox run port-forward
 
-# Build and lint Helm chart
-helm-lint:
-    @echo "Linting Helm chart..."
+[private]
+helm-lint_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Linting Helm chart"
     helm lint deploy/charts/{{ project_slug }}/
+    log_end "Helm lint complete"
 
-# Template Helm chart
-helm-template:
-    @echo "Templating Helm chart..."
+[private]
+helm-template_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Templating Helm chart"
     helm template {{ project_name }} deploy/charts/{{ project_slug }}/
+    log_end "Helm template complete"
 
-# Package Helm chart
-helm-package:
-    @echo "Packaging Helm chart..."
+[private]
+helm-package_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Packaging Helm chart"
     helm package deploy/charts/{{ project_slug }}/
+    log_end "Helm package complete"
 
-# Install Helm chart locally
-helm-install:
-    @echo "Installing Helm chart..."
+[private]
+helm-install_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Installing Helm chart"
     helm install {{ project_name }} deploy/charts/{{ project_slug }}/
+    log_end "Helm install complete"
 
-# Upgrade Helm chart
-helm-upgrade:
-    @echo "Upgrading Helm chart..."
+[private]
+helm-upgrade_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Upgrading Helm chart"
     helm upgrade {{ project_name }} deploy/charts/{{ project_slug }}/
+    log_end "Helm upgrade complete"
 
-# Uninstall Helm chart
-helm-uninstall:
-    @echo "Uninstalling Helm chart..."
+[private]
+helm-uninstall_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Uninstalling Helm chart"
     helm uninstall {{ project_name }}
+    log_end "Helm uninstall complete"
 
-# Build Kustomize overlays
-kustomize-build:
-    @echo "Building Kustomize overlays..."
-    @echo "Development:"
+[private]
+kustomize-build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Building Kustomize overlays"
+    echo "Development:"
     kustomize build deploy/apps/{{ project_slug }}/overlays/dev
-    @echo "Staging:"
+    echo "Staging:"
     kustomize build deploy/apps/{{ project_slug }}/overlays/staging
-    @echo "Production:"
+    echo "Production:"
     kustomize build deploy/apps/{{ project_slug }}/overlays/prod
+    log_end "Kustomize build complete"
 
-# Apply Kustomize overlays
-kustomize-apply:
-    @echo "Applying Kustomize overlays..."
+[private]
+kustomize-apply_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Applying Kustomize overlays"
     kubectl apply -k deploy/apps/{{ project_slug }}/overlays/dev
+    log_end "Kustomize apply complete"
 
-# Diff Kustomize overlays
-kustomize-diff:
-    @echo "Diffing Kustomize overlays..."
+[private]
+kustomize-diff_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Diffing Kustomize overlays"
     kubectl diff -k deploy/apps/{{ project_slug }}/overlays/dev
+    log_end "Kustomize diff complete"
 
-# Validate Kubernetes manifests
-kubeval:
-    @echo "Validating with kubeval..."
+[private]
+kubeval_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Validating with kubeval"
     kubeval --strict deploy/apps/{{ project_slug }}/base/kustomization.yaml
+    log_end "kubeval complete"
 
-# Validate with kubeconform
-kubeconform:
-    @echo "Validating with kubeconform..."
+[private]
+kubeconform_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Validating with kubeconform"
     kubeconform --strict deploy/apps/{{ project_slug }}/base/kustomization.yaml
+    log_end "kubeconform complete"
 
-# Score with kube-score
-kube-score:
-    @echo "Scoring with kube-score..."
+[private]
+kube-score_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Scoring with kube-score"
     kube-score score deploy/apps/{{ project_slug }}/base/kustomization.yaml
+    log_end "kube-score complete"
 
-# Generate ArgoCD manifests
-argocd-generate:
-    @echo "Generating ArgoCD manifests..."
+[private]
+argocd-generate_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Generating ArgoCD manifests"
     kubectl apply -f deploy/argocd/{{ project_slug }}/
+    log_end "ArgoCD manifests generated"
 
-# Sync ArgoCD applications
-argocd-sync:
-    @echo "Syncing ArgoCD applications..."
+[private]
+argocd-sync_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Syncing ArgoCD applications"
     argocd app sync {{ project_name }}
     argocd app sync {{ project_name }}-staging
     argocd app sync {{ project_name }}-prod
+    log_end "ArgoCD sync complete"
 
-# Get ArgoCD application status
-argocd-status:
-    @echo "Getting ArgoCD status..."
+[private]
+argocd-status_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     argocd app get {{ project_name }}
     argocd app get {{ project_name }}-staging
     argocd app get {{ project_name }}-prod
 
-# Port forward ArgoCD UI
-argocd-port-forward:
-    @echo "Port forwarding ArgoCD UI..."
+[private]
+argocd-port-forward_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Port forwarding ArgoCD UI"
     kubectl port-forward -n argocd svc/argocd-server 8080:443
 
-# Generate Flux manifests
-flux-generate:
-    @echo "Generating Flux manifests..."
+[private]
+flux-generate_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Generating Flux manifests"
     flux create kustomization {{ project_name }} \
         --source=GitRepository/{{ project_name }} \
         --path="./deploy/apps/{{ project_slug }}/overlays/dev" \
         --prune=true \
         --interval=5m
+    log_end "Flux manifests generated"
 
-# Sync Flux resources
-flux-sync:
-    @echo "Syncing Flux resources..."
+[private]
+flux-sync_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Syncing Flux resources"
     flux reconcile kustomization {{ project_name }}
+    log_end "Flux sync complete"
 
-# Get Flux status
-flux-status:
-    @echo "Getting Flux status..."
+[private]
+flux-status_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     flux get kustomizations
     flux get helmreleases
 
-# Build Docker image (if applicable)
 {% if enable_docker %}
-docker-build:
-    @echo "Building Docker image..."
+[private]
+docker-build_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Building Docker image"
     docker build -t {{ app_image }}:{{ app_version }} .
     docker tag {{ app_image }}:{{ app_version }} {{ app_image }}:latest
+    log_end "Docker image built"
 
-# Push Docker image
-docker-push:
-    @echo "Pushing Docker image..."
+[private]
+docker-push_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Pushing Docker image"
     docker push {{ app_image }}:{{ app_version }}
     docker push {{ app_image }}:latest
+    log_end "Docker image pushed"
 {% endif %}
 
-# Run pre-commit hooks
-pre-commit:
-    @echo "Running pre-commit hooks..."
+[private]
+pre-commit_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running pre-commit hooks"
     pre-commit run --all-files
+    log_end "Pre-commit complete"
 
-# Install pre-commit hooks
-pre-commit-install:
-    @echo "Installing pre-commit hooks..."
+[private]
+pre-commit-install_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Installing pre-commit hooks"
     pre-commit install
+    log_end "Pre-commit hooks installed"
 
-# Update dependencies
-deps-update:
-    @echo "Updating dependencies..."
+[private]
+deps-update_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Updating dependencies"
     helm dependency update deploy/charts/{{ project_slug }}/
+    log_end "Dependencies updated"
 
-# Security scan
-security-scan:
-    @echo "Running security scan..."
+[private]
+security-scan_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running security scan"
     trivy image {{ app_image }}:{{ app_version }}
+    log_end "Security scan complete"
 
-# Generate SBOM
-sbom:
-    @echo "Generating SBOM..."
+[private]
+sbom_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Generating SBOM"
     syft {{ app_image }}:{{ app_version }} -o sbom.json
+    log_end "SBOM generated"
 
-# Full CI pipeline
-ci: validate test security-scan
-    @echo "CI pipeline completed successfully!"
+[private]
+ci_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just validate_impl
+    just test_impl
+    just security-scan_impl
+    log_end "CI pipeline completed successfully"
 
-# Full deployment pipeline
-deploy: deploy-dev deploy-staging deploy-prod
-    @echo "All deployments completed successfully!"
+[private]
+deploy_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just deploy-dev_impl
+    just deploy-staging_impl
+    just deploy-prod_impl
+    log_end "All deployments completed successfully"
 
-# Help command
-help:
-    @echo "{{ project_name }} - GitOps with Helm + Kustomize"
-    @echo ""
-    @echo "Development Commands:"
-    @echo "  setup           - Set up development environment"
-    @echo "  validate         - Validate all configurations"
-    @echo "  test            - Run tests"
-    @echo "  clean           - Clean up all resources"
-    @echo ""
-    @echo "Deployment Commands:"
-    @echo "  deploy-dev      - Deploy to development"
-    @echo "  deploy-staging  - Deploy to staging"
-    @echo "  deploy-prod     - Deploy to production"
-    @echo "  status          - Check deployment status"
-    @echo "  logs            - Get logs"
-    @echo "  port-forward    - Port forward service"
-    @echo ""
-    @echo "Helm Commands:"
-    @echo "  helm-lint       - Lint Helm chart"
-    @echo "  helm-template   - Template Helm chart"
-    @echo "  helm-package    - Package Helm chart"
-    @echo "  helm-install    - Install Helm chart"
-    @echo "  helm-upgrade    - Upgrade Helm chart"
-    @echo "  helm-uninstall  - Uninstall Helm chart"
-    @echo ""
-    @echo "Kustomize Commands:"
-    @echo "  kustomize-build - Build Kustomize overlays"
-    @echo "  kustomize-apply - Apply Kustomize overlays"
-    @echo "  kustomize-diff  - Diff Kustomize overlays"
-    @echo ""
-    @echo "Validation Commands:"
-    @echo "  kubeval         - Validate with kubeval"
-    @echo "  kubeconform     - Validate with kubeconform"
-    @echo "  kube-score      - Score with kube-score"
-    @echo ""
-    @echo "GitOps Commands:"
-    @echo "  argocd-generate - Generate ArgoCD manifests"
-    @echo "  argocd-sync     - Sync ArgoCD applications"
-    @echo "  argocd-status   - Get ArgoCD status"
-    @echo "  argocd-port-forward - Port forward ArgoCD UI"
-    @echo ""
-    @echo "Flux Commands:"
-    @echo "  flux-generate   - Generate Flux manifests"
-    @echo "  flux-sync       - Sync Flux resources"
-    @echo "  flux-status     - Get Flux status"
-    @echo ""
-    @echo "Utility Commands:"
-    @echo "  pre-commit      - Run pre-commit hooks"
-    @echo "  pre-commit-install - Install pre-commit hooks"
-    @echo "  deps-update     - Update dependencies"
-    @echo "  security-scan   - Run security scan"
-    @echo "  sbom            - Generate SBOM"
-    @echo "  ci              - Run CI pipeline"
-    @echo "  deploy          - Deploy to all environments"
-    @echo "  help            - Show this help"
+# --- Helm Unit Testing implementation targets --------------------------------
 
-# Helm Unit Testing Commands
-helm-unittest:
-    @echo "Running Helm unit tests..."
+[private]
+helm-unittest_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Helm unit tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict
+    log_end "Helm unit tests complete"
 
-helm-unittest-verbose:
-    @echo "Running Helm unit tests with verbose output..."
+[private]
+helm-unittest-verbose_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Helm unit tests with verbose output"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --verbose
+    log_end "Helm unit tests complete"
 
-helm-unittest-watch:
-    @echo "Running Helm unit tests with watch mode..."
+[private]
+helm-unittest-watch_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Helm unit tests with watch mode"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --watch
 
-helm-unittest-update:
-    @echo "Running Helm unit tests with update snapshots..."
+[private]
+helm-unittest-update_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Helm unit tests with update snapshots"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --update-snapshots
+    log_end "Snapshots updated"
 
-helm-unittest-coverage:
-    @echo "Running Helm unit tests with coverage..."
+[private]
+helm-unittest-coverage_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Helm unit tests with coverage"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --coverage
+    log_end "Coverage report generated"
 
-helm-unittest-format:
-    @echo "Running Helm unit tests with format check..."
+[private]
+helm-unittest-format_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running Helm unit tests with format check"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --format
+    log_end "Format check complete"
 
-helm-unittest-specific:
-    @echo "Running specific Helm unit test..."
-    @read -p "Enter test file name: " test_file; \
-    helm unittest deploy/charts/{{ project_slug }}/ --strict --tests "$$test_file"
+[private]
+helm-unittest-specific_impl test_file:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running specific Helm unit test: {{test_file}}"
+    helm unittest deploy/charts/{{ project_slug }}/ --strict --tests "{{test_file}}"
+    log_end "Specific test complete"
 
-helm-unittest-deployment:
-    @echo "Running deployment tests only..."
+[private]
+helm-unittest-deployment_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running deployment tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --tests deployment_test.yaml
+    log_end "Deployment tests complete"
 
-helm-unittest-service:
-    @echo "Running service tests only..."
+[private]
+helm-unittest-service_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running service tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --tests service_test.yaml
+    log_end "Service tests complete"
 
-helm-unittest-ingress:
-    @echo "Running ingress tests only..."
+[private]
+helm-unittest-ingress_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running ingress tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --tests ingress_test.yaml
+    log_end "Ingress tests complete"
 
-helm-unittest-configmap:
-    @echo "Running configmap tests only..."
+[private]
+helm-unittest-configmap_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running configmap tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --tests configmap_test.yaml
+    log_end "Configmap tests complete"
 
-helm-unittest-secret:
-    @echo "Running secret tests only..."
+[private]
+helm-unittest-secret_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running secret tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --tests secret_test.yaml
+    log_end "Secret tests complete"
 
-helm-unittest-hpa:
-    @echo "Running HPA tests only..."
+[private]
+helm-unittest-hpa_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running HPA tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --tests hpa_test.yaml
+    log_end "HPA tests complete"
 
-helm-unittest-serviceaccount:
-    @echo "Running service account tests only..."
+[private]
+helm-unittest-serviceaccount_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running service account tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --tests serviceaccount_test.yaml
+    log_end "Service account tests complete"
 
-helm-unittest-helpers:
-    @echo "Running helper tests only..."
+[private]
+helm-unittest-helpers_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running helper tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --tests _helpers_test.yaml
+    log_end "Helper tests complete"
 
-# Test Development Commands
-test-dev:
-    @echo "Running development tests..."
+# --- test convenience implementation targets ---------------------------------
+
+[private]
+test-dev_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running development tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --watch --verbose
 
-test-staging:
-    @echo "Running staging tests..."
+[private]
+test-staging_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running staging tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --values deploy/apps/{{ project_slug }}/overlays/staging/kustomization.yaml
+    log_end "Staging tests complete"
 
-test-prod:
-    @echo "Running production tests..."
+[private]
+test-prod_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running production tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --values deploy/apps/{{ project_slug }}/overlays/prod/kustomization.yaml
+    log_end "Production tests complete"
 
-# Test Validation Commands
-validate-tests:
-    @echo "Validating Helm unit tests..."
+[private]
+validate-tests_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Validating Helm unit tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --dry-run
+    log_end "Test validation complete"
 
-validate-test-structure:
-    @echo "Validating test structure..."
-    @echo "Checking test files..."
-    @find deploy/charts/{{ project_slug }}/tests -name "*.yaml" -exec echo "Found test file: {}" \;
-    @echo "Test structure validation complete!"
+[private]
+validate-test-structure_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Validating test structure"
+    find deploy/charts/{{ project_slug }}/tests -name "*.yaml" -exec echo "Found test file: {}" \;
+    log_end "Test structure validation complete"
 
-# Test Coverage Commands
-test-coverage:
-    @echo "Generating test coverage report..."
+[private]
+test-coverage_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Generating test coverage report"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --coverage --output-file coverage.json
+    log_end "Coverage report generated"
 
-test-coverage-html:
-    @echo "Generating HTML test coverage report..."
+[private]
+test-coverage-html_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Generating HTML test coverage report"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --coverage --output-file coverage.html
+    log_end "HTML coverage report generated"
 
-# Test Debugging Commands
-debug-tests:
-    @echo "Debugging Helm unit tests..."
+[private]
+debug-tests_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Debugging Helm unit tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --verbose --debug
+    log_end "Debug session complete"
 
-debug-specific-test:
-    @echo "Debugging specific test..."
-    @read -p "Enter test file name: " test_file; \
-    helm unittest deploy/charts/{{ project_slug }}/ --strict --tests "$$test_file" --verbose --debug
+[private]
+debug-specific-test_impl test_file:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Debugging specific test: {{test_file}}"
+    helm unittest deploy/charts/{{ project_slug }}/ --strict --tests "{{test_file}}" --verbose --debug
+    log_end "Debug session complete"
 
-# Test Performance Commands
-test-performance:
-    @echo "Running performance tests..."
+[private]
+test-performance_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running performance tests"
     time helm unittest deploy/charts/{{ project_slug }}/ --strict
+    log_end "Performance tests complete"
 
-test-performance-verbose:
-    @echo "Running performance tests with verbose output..."
+[private]
+test-performance-verbose_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running performance tests with verbose output"
     time helm unittest deploy/charts/{{ project_slug }}/ --strict --verbose
+    log_end "Performance tests complete"
 
-# Test Integration Commands
-test-integration:
-    @echo "Running integration tests..."
+[private]
+test-integration_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running integration tests"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --integration
+    log_end "Integration tests complete"
 
-test-integration-verbose:
-    @echo "Running integration tests with verbose output..."
+[private]
+test-integration-verbose_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Running integration tests with verbose output"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --integration --verbose
+    log_end "Integration tests complete"
 
-# Test Reporting Commands
-test-report:
-    @echo "Generating test report..."
+[private]
+test-report_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Generating test report"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --output-file test-report.json
+    log_end "Test report generated"
 
-test-report-html:
-    @echo "Generating HTML test report..."
+[private]
+test-report-html_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Generating HTML test report"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --output-file test-report.html
+    log_end "HTML test report generated"
 
-test-report-junit:
-    @echo "Generating JUnit test report..."
+[private]
+test-report-junit_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Generating JUnit test report"
     helm unittest deploy/charts/{{ project_slug }}/ --strict --output-file test-report.xml
+    log_end "JUnit test report generated"
 
-# Test Cleanup Commands
-test-cleanup:
-    @echo "Cleaning up test artifacts..."
+[private]
+test-cleanup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Cleaning up test artifacts"
     rm -f test-report.* coverage.* unittest-report.*
-    @echo "Test cleanup complete!"
+    log_end "Test cleanup complete"
 
-# Test Setup Commands
-test-setup:
-    @echo "Setting up test environment..."
-    @echo "Installing helm-unittest plugin..."
+[private]
+test-setup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Setting up test environment"
     helm plugin install https://github.com/helm-unittest/helm-unittest
-    @echo "Test environment setup complete!"
+    log_end "Test environment setup complete"
 
-# Test Help Commands
-test-help:
-    @echo "Helm Unit Testing Commands:"
-    @echo "  helm-unittest              - Run Helm unit tests"
-    @echo "  helm-unittest-verbose      - Run Helm unit tests with verbose output"
-    @echo "  helm-unittest-watch        - Run Helm unit tests with watch mode"
-    @echo "  helm-unittest-update       - Run Helm unit tests with update snapshots"
-    @echo "  helm-unittest-coverage     - Run Helm unit tests with coverage"
-    @echo "  helm-unittest-format       - Run Helm unit tests with format check"
-    @echo "  helm-unittest-specific     - Run specific Helm unit test"
-    @echo "  helm-unittest-deployment   - Run deployment tests only"
-    @echo "  helm-unittest-service      - Run service tests only"
-    @echo "  helm-unittest-ingress      - Run ingress tests only"
-    @echo "  helm-unittest-configmap    - Run configmap tests only"
-    @echo "  helm-unittest-secret       - Run secret tests only"
-    @echo "  helm-unittest-hpa          - Run HPA tests only"
-    @echo "  helm-unittest-serviceaccount - Run service account tests only"
-    @echo "  helm-unittest-helpers      - Run helper tests only"
-    @echo ""
-    @echo "Test Development Commands:"
-    @echo "  test-dev                   - Run development tests"
-    @echo "  test-staging               - Run staging tests"
-    @echo "  test-prod                  - Run production tests"
-    @echo ""
-    @echo "Test Validation Commands:"
-    @echo "  validate-tests             - Validate Helm unit tests"
-    @echo "  validate-test-structure    - Validate test structure"
-    @echo ""
-    @echo "Test Coverage Commands:"
-    @echo "  test-coverage              - Generate test coverage report"
-    @echo "  test-coverage-html         - Generate HTML test coverage report"
-    @echo ""
-    @echo "Test Debugging Commands:"
-    @echo "  debug-tests                - Debug Helm unit tests"
-    @echo "  debug-specific-test         - Debug specific test"
-    @echo ""
-    @echo "Test Performance Commands:"
-    @echo "  test-performance           - Run performance tests"
-    @echo "  test-performance-verbose    - Run performance tests with verbose output"
-    @echo ""
-    @echo "Test Integration Commands:"
-    @echo "  test-integration           - Run integration tests"
-    @echo "  test-integration-verbose     - Run integration tests with verbose output"
-    @echo ""
-    @echo "Test Reporting Commands:"
-    @echo "  test-report                - Generate test report"
-    @echo "  test-report-html            - Generate HTML test report"
-    @echo "  test-report-junit           - Generate JUnit test report"
-    @echo ""
-    @echo "Test Cleanup Commands:"
-    @echo "  test-cleanup               - Clean up test artifacts"
-    @echo ""
-    @echo "Test Setup Commands:"
-    @echo "  test-setup                 - Set up test environment"
-    @echo ""
-    @echo "Test Help Commands:"
-    @echo "  test-help                  - Show this help"
+# --- help targets (keep regular echo — output is the product) ----------------
+
+[private]
+help_impl:
+    #!/usr/bin/env bash
+    echo "{{ project_name }} - GitOps with Helm + Kustomize"
+    echo ""
+    echo "Development Commands:"
+    echo "  setup           - Set up development environment"
+    echo "  validate         - Validate all configurations"
+    echo "  test            - Run tests"
+    echo "  clean           - Clean up all resources"
+    echo ""
+    echo "Deployment Commands:"
+    echo "  deploy-dev      - Deploy to development"
+    echo "  deploy-staging  - Deploy to staging"
+    echo "  deploy-prod     - Deploy to production"
+    echo "  status          - Check deployment status"
+    echo "  logs            - Get logs"
+    echo "  port-forward    - Port forward service"
+    echo ""
+    echo "Helm Commands:"
+    echo "  helm-lint       - Lint Helm chart"
+    echo "  helm-template   - Template Helm chart"
+    echo "  helm-package    - Package Helm chart"
+    echo "  helm-install    - Install Helm chart"
+    echo "  helm-upgrade    - Upgrade Helm chart"
+    echo "  helm-uninstall  - Uninstall Helm chart"
+    echo ""
+    echo "Kustomize Commands:"
+    echo "  kustomize-build - Build Kustomize overlays"
+    echo "  kustomize-apply - Apply Kustomize overlays"
+    echo "  kustomize-diff  - Diff Kustomize overlays"
+    echo ""
+    echo "Validation Commands:"
+    echo "  kubeval         - Validate with kubeval"
+    echo "  kubeconform     - Validate with kubeconform"
+    echo "  kube-score      - Score with kube-score"
+    echo ""
+    echo "GitOps Commands:"
+    echo "  argocd-generate - Generate ArgoCD manifests"
+    echo "  argocd-sync     - Sync ArgoCD applications"
+    echo "  argocd-status   - Get ArgoCD status"
+    echo "  argocd-port-forward - Port forward ArgoCD UI"
+    echo ""
+    echo "Flux Commands:"
+    echo "  flux-generate   - Generate Flux manifests"
+    echo "  flux-sync       - Sync Flux resources"
+    echo "  flux-status     - Get Flux status"
+    echo ""
+    echo "Utility Commands:"
+    echo "  pre-commit      - Run pre-commit hooks"
+    echo "  pre-commit-install - Install pre-commit hooks"
+    echo "  deps-update     - Update dependencies"
+    echo "  security-scan   - Run security scan"
+    echo "  sbom            - Generate SBOM"
+    echo "  ci              - Run CI pipeline"
+    echo "  deploy          - Deploy to all environments"
+    echo "  help            - Show this help"
+    echo ""
+    echo "Verbosity: set JUST_LOG=1 for all output, JUST_LOG=startend for start/end markers"
+
+[private]
+test-help_impl:
+    #!/usr/bin/env bash
+    echo "Helm Unit Testing Commands:"
+    echo "  helm-unittest              - Run Helm unit tests"
+    echo "  helm-unittest-verbose      - Run Helm unit tests with verbose output"
+    echo "  helm-unittest-watch        - Run Helm unit tests with watch mode"
+    echo "  helm-unittest-update       - Run Helm unit tests with update snapshots"
+    echo "  helm-unittest-coverage     - Run Helm unit tests with coverage"
+    echo "  helm-unittest-format       - Run Helm unit tests with format check"
+    echo "  helm-unittest-specific     - Run specific Helm unit test"
+    echo "  helm-unittest-deployment   - Run deployment tests only"
+    echo "  helm-unittest-service      - Run service tests only"
+    echo "  helm-unittest-ingress      - Run ingress tests only"
+    echo "  helm-unittest-configmap    - Run configmap tests only"
+    echo "  helm-unittest-secret       - Run secret tests only"
+    echo "  helm-unittest-hpa          - Run HPA tests only"
+    echo "  helm-unittest-serviceaccount - Run service account tests only"
+    echo "  helm-unittest-helpers      - Run helper tests only"
+    echo ""
+    echo "Test Development Commands:"
+    echo "  test-dev                   - Run development tests"
+    echo "  test-staging               - Run staging tests"
+    echo "  test-prod                  - Run production tests"
+    echo ""
+    echo "Test Validation Commands:"
+    echo "  validate-tests             - Validate Helm unit tests"
+    echo "  validate-test-structure    - Validate test structure"
+    echo ""
+    echo "Test Coverage Commands:"
+    echo "  test-coverage              - Generate test coverage report"
+    echo "  test-coverage-html         - Generate HTML test coverage report"
+    echo ""
+    echo "Test Debugging Commands:"
+    echo "  debug-tests                - Debug Helm unit tests"
+    echo "  debug-specific-test         - Debug specific test"
+    echo ""
+    echo "Test Performance Commands:"
+    echo "  test-performance           - Run performance tests"
+    echo "  test-performance-verbose    - Run performance tests with verbose output"
+    echo ""
+    echo "Test Integration Commands:"
+    echo "  test-integration           - Run integration tests"
+    echo "  test-integration-verbose     - Run integration tests with verbose output"
+    echo ""
+    echo "Test Reporting Commands:"
+    echo "  test-report                - Generate test report"
+    echo "  test-report-html            - Generate HTML test report"
+    echo "  test-report-junit           - Generate JUnit test report"
+    echo ""
+    echo "Test Cleanup Commands:"
+    echo "  test-cleanup               - Clean up test artifacts"
+    echo ""
+    echo "Test Setup Commands:"
+    echo "  test-setup                 - Set up test environment"
+    echo ""
+    echo "Test Help Commands:"
+    echo "  test-help                  - Show this help"

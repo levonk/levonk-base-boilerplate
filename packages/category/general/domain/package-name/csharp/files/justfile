@@ -1,92 +1,144 @@
 # Justfile for {{ package_name | default('csharp-package') }} C# Package
 
+_log := '
+_jv_has() {
+  local cat="$1"
+  local v="${JUST_LOG:-0}"
+  case "$v" in
+    1|all) return 0 ;;
+    0|"") return 1 ;;
+  esac
+  v="${v//startend/start,end}"
+  echo ",$v," | grep -q ",$cat,"
+}
+log_info()   { _jv_has info   && echo "$*" || true; }
+log_start()  { _jv_has start  && echo "▶ $*" || true; }
+log_end()    { _jv_has end    && echo "✔ $*" || true; }
+log_status() { _jv_has status && echo "$*" || true; }
+log_warn()   { echo "⚠️  $*" >&2; }
+log_error()  { echo "❌ $*" >&2; }
+log_startend() {
+  local msg="$1"; shift
+  local rc
+  _jv_has start && echo "▶ $msg" || true
+  rc=0; "$@" || rc=$?
+  _jv_has end && echo "✔ $msg complete" || true
+  return $rc
+}
+'
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default target
 default: dev
 
-# Internal targets (prefixed with - to avoid showing in help)
--bootstrap-internal:
+# Internal targets
+[private]
+bootstrap_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🚀 Bootstrapping {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Bootstrapping {{ package_name | default('csharp-package') }}"
+
     # Check .NET installation
     if ! command -v dotnet >/dev/null 2>&1; then
-        echo "❌ dotnet not found"
+        log_error "dotnet not found"
         exit 1
     fi
-    
+
     # Restore dependencies
     if [ -f "*.csproj" ] || [ -f "*.sln" ]; then
         dotnet restore
     fi
-    
-    echo "✅ Bootstrap complete"
 
--doctor-internal:
+    log_end "Bootstrap complete"
+
+[private]
+doctor_impl:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🔍 Running health checks for {{ package_name | default('csharp-package') }}..."
-    
+
     # Check required tools
     echo "Checking tools:"
     command -v dotnet >/dev/null 2>&1 && echo "✅ dotnet" || echo "❌ dotnet missing"
     command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
-    
+
     # Check .NET version
     if command -v dotnet >/dev/null 2>&1; then
         echo ".NET version: $(dotnet --version)"
     fi
-    
+
     # Check project structure
     echo "Checking structure:"
     test -f "*.csproj" && echo "✅ .csproj found" || echo "⚠️  No .csproj found"
     test -f "*.sln" && echo "✅ .sln found" || echo "⚠️  No .sln found"
     test -d src && echo "✅ src directory" || echo "⚠️  src directory missing"
-    
+
     echo "🏁 Doctor complete"
 
--clean-internal:
+[private]
+clean_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🧹 Cleaning {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Cleaning {{ package_name | default('csharp-package') }}"
+
     # Clean build artifacts
     if [ -f "*.sln" ]; then
         dotnet clean
     elif [ -f "*.csproj" ]; then
         dotnet clean
     fi
-    
+
     # Remove additional artifacts
     rm -rf bin/
     rm -rf obj/
     rm -rf TestResults/
     rm -rf coverage/
-    
-    echo "✅ Clean complete"
 
--build-internal:
+    log_end "Clean complete"
+
+[private]
+build_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔨 Building {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Building {{ package_name | default('csharp-package') }}"
+
     # Build the project
     if [ -f "*.sln" ]; then
         dotnet build
     elif [ -f "*.csproj" ]; then
         dotnet build
     else
-        echo "❌ No .sln or .csproj found"
+        log_error "No .sln or .csproj found"
         exit 1
     fi
-    
-    echo "✅ Build complete"
 
--dev-internal:
+    log_end "Build complete"
+
+[private]
+dev_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🚀 Starting development environment for {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Starting development environment for {{ package_name | default('csharp-package') }}"
+
     # Watch for changes and rebuild
     if command -v dotnet-watch >/dev/null 2>&1; then
         if [ -f "*.sln" ]; then
@@ -95,190 +147,218 @@ default: dev
             dotnet watch
         fi
     else
-        echo "👀 Watching for changes... (Ctrl+C to stop)"
-        echo "🛠️  Available commands:"
-        echo "   just test    - Run tests"
-        echo "   just lint    - Run linting"
-        echo "   just build   - Build project"
-        echo "   just run     - Run project"
-        
+        log_info "Watching for changes... (Ctrl+C to stop)"
+        log_info "Available commands:"
+        log_info "   just test    - Run tests"
+        log_info "   just lint    - Run linting"
+        log_info "   just build   - Build project"
+        log_info "   just run     - Run project"
+
         # Simple watch loop
         while true; do
             sleep 5
             # Check if any C# files changed
             if find . -name "*.cs" -newer /tmp/last-check 2>/dev/null | grep -q .; then
                 touch /tmp/last-check
-                echo "🔄 C# files changed, consider rebuilding"
+                log_info "C# files changed, consider rebuilding"
             fi
         done
     fi
 
--test-internal:
+[private]
+test_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🧪 Testing {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Testing {{ package_name | default('csharp-package') }}"
+
     # Run tests
     if [ -f "*.sln" ]; then
         dotnet test
     elif [ -f "*.csproj" ]; then
         dotnet test
     else
-        echo "❌ No .sln or .csproj found"
+        log_error "No .sln or .csproj found"
         exit 1
     fi
-    
-    echo "✅ Tests complete"
 
--lint-internal:
+    log_end "Tests complete"
+
+[private]
+lint_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔍 Linting {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Linting {{ package_name | default('csharp-package') }}"
+
     # Run linting tools
     if command -v dotnet-format >/dev/null 2>&1; then
-        echo "Checking code format..."
+        log_info "Checking code format..."
         dotnet format --verbosity normal --check
     else
-        echo "⚠️  dotnet-format not available"
+        log_warn "dotnet-format not available"
     fi
-    
-    echo "✅ Linting complete"
 
--typecheck-internal:
+    log_end "Linting complete"
+
+[private]
+typecheck_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔍 Type checking {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Type checking {{ package_name | default('csharp-package') }}"
+
     # Compile for type checking
     if [ -f "*.sln" ]; then
         dotnet build --no-restore
     elif [ -f "*.csproj" ]; then
         dotnet build --no-restore
     else
-        echo "❌ No .sln or .csproj found"
+        log_error "No .sln or .csproj found"
         exit 1
     fi
-    
-    echo "✅ Type checking complete"
+
+    log_end "Type checking complete"
 
 # Public targets (user-facing)
-bootstrap: bootstrap-internal
-doctor: doctor-internal
-clean: clean-internal
-build: build-internal
-dev: dev-internal
-test: test-internal
-lint: lint-internal
-typecheck: typecheck-internal
+bootstrap:
+    @just _devbox bootstrap_impl
+
+doctor:
+    @just _devbox doctor_impl
+
+clean:
+    @just _devbox clean_impl
+
+build:
+    @just _devbox build_impl
+
+dev:
+    @just _devbox dev_impl
+
+test:
+    @just _devbox test_impl
+
+lint:
+    @just _devbox lint_impl
+
+typecheck:
+    @just _devbox typecheck_impl
 
 # Additional C#-specific targets
 build-release:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔨 Building {{ package_name | default('csharp-package') }} in release mode..."
-    
+    {{_log}}
+    log_start "Building {{ package_name | default('csharp-package') }} in release mode"
+
     # Build in release mode
     if [ -f "*.sln" ]; then
         dotnet build -c Release
     elif [ -f "*.csproj" ]; then
         dotnet build -c Release
     else
-        echo "❌ No .sln or .csproj found"
+        log_error "No .sln or .csproj found"
         exit 1
     fi
-    
-    echo "✅ Release build complete"
+
+    log_end "Release build complete"
 
 run:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🚀 Running {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Running {{ package_name | default('csharp-package') }}"
+
     # Run the project
     if [ -f "*.sln" ]; then
         dotnet run --project
     elif [ -f "*.csproj" ]; then
         dotnet run
     else
-        echo "❌ No .sln or .csproj found"
+        log_error "No .sln or .csproj found"
         exit 1
     fi
 
 test-coverage:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "📊 Running tests with coverage for {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Running tests with coverage for {{ package_name | default('csharp-package') }}"
+
     # Run tests with coverage
     if [ -f "*.sln" ]; then
         dotnet test --collect:"XPlat Code Coverage"
     elif [ -f "*.csproj" ]; then
         dotnet test --collect:"XPlat Code Coverage"
     else
-        echo "❌ No .sln or .csproj found"
+        log_error "No .sln or .csproj found"
         exit 1
     fi
-    
-    echo "📊 Coverage collected"
-    echo "✅ Coverage complete"
+
+    log_info "Coverage collected"
+    log_end "Coverage complete"
 
 format:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🎨 Formatting {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Formatting {{ package_name | default('csharp-package') }}"
+
     # Format code
     if command -v dotnet-format >/dev/null 2>&1; then
         dotnet format
     else
-        echo "⚠️  dotnet-format not available"
+        log_warn "dotnet-format not available"
     fi
-    
-    echo "✅ Formatting complete"
+
+    log_end "Formatting complete"
 
 pack:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "📦 Packing {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Packing {{ package_name | default('csharp-package') }}"
+
     # Create NuGet package
     if [ -f "*.sln" ]; then
         dotnet pack -c Release
     elif [ -f "*.csproj" ]; then
         dotnet pack -c Release
     else
-        echo "❌ No .sln or .csproj found"
+        log_error "No .sln or .csproj found"
         exit 1
     fi
-    
-    echo "✅ Package complete"
+
+    log_end "Package complete"
 
 restore:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "📦 Restoring dependencies for {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Restoring dependencies for {{ package_name | default('csharp-package') }}"
+
     # Restore dependencies
     if [ -f "*.sln" ]; then
         dotnet restore
     elif [ -f "*.csproj" ]; then
         dotnet restore
     else
-        echo "❌ No .sln or .csproj found"
+        log_error "No .sln or .csproj found"
         exit 1
     fi
-    
-    echo "✅ Dependencies restored"
+
+    log_end "Dependencies restored"
 
 validate:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "✅ Validating {{ package_name | default('csharp-package') }}..."
-    
+    {{_log}}
+    log_start "Validating {{ package_name | default('csharp-package') }}"
+
     # Run all validation checks
     just typecheck
     just lint
     just test
-    
-    echo "✅ Validation complete"
+
+    log_end "Validation complete"

@@ -4,24 +4,26 @@
 sync-deps:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Synchronize Package.resolved with Package.swift
     # Called by pre-commit target when Package.swift is modified
-    echo "🔄 Syncing Package.resolved with Package.swift..."
+    log_start "Syncing Package.resolved with Package.swift"
     swift package resolve
     git add Package.resolved
-    echo "✅ Package.resolved synchronized and staged"
+    log_end "Package.resolved synchronized and staged"
 
 pre-commit:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Pre-commit hook orchestration - called by git pre-commit hook
     # This target can call multiple validation targets
-    echo "🔍 Running pre-commit checks..."
-    
+    log_start "Running pre-commit checks"
+
     # Check if Package.swift is modified and sync dependencies if needed
     if git diff --cached --name-only | grep -q "Package.swift"; then
-        echo "Package.swift modified, syncing dependencies..."
+        log_info "Package.swift modified, syncing dependencies..."
         just sync-deps
     fi
-    
-    echo "✅ Pre-commit checks complete"
+
+    log_end "Pre-commit checks complete"

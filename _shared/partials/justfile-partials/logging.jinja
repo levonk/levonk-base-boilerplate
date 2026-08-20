@@ -1,0 +1,53 @@
+# Justfile logging helper — interpolated into shebang recipes via {{_log}}.
+#
+# Usage in recipes:
+#   recipe_impl:
+#       #!/usr/bin/env bash
+#       set -euo pipefail
+#       {{_log}}
+#       log_start "Building"
+#       pnpm build
+#       log_end "Building complete"
+#       log_warn "Something concerning"
+#       log_error "Something broke"
+#
+# Verbosity — controlled by the JUST_LOG env var:
+#   (unset / 0)        warn + error only (default, quiet)
+#   JUST_LOG=1         all levels (info, start, end, status)
+#   JUST_LOG=startend  start + end only
+#   JUST_LOG=start     start only
+#   JUST_LOG=end       end only
+#   JUST_LOG=info      info only
+#   JUST_LOG=status    status only
+#   JUST_LOG=info,startend  comma-separated combos
+#
+# Note: JUST_VERBOSE is reserved by just itself (--verbose flag).
+# log_warn and log_error always print (to stderr). All other levels are
+# gated by JUST_LOG. log_startend is a wrapper that runs a command with
+# start/end logging around it.
+_log := '
+_jv_has() {
+  local cat="$1"
+  local v="${JUST_LOG:-0}"
+  case "$v" in
+    1|all) return 0 ;;
+    0|"") return 1 ;;
+  esac
+  v="${v//startend/start,end}"
+  echo ",$v," | grep -q ",$cat,"
+}
+log_info()   { _jv_has info   && echo "$*" || true; }
+log_start()  { _jv_has start  && echo "▶ $*" || true; }
+log_end()    { _jv_has end    && echo "✔ $*" || true; }
+log_status() { _jv_has status && echo "$*" || true; }
+log_warn()   { echo "⚠️  $*" >&2; }
+log_error()  { echo "❌ $*" >&2; }
+log_startend() {
+  local msg="$1"; shift
+  local rc
+  _jv_has start && echo "▶ $msg" || true
+  rc=0; "$@" || rc=$?
+  _jv_has end && echo "✔ $msg complete" || true
+  return $rc
+}
+'

@@ -1,37 +1,83 @@
 # Justfile for {{ package_name | default('bash-package') }} Bash Package
 
+_log := '
+_jv_has() {
+  local cat="$1"
+  local v="${JUST_LOG:-0}"
+  case "$v" in
+    1|all) return 0 ;;
+    0|"") return 1 ;;
+  esac
+  v="${v//startend/start,end}"
+  echo ",$v," | grep -q ",$cat,"
+}
+log_info()   { _jv_has info   && echo "$*" || true; }
+log_start()  { _jv_has start  && echo "▶ $*" || true; }
+log_end()    { _jv_has end    && echo "✔ $*" || true; }
+log_status() { _jv_has status && echo "$*" || true; }
+log_warn()   { echo "⚠️  $*" >&2; }
+log_error()  { echo "❌ $*" >&2; }
+log_startend() {
+  local msg="$1"; shift
+  local rc
+  _jv_has start && echo "▶ $msg" || true
+  rc=0; "$@" || rc=$?
+  _jv_has end && echo "✔ $msg complete" || true
+  return $rc
+}
+'
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default target
 default: dev
 
-# Internal targets (prefixed with - to avoid showing in help)
--bootstrap-internal:
+# Internal targets
+[private]
+bootstrap_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🚀 Bootstrapping {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Bootstrapping {{ package_name | default('bash-package') }}"
+
     # Ensure test directory exists
     mkdir -p tests
-    
+
     # Install shell tools if not available
     if ! command -v shellcheck >/dev/null 2>&1; then
-        echo "⚠️  shellcheck not available"
+        log_warn "shellcheck not available"
     fi
-    
-    if ! command -v shfmt >/dev/null 2>&1; then
-        echo "⚠️  shfmt not available"
-    fi
-    
-    if ! command -v bats >/dev/null 2>&1; then
-        echo "⚠️  bats not available"
-    fi
-    
-    echo "✅ Bootstrap complete"
 
--doctor-internal:
+    if ! command -v shfmt >/dev/null 2>&1; then
+        log_warn "shfmt not available"
+    fi
+
+    if ! command -v bats >/dev/null 2>&1; then
+        log_warn "bats not available"
+    fi
+
+    log_end "Bootstrap complete"
+
+[private]
+doctor_impl:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "🔍 Running health checks for {{ package_name | default('bash-package') }}..."
-    
+
     # Check required tools
     echo "Checking tools:"
     command -v bash >/dev/null 2>&1 && echo "✅ bash" || echo "❌ bash missing"
@@ -39,157 +85,187 @@ default: dev
     command -v shfmt >/dev/null 2>&1 && echo "✅ shfmt" || echo "❌ shfmt missing"
     command -v bats >/dev/null 2>&1 && echo "✅ bats" || echo "❌ bats missing"
     command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
-    
+
     # Check project structure
     echo "Checking structure:"
     test -d src && echo "✅ src directory" || echo "❌ src directory missing"
     test -d tests && echo "✅ tests directory" || echo "❌ tests directory missing"
-    
+
     echo "🏁 Doctor complete"
 
--clean-internal:
+[private]
+clean_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🧹 Cleaning {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Cleaning {{ package_name | default('bash-package') }}"
+
     # Remove temporary files
     rm -rf coverage/
     rm -f *.bash~
     rm -f .coverage
-    
+
     # Clean test artifacts
     find tests -name "*.tmp" -delete 2>/dev/null || true
-    
-    echo "✅ Clean complete"
 
--build-internal:
+    log_end "Clean complete"
+
+[private]
+build_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔨 Building {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Building {{ package_name | default('bash-package') }}"
+
     # Validate all shell scripts
     for script in src/*.sh; do
         if [ -f "$script" ]; then
-            echo "Validating $script..."
+            log_info "Validating $script..."
             bash -n "$script"
         fi
     done
-    
-    echo "✅ Build complete"
 
--dev-internal:
+    log_end "Build complete"
+
+[private]
+dev_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🚀 Starting development environment for {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Starting development environment for {{ package_name | default('bash-package') }}"
+
     # Watch for changes and run tests
-    echo "👀 Watching for changes... (Ctrl+C to stop)"
-    echo "🛠️  Available commands:"
-    echo "   just test    - Run tests"
-    echo "   just lint    - Run linting"
-    echo "   just format  - Format code"
-    
+    log_info "Watching for changes... (Ctrl+C to stop)"
+    log_info "Available commands:"
+    log_info "   just test    - Run tests"
+    log_info "   just lint    - Run linting"
+    log_info "   just format  - Format code"
+
     # Simple watch loop
     while true; do
         sleep 5
         # Check if any files changed
         if find src -name "*.sh" -newer /tmp/last-check 2>/dev/null | grep -q .; then
             touch /tmp/last-check
-            echo "🔄 Files changed, consider running tests"
+            log_info "Files changed, consider running tests"
         fi
     done
 
--test-internal:
+[private]
+test_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🧪 Testing {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Testing {{ package_name | default('bash-package') }}"
+
     # Run bats tests if available
     if command -v bats >/dev/null 2>&1 && [ -d "tests" ]; then
         bats tests/
     else
-        echo "⚠️  bats not available or no tests directory"
+        log_warn "bats not available or no tests directory"
         # Basic syntax check
         for script in src/*.sh; do
             if [ -f "$script" ]; then
-                echo "Testing $script..."
+                log_info "Testing $script..."
                 bash -n "$script"
             fi
         done
     fi
-    
-    echo "✅ Tests complete"
 
--lint-internal:
+    log_end "Tests complete"
+
+[private]
+lint_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔍 Linting {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Linting {{ package_name | default('bash-package') }}"
+
     # Run shellcheck if available
     if command -v shellcheck >/dev/null 2>&1; then
-        echo "Running shellcheck..."
+        log_info "Running shellcheck..."
         shellcheck src/*.sh || true
     else
-        echo "⚠️  shellcheck not available"
+        log_warn "shellcheck not available"
     fi
-    
-    echo "✅ Linting complete"
 
--typecheck-internal:
+    log_end "Linting complete"
+
+[private]
+typecheck_impl:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔍 Type checking {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Type checking {{ package_name | default('bash-package') }}"
+
     # Bash syntax validation
     for script in src/*.sh; do
         if [ -f "$script" ]; then
-            echo "Checking $script..."
+            log_info "Checking $script..."
             bash -n "$script"
         fi
     done
-    
-    echo "✅ Type checking complete"
+
+    log_end "Type checking complete"
 
 # Public targets (user-facing)
-bootstrap: bootstrap-internal
-doctor: doctor-internal
-clean: clean-internal
-build: build-internal
-dev: dev-internal
-test: test-internal
-lint: lint-internal
-typecheck: typecheck-internal
+bootstrap:
+    @just _devbox bootstrap_impl
+
+doctor:
+    @just _devbox doctor_impl
+
+clean:
+    @just _devbox clean_impl
+
+build:
+    @just _devbox build_impl
+
+dev:
+    @just _devbox dev_impl
+
+test:
+    @just _devbox test_impl
+
+lint:
+    @just _devbox lint_impl
+
+typecheck:
+    @just _devbox typecheck_impl
 
 # Additional Bash-specific targets
 format:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🎨 Formatting {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Formatting {{ package_name | default('bash-package') }}"
+
     if command -v shfmt >/dev/null 2>&1; then
         shfmt -w -i 4 src/*.sh
-        echo "✅ Formatting complete"
+        log_end "Formatting complete"
     else
-        echo "⚠️  shfmt not available"
+        log_warn "shfmt not available"
     fi
 
 format-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🔍 Checking format for {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Checking format for {{ package_name | default('bash-package') }}"
+
     if command -v shfmt >/dev/null 2>&1; then
         shfmt -d -i 4 src/*.sh
-        echo "✅ Format check complete"
+        log_end "Format check complete"
     else
-        echo "⚠️  shfmt not available"
+        log_warn "shfmt not available"
     fi
 
 install:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "📦 Installing {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Installing {{ package_name | default('bash-package') }}"
+
     # Install scripts to local bin
     mkdir -p ~/.local/bin
     for script in src/*.sh; do
@@ -197,38 +273,40 @@ install:
             basename_script=$(basename "$script" .sh)
             cp "$script" ~/.local/bin/"${basename_script}"
             chmod +x ~/.local/bin/"${basename_script}"
-            echo "✅ Installed $basename_script"
+            log_info "Installed $basename_script"
         fi
     done
-    
-    echo "✅ Installation complete"
+
+    log_end "Installation complete"
 
 uninstall:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "🗑️  Uninstalling {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Uninstalling {{ package_name | default('bash-package') }}"
+
     # Remove scripts from local bin
     for script in src/*.sh; do
         if [ -f "$script" ]; then
             basename_script=$(basename "$script" .sh)
             if [ -f ~/.local/bin/"${basename_script}" ]; then
                 rm -f ~/.local/bin/"${basename_script}"
-                echo "🗑️  Removed $basename_script"
+                log_info "Removed $basename_script"
             fi
         fi
     done
-    
-    echo "✅ Uninstallation complete"
+
+    log_end "Uninstallation complete"
 
 validate:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "✅ Validating {{ package_name | default('bash-package') }}..."
-    
+    {{_log}}
+    log_start "Validating {{ package_name | default('bash-package') }}"
+
     # Run all validation checks
     just typecheck
     just lint
     just test
-    
-    echo "✅ Validation complete"
+
+    log_end "Validation complete"

@@ -1,95 +1,195 @@
 # TypeScript Package Development Commands
 
+{% include "partials.bak/partials/justfile-partials/logging.jinja" %}
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default recipe
 default:
     @just --list
 
 # Standard development recipes (REQUIRED)
 clean:
-    devbox shell clean
+    @just _devbox clean_impl
 
 dev:
-    devbox shell dev
+    @just _devbox dev_impl
 
 build:
-    devbox shell build
+    @just _devbox build_impl
 
 test:
-    devbox shell test
+    @just _devbox test_impl
 
 lint:
-    devbox shell lint
+    @just _devbox lint_impl
 
 typecheck:
-    devbox shell typecheck
+    @just _devbox typecheck_impl
+
+[private]
+clean_impl:
+    rm -rf dist/
+
+[private]
+dev_impl:
+    pnpm dev
+
+[private]
+build_impl:
+    pnpm run build
+
+[private]
+test_impl:
+    pnpm test
+
+[private]
+lint_impl:
+    pnpm run lint
+
+[private]
+typecheck_impl:
+    pnpm run typecheck
 
 # Bootstrap recipes (REQUIRED)
 bootstrap:
-    devbox shell bootstrap
+    @just _devbox bootstrap_impl
 
-bootstrap-internal:
+[private]
+bootstrap_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     # Install dependencies in background if not present
     [ -d node_modules/ ] || pnpm install &
 
-    echo "TypeScript package bootstrap complete!"
+    log_end "TypeScript package bootstrap complete"
 
 # Health and diagnostics (REQUIRED)
 doctor:
+    @just _devbox doctor_impl
+
+[private]
+doctor_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     # Check TypeScript package development environment
-    @echo "📦 TypeScript package environment:"
-    @echo "📦 Dependencies:"
-    @pnpm list --depth=0
-    @echo ""
-    @echo "🛠️  Development tools:"
-    @command -v eslint || echo "eslint not found"
-    @command -v vitest || echo "vitest not found"
-    @echo ""
-    @echo "✅ TypeScript package environment is ready!"
+    echo "📦 TypeScript package environment:"
+    echo "📦 Dependencies:"
+    pnpm list --depth=0
+    echo ""
+    echo "🛠️  Development tools:"
+    command -v eslint || echo "eslint not found"
+    command -v vitest || echo "vitest not found"
+    echo ""
+    echo "✅ TypeScript package environment is ready!"
 
 # Install dependencies
 install:
+    @just _devbox install_impl
+
+[private]
+install_impl:
     pnpm install
 
 # Build package
 build-package:
+    @just _devbox build-package_impl
+
+[private]
+build-package_impl:
     pnpm run build
 
 # Run tests
 test-package:
+    @just _devbox test-package_impl
+
+[private]
+test-package_impl:
     pnpm test
 
 # Run tests in watch mode
 test-watch:
+    @just _devbox test-watch_impl
+
+[private]
+test-watch_impl:
     pnpm test:watch
 
 # Lint code
 lint-code:
+    @just _devbox lint-code_impl
+
+[private]
+lint-code_impl:
     pnpm run lint
 
 # Lint and fix
 lint-fix:
+    @just _devbox lint-fix_impl
+
+[private]
+lint-fix_impl:
     pnpm run lint:fix
 
 # Format code
 format:
+    @just _devbox format_impl
+
+[private]
+format_impl:
     pnpm run format
 
 # Type checking
 typecheck-code:
+    @just _devbox typecheck-code_impl
+
+[private]
+typecheck-code_impl:
     pnpm run typecheck
 
 # Clean build artifacts
 clean-artifacts:
+    @just _devbox clean-artifacts_impl
+
+[private]
+clean-artifacts_impl:
     rm -rf dist/
 
 # Clean hard (includes node_modules)
 clean-hard:
+    @just _devbox clean-hard_impl
+
+[private]
+clean-hard_impl:
     rm -rf dist/ node_modules/
 
 # Development setup
 setup:
-    @just bootstrap
-    echo "✅ TypeScript package development environment ready!"
+    @just _devbox setup_impl
+
+[private]
+setup_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just bootstrap
+    log_end "TypeScript package development environment ready"
 
 # Dependency synchronization
 {% include 'partials.bak/partials/justfile-partials/typescript-deps-sync.jinja' %}

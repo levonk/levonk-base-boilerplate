@@ -1,54 +1,74 @@
 # {{ project_name | default('rust-cli-app') }} - Rust CLI Development Commands
 # Standard justfile following ADR-20260131001
 
+{% include "partials.bak/partials/justfile-partials/logging.jinja" %}
+
+# Devbox auto-detection: run impl target directly if in devbox,
+# re-exec via devbox run if not, or fail with doctor diagnostic.
+_devbox target *args:
+    #!/usr/bin/env bash
+    {{_log}}
+    if [ "${DEVBOX_SHELL_ENABLED:-0}" = "1" ]; then
+        exec just "{{target}}" {{args}}
+    elif command -v devbox >/dev/null 2>&1; then
+        exec devbox run -- just "{{target}}" {{args}}
+    else
+        log_error "devbox not found in PATH."
+        log_warn "Running doctor to diagnose environment issues..."
+        just doctor 2>/dev/null || true
+        exit 1
+    fi
+
 # Default recipe
 default:
     @just --list
 
 # Normal targets - Developer interface (REQUIRED)
 clean:
-    just clean-internal
+    @just _devbox clean_impl
 
 dev:
-    just dev-internal
+    @just _devbox dev_impl
 
 build:
-    just build-internal
+    @just _devbox build_impl
 
 test:
-    just test-internal
+    @just _devbox test_impl
 
 lint:
-    just lint-internal
+    @just _devbox lint_impl
 
 typecheck:
-    just typecheck-internal
+    @just _devbox typecheck_impl
 
 release:
-    just release-internal
+    @just _devbox release_impl
 
 # Bootstrap recipes (REQUIRED)
 bootstrap:
-    just bootstrap-internal
+    @just _devbox bootstrap_impl
 
-bootstrap-internal:
+[private]
+bootstrap_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Install dependencies and initialize memory management
-    echo "🦀 Rust CLI bootstrap complete for {{ project_name | default('rust-cli-app') }}!"
+    log_end "Rust CLI bootstrap complete for {{ project_name | default('rust-cli-app') }}"
 
     # Initialize tkr for task management
     if command -v tkr >/dev/null 2>&1; then
         if [ ! -d ".tickets" ]; then
-            echo "[bootstrap] Initializing tkr..."
-            tkr init || echo "[bootstrap] tkr init failed"
+            log_info "Initializing tkr..."
+            tkr init || log_warn "tkr init failed"
         else
-            echo "[bootstrap] tkr already initialized"
+            log_info "tkr already initialized"
         fi
     fi
 
     # Create memory directory structure for Obsidian
-    echo "[bootstrap] Setting up memory structure..."
+    log_info "Setting up memory structure..."
     mkdir -p memory/{00-inbox,01-projects,02-decisions,03-patterns,04-learnings,05-references,98-logs,99-daily}
 
     # Create Obsidian configuration if needed
@@ -59,32 +79,34 @@ bootstrap-internal:
 
 # Prime recipes (REQUIRED)
 prime:
-    @echo "🚀 Priming code indexing and analysis tools..."
-    @devbox run prime
+    @just _devbox prime_impl
 
-prime-internal:
+[private]
+prime_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Update repository and index documentation
-    echo "[prime] Updating repository..."
-    git fetch || echo "[prime] git fetch failed (check remote connectivity)"
+    log_info "Updating repository..."
+    git fetch || log_warn "git fetch failed (check remote connectivity)"
 
     # qmd memory indexing
     if command -v qmd >/dev/null 2>&1; then
-        echo "[prime] Indexing documentation with qmd..."
-        qmd index docs/ internal-docs/ memory/ README.md || echo "[prime] qmd indexing failed"
-        echo "[prime] qmd indexing complete."
+        log_info "Indexing documentation with qmd..."
+        qmd index docs/ internal-docs/ memory/ README.md || log_warn "qmd indexing failed"
+        log_info "qmd indexing complete."
     else
-        echo "[prime] Skipping qmd (not installed)"
+        log_info "Skipping qmd (not installed)"
     fi
 
-    echo "[prime] Rust CLI priming complete!"
+    log_end "Rust CLI priming complete"
 
 # Health and diagnostics (REQUIRED)
 doctor:
-    devbox run doctor
+    @just _devbox doctor_impl
 
-doctor-internal:
+[private]
+doctor_impl:
     #!/usr/bin/env bash
     set -euo pipefail
     # Check Rust CLI environment
@@ -129,32 +151,38 @@ doctor-internal:
 
 # Quality checks (OPTIONAL but RECOMMENDED)
 quality:
-    just lint
-    just test
-    just typecheck
+    @just _devbox quality_impl
+
+[private]
+quality_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just lint_impl
+    just test_impl
+    just typecheck_impl
 
 # Memory and task management targets (NEW)
 doc-search:
-    @echo "🔍 Searching documentation and memory..."
-    @devbox run doc-search
+    @just _devbox doc-search_impl
 
-doc-search-internal:
+[private]
+doc-search_impl query=".":
     #!/usr/bin/env bash
     set -euo pipefail
     # Search memory and documentation with qmd
     if command -v qmd >/dev/null 2>&1; then
-        query="${1:-.}"  # Default to show all if no query
-        qmd search "$query" | head -20
+        qmd search "{{query}}" | head -20
     else
         echo "qmd not found - falling back to ripgrep..."
-        rg --type md "$query" docs/ internal-docs/ memory/ || true
+        rg --type md "{{query}}" docs/ internal-docs/ memory/ || true
     fi
 
 tasks:
-    @echo "📋 Listing current tasks..."
-    @devbox run tasks
+    @just _devbox tasks_impl
 
-tasks-internal:
+[private]
+tasks_impl:
     #!/usr/bin/env bash
     set -euo pipefail
     # List current tasks
@@ -165,226 +193,257 @@ tasks-internal:
     fi
 
 task-ready:
-    @echo "🎯 Getting next available task..."
-    @devbox run task-ready
+    @just _devbox task-ready_impl
 
-task-ready-internal:
+[private]
+task-ready_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Get next available task
     if command -v tkr >/dev/null 2>&1; then
         tkr ready
     else
-        echo "tkr not found"
+        log_warn "tkr not found"
     fi
 
 task-start:
-    @echo "🚀 Starting available task..."
-    @devbox run task-start
+    @just _devbox task-start_impl
 
-task-start-internal:
+[private]
+task-start_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Start working on available task
     if command -v tkr >/dev/null 2>&1; then
         task_id=$(tkr ready | head -1 | cut -d' ' -f1)
         if [ -n "$task_id" ]; then
             tkr start "$task_id"
-            echo "Started task: $task_id"
+            log_info "Started task: $task_id"
         else
-            echo "No available tasks"
+            log_info "No available tasks"
         fi
     else
-        echo "tkr not found"
+        log_warn "tkr not found"
     fi
 
 # Language-specific commands for Rust CLI
 # Development setup (OPTIONAL)
 setup:
-    echo "🦀 Rust CLI development environment ready!"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_end "Rust CLI development environment ready"
 
 # Internal targets - Actual implementation
-clean-internal:
+[private]
+clean_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     # Clean build artifacts
-    command cargo clean
-    echo "🧹 Build artifacts removed"
+    cargo clean
+    log_end "Build artifacts removed"
 
-build-internal:
+[private]
+build_impl:
     # Build the project in debug mode
-    command cargo build
+    cargo build
 
-release-internal:
+[private]
+release_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
     # Full release pipeline: quality checks + build
-    echo "🚀 Starting release pipeline for {{ project_name | default('rust-cli-app') }}..."
-    just lint-internal
-    just test-internal
-    just typecheck-internal
-    just build-release-internal
-    echo "✅ Release complete! Binary available at target/release/{{ project_slug }}"
+    log_start "Starting release pipeline for {{ project_name | default('rust-cli-app') }}"
+    just lint_impl
+    just test_impl
+    just typecheck_impl
+    just build-release_impl
+    log_end "Release complete! Binary available at target/release/{{ project_slug }}"
 
-build-release-internal:
+[private]
+build-release_impl:
     # Build the project in release mode
-    command cargo build --release
+    cargo build --release
 
-debug-internal:
+[private]
+debug_impl:
     # Build the project in debug mode
-    command cargo build
+    cargo build
 
-install-internal:
+[private]
+install_impl:
     # Install the binary locally
-    command cargo install --path .
+    cargo install --path .
 
-lint-internal:
+[private]
+lint_impl:
     # Lint the code using clippy
-    command cargo clippy -- -D warnings
+    cargo clippy -- -D warnings
 
-test-internal:
+[private]
+test_impl:
     # Run tests
-    command cargo test
+    cargo test
 
-typecheck-internal:
+[private]
+typecheck_impl:
     # Run type checking (cargo check)
-    command cargo check
+    cargo check
 
-dev-internal:
+[private]
+dev_impl:
     # Run the application in development mode
-    command cargo run
+    cargo run
 
-run-internal:
+[private]
+run_impl:
     # Run the application with arguments
-    command cargo run
+    cargo run
 
 {% if include_http_server -%}
 serve:
-    @echo "🌐 Starting HTTP server..."
-    @devbox run serve
+    @just _devbox serve_impl
 
-serve-internal:
+[private]
+serve_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Start the HTTP server
     PORT="${HTTP_PORT:-{{ http_port }}}"
     HOST="${HTTP_HOST:-0.0.0.0}"
-    echo "Starting server on $HOST:$PORT"
+    log_info "Starting server on $HOST:$PORT"
     cargo run -- serve --port "$PORT" --host "$HOST"
 {% endif -%}
 
 # Additional Rust-specific targets
-test-coverage-internal:
+[private]
+test-coverage_impl:
     # Run tests with coverage
-    command cargo tarpaulin --out Html
+    cargo tarpaulin --out Html
 
-format-internal:
+[private]
+format_impl:
     # Format code with rustfmt
-    command cargo fmt
+    cargo fmt
 
-format-check-internal:
+[private]
+format-check_impl:
     # Check code format
-    command cargo fmt -- --check
+    cargo fmt -- --check
 
-doc-internal:
+[private]
+doc_impl:
     # Generate documentation
-    command cargo doc --open
+    cargo doc --open
 
-audit-internal:
+[private]
+audit_impl:
     # Audit dependencies
-    command cargo audit
+    cargo audit
 
 # Dependency synchronization
 {% include 'partials.bak/partials/justfile-partials/rust-deps-sync.jinja' %}
 
 # Man page generation and installation
 generate-man-pages:
-    @echo "📄 Generating man pages..."
-    @devbox run generate-man-pages
+    @just _devbox generate-man-pages_impl
 
-generate-man-pages-internal:
+[private]
+generate-man-pages_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Generate man pages from template
     MAN_DIR="docs/man"
     OUTPUT_DIR="target/man"
-    
+
     # Create output directory
     mkdir -p "$OUTPUT_DIR"
-    
+
     # Process man page template
     if [ -f "$MAN_DIR/{{ project_slug }}.1.jinja" ]; then
         # For template-based approach, we'd use copier to render
         # For now, copy the template as-is (will be rendered during project generation)
         cp "$MAN_DIR/{{ project_slug }}.1.jinja" "$OUTPUT_DIR/{{ project_slug }}.1"
-        echo "✅ Man page template copied to $OUTPUT_DIR/{{ project_slug }}.1"
+        log_end "Man page template copied to $OUTPUT_DIR/{{ project_slug }}.1"
     else
-        echo "⚠️  Man page template not found at $MAN_DIR/{{ project_slug }}.1.jinja"
+        log_warn "Man page template not found at $MAN_DIR/{{ project_slug }}.1.jinja"
     fi
 
 install-man-pages:
-    @echo "📦 Installing man pages..."
-    @devbox run install-man-pages
+    @just _devbox install-man-pages_impl
 
-install-man-pages-internal:
+[private]
+install-man-pages_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Install man pages to system man directory
     MAN_DIR="target/man"
     MAN_PATH="${MANPATH:-/usr/local/share/man}"
-    
+
     if [ ! -d "$MAN_DIR" ]; then
-        echo "⚠️  Man pages not generated. Run 'just generate-man-pages' first."
+        log_warn "Man pages not generated. Run 'just generate-man-pages' first."
         exit 1
     fi
-    
+
     # Install man page (requires sudo)
-    echo "Installing man page to $MAN_PATH/man1/"
+    log_info "Installing man page to $MAN_PATH/man1/"
     sudo mkdir -p "$MAN_PATH/man1/"
     sudo cp "$MAN_DIR/{{ project_slug }}.1" "$MAN_PATH/man1/"
     sudo mandb
-    echo "✅ Man page installed. Try 'man {{ project_slug }}' to view it."
+    log_end "Man page installed. Try 'man {{ project_slug }}' to view it."
 
 validate-man-pages:
-    @echo "🔍 Validating man page format and content..."
-    @devbox run validate-man-pages
+    @just _devbox validate-man-pages_impl
 
-validate-man-pages-internal:
+[private]
+validate-man-pages_impl:
     #!/usr/bin/env bash
     set -euo pipefail
+    {{_log}}
     # Validate man page format using man command
     MAN_DIR="target/man"
     MAN_FILE="$MAN_DIR/{{ project_slug }}.1"
-    
+
     if [ ! -f "$MAN_FILE" ]; then
-        echo "⚠️  Man page not found. Run 'just generate-man-pages' first."
+        log_warn "Man page not found. Run 'just generate-man-pages' first."
         exit 1
     fi
-    
-    echo "Validating man page format..."
-    
+
+    log_info "Validating man page format..."
+
     # Check if man command can parse the file
     if command -v man >/dev/null 2>&1; then
         # Use man --warnings to check for formatting issues
         if man --warnings --local-file "$MAN_FILE" 2>&1 | grep -q "warning"; then
-            echo "⚠️  Man page has formatting warnings:"
+            log_warn "Man page has formatting warnings:"
             man --warnings --local-file "$MAN_FILE" 2>&1 | grep "warning"
         else
-            echo "✅ Man page format is valid"
+            log_end "Man page format is valid"
         fi
     else
-        echo "⚠️  man command not available, skipping format validation"
+        log_warn "man command not available, skipping format validation"
     fi
-    
+
     # Check for required sections
-    echo "Checking for required sections..."
+    log_info "Checking for required sections..."
     REQUIRED_SECTIONS=("NAME" "SYNOPSIS" "DESCRIPTION" "OPTIONS" "EXAMPLES" "EXIT STATUS" "ENVIRONMENT" "FILES" "BUGS" "SEE ALSO")
     for section in "${REQUIRED_SECTIONS[@]}"; do
         if grep -q "\.SH $section" "$MAN_FILE"; then
-            echo "  ✅ $section section found"
+            log_info "  ✅ $section section found"
         else
-            echo "  ❌ $section section missing"
+            log_error "  $section section missing"
             exit 1
         fi
     done
-    
-    echo "✅ Man page validation complete"
+
+    log_end "Man page validation complete"
 
 # Help target
 help:
@@ -420,4 +479,4 @@ help:
     echo "  just pre-commit    - Run pre-commit checks"
     echo ""
     echo "Internal commands (for devbox scripts):"
-    echo "  just *-internal    - Internal implementations"
+    echo "  just *_impl        - Internal implementations"
