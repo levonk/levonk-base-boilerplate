@@ -348,6 +348,17 @@ audit:
 
     log_end "Audit complete"
 
+outdated:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Checking for outdated dependencies for {{ package_name | default('rust-package') }}"
+
+    # Show available dependency updates without making changes
+    cargo update --dry-run
+
+    log_end "Outdated check complete"
+
 publish-dry-run:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -391,6 +402,7 @@ validate:
     just typecheck
     just lint
     just test
+    just audit
 
     log_end "Validation complete"
 

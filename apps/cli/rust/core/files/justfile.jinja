@@ -45,6 +45,12 @@ typecheck:
 release:
     @just _devbox release_impl
 
+audit:
+    @just _devbox audit_impl
+
+outdated:
+    @just _devbox outdated_impl
+
 # Bootstrap recipes (REQUIRED)
 bootstrap:
     @just _devbox bootstrap_impl
@@ -161,6 +167,7 @@ quality_impl:
     just lint_impl
     just test_impl
     just typecheck_impl
+    just audit_impl
 
 # Memory and task management targets (NEW)
 doc-search:
@@ -261,6 +268,7 @@ release_impl:
     just lint_impl
     just test_impl
     just typecheck_impl
+    just audit_impl
     just build-release_impl
     log_end "Release complete! Binary available at target/release/{{ project_slug }}"
 
@@ -345,6 +353,11 @@ doc_impl:
 audit_impl:
     # Audit dependencies
     cargo audit
+
+[private]
+outdated_impl:
+    # Show available dependency updates without making changes
+    cargo update --dry-run
 
 # Dependency synchronization
 {% include 'partials.bak/partials/justfile-partials/rust-deps-sync.jinja' %}
@@ -474,7 +487,8 @@ help:
     echo "  just test-coverage - Run tests with coverage"
     echo "  just format        - Format code"
     echo "  just doc           - Generate documentation"
-    echo "  just audit         - Audit dependencies"
+    echo "  just audit         - Audit dependencies for security vulnerabilities"
+    echo "  just outdated      - Check for available dependency updates"
     echo "  just sync-deps     - Sync Cargo.lock with Cargo.toml"
     echo "  just pre-commit    - Run pre-commit checks"
     echo ""

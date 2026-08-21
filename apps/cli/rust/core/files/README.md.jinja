@@ -217,6 +217,19 @@ devbox shell
 devbox run just build
 ```
 
+### Common Commands
+
+```bash
+just build          # Build the project
+just test           # Run tests
+just lint           # Run clippy lints
+just quality        # Run all quality checks (lint, test, typecheck, audit)
+just audit          # Audit dependencies for security vulnerabilities
+just outdated       # Check for available dependency updates
+just release        # Full release pipeline (includes audit)
+just doctor         # Check environment health
+```
+
 ## Project Structure
 
 ```

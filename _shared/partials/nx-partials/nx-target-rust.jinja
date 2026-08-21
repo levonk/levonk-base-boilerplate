@@ -30,3 +30,11 @@
       },
       "cache": true
     },
+    "audit": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "cargo audit",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },
