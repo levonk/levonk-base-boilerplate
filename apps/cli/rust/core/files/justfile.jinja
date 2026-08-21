@@ -170,6 +170,24 @@ quality_impl:
     just audit_impl
     just outdated_impl
 
+# Full validation (fmt check, lint, test, doc, audit, outdated)
+validate:
+    @just _devbox validate_impl
+
+[private]
+validate_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    log_start "Validating {{ project_name | default('rust-cli-app') }}"
+    just format-check_impl
+    just lint_impl
+    just test_impl
+    cargo doc
+    just audit_impl
+    just outdated_impl
+    log_end "Validation complete"
+
 # Memory and task management targets (NEW)
 doc-search:
     @just _devbox doc-search_impl
@@ -358,8 +376,8 @@ audit_impl:
 
 [private]
 outdated_impl:
-    # Show available dependency updates
-    cargo outdated
+    # Show available dependency updates (non-blocking — reports drift only)
+    cargo outdated --exit-code 0 || true
 
 # Dependency synchronization
 {% include 'partials.bak/partials/justfile-partials/rust-deps-sync.jinja' %}
@@ -474,6 +492,7 @@ help:
     echo "  just clean         - Clean build artifacts"
     echo "  just doctor        - Check environment health"
     echo "  just quality       - Run all quality checks"
+    echo "  just validate      - Full validation (fmt, lint, test, doc, audit, outdated)"
     echo "  just release       - Full release pipeline"
     echo "  just prime         - Index documentation and update repository"
     echo ""
