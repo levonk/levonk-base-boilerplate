@@ -8,16 +8,7 @@
   "version": "0.1.0",
   "description": "{{ description | default('A Rust CLI application') }}",
   "packages": {
-    "rustc": "",
-    "cargo": "",
-    "rust-analyzer": "",
-    "clippy": "",
-    "rustfmt": "",
-    "just": "",
-    "cargo-watch": "",
-    "cargo-tarpaulin": "",
-    "cargo-audit": "",
-    "pkg-config": ""
+{% include "partials.bak/partials/devbox-partials/devbox-packages-rust.jinja" %}
     {%- if include_openssl -%},
     "openssl": "",
     "openssl.dev": ""

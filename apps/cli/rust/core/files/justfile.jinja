@@ -168,6 +168,7 @@ quality_impl:
     just test_impl
     just typecheck_impl
     just audit_impl
+    just outdated_impl
 
 # Memory and task management targets (NEW)
 doc-search:
@@ -269,6 +270,7 @@ release_impl:
     just test_impl
     just typecheck_impl
     just audit_impl
+    just outdated_impl
     just build-release_impl
     log_end "Release complete! Binary available at target/release/{{ project_slug }}"
 
@@ -356,8 +358,8 @@ audit_impl:
 
 [private]
 outdated_impl:
-    # Show available dependency updates without making changes
-    cargo update --dry-run
+    # Show available dependency updates
+    cargo outdated
 
 # Dependency synchronization
 {% include 'partials.bak/partials/justfile-partials/rust-deps-sync.jinja' %}

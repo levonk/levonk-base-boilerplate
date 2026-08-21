@@ -354,8 +354,13 @@ outdated:
     {{_log}}
     log_start "Checking for outdated dependencies for {{ package_name | default('rust-package') }}"
 
-    # Show available dependency updates without making changes
-    cargo update --dry-run
+    # Show available dependency updates
+    if command -v cargo-outdated >/dev/null 2>&1; then
+        cargo outdated
+    else
+        log_warn "cargo-outdated not available"
+        log_info "Install with: cargo install cargo-outdated"
+    fi
 
     log_end "Outdated check complete"
 
@@ -403,6 +408,7 @@ validate:
     just lint
     just test
     just audit
+    just outdated
 
     log_end "Validation complete"
 

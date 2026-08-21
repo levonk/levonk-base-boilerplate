@@ -34,14 +34,16 @@ automatically runs security auditing as part of:
 ### In scope
 
 - **`_shared/partials/nx-partials/nx-target-rust.jinja`** — add an `audit` Nx target
-- **Package Rust template** (`packages/category/general/domain/package-name/rust/core/files/justfile`) — wire `cargo audit` into `validate`, add `outdated` target
-- **CLI Rust template** (`apps/cli/rust/core/files/justfile.jinja`) — wire `cargo audit` into `quality` and `release`, add public `audit` target, add `outdated` target
-- **CLI Rust CI** (`apps/cli/rust/core/files/.github/workflows/ci.yml.jinja`) — add a `security` job running `cargo audit`
-- **README docs** — update to reflect audit is now part of validation
+- **`_shared/partials/devbox-partials/devbox-packages-rust.jinja`** — new shared partial with rust devbox packages including `cargo-audit` and `cargo-outdated`
+- **`_shared/.github/workflows/rust-ci.yml.jinja`** — new shared CI workflow (test, lint, build, security/audit, outdated-check)
+- **`_shared/.github/workflows/rust-weekly-outdated.yml.jinja`** — new shared weekly workflow that runs `cargo update` (no dry-run) and creates a PR
+- **Package Rust template** (`packages/category/general/domain/package-name/rust/core/files/`) — wire `cargo audit` + `cargo outdated` into `validate`, add `outdated` target, use shared devbox packages partial, add shared CI workflows
+- **CLI Rust template** (`apps/cli/rust/core/files/`) — wire `cargo audit` + `cargo outdated` into `quality` and `release`, add public `audit` and `outdated` targets, use shared devbox packages partial, use shared CI workflows
+- **README docs** — update to reflect audit + outdated in validation
+- **AGENTS.md** — document shared Rust CI partials
 
 ### Out of scope
 
-- Adding CI workflows to the package Rust template (it has no CI workflow today; that's a separate concern)
 - Fixing the `make` vs `just` documentation inconsistency in the package Rust README
 - Updating the `apmw` project itself (that's a downstream project, not a boilerplate)
 - Adding `cargo deny` or other supply-chain tools (cargo audit + cargo outdated is the scope)
