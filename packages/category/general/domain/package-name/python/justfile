@@ -1,0 +1,319 @@
+# Justfile for {{ package_name | default('python-package') }} Python Package
+
+# Default target
+default: dev
+
+# Internal targets (prefixed with - to avoid showing in help)
+-bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Bootstrapping {{ package_name | default('python-package') }}..."
+    
+    # Install package in development mode
+    pip install -e .
+    
+    # Install development dependencies
+    if [ -f "pyproject.toml" ]; then
+        pip install -e ".[dev]"
+    fi
+    
+    echo "✅ Bootstrap complete"
+
+-doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Running health checks for {{ package_name | default('python-package') }}..."
+    
+    # Check required tools
+    echo "Checking tools:"
+    command -v python >/dev/null 2>&1 && echo "✅ python" || echo "❌ python missing"
+    command -v pip >/dev/null 2>&1 && echo "✅ pip" || echo "❌ pip missing"
+    command -v poetry >/dev/null 2>&1 && echo "✅ poetry" || echo "⚠️  poetry missing"
+    command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
+    
+    # Check Python version
+    if command -v python >/dev/null 2>&1; then
+        echo "Python version: $(python --version)"
+    fi
+    
+    # Check project structure
+    echo "Checking structure:"
+    test -f pyproject.toml && echo "✅ pyproject.toml" || echo "⚠️  pyproject.toml missing"
+    test -f setup.py && echo "✅ setup.py" || echo "⚠️  setup.py missing"
+    test -d src && echo "✅ src directory" || echo "⚠️  src directory missing"
+    test -d tests && echo "✅ tests directory" || echo "⚠️  tests directory missing"
+    
+    echo "🏁 Doctor complete"
+
+-clean-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧹 Cleaning {{ package_name | default('python-package') }}..."
+    
+    # Remove build artifacts
+    rm -rf build/
+    rm -rf dist/
+    rm -rf *.egg-info/
+    rm -rf .pytest_cache/
+    rm -rf .coverage
+    rm -rf htmlcov/
+    rm -rf .mypy_cache/
+    rm -rf .tox/
+    
+    # Remove cache files
+    find . -name "*.pyc" -delete
+    find . -name "*.pyo" -delete
+    find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    
+    echo "✅ Clean complete"
+
+-build-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Building {{ package_name | default('python-package') }}..."
+    
+    # Build the package
+    python -m build
+    
+    echo "✅ Build complete"
+
+-dev-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting development environment for {{ package_name | default('python-package') }}..."
+    
+    # Watch for changes and run tests
+    echo "👀 Watching for changes... (Ctrl+C to stop)"
+    echo "🛠️  Available commands:"
+    echo "   just test    - Run tests"
+    echo "   just lint    - Run linting"
+    echo "   just format  - Format code"
+    echo "   just install - Install package"
+    
+    # Simple watch loop
+    while true; do
+        sleep 5
+        # Check if any Python files changed
+        if find . -name "*.py" -newer /tmp/last-check 2>/dev/null | grep -q .; then
+            touch /tmp/last-check
+            echo "🔄 Python files changed, consider running tests"
+        fi
+    done
+
+-test-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing {{ package_name | default('python-package') }}..."
+    
+    # Run pytest
+    if command -v pytest >/dev/null 2>&1; then
+        pytest
+    else
+        python -m pytest
+    fi
+    
+    echo "✅ Tests complete"
+
+-lint-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Linting {{ package_name | default('python-package') }}..."
+    
+    # Run linting tools
+    if command -v flake8 >/dev/null 2>&1; then
+        echo "Running flake8..."
+        flake8 src tests || true
+    else
+        echo "⚠️  flake8 not available"
+    fi
+    
+    if command -v black >/dev/null 2>&1; then
+        echo "Running black --check..."
+        black --check src tests || true
+    else
+        echo "⚠️  black not available"
+    fi
+    
+    if command -v isort >/dev/null 2>&1; then
+        echo "Running isort --check-only..."
+        isort --check-only src tests || true
+    else
+        echo "⚠️  isort not available"
+    fi
+    
+    echo "✅ Linting complete"
+
+-typecheck-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Type checking {{ package_name | default('python-package') }}..."
+    
+    # Run mypy
+    if command -v mypy >/dev/null 2>&1; then
+        mypy src
+    else
+        echo "⚠️  mypy not available"
+    fi
+    
+    echo "✅ Type checking complete"
+
+# Public targets (user-facing)
+bootstrap: bootstrap-internal
+doctor: doctor-internal
+clean: clean-internal
+build: build-internal
+dev: dev-internal
+test: test-internal
+lint: lint-internal
+typecheck: typecheck-internal
+
+# Additional Python-specific targets
+install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing {{ package_name | default('python-package') }}..."
+    
+    # Install package in development mode
+    pip install -e .
+    
+    echo "✅ Installation complete"
+
+install-dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing {{ package_name | default('python-package') }} with dev dependencies..."
+    
+    # Install package with development dependencies
+    if [ -f "pyproject.toml" ]; then
+        pip install -e ".[dev]"
+    else
+        pip install -e .
+        echo "⚠️  No [dev] dependencies found in pyproject.toml"
+    fi
+    
+    echo "✅ Development installation complete"
+
+test-coverage:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📊 Running tests with coverage for {{ package_name | default('python-package') }}..."
+    
+    # Run tests with coverage
+    if command -v pytest >/dev/null 2>&1; then
+        pytest --cov={{ package_name | default('python-package') }} --cov-report=html
+    else
+        python -m pytest --cov={{ package_name | default('python-package') }} --cov-report=html
+    fi
+    
+    echo "📊 Coverage report generated: htmlcov/index.html"
+    echo "✅ Coverage complete"
+
+test-watch:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "👀 Watching tests for {{ package_name | default('python-package') }}..."
+    
+    # Run pytest-watch if available
+    if command -v ptw >/dev/null 2>&1; then
+        ptw --runner "python -m pytest"
+    else
+        echo "⚠️  pytest-watch not available"
+        echo "Install with: pip install pytest-watch"
+    fi
+
+format:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🎨 Formatting {{ package_name | default('python-package') }}..."
+    
+    # Format code with black and isort
+    if command -v black >/dev/null 2>&1; then
+        echo "Running black..."
+        black src tests
+    else
+        echo "⚠️  black not available"
+    fi
+    
+    if command -v isort >/dev/null 2>&1; then
+        echo "Running isort..."
+        isort src tests
+    else
+        echo "⚠️  isort not available"
+    fi
+    
+    echo "✅ Formatting complete"
+
+docs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📚 Serving documentation for {{ package_name | default('python-package') }}..."
+    
+    # Serve documentation with mkdocs if available
+    if command -v mkdocs >/dev/null 2>&1; then
+        mkdocs serve
+    else
+        echo "⚠️  mkdocs not available"
+        echo "Install with: pip install mkdocs"
+    fi
+
+docs-build:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📚 Building documentation for {{ package_name | default('python-package') }}..."
+    
+    # Build documentation with mkdocs if available
+    if command -v mkdocs >/dev/null 2>&1; then
+        mkdocs build
+        echo "📚 Documentation built: site/"
+    else
+        echo "⚠️  mkdocs not available"
+        echo "Install with: pip install mkdocs"
+    fi
+
+publish:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Publishing {{ package_name | default('python-package') }}..."
+    
+    # Build and publish to PyPI
+    just build
+    
+    if command -v twine >/dev/null 2>&1; then
+        twine upload dist/*
+    else
+        echo "❌ twine not available"
+        echo "Install with: pip install twine"
+        exit 1
+    fi
+    
+    echo "✅ Published to PyPI"
+
+publish-test:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Publishing {{ package_name | default('python-package') }} to test PyPI..."
+    
+    # Build and publish to test PyPI
+    just build
+    
+    if command -v twine >/dev/null 2>&1; then
+        twine upload --repository testpypi dist/*
+    else
+        echo "❌ twine not available"
+        echo "Install with: pip install twine"
+        exit 1
+    fi
+    
+    echo "✅ Published to test PyPI"
+
+validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "✅ Validating {{ package_name | default('python-package') }}..."
+    
+    # Run all validation checks
+    just typecheck
+    just lint
+    just test
+    
+    echo "✅ Validation complete"

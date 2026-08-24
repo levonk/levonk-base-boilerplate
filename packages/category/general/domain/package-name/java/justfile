@@ -1,0 +1,305 @@
+# Justfile for {{ package_name | default('java-package') }} Java Package
+
+# Default target
+default: dev
+
+# Internal targets (prefixed with - to avoid showing in help)
+-bootstrap-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Bootstrapping {{ package_name | default('java-package') }}..."
+    
+    # Check Java installation
+    if ! command -v java >/dev/null 2>&1; then
+        echo "❌ java not found"
+        exit 1
+    fi
+    
+    # Check Maven installation
+    if ! command -v mvn >/dev/null 2>&1; then
+        echo "❌ mvn not found"
+        exit 1
+    fi
+    
+    echo "✅ Bootstrap complete"
+
+-doctor-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Running health checks for {{ package_name | default('java-package') }}..."
+    
+    # Check required tools
+    echo "Checking tools:"
+    command -v java >/dev/null 2>&1 && echo "✅ java" || echo "❌ java missing"
+    command -v javac >/dev/null 2>&1 && echo "✅ javac" || echo "❌ javac missing"
+    command -v mvn >/dev/null 2>&1 && echo "✅ mvn" || echo "❌ mvn missing"
+    command -v just >/dev/null 2>&1 && echo "✅ just" || echo "❌ just missing"
+    
+    # Check Java version
+    if command -v java >/dev/null 2>&1; then
+        echo "Java version: $(java -version 2>&1 | head -n 1)"
+    fi
+    
+    # Check project structure
+    echo "Checking structure:"
+    test -f pom.xml && echo "✅ pom.xml" || echo "❌ pom.xml missing"
+    test -d src && echo "✅ src directory" || echo "⚠️  src directory missing"
+    test -d src/main/java && echo "✅ src/main/java" || echo "⚠️  src/main/java missing"
+    test -d src/test/java && echo "✅ src/test/java" || echo "⚠️  src/test/java missing"
+    
+    echo "🏁 Doctor complete"
+
+-clean-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧹 Cleaning {{ package_name | default('java-package') }}..."
+    
+    # Clean Maven artifacts
+    mvn clean
+    
+    echo "✅ Clean complete"
+
+-build-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Building {{ package_name | default('java-package') }}..."
+    
+    # Build the project
+    mvn clean compile
+    
+    echo "✅ Build complete"
+
+-dev-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Starting development environment for {{ package_name | default('java-package') }}..."
+    
+    # Watch for changes and compile
+    echo "👀 Watching for changes... (Ctrl+C to stop)"
+    echo "🛠️  Available commands:"
+    echo "   just test    - Run tests"
+    echo "   just lint    - Run linting"
+    echo "   just build   - Build project"
+    echo "   just run     - Run application"
+    
+    # Simple watch loop
+    while true; do
+        sleep 5
+        # Check if any Java files changed
+        if find . -name "*.java" -newer /tmp/last-check 2>/dev/null | grep -q .; then
+            touch /tmp/last-check
+            echo "🔄 Java files changed, consider rebuilding"
+        fi
+    done
+
+-test-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Testing {{ package_name | default('java-package') }}..."
+    
+    # Run tests
+    mvn test
+    
+    echo "✅ Tests complete"
+
+-lint-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Linting {{ package_name | default('java-package') }}..."
+    
+    # Run linting tools
+    if mvn spotbugs:check >/dev/null 2>&1; then
+        echo "Running SpotBugs..."
+        mvn spotbugs:check || true
+    else
+        echo "⚠️  SpotBugs not available"
+    fi
+    
+    if mvn checkstyle:check >/dev/null 2>&1; then
+        echo "Running Checkstyle..."
+        mvn checkstyle:check || true
+    else
+        echo "⚠️  Checkstyle not available"
+    fi
+    
+    echo "✅ Linting complete"
+
+-typecheck-internal:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Type checking {{ package_name | default('java-package') }}..."
+    
+    # Compile for type checking
+    mvn clean compile
+    
+    echo "✅ Type checking complete"
+
+# Public targets (user-facing)
+bootstrap: bootstrap-internal
+doctor: doctor-internal
+clean: clean-internal
+build: build-internal
+dev: dev-internal
+test: test-internal
+lint: lint-internal
+typecheck: typecheck-internal
+
+# Additional Java-specific targets
+build-release:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔨 Building {{ package_name | default('java-package') }} in release mode..."
+    
+    # Build without tests
+    mvn clean package -DskipTests
+    
+    echo "✅ Release build complete"
+
+run:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Running {{ package_name | default('java-package') }}..."
+    
+    # Run the application
+    if [ -f "pom.xml" ]; then
+        mvn exec:java
+    else
+        echo "❌ No pom.xml found"
+        exit 1
+    fi
+
+test-coverage:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📊 Running tests with coverage for {{ package_name | default('java-package') }}..."
+    
+    # Run tests with coverage
+    if mvn jacoco:report >/dev/null 2>&1; then
+        mvn jacoco:report
+        echo "📊 Coverage report generated: target/site/jacoco/index.html"
+    else
+        echo "⚠️  JaCoCo not available"
+        mvn test
+    fi
+    
+    echo "✅ Coverage complete"
+
+test-integration:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🧪 Running integration tests for {{ package_name | default('java-package') }}..."
+    
+    # Run integration tests
+    mvn verify -P integration-tests
+    
+    echo "✅ Integration tests complete"
+
+format:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🎨 Formatting {{ package_name | default('java-package') }}..."
+    
+    # Format code with Spotless
+    if mvn spotless:apply >/dev/null 2>&1; then
+        mvn spotless:apply
+    else
+        echo "⚠️  Spotless not available"
+    fi
+    
+    echo "✅ Formatting complete"
+
+format-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔍 Checking format for {{ package_name | default('java-package') }}..."
+    
+    # Check code format with Spotless
+    if mvn spotless:check >/dev/null 2>&1; then
+        mvn spotless:check
+    else
+        echo "⚠️  Spotless not available"
+    fi
+    
+    echo "✅ Format check complete"
+
+package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Packaging {{ package_name | default('java-package') }}..."
+    
+    # Package the project
+    mvn package
+    
+    echo "✅ Package complete"
+
+install:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing {{ package_name | default('java-package') }}..."
+    
+    # Install to local repository
+    mvn install
+    
+    echo "✅ Installation complete"
+
+deploy:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🚀 Deploying {{ package_name | default('java-package') }}..."
+    
+    # Deploy to remote repository
+    mvn deploy
+    
+    echo "✅ Deployment complete"
+
+site:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📚 Generating site for {{ package_name | default('java-package') }}..."
+    
+    # Generate project site
+    mvn site
+    
+    echo "📚 Site generated: target/site/"
+
+javadoc:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📚 Generating Javadoc for {{ package_name | default('java-package') }}..."
+    
+    # Generate Javadoc
+    mvn javadoc:javadoc
+    
+    echo "📚 Javadoc generated: target/site/apidocs/"
+
+dependency-tree:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🌳 Showing dependency tree for {{ package_name | default('java-package') }}..."
+    
+    # Show dependency tree
+    mvn dependency:tree
+    
+    echo "✅ Dependency tree complete"
+
+dependency-update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "🔄 Checking dependency updates for {{ package_name | default('java-package') }}..."
+    
+    # Check for dependency updates
+    mvn versions:display-dependency-updates
+    
+    echo "✅ Dependency update check complete"
+
+validate:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "✅ Validating {{ package_name | default('java-package') }}..."
+    
+    # Run all validation checks
+    just typecheck
+    just lint
+    just test
+    
+    echo "✅ Validation complete"
