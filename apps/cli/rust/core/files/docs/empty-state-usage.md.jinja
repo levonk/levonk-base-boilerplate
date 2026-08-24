@@ -1,0 +1,184 @@
+# Empty State Usage Guide
+
+This guide explains how to integrate empty state formatting into CLI commands to provide clear, consistent feedback when queries return no results.
+
+## Overview
+
+Empty state formatting automatically detects when command outputs are empty and provides context-rich messages that:
+- Indicate successful command execution (exit code 0)
+- Include filter criteria, scope, and field selection context
+- Are consistent across TOON, JSON, and human output formats
+- Prevent agents from re-running commands with different flags
+
+## Basic Usage
+
+### For List Commands
+
+```rust
+use crate::internal::emptystate::{EmptyStateContext, format_and_output, OutputFormat};
+use crate::internal::toon::{ToonValue, ToonArray};
+
+// In your list command handler
+let results = fetch_items(&filters, &scope);
+let toon_value = ToonValue::Array(ToonArray::new(results));
+
+// Build context
+let context = EmptyStateContext::new("list")
+    .with_filter("status=active")
+    .with_scope("active")
+    .with_fields(selected_fields);
+
+// Output with automatic empty state handling
+let mut stdout = io::stdout();
+format_and_output(&mut stdout, &toon_value, context, output_format)?;
+```
+
+### For Detail/Get Commands
+
+```rust
+use crate::internal::emptystate::{EmptyStateContext, format_and_output, OutputFormat};
+use crate::internal::toon::{ToonValue, ToonObject};
+
+// In your detail command handler
+let item = fetch_item(&id);
+let toon_value = ToonValue::Object(ToonObject::from(item));
+
+// Build context
+let context = EmptyStateContext::new("get")
+    .with_metadata("id", id);
+
+// Output with automatic empty state handling
+let mut stdout = io::stdout();
+format_and_output(&mut stdout, &toon_value, context, output_format)?;
+```
+
+### For Search Commands
+
+```rust
+use crate::internal::emptystate::{EmptyStateContext, format_and_output, OutputFormat};
+use crate::internal::toon::{ToonValue, ToonArray};
+
+// In your search command handler
+let results = search(&query, &filters);
+let toon_value = ToonValue::Array(ToonArray::new(results));
+
+// Build context
+let context = EmptyStateContext::new("search")
+    .with_filter(format!("query={}", query))
+    .with_fields(selected_fields);
+
+// Output with automatic empty state handling
+let mut stdout = io::stdout();
+format_and_output(&mut stdout, &toon_value, context, output_format)?;
+```
+
+## TOON Encoder Integration
+
+For automatic empty state handling in TOON output:
+
+```rust
+use crate::internal::emptystate::EmptyStateContext;
+use crate::internal::toon::encoder::ToonEncoder;
+
+// Build context
+let context = EmptyStateContext::new("list")
+    .with_filter("status=active");
+
+// Create encoder with empty state context
+let mut encoder = ToonEncoder::new(&mut stdout)
+    .with_empty_state_context(context);
+
+// Encode - empty states are automatically formatted
+encoder.encode(&toon_value)?;
+```
+
+## Exit Code Behavior
+
+Empty state queries should **always** return exit code 0 to indicate successful execution:
+
+```rust
+use anyhow::Result;
+
+fn handle_list_command(args: &Args) -> Result<()> {
+    let results = fetch_items(&args.filters)?;
+    let toon_value = ToonValue::Array(ToonArray::new(results));
+
+    let context = EmptyStateContext::new("list")
+        .with_filter(&args.filters);
+
+    let mut stdout = io::stdout();
+    format_and_output(&mut stdout, &toon_value, context, output_format)?;
+
+    // Always return Ok(()) for successful execution, even if empty
+    Ok(())
+}
+```
+
+## Output Formats
+
+### Human Format
+```
+✓ Command executed successfully | No items found for 'list' | Filters: status=active | Scope: active
+```
+
+### TOON Format
+```
+success: true
+empty_type: "EmptyArray"
+command: "list"
+filters: ["status=active"]
+scope: "active"
+```
+
+### JSON Format
+```json
+{
+  "success": true,
+  "empty_type": "EmptyArray",
+  "command": "list",
+  "filters": ["status=active"],
+  "scope": "active"
+}
+```
+
+## Context Building
+
+Build rich context to help users understand why results are empty:
+
+```rust
+let context = EmptyStateContext::new("list")
+    .with_filter("status=active")
+    .with_filter("type=user")
+    .with_scope("active")
+    .with_fields(vec!["id".to_string(), "name".to_string()])
+    .with_metadata("user", "alice")
+    .with_metadata("org", "acme");
+```
+
+## Testing
+
+Test empty state handling in your command tests:
+
+```rust
+#[test]
+fn test_list_command_empty_results() {
+    let results = vec![]; // Empty results
+    let toon_value = ToonValue::Array(ToonArray::new(results));
+    let context = EmptyStateContext::new("list");
+
+    let mut buffer = Vec::new();
+    let was_empty = format_and_output(&mut buffer, &toon_value, context, OutputFormat::Toon).unwrap();
+
+    assert!(was_empty);
+    let output = String::from_utf8(buffer).unwrap();
+    assert!(output.contains("success:"));
+}
+```
+
+## Best Practices
+
+1. **Always provide context**: Include filters, scope, and field selection in context
+2. **Use descriptive command names**: Context command should match the actual command
+3. **Exit code 0 for empty**: Empty results are not errors
+4. **Test empty scenarios**: Ensure empty states are tested in integration tests
+5. **Consistent format**: Use the same context structure across similar commands

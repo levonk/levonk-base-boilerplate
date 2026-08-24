@@ -119,9 +119,19 @@ You can view the man page in two ways:
 # Using the --man flag
 {{ project_slug }} --man
 
-# Or using the man command (after installation)
+# Using the system man command (after installation)
 man {{ project_slug }}
 ```
+
+#### Installing Man Pages
+
+Man pages are automatically installed when you run the install command:
+
+```bash
+{{ project_slug }} --install
+```
+
+This installs the man page to `~/.local/share/man/man1/{{ project_slug }}.1` (or `$XDG_DATA_HOME/man/man1/` if set).
 
 #### Generating Man Pages
 
@@ -135,15 +145,14 @@ just generate-man-pages
 just validate-man-pages
 ```
 
-#### Installing Man Pages
+#### Man Page Content
 
-To install man pages system-wide (requires sudo):
-
-```bash
-just install-man-pages
-```
-
-This installs the man page to `/usr/local/share/man/man1/` and updates the man database.
+The man page includes:
+- Command name and description
+- Synopsis with all options
+- Detailed description
+- Complete list of options and flags
+- Examples and usage notes
 
 #### Man Page Sections
 
@@ -160,43 +169,420 @@ The man page includes the following sections:
 - **BUGS**: Where to report bugs
 - **SEE ALSO**: Related documentation
 
-## Agent Integration
+## Configuration
 
-The CLI provides two integration methods for AI agents:
+The CLI supports multiple configuration sources with the following precedence (highest to lowest):
 
-### Agent Hooks
+1. Command-line arguments
+2. Environment variables (`{{ PROJECT_SLUG }}_*`)
+3. Local config (`.config/{{ project_slug }}/config.toml`)
+4. User config (`~/.config/myorg/{{ project_slug }}/config.toml`)
+5. System config (`/etc/{{ project_slug }}/config.toml`)
+6. Default values
 
-The CLI can register session hooks with agent platforms (Claude Code, Codex):
-- Hooks are registered in platform-specific config files
-- Installation is idempotent (re-running updates existing hooks)
-- Command paths are resolved to absolute paths when in PATH
+### AXI (Agent eXperience Interface) Configuration
 
-Install hooks for Claude Code:
-  {{ project_slug }} --install-agent-hooks claude
-  {{ project_slug }} session install-hooks claude
+The CLI includes AXI-specific settings for AI agent integration:
 
-Install hooks for Codex:
-  {{ project_slug }} --install-agent-hooks codex
-  {{ project_slug }} session install-hooks codex
+```toml
+# Mode: agent or human
+mode = "agent"
 
-### Agent Skill
+# Default output format for agent mode: toon, json, or human
+default_format = "toon"
 
-The CLI provides an installable agent skill for discoverability via agentskills.io:
-- Skill is generated from CLI help and examples
-- Live state is stripped to ensure static content
-- Command examples are in non-interactive form
-- Skill includes trigger-shaped frontmatter for agent discovery
+# Truncation limit for long output fields (characters)
+truncation_limit = 1000
 
-Generate skill:
-  {{ project_slug }} skill generate --output SKILL.md
+# Enable contextual help in agent mode
+enable_contextual_help = true
 
-Check skill freshness:
-  {{ project_slug }} skill check
+# Enable session context output in agent mode
+session_context_enabled = false
+```
 
-**Note**: You only need to use **one** integration method:
-- Use **agent hooks** for session context and lifecycle integration
-- Use **agent skill** for command discovery and documentation
-- Both methods are optional; choose based on your use case
+See [docs/config-precedence.md](docs/config-precedence.md) for detailed configuration documentation.
+
+### Field Selection with --fields
+
+The CLI supports field selection to reduce output size in agent mode. Use the `--fields` flag to specify which fields to include in output:
+
+```bash
+# Default output (minimal schema: id, title, status)
+{{ project_slug }} list-items
+
+# Select specific fields
+{{ project_slug }} list-items --fields id,title,created_at
+
+# Select all available fields
+{{ project_slug }} list-items --fields id,title,status,created_at,updated_at,body
+```
+
+**Available fields vary by command.** Use `--fields` with an invalid field name to see available fields for the current command.
+
+**Default behavior:**
+- Agent mode: Uses minimal default schema (3-4 fields) to reduce token consumption
+- Human mode: Uses full schema with all fields
+- List outputs: Limited to 100 items by default (configurable via schema)
+
+### Pre-computed Aggregates
+
+The CLI includes pre-computed aggregates to reduce the need for follow-up API calls in agent interactions. Aggregates provide commonly-needed data upfront.
+
+#### Count Fields
+
+List outputs include total count information:
+
+**TOON Format**
+```
+count: 30 of 847 total
+```
+
+**JSON Format**
+```json
+{
+  "count": 30,
+  "total": 847
+}
+```
+
+#### Derived Status Fields
+
+Detail views include lightweight derived status summaries:
+
+**TOON Format**
+```
+# Derived status:
+test_summary: 3/3 passed
+comment_count: 7 comments
+progress: 75% complete
+```
+
+**JSON Format**
+```json
+{
+  "derived_status": {
+    "fields": [
+      {"name": "test_summary", "value": "3/3 passed", "lightweight": true},
+      {"name": "comment_count", "value": "7 comments", "lightweight": true},
+      {"name": "progress", "value": "75% complete", "lightweight": true}
+    ]
+  }
+}
+```
+
+**Available derived fields:**
+- `test_summary` - Test pass/fail status (e.g., "3/3 passed")
+- `comment_count` - Number of comments (e.g., "7 comments")
+- `progress` - Completion percentage (e.g., "75% complete")
+
+**Performance characteristics:**
+- Aggregates are only computed when the backend can provide them cheaply
+- Derived fields are lightweight (<10ms computation time)
+- Count computation uses backend COUNT queries when available
+- Fallback to in-memory counting for backends without COUNT support
+
+## Structured Error Format
+
+The CLI uses structured error formatting to provide consistent, machine-readable errors that AI agents can parse programmatically.
+
+### Error Format Examples
+
+**TOON Format (Agent Mode)**
+```
+error[1]{code,message}: "MISSING_REQUIRED_FLAG","--title is required"
+help[1]: "{{ project_slug }} create --title \"...\""
+```
+
+**JSON Format**
+```json
+{
+  "error": {
+    "code": "MISSING_REQUIRED_FLAG",
+    "message": "--title is required"
+  },
+  "help": ["{{ project_slug }} create --title \"...\""]
+}
+```
+
+**Human Format**
+```
+Error: --title is required
+
+Suggestion: {{ project_slug }} create --title "..."
+```
+
+### Error Codes
+
+| Code | Exit Code | Description |
+|------|-----------|-------------|
+| `MISSING_REQUIRED_FLAG` | 2 | Required flag not provided |
+| `INVALID_FLAG_VALUE` | 2 | Flag value doesn't match expected format |
+| `CONFLICTING_FLAGS` | 2 | Mutually exclusive flags provided |
+| `UNKNOWN_FLAG` | 2 | Unknown flag provided |
+| `NOT_FOUND` | 1 | Resource not found |
+| `ALREADY_EXISTS` | 1 | Resource already exists |
+| `PERMISSION_DENIED` | 1 | Insufficient permissions |
+| `NETWORK_ERROR` | 1 | Network operation failed |
+| `INTERNAL_ERROR` | 1 | Unexpected internal error |
+| `NO_OP` | 0 | Desired state already exists (idempotent) |
+
+### Output Channels
+
+- **stdout**: Structured errors in TOON/JSON/human format
+- **stderr**: Diagnostic messages, debug logging, progress indicators
+
+### Key Features
+
+- **Actionable suggestions**: Every error includes at least one next step
+- **No raw dependency output**: External tool errors are translated to structured format
+- **CLI command references**: Suggestions reference CLI commands, not underlying tools
+- **Idempotent operations**: No-op scenarios exit with code 0
+
+## Idempotent Operations
+
+The CLI supports idempotent operations to ensure that repeating commands doesn't cause errors when the desired state already exists.
+
+### Idempotency Behavior
+
+**Create Operations**
+- If resource doesn't exist: Create normally
+- If resource exists with same state: Return success with no-op acknowledgment (exit code 0)
+- If resource exists with different state: Return error with suggestion to update
+
+**Update Operations**
+- If resource doesn't exist: Return error (not found)
+- If resource exists with same state: Return success with no-op acknowledgment (exit code 0)
+- If resource exists with different state: Update normally
+
+**Delete Operations**
+- If resource doesn't exist: Return success with no-op acknowledgment (exit code 0)
+- If resource exists: Delete normally
+
+**Close Operations**
+- If resource doesn't exist: Return error (not found)
+- If resource already closed: Return success with no-op acknowledgment (exit code 0)
+- If resource open: Close normally
+
+### No-Op Acknowledgment Format
+
+**TOON Format**
+```
+resource[1]{id,status}: "42","closed"
+note[1]: "Task #42 already closed (no-op)"
+```
+
+**JSON Format**
+```json
+{
+  "resource": {
+    "id": "42",
+    "status": "closed"
+  },
+  "note": "Task #42 already closed (no-op)"
+}
+```
+
+**Human Format**
+```
+Task #42 already closed (no-op)
+```
+
+### Exit Code Semantics
+
+- **Exit code 0**: Successful operation or successful no-op (desired state already exists)
+- **Exit code 1**: Error (resource not found, permission denied, etc.)
+- **Exit code 2**: Usage error (invalid input, missing required flag, etc.)
+
+## Prompt Suppression
+
+The CLI automatically suppresses interactive prompts in agent mode to ensure non-interactive operation. Human mode retains prompts for better user experience.
+
+### Mode-Based Prompt Behavior
+
+**Agent Mode**
+- All interactive prompts are suppressed
+- Missing required values fail immediately with structured error
+- Destructive operations auto-confirm (no confirmation prompt)
+- Wrapped tools invoked with non-interactive flags
+
+**Human Mode**
+- Interactive prompts work normally
+- `--force` flag bypasses confirmation prompts
+- Missing required values prompt for input
+- Wrapped tools invoked normally (unless `--force`)
+
+### --force Flag
+
+The `--force` flag bypasses confirmation prompts in human mode:
+
+```bash
+# Without --force (prompts for confirmation)
+{{ project_slug }} delete important_file.txt
+# Output: ⚠️  This will delete file: important_file.txt [y/N]:
+
+# With --force (auto-confirms)
+{{ project_slug }} delete --force important_file.txt
+# Output: Deleting file: important_file.txt
+```
+
+**Note**: In agent mode, `--force` is implicitly enabled for all operations.
+
+### Missing Required Values
+
+**Agent Mode (fail immediately)**
+```bash
+{{ project_slug }} create
+# Output: error[2]{code,message}: "MISSING_REQUIRED_FLAG","--title is required"
+#         help[1]: "{{ project_slug }} create --title \"...\""
+# Exit code: 2
+```
+
+**Human Mode (prompt for input)**
+```bash
+{{ project_slug }} create
+# Output: Enter title: [prompt for input]
+```
+
+## Session Integration
+
+The CLI supports session hooks for ambient context injection in AI agents.
+
+### --session-context Command
+
+Outputs compact session context in TOON format for agent consumption:
+
+```bash
+{{ project_slug }} --session-context
+```
+
+**Output:**
+```
+cwd: "/path/to/project"
+repo_root: "/path/to/project"
+repo_type: "git"
+branch: "main"
+recent_operations: 5
+session_id: "abc123"
+```
+
+### --install-agent-hooks Command
+
+Registers session hooks for Claude Code and Codex:
+
+```bash
+{{ project_slug }} --install-agent-hooks
+```
+
+This command:
+- Installs session-start hooks to inject context
+- Installs session-end hooks to capture metadata
+- Uses portable command resolution (PATH-verified or absolute path)
+- Is idempotent (silent no-ops for same path)
+
+**Note**: Hook installation requires write permissions to agent configuration directories.
+
+## Agent Skills
+
+The CLI supports agent skill generation for discoverability via agentskills.io.
+
+### --generate-skill Command
+
+Generates a SKILL.md file for agent discoverability:
+
+```bash
+{{ project_slug }} --generate-skill > SKILL.md
+```
+
+The generated skill:
+- Uses the same content as the no-args home view
+- Strips live state (repository-specific paths, environment values)
+- Rewrites command examples to non-interactive form
+- Includes trigger-shaped frontmatter (name and description)
+
+### --check-skill Command
+
+Validates that the committed SKILL.md is not stale:
+
+```bash
+{{ project_slug }} --check-skill
+```
+
+This command is intended for CI/CD pipelines and fails if the skill content differs from the current CLI implementation.
+
+## Integration Methods
+
+You can integrate the CLI with AI agents using two methods:
+
+### 1. Session Hooks (Recommended for Local Development)
+
+Install session hooks for automatic context injection:
+
+```bash
+{{ project_slug }} --install-agent-hooks
+```
+
+**Pros**: Automatic context injection, no manual configuration
+**Cons**: Requires hook installation, agent-specific configuration
+
+### 2. Agent Skills (Recommended for Cloud/Remote)
+
+Generate and publish SKILL.md for agent discoverability:
+
+```bash
+{{ project_slug }} --generate-skill > SKILL.md
+```
+
+**Pros**: No installation required, works with agentskills.io
+**Cons**: Manual regeneration when CLI changes
+
+**Note**: You only need one integration method - choose based on your use case.
+
+## No-Args Behavior
+
+Running the CLI with no arguments shows the most relevant live content, not a usage manual. This enables agents to see actual state immediately and act without a second call.
+
+**Agent Mode (TOON format)**
+```
+items[5]{id,title,status}: "1","Task 1","open","2","Task 2","in-progress","3","Task 3","closed","4","Task 4","open","5","Task 5","open"
+count: 5 of 10 total
+recent_operations: 3
+```
+
+**Human Mode (Human-readable format)**
+```
+Current State:
+- 5 items total (3 open, 1 in-progress, 1 closed)
+- Recent operations: 3
+- Repository: main branch
+
+Suggestions:
+- {{ project_slug }} list --toon
+- {{ project_slug }} create --title "..."
+```
+
+**Detailed Help**
+
+For detailed usage information, use the `--help` flag:
+
+```bash
+{{ project_slug }} --help
+```
+
+**Example:**
+```bash
+# Agent mode with default fields (minimal output)
+{{ project_slug }} --toon list-items
+# Output: id,title,status for each item
+
+# Agent mode with custom fields
+{{ project_slug }} --toon list-items --fields id,title,created_at
+# Output: id,title,created_at for each item
+
+# Human mode with JSON output
+{{ project_slug }} --json list-items
+# Output: All fields in JSON format
+```
 
 ## Development
 

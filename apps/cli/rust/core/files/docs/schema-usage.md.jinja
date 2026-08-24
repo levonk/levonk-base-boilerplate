@@ -1,0 +1,243 @@
+# Schema Usage Guide
+
+This guide explains how to use the schema system to define output schemas for CLI commands in applications built from this boilerplate.
+
+## Overview
+
+The schema system provides:
+- **Minimal default schemas** (3-4 fields) to reduce token consumption in agent mode
+- **Field selection** via `--fields` flag for custom output
+- **Long-form content detection** to exclude large fields from list views
+- **Configurable list limits** for controlling output size
+
+## Defining Schemas for Commands
+
+Each CLI command should define its output schema using the `SchemaRegistry`.
+
+### Step 1: Define Field Definitions
+
+Create field definitions for your command's output:
+
+```rust
+use {{ project_slug }}::internal::schema::definition::FieldDefinition;
+
+let fields = vec![
+    FieldDefinition::new("id", "Unique identifier", true),
+    FieldDefinition::new("title", "Human-readable title", true),
+    FieldDefinition::new("status", "Current status", true),
+    FieldDefinition::new("created_at", "Creation timestamp", false),
+    FieldDefinition::new("body", "Long-form content", false).long_form(),
+];
+```
+
+### Step 2: Create Output Schema
+
+Create an output schema with the field definitions:
+
+```rust
+use {{ project_slug }}::internal::schema::definition::OutputSchema;
+
+let schema = OutputSchema::new("list-items")
+    .with_field(FieldDefinition::new("id", "Unique identifier", true))
+    .with_field(FieldDefinition::new("title", "Human-readable title", true))
+    .with_field(FieldDefinition::new("status", "Current status", true))
+    .with_field(FieldDefinition::new("created_at", "Creation timestamp", false))
+    .with_field(FieldDefinition::new("body", "Long-form content", false).long_form())
+    .with_limit(100); // Limit list outputs to 100 items
+```
+
+### Step 3: Register Schema
+
+Register the schema in a global registry:
+
+```rust
+use {{ project_slug }}::internal::schema::definition::SchemaRegistry;
+
+let mut registry = SchemaRegistry::new();
+registry.register("list-items", schema);
+```
+
+### Step 4: Apply Schema to Output
+
+Apply the schema to TOON or JSON output:
+
+```rust
+use {{ project_slug }}::internal::schema::selector::FieldSelector;
+
+// Get CLI --fields argument
+let fields_arg = cli.fields.as_deref().unwrap_or("");
+
+// Create field selector
+let selector = match FieldSelector::with_fields(schema, fields_arg) {
+    Ok(sel) => sel,
+    Err(e) => {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
+};
+
+// Apply to TOON output
+let filtered_toon = toon_array.select_fields(selector.selected_fields());
+let limited_toon = filtered_toon.limit(selector.default_limit().unwrap_or(100));
+
+// Apply to JSON output
+let filtered_json = selector.apply_to_json(&json_value);
+```
+
+## Best Practices
+
+### Default Fields
+
+Always include these 3-4 fields in default schemas:
+- `id` - Unique identifier
+- `title` - Human-readable title
+- `status` - Current status
+- Optional: One additional field specific to the command
+
+### Long-Form Content
+
+Mark fields as long-form if they contain:
+- Large text bodies (descriptions, content)
+- Binary data
+- Nested structures
+
+Long-form fields are excluded from default output in agent mode.
+
+### List Limits
+
+Set appropriate limits for list outputs:
+- Default: 100 items
+- Large datasets: 50-100 items
+- Small datasets: 200-500 items
+
+## Example: Complete Command Implementation
+
+```rust
+use {{ project_slug }}::internal::schema::{definition::*, selector::*};
+use {{ project_slug }}::internal::toon::{ToonArray, ToonObject, ToonValue};
+
+pub fn list_items(cli: &Cli) -> Result<()> {
+    // Define schema
+    let schema = OutputSchema::new("list-items")
+        .with_field(FieldDefinition::new("id", "Unique identifier", true))
+        .with_field(FieldDefinition::new("title", "Human-readable title", true))
+        .with_field(FieldDefinition::new("status", "Current status", true))
+        .with_field(FieldDefinition::new("created_at", "Creation timestamp", false))
+        .with_field(FieldDefinition::new("body", "Long-form content", false).long_form())
+        .with_limit(100);
+
+    // Create field selector from CLI args
+    let fields_arg = cli.fields.as_deref().unwrap_or("");
+    let selector = FieldSelector::with_fields(schema, fields_arg)?;
+
+    // Fetch items (your application logic here)
+    let items = fetch_items_from_db()?;
+
+    // Convert to TOON format
+    let header = selector.selected_fields().clone();
+    let mut toon_array = ToonArray::with_header(header, vec![]);
+
+    for item in items {
+        let mut obj = ToonObject::new();
+        if selector.should_include("id") {
+            obj.add_field("id".to_string(), ToonValue::String(item.id));
+        }
+        if selector.should_include("title") {
+            obj.add_field("title".to_string(), ToonValue::String(item.title));
+        }
+        if selector.should_include("status") {
+            obj.add_field("status".to_string(), ToonValue::String(item.status));
+        }
+        if selector.should_include("created_at") {
+            obj.add_field("created_at".to_string(), ToonValue::String(item.created_at));
+        }
+        if selector.should_include("body") {
+            obj.add_field("body".to_string(), ToonValue::String(item.body));
+        }
+        toon_array.items.push(ToonValue::Object(obj));
+    }
+
+    // Apply limit
+    let limited_toon = toon_array.limit(selector.default_limit().unwrap_or(100));
+
+    // Output
+    let output = {{ project_slug }}::internal::toon::encoder::to_string(&ToonValue::Array(limited_toon))?;
+    println!("{}", output);
+
+    Ok(())
+}
+```
+
+## Testing Schema Integration
+
+Test your schema integration with the following cases:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_fields() {
+        let schema = create_schema();
+        let selector = FieldSelector::with_defaults(schema);
+        assert_eq!(selector.selected_fields().len(), 3); // id, title, status
+    }
+
+    #[test]
+    fn test_custom_fields() {
+        let schema = create_schema();
+        let selector = FieldSelector::with_fields(schema, "id,title,created_at").unwrap();
+        assert_eq!(selector.selected_fields().len(), 3);
+        assert!(selector.should_include("created_at"));
+    }
+
+    #[test]
+    fn test_invalid_field() {
+        let schema = create_schema();
+        let result = FieldSelector::with_fields(schema, "id,invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_long_form_exclusion() {
+        let schema = create_schema();
+        let selector = FieldSelector::with_defaults(schema);
+        assert!(!selector.should_include("body")); // Long-form field excluded by default
+    }
+}
+```
+
+## Migration Guide
+
+When adding schemas to existing commands:
+
+1. **Identify output fields** - List all fields currently output by the command
+2. **Categorize fields** - Mark long-form fields (bodies, descriptions)
+3. **Define default schema** - Select 3-4 essential fields for default output
+4. **Update command** - Apply schema to output formatting
+5. **Update tests** - Add tests for schema compliance
+6. **Update documentation** - Document available fields in command help
+
+## Troubleshooting
+
+### Field validation errors
+
+If you see "Invalid field" errors:
+- Check that field names match exactly (case-sensitive)
+- Verify the schema is registered for the command
+- Ensure field names use kebab-case (not snake_case or camelCase)
+
+### Output not filtered
+
+If output includes all fields regardless of `--fields`:
+- Verify the selector is applied before output formatting
+- Check that `should_include()` is called for each field
+- Ensure the schema is being used (not bypassed)
+
+### List limits not applied
+
+If list outputs exceed configured limits:
+- Verify `limit()` is called on the array after field selection
+- Check that the schema has a `default_limit` set
+- Ensure the limit is applied to the final output, not intermediate data
