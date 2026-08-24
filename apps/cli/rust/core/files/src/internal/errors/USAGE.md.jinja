@@ -1,0 +1,242 @@
+# Structured Error Usage Guide
+
+This guide shows how to use the structured error system in {{ project_slug }} CLI commands.
+
+## Overview
+
+The structured error system provides:
+- **Error formatting** in TOON, JSON, and human formats
+- **Actionable suggestions** for common errors
+- **Pre-dependency validation** to catch errors early
+- **Error translation** to extract actionable meaning from raw errors
+- **Output channel separation** (stdout for errors, stderr for diagnostics)
+
+## Basic Usage
+
+### 1. Creating a Structured Error
+
+```rust
+use crate::internal::errors::{ErrorCode, StructuredError, ErrorOutput, ErrorFormatter, SuggestionGenerator, SuggestionContext};
+
+// Create a structured error
+let error = StructuredError::new(
+    ErrorCode::MissingRequiredFlag,
+    "--title is required"
+);
+
+// Add context if needed
+let error_with_context = error.with_context("Command: create");
+```
+
+### 2. Generating Suggestions
+
+```rust
+// Create a suggestion generator
+let generator = SuggestionGenerator::new("{{ project_slug }}")
+    .with_command("create");
+
+// Create context for the error
+let context = SuggestionContext::new()
+    .with_missing_flag("--title")
+    .with_optional_flags(vec!["--body".to_string()]);
+
+// Generate suggestions
+let suggestions = generator.generate(&ErrorCode::MissingRequiredFlag, &context);
+
+// Create error output
+let error_output = ErrorOutput::new(error, suggestions);
+```
+
+### 3. Validating Before Dependencies
+
+```rust
+use crate::internal::errors::{Validator, ValidationResult};
+
+// Create a validator for your command
+let validator = Validator::new()
+    .with_required_flag("--title")
+    .with_valid_flag("--title")
+    .with_valid_flag("--body")
+    .with_exclusive_group(vec!["--force".to_string(), "--interactive".to_string()]);
+
+// Validate provided flags
+let provided_flags: HashSet<String> = args.flags.iter().cloned().collect();
+match validator.validate(&provided_flags) {
+    ValidationResult::Ok => {
+        // Proceed with command execution
+    }
+    ValidationResult::Error(error) => {
+        // Output structured error and exit
+        let suggestions = generate_suggestions(&error);
+        let error_output = ErrorOutput::new(error, suggestions);
+        output_handler.output_structured_error(&error_output)?;
+        std::process::exit(error.error_code());
+    }
+}
+```
+
+### 4. Translating Raw Dependency Errors
+
+```rust
+use crate::internal::errors::ErrorTranslator;
+
+// Create a translator
+let translator = ErrorTranslator::new("{{ project_slug }}");
+
+// Translate a raw error from a dependency
+let raw_error = "Connection refused: could not connect to server";
+let structured_error = translator.translate(raw_error);
+
+// Check if it's a no-op (idempotent success)
+if translator.is_no_op(raw_error) {
+    // Treat as success with exit code 0
+    let error_output = ErrorOutput::new(
+        StructuredError::new(ErrorCode::NoOp, "Resource already exists"),
+        vec![]
+    ).with_note("No changes made (already in desired state)");
+    output_handler.output_structured_error(&error_output)?;
+    return Ok(());
+}
+```
+
+### 5. Outputting Errors
+
+```rust
+// Output structured error in the configured format (TOON/JSON/human)
+output_handler.output_structured_error(&error_output)?;
+
+// Output diagnostic messages to stderr
+output_handler.diagnostic("Debug: Processing request...")?;
+
+// Set exit code based on error type
+std::process::exit(error_output.error.code.parse::<ErrorCode>().unwrap().exit_code());
+```
+
+## Complete Example
+
+Here's a complete example for a `create` command:
+
+```rust
+use crate::internal::errors::*;
+use std::collections::HashSet;
+
+pub fn execute_create(args: &CreateArgs, output_handler: &OutputHandler) -> Result<()> {
+    // Step 1: Validate flags before calling dependencies
+    let validator = Validator::new()
+        .with_required_flag("--title")
+        .with_valid_flag("--title")
+        .with_valid_flag("--body")
+        .with_valid_flag("--priority");
+
+    let mut provided_flags = HashSet::new();
+    if args.title.is_some() {
+        provided_flags.insert("--title".to_string());
+    }
+    if args.body.is_some() {
+        provided_flags.insert("--body".to_string());
+    }
+    if args.priority.is_some() {
+        provided_flags.insert("--priority".to_string());
+    }
+
+    match validator.validate(&provided_flags) {
+        ValidationResult::Ok => {}
+        ValidationResult::Error(error) => {
+            let generator = SuggestionGenerator::new("{{ project_slug }}").with_command("create");
+            let context = SuggestionContext::new()
+                .with_missing_flag("--title")
+                .with_optional_flags(vec!["--body".to_string()]);
+            let suggestions = generator.generate(&error.code.parse().unwrap(), &context);
+            let error_output = ErrorOutput::new(error, suggestions);
+            output_handler.output_structured_error(&error_output)?;
+            std::process::exit(2);
+        }
+    }
+
+    // Step 2: Execute the operation
+    match create_resource(args).await {
+        Ok(resource) => {
+            // Output success
+            output_handler.output_formatted(&resource, Some(&toon_value))?;
+            Ok(())
+        }
+        Err(e) => {
+            // Step 3: Translate and format the error
+            let translator = ErrorTranslator::new("{{ project_slug }}");
+            let raw_error = e.to_string();
+            let structured_error = translator.translate(&raw_error);
+
+            // Step 4: Generate suggestions
+            let generator = SuggestionGenerator::new("{{ project_slug }}").with_command("create");
+            let context = SuggestionContext::new();
+            let suggestions = generator.generate(&structured_error.code.parse().unwrap(), &context);
+
+            // Step 5: Output structured error
+            let error_output = ErrorOutput::new(structured_error, suggestions);
+            output_handler.output_structured_error(&error_output)?;
+
+            // Step 6: Exit with appropriate code
+            let error_code: ErrorCode = error_output.error.code.parse().unwrap();
+            std::process::exit(error_code.exit_code());
+        }
+    }
+}
+```
+
+## Error Code Reference
+
+| Error Code | Exit Code | When to Use |
+|------------|-----------|-------------|
+| `MISSING_REQUIRED_FLAG` | 2 | Required flag not provided |
+| `INVALID_FLAG_VALUE` | 2 | Flag value doesn't match expected format |
+| `CONFLICTING_FLAGS` | 2 | Mutually exclusive flags provided |
+| `UNKNOWN_FLAG` | 2 | Unknown flag provided |
+| `NOT_FOUND` | 1 | Resource not found |
+| `ALREADY_EXISTS` | 1 | Resource already exists |
+| `PERMISSION_DENIED` | 1 | Insufficient permissions |
+| `NETWORK_ERROR` | 1 | Network operation failed |
+| `INTERNAL_ERROR` | 1 | Unexpected internal error |
+| `NO_OP` | 0 | Desired state already exists (idempotent) |
+
+## Best Practices
+
+1. **Always validate before dependencies**: Use `Validator` to check flags before calling external tools
+2. **Translate raw errors**: Use `ErrorTranslator` to convert dependency errors to structured errors
+3. **Provide actionable suggestions**: Use `SuggestionGenerator` to give users next steps
+4. **Use correct exit codes**: Follow the exit code semantics (0=success, 1=error, 2=usage)
+5. **Separate channels**: Use `output_structured_error` for stdout, `diagnostic` for stderr
+6. **Never leak raw output**: Always translate errors before outputting
+
+## Testing
+
+The error modules include comprehensive unit tests. To run them:
+
+```bash
+cargo test internal::errors
+```
+
+## Output Formats
+
+### TOON Format (Agent Mode)
+```
+error[1]{code,message}: "MISSING_REQUIRED_FLAG","--title is required"
+help[1]: "{{ project_slug }} create --title \"...\""
+```
+
+### JSON Format
+```json
+{
+  "error": {
+    "code": "MISSING_REQUIRED_FLAG",
+    "message": "--title is required"
+  },
+  "help": ["{{ project_slug }} create --title \"...\""]
+}
+```
+
+### Human Format
+```
+Error: --title is required
+
+Suggestion: {{ project_slug }} create --title "..."
+```

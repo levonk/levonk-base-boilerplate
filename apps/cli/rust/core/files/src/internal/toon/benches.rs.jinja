@@ -1,0 +1,119 @@
+/// Benchmarks for TOON vs JSON encoding performance
+/// 
+/// Compares encoding speed and output size between TOON and JSON formats.
+
+use super::types::{ToonValue, ToonArray, ToonObject};
+use super::encoder::to_string;
+use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use serde_json;
+
+fn create_sample_data(size: usize) -> ToonValue {
+    let mut obj = ToonObject::new();
+    
+    for i in 0..size {
+        obj.add_field(
+            format!("field_{}", i),
+            ToonValue::String(format!("value_{}", i))
+        );
+    }
+    
+    ToonValue::Object(obj)
+}
+
+fn create_sample_array(size: usize) -> ToonValue {
+    let mut items = Vec::new();
+    
+    for i in 0..size {
+        items.push(ToonValue::Number(i as f64));
+    }
+    
+    ToonValue::Array(ToonArray::new(items))
+}
+
+fn bench_toon_encode(c: &mut Criterion) {
+    let mut group = c.benchmark_group("toon_encode");
+    
+    for size in [10, 100, 1000].iter() {
+        let data = create_sample_data(*size);
+        
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| to_string(black_box(&data)))
+        });
+    }
+    
+    group.finish();
+}
+
+fn bench_json_encode(c: &mut Criterion) {
+    let mut group = c.benchmark_group("json_encode");
+    
+    for size in [10, 100, 1000].iter() {
+        let data = create_sample_data(*size);
+        
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| serde_json::to_string_pretty(black_box(&data)))
+        });
+    }
+    
+    group.finish();
+}
+
+fn bench_toon_array_encode(c: &mut Criterion) {
+    let mut group = c.benchmark_group("toon_array_encode");
+    
+    for size in [10, 100, 1000].iter() {
+        let data = create_sample_array(*size);
+        
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| to_string(black_box(&data)))
+        });
+    }
+    
+    group.finish();
+}
+
+fn bench_json_array_encode(c: &mut Criterion) {
+    let mut group = c.benchmark_group("json_array_encode");
+    
+    for size in [10, 100, 1000].iter() {
+        let data = create_sample_array(*size);
+        
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
+            b.iter(|| serde_json::to_string_pretty(black_box(&data)))
+        });
+    }
+    
+    group.finish();
+}
+
+fn bench_output_size(c: &mut Criterion) {
+    let mut group = c.benchmark_group("output_size");
+    
+    let data = create_sample_data(100);
+    
+    group.bench_function("toon_size", |b| {
+        b.iter(|| {
+            let toon = to_string(black_box(&data)).unwrap();
+            toon.len()
+        })
+    });
+    
+    group.bench_function("json_size", |b| {
+        b.iter(|| {
+            let json = serde_json::to_string_pretty(black_box(&data)).unwrap();
+            json.len()
+        })
+    });
+    
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_toon_encode,
+    bench_json_encode,
+    bench_toon_array_encode,
+    bench_json_array_encode,
+    bench_output_size
+);
+criterion_main!(benches);

@@ -1,0 +1,263 @@
+/// Error translation for {{ project_slug }}
+///
+/// This module translates raw dependency errors into structured errors,
+/// extracting actionable meaning while discarding noise.
+
+use super::{ErrorCode, StructuredError};
+use regex::Regex;
+
+/// Error translator for converting raw errors to structured errors
+pub struct ErrorTranslator {
+    /// CLI command name for context
+    command_name: String,
+    /// Translation patterns
+    patterns: Vec<TranslationPattern>,
+}
+
+/// Pattern for matching and translating errors
+struct TranslationPattern {
+    /// Regex pattern to match
+    regex: Regex,
+    /// Error code to use on match
+    error_code: ErrorCode,
+    /// Message template (use {} for captured groups)
+    message_template: String,
+}
+
+impl ErrorTranslator {
+    /// Create a new error translator with default patterns
+    pub fn new(command_name: impl Into<String>) -> Self {
+        let command_name = command_name.into();
+        let mut translator = Self {
+            command_name: command_name.clone(),
+            patterns: Vec::new(),
+        };
+
+        // Add default translation patterns
+        translator.add_default_patterns();
+        translator
+    }
+
+    /// Add default translation patterns for common errors
+    fn add_default_patterns(&mut self) {
+        // Network errors
+        self.add_pattern(
+            r"(?i)(connection refused|connection timeout|network unreachable|dns error)",
+            ErrorCode::NetworkError,
+            "Network connection failed",
+        );
+
+        // Permission errors
+        self.add_pattern(
+            r"(?i)(permission denied|access denied|unauthorized|forbidden)",
+            ErrorCode::PermissionDenied,
+            "Permission denied",
+        );
+
+        // Not found errors
+        self.add_pattern(
+            r"(?i)(not found|does not exist|no such|404)",
+            ErrorCode::NotFound,
+            "Resource not found",
+        );
+
+        // Already exists errors
+        self.add_pattern(
+            r"(?i)(already exists|duplicate|conflict|409)",
+            ErrorCode::AlreadyExists,
+            "Resource already exists",
+        );
+
+        // Invalid input errors
+        self.add_pattern(
+            r"(?i)(invalid|malformed|bad request|400)",
+            ErrorCode::InvalidFlagValue,
+            "Invalid input",
+        );
+    }
+
+    /// Add a custom translation pattern
+    pub fn add_pattern(
+        &mut self,
+        pattern: &str,
+        error_code: ErrorCode,
+        message_template: impl Into<String>,
+    ) {
+        let regex = Regex::new(pattern).unwrap_or_else(|_| {
+            // If regex is invalid, create a pattern that never matches
+            Regex::new(r"\x00").unwrap()
+        });
+
+        self.patterns.push(TranslationPattern {
+            regex,
+            error_code,
+            message_template: message_template.into(),
+        });
+    }
+
+    /// Translate a raw error message to a structured error
+    pub fn translate(&self, raw_error: &str) -> StructuredError {
+        // Try to match against patterns
+        for pattern in &self.patterns {
+            if let Some(captures) = pattern.regex.captures(raw_error) {
+                let message = if captures.len() > 1 {
+                    // Replace {} placeholders with captured groups
+                    let mut message = pattern.message_template.clone();
+                    for (_i, capture) in captures.iter().enumerate().skip(1) {
+                        if let Some(text) = capture {
+                            message = message.replacen("{}", text.as_str(), 1);
+                        }
+                    }
+                    message
+                } else {
+                    pattern.message_template.clone()
+                };
+
+                return StructuredError::new(pattern.error_code.clone(), message)
+                    .with_context(self.sanitize_context(raw_error));
+            }
+        }
+
+        // If no pattern matches, return a generic internal error
+        StructuredError::new(
+            ErrorCode::InternalError,
+            "An unexpected error occurred",
+        ).with_context(self.sanitize_context(raw_error))
+    }
+
+    /// Sanitize context to remove sensitive information and noise
+    fn sanitize_context(&self, raw_error: &str) -> String {
+        // Remove stack traces
+        let sanitized = Regex::new(r"at .+?\.rs:\d+")
+            .unwrap()
+            .replace_all(raw_error, "[stack trace omitted]");
+
+        // Remove tool-specific noise
+        let sanitized = Regex::new(r"(?i)(warning:|error:)\s*\[.*?\]")
+            .unwrap()
+            .replace_all(&sanitized, "");
+
+        // Remove excessive whitespace
+        let sanitized = sanitized.lines()
+            .filter(|line| !line.trim().is_empty())
+            .collect::<Vec<_>>()
+            .join("; ");
+
+        // Truncate if too long
+        if sanitized.len() > 200 {
+            format!("{}...", &sanitized[..200])
+        } else {
+            sanitized.to_string()
+        }
+    }
+
+    /// Check if an error should be treated as a no-op (idempotent success)
+    pub fn is_no_op(&self, raw_error: &str) -> bool {
+        let lower = raw_error.to_lowercase();
+        lower.contains("already") && lower.contains("exists")
+            || lower.contains("no change")
+            || lower.contains("up to date")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_translator_creation() {
+        let translator = ErrorTranslator::new("mytool");
+        assert_eq!(translator.command_name, "mytool");
+        assert!(!translator.patterns.is_empty());
+    }
+
+    #[test]
+    fn test_translate_network_error() {
+        let translator = ErrorTranslator::new("mytool");
+        let error = translator.translate("Connection refused: could not connect to server");
+
+        assert_eq!(error.code, "NETWORK_ERROR");
+        assert!(error.message.contains("Network"));
+    }
+
+    #[test]
+    fn test_translate_permission_error() {
+        let translator = ErrorTranslator::new("mytool");
+        let error = translator.translate("Permission denied: cannot write to file");
+
+        assert_eq!(error.code, "PERMISSION_DENIED");
+        assert!(error.message.contains("Permission"));
+    }
+
+    #[test]
+    fn test_translate_not_found_error() {
+        let translator = ErrorTranslator::new("mytool");
+        let error = translator.translate("Resource not found: ID 999 does not exist");
+
+        assert_eq!(error.code, "NOT_FOUND");
+        assert!(error.message.contains("not found"));
+    }
+
+    #[test]
+    fn test_translate_already_exists_error() {
+        let translator = ErrorTranslator::new("mytool");
+        let error = translator.translate("Resource already exists: duplicate key");
+
+        assert_eq!(error.code, "ALREADY_EXISTS");
+        assert!(error.message.contains("already exists"));
+    }
+
+    #[test]
+    fn test_translate_unknown_error() {
+        let translator = ErrorTranslator::new("mytool");
+        let error = translator.translate("Some unknown error occurred");
+
+        assert_eq!(error.code, "INTERNAL_ERROR");
+        assert!(error.message.contains("unexpected"));
+    }
+
+    #[test]
+    fn test_sanitize_context() {
+        let translator = ErrorTranslator::new("mytool");
+        let raw = "Error: something went wrong\nat src/main.rs:42\nat src/lib.rs:123";
+        let sanitized = translator.sanitize_context(raw);
+
+        assert!(!sanitized.contains("at src/main.rs:42"));
+        assert!(sanitized.contains("[stack trace omitted]"));
+    }
+
+    #[test]
+    fn test_is_no_op() {
+        let translator = ErrorTranslator::new("mytool");
+
+        assert!(translator.is_no_op("Resource already exists"));
+        assert!(translator.is_no_op("No changes made"));
+        assert!(translator.is_no_op("Already up to date"));
+
+        assert!(!translator.is_no_op("Connection failed"));
+        assert!(!translator.is_no_op("Permission denied"));
+    }
+
+    #[test]
+    fn test_add_custom_pattern() {
+        let mut translator = ErrorTranslator::new("mytool");
+        translator.add_pattern(
+            r"custom error: (.+)",
+            ErrorCode::InternalError,
+            "Custom error: {}",
+        );
+
+        let error = translator.translate("custom error: something bad");
+        assert!(error.message.contains("something bad"));
+    }
+
+    #[test]
+    fn test_context_truncation() {
+        let translator = ErrorTranslator::new("mytool");
+        let long_error = "A".repeat(300);
+        let sanitized = translator.sanitize_context(&long_error);
+
+        assert!(sanitized.len() <= 203); // 200 + "..."
+        assert!(sanitized.ends_with("..."));
+    }
+}

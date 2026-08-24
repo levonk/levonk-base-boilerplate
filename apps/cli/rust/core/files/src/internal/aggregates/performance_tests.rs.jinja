@@ -1,0 +1,158 @@
+/// Performance tests for aggregate queries
+///
+/// Benchmarks aggregate computation performance to ensure
+/// aggregates don't significantly impact query performance.
+
+use super::{counter::*, derived::*};
+use std::time::Instant;
+
+#[test]
+fn test_counter_backend_count_performance() {
+    let counter = Counter::new();
+    let start = Instant::now();
+
+    for _ in 0..1000 {
+        let _ = counter.compute_from_backend(847);
+    }
+
+    let duration = start.elapsed();
+    // Should complete 1000 operations in less than 10ms
+    assert!(duration.as_millis() < 10, "Backend count too slow: {:?}", duration);
+}
+
+#[test]
+fn test_counter_in_memory_count_performance() {
+    let counter = Counter::new();
+    let items = vec![(); 10000];
+    let start = Instant::now();
+
+    for _ in 0..100 {
+        let _ = counter.compute_from_memory(&items);
+    }
+
+    let duration = start.elapsed();
+    // Should complete 100 operations on 10k items in less than 50ms
+    assert!(duration.as_millis() < 50, "In-memory count too slow: {:?}", duration);
+}
+
+#[test]
+fn test_derived_field_computation_performance() {
+    let computer = DerivedFieldComputer::new();
+    let start = Instant::now();
+
+    for _ in 0..1000 {
+        let _ = computer.compute_test_summary(3, 3);
+        let _ = computer.compute_comment_count(7);
+        let _ = computer.compute_progress(75, 100);
+    }
+
+    let duration = start.elapsed();
+    // Should complete 3000 operations in less than 10ms
+    assert!(duration.as_millis() < 10, "Derived field computation too slow: {:?}", duration);
+}
+
+#[test]
+fn test_derived_status_computation_performance() {
+    let computer = DerivedFieldComputer::new();
+    let mut metrics = std::collections::HashMap::new();
+    metrics.insert("passed".to_string(), 3);
+    metrics.insert("total".to_string(), 3);
+    metrics.insert("comments".to_string(), 7);
+
+    let start = Instant::now();
+
+    for _ in 0..1000 {
+        let _ = computer.compute_status_summary(&metrics);
+    }
+
+    let duration = start.elapsed();
+    // Should complete 1000 operations in less than 20ms
+    assert!(duration.as_millis() < 20, "Derived status computation too slow: {:?}", duration);
+}
+
+#[test]
+fn test_count_result_formatting_performance() {
+    let result = CountResult::with_total(30, 847, CountStrategy::BackendCount);
+    let start = Instant::now();
+
+    for _ in 0..10000 {
+        let _ = result.format();
+    }
+
+    let duration = start.elapsed();
+    // Should complete 10000 format operations in less than 10ms
+    assert!(duration.as_millis() < 10, "Count formatting too slow: {:?}", duration);
+}
+
+#[test]
+fn test_derived_status_toon_formatting_performance() {
+    let status = DerivedStatus::new()
+        .add_field(DerivedField::new("test_summary", "3/3 passed"))
+        .add_field(DerivedField::new("comment_count", "7 comments"));
+
+    let start = Instant::now();
+
+    for _ in 0..10000 {
+        let _ = status.to_toon_object();
+    }
+
+    let duration = start.elapsed();
+    // Should complete 10000 format operations in less than 50ms
+    assert!(duration.as_millis() < 50, "TOON formatting too slow: {:?}", duration);
+}
+
+#[test]
+fn test_counter_lazy_computation_overhead() {
+    let lazy_counter = Counter::new().with_lazy(true);
+    let eager_counter = Counter::new().with_lazy(false);
+
+    let start = Instant::now();
+    for _ in 0..1000 {
+        let _ = lazy_counter.compute_from_backend(847);
+    }
+    let lazy_duration = start.elapsed();
+
+    let start = Instant::now();
+    for _ in 0..1000 {
+        let _ = eager_counter.compute_from_backend(847);
+    }
+    let eager_duration = start.elapsed();
+
+    // Lazy should not add significant overhead
+    let overhead = lazy_duration.saturating_sub(eager_duration);
+    assert!(overhead.as_micros() < 1000, "Lazy computation overhead too high: {:?}", overhead);
+}
+
+#[test]
+fn test_backend_capability_check_performance() {
+    let counter = Counter::new();
+    let start = Instant::now();
+
+    for _ in 0..10000 {
+        let _ = counter.backend_count_supported();
+        let _ = counter.optimal_strategy();
+    }
+
+    let duration = start.elapsed();
+    // Should complete 20000 checks in less than 10ms
+    assert!(duration.as_millis() < 10, "Capability checks too slow: {:?}", duration);
+}
+
+#[test]
+fn test_large_scale_aggregate_computation() {
+    let counter = Counter::new();
+    let computer = DerivedFieldComputer::new();
+
+    let start = Instant::now();
+
+    // Simulate processing 1000 items with aggregates
+    for i in 0..1000 {
+        let _ = counter.compute_from_backend(i);
+        let _ = computer.compute_test_summary(i % 10, 10);
+        let _ = computer.compute_comment_count(i % 20);
+    }
+
+    let duration = start.elapsed();
+    // Should complete 1000 aggregate computations in less than 100ms
+    assert!(duration.as_millis() < 100, "Large-scale computation too slow: {:?}", duration);
+}

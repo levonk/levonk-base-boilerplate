@@ -1,0 +1,167 @@
+/// Integration tests for empty state handling
+///
+/// These tests demonstrate how commands should integrate empty state
+/// formatting into their output pipelines.
+
+use crate::internal::emptystate::{EmptyStateContext, format_and_output, OutputFormat};
+use crate::internal::toon::{ToonValue, ToonArray, ToonObject};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_command_empty_array() {
+        // Simulate a list command returning empty results
+        let empty_arr = ToonArray::new(vec![]);
+        let context = EmptyStateContext::new("list")
+            .with_filter("status=active")
+            .with_scope("active");
+
+        let mut buffer = Vec::new();
+        let was_empty = format_and_output(&mut buffer, &ToonValue::Array(empty_arr), context, OutputFormat::Toon).unwrap();
+
+        assert!(was_empty);
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("success:"));
+        assert!(output.contains("empty_type:"));
+    }
+
+    #[test]
+    fn test_detail_command_empty_object() {
+        // Simulate a detail/get command returning empty results
+        let empty_obj = ToonObject::new();
+        let context = EmptyStateContext::new("get")
+            .with_metadata("id", "123");
+
+        let mut buffer = Vec::new();
+        let was_empty = format_and_output(&mut buffer, &ToonValue::Object(empty_obj), context, OutputFormat::Toon).unwrap();
+
+        assert!(was_empty);
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("success:"));
+    }
+
+    #[test]
+    fn test_search_command_no_results() {
+        // Simulate a search command with no results
+        let empty_arr = ToonArray::new(vec![]);
+        let context = EmptyStateContext::new("search")
+            .with_filter("query=test")
+            .with_fields(vec!["id".to_string(), "title".to_string()]);
+
+        let mut buffer = Vec::new();
+        let was_empty = format_and_output(&mut buffer, &ToonValue::Array(empty_arr), context, OutputFormat::Json).unwrap();
+
+        assert!(was_empty);
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("\"success\""));
+        assert!(output.contains("\"empty_type\""));
+    }
+
+    #[test]
+    fn test_non_empty_result_no_formatting() {
+        // Non-empty results should not trigger empty state formatting
+        let arr = ToonArray::new(vec![ToonValue::Number(1.0)]);
+        let context = EmptyStateContext::new("list");
+
+        let mut buffer = Vec::new();
+        let was_empty = format_and_output(&mut buffer, &ToonValue::Array(arr), context, OutputFormat::Toon).unwrap();
+
+        assert!(!was_empty);
+        assert!(buffer.is_empty());
+    }
+
+    #[test]
+    fn test_human_format_empty_state() {
+        let empty_arr = ToonArray::new(vec![]);
+        let context = EmptyStateContext::new("list")
+            .with_filter("status=active");
+
+        let mut buffer = Vec::new();
+        let was_empty = format_and_output(&mut buffer, &ToonValue::Array(empty_arr), context, OutputFormat::Human).unwrap();
+
+        assert!(was_empty);
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("✓ Command executed successfully"));
+        assert!(output.contains("No items found"));
+    }
+
+    #[test]
+    fn test_json_format_empty_state() {
+        let empty_arr = ToonArray::new(vec![]);
+        let context = EmptyStateContext::new("list");
+
+        let mut buffer = Vec::new();
+        let was_empty = format_and_output(&mut buffer, &ToonValue::Array(empty_arr), context, OutputFormat::Json).unwrap();
+
+        assert!(was_empty);
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("\"success\": true"));
+        assert!(output.contains("\"empty_type\""));
+    }
+
+    #[test]
+    fn test_toon_format_empty_state() {
+        let empty_arr = ToonArray::new(vec![]);
+        let context = EmptyStateContext::new("list");
+
+        let mut buffer = Vec::new();
+        let was_empty = format_and_output(&mut buffer, &ToonValue::Array(empty_arr), context, OutputFormat::Toon).unwrap();
+
+        assert!(was_empty);
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("success:"));
+        assert!(output.contains("empty_type:"));
+    }
+
+    #[test]
+    fn test_empty_state_with_complex_context() {
+        let empty_arr = ToonArray::new(vec![]);
+        let context = EmptyStateContext::new("list")
+            .with_filter("status=active")
+            .with_filter("type=user")
+            .with_scope("active")
+            .with_fields(vec!["id".to_string(), "name".to_string(), "email".to_string()])
+            .with_metadata("user", "alice")
+            .with_metadata("org", "acme");
+
+        let mut buffer = Vec::new();
+        let was_empty = format_and_output(&mut buffer, &ToonValue::Array(empty_arr), context, OutputFormat::Human).unwrap();
+
+        assert!(was_empty);
+        let output = String::from_utf8(buffer).unwrap();
+        assert!(output.contains("Filters: status=active, type=user"));
+        assert!(output.contains("Scope: active"));
+        assert!(output.contains("Fields: id, name, email"));
+        assert!(output.contains("Context:"));
+    }
+
+    #[test]
+    fn test_exit_code_with_empty_results() {
+        // Empty state should not cause errors - exit code should be 0
+        let empty_arr = ToonArray::new(vec![]);
+        let context = EmptyStateContext::new("list");
+
+        let mut buffer = Vec::new();
+        let result = format_and_output(&mut buffer, &ToonValue::Array(empty_arr), context, OutputFormat::Toon);
+
+        // Should succeed without error (exit code 0)
+        assert!(result.is_ok());
+        assert!(result.unwrap()); // Returns true for empty state
+    }
+
+    #[test]
+    fn test_exit_code_with_non_empty_results() {
+        // Non-empty results should also succeed
+        let arr = ToonArray::new(vec![ToonValue::Number(1.0)]);
+        let context = EmptyStateContext::new("list");
+
+        let mut buffer = Vec::new();
+        let result = format_and_output(&mut buffer, &ToonValue::Array(arr), context, OutputFormat::Toon);
+
+        // Should succeed without error (exit code 0)
+        assert!(result.is_ok());
+        assert!(!result.unwrap()); // Returns false for non-empty state
+    }
+}

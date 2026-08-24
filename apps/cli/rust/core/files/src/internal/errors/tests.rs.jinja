@@ -1,0 +1,180 @@
+/// Tests for error formatting module
+///
+/// Comprehensive tests for structured error formatting across different output formats.
+
+use super::*;
+
+#[test]
+fn test_error_code_exit_codes() {
+    assert_eq!(ErrorCode::MissingRequiredFlag.exit_code(), 2);
+    assert_eq!(ErrorCode::InvalidFlagValue.exit_code(), 2);
+    assert_eq!(ErrorCode::ConflictingFlags.exit_code(), 2);
+    assert_eq!(ErrorCode::UnknownFlag.exit_code(), 2);
+    assert_eq!(ErrorCode::NotFound.exit_code(), 1);
+    assert_eq!(ErrorCode::AlreadyExists.exit_code(), 1);
+    assert_eq!(ErrorCode::PermissionDenied.exit_code(), 1);
+    assert_eq!(ErrorCode::NetworkError.exit_code(), 1);
+    assert_eq!(ErrorCode::InternalError.exit_code(), 1);
+    assert_eq!(ErrorCode::NoOp.exit_code(), 0);
+}
+
+#[test]
+fn test_error_code_as_str() {
+    assert_eq!(ErrorCode::MissingRequiredFlag.as_str(), "MISSING_REQUIRED_FLAG");
+    assert_eq!(ErrorCode::InvalidFlagValue.as_str(), "INVALID_FLAG_VALUE");
+    assert_eq!(ErrorCode::ConflictingFlags.as_str(), "CONFLICTING_FLAGS");
+    assert_eq!(ErrorCode::UnknownFlag.as_str(), "UNKNOWN_FLAG");
+    assert_eq!(ErrorCode::NotFound.as_str(), "NOT_FOUND");
+    assert_eq!(ErrorCode::AlreadyExists.as_str(), "ALREADY_EXISTS");
+    assert_eq!(ErrorCode::PermissionDenied.as_str(), "PERMISSION_DENIED");
+    assert_eq!(ErrorCode::NetworkError.as_str(), "NETWORK_ERROR");
+    assert_eq!(ErrorCode::InternalError.as_str(), "INTERNAL_ERROR");
+    assert_eq!(ErrorCode::NoOp.as_str(), "NO_OP");
+}
+
+#[test]
+fn test_structured_error_creation() {
+    let error = StructuredError::new(ErrorCode::MissingRequiredFlag, "--title is required");
+    assert_eq!(error.code, "MISSING_REQUIRED_FLAG");
+    assert_eq!(error.message, "--title is required");
+    assert!(error.context.is_none());
+
+    let error_with_context = error.with_context("Command: create");
+    assert_eq!(error_with_context.context, Some("Command: create".to_string()));
+}
+
+#[test]
+fn test_error_output_creation() {
+    let error = StructuredError::new(ErrorCode::MissingRequiredFlag, "--title is required");
+    let help = vec!["{{ project_slug }} create --title \"...\"".to_string()];
+    let output = ErrorOutput::new(error, help);
+
+    assert_eq!(output.error.code, "MISSING_REQUIRED_FLAG");
+    assert_eq!(output.help.len(), 1);
+    assert!(output.note.is_none());
+
+    let output_with_note = output.with_note("This is a note");
+    assert_eq!(output_with_note.note, Some("This is a note".to_string()));
+}
+
+#[test]
+fn test_format_toon() {
+    let error = StructuredError::new(ErrorCode::MissingRequiredFlag, "--title is required");
+    let help = vec!["{{ project_slug }} create --title \"...\"".to_string()];
+    let output = ErrorOutput::new(error, help);
+
+    let toon = ErrorFormatter::format_toon(&output);
+    assert!(toon.contains("error[1]{code,message}:"));
+    assert!(toon.contains("MISSING_REQUIRED_FLAG"));
+    assert!(toon.contains("--title is required"));
+    assert!(toon.contains("help[1]:"));
+    assert!(toon.contains("{{ project_slug }} create --title"));
+}
+
+#[test]
+fn test_format_json() {
+    let error = StructuredError::new(ErrorCode::NotFound, "Task #999 not found");
+    let help = vec!["{{ project_slug }} list".to_string()];
+    let output = ErrorOutput::new(error, help);
+
+    let json = ErrorFormatter::format_json(&output);
+    assert!(json.contains("\"code\""));
+    assert!(json.contains("NOT_FOUND"));
+    assert!(json.contains("\"message\""));
+    assert!(json.contains("Task #999 not found"));
+    assert!(json.contains("\"help\""));
+}
+
+#[test]
+fn test_format_human() {
+    let error = StructuredError::new(ErrorCode::MissingRequiredFlag, "--title is required");
+    let help = vec!["{{ project_slug }} create --title \"...\"".to_string()];
+    let output = ErrorOutput::new(error, help);
+
+    let human = ErrorFormatter::format_human(&output);
+    assert!(human.contains("Error: --title is required"));
+    assert!(human.contains("Suggestion: {{ project_slug }} create --title"));
+}
+
+#[test]
+fn test_format_toon_with_note() {
+    let error = StructuredError::new(ErrorCode::NoOp, "Task already closed");
+    let help = vec![];
+    let output = ErrorOutput::new(error, help).with_note("Task #42 already closed (no-op)");
+
+    let toon = ErrorFormatter::format_toon(&output);
+    assert!(toon.contains("note[1]:"));
+    assert!(toon.contains("Task #42 already closed (no-op)"));
+}
+
+#[test]
+fn test_format_toon_multiple_suggestions() {
+    let error = StructuredError::new(ErrorCode::NotFound, "Task #999 not found");
+    let help = vec![
+        "{{ project_slug }} list".to_string(),
+        "{{ project_slug }} view <id>".to_string(),
+    ];
+    let output = ErrorOutput::new(error, help);
+
+    let toon = ErrorFormatter::format_toon(&output);
+    assert!(toon.contains("help[2]:"));
+    assert!(toon.contains("{{ project_slug }} list"));
+    assert!(toon.contains("{{ project_slug }} view <id>"));
+}
+
+#[test]
+fn test_format_toon_with_context() {
+    let error = StructuredError::new(ErrorCode::MissingRequiredFlag, "--title is required")
+        .with_context("Command: create");
+    let help = vec!["{{ project_slug }} create --title \"...\"".to_string()];
+    let output = ErrorOutput::new(error, help);
+
+    let toon = ErrorFormatter::format_toon(&output);
+    assert!(toon.contains("MISSING_REQUIRED_FLAG"));
+    assert!(toon.contains("--title is required"));
+}
+
+#[test]
+fn test_format_json_serialization() {
+    let error = StructuredError::new(ErrorCode::PermissionDenied, "Access denied");
+    let help = vec!["{{ project_slug }} login".to_string()];
+    let output = ErrorOutput::new(error, help);
+
+    let json = ErrorFormatter::format_json(&output);
+    let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(parsed["error"]["code"], "PERMISSION_DENIED");
+    assert_eq!(parsed["error"]["message"], "Access denied");
+    assert_eq!(parsed["help"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn test_format_human_with_context() {
+    let error = StructuredError::new(ErrorCode::NetworkError, "Connection failed")
+        .with_context("Endpoint: https://api.example.com");
+    let help = vec!["Check network connection".to_string()];
+    let output = ErrorOutput::new(error, help);
+
+    let human = ErrorFormatter::format_human(&output);
+    assert!(human.contains("Error: Connection failed"));
+    assert!(human.contains("Context: Endpoint: https://api.example.com"));
+    assert!(human.contains("Suggestion: Check network connection"));
+}
+
+#[test]
+fn test_error_output_with_multiple_suggestions() {
+    let error = StructuredError::new(ErrorCode::InvalidFlagValue, "Invalid value for --format");
+    let help = vec![
+        "Use --format=toon".to_string(),
+        "Use --format=json".to_string(),
+        "Use --format=human".to_string(),
+    ];
+    let output = ErrorOutput::new(error, help);
+
+    assert_eq!(output.help.len(), 3);
+
+    let human = ErrorFormatter::format_human(&output);
+    assert!(human.contains("Suggestion: Use --format=toon"));
+    assert!(human.contains("Alternative: Use --format=json"));
+    assert!(human.contains("Alternative: Use --format=human"));
+}
