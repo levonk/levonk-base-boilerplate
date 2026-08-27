@@ -1,0 +1,74 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- GitOps-specific ---
+
+# Kubernetes
+*.kubeconfig
+*.kubeconfig-*
+kubeconfig-*
+
+# Helm
+charts/*.tgz
+charts/*.tar.gz
+.helm-registry/
+
+# Kustomize
+*.bak
+*.backup
+
+# ArgoCD
+argocd-*.yaml
+argocd-*.yml
+
+# Flux
+flux-system/
+*.flux.yaml
+*.flux.yml
+
+# Helm cache
+.helm/cache/
+.kube/cache/
+
+# Generated files
+generated/
+
+# Local development overrides
+values.local.yaml
+values.local.yml
+kustomization.local.yaml
+kustomization.local.yml
+config.local.yaml
+config.local.yml
+settings.local.yaml
+settings.local.yml
+
+# Terraform (if used)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Pulumi (if used)
+.Pulumi/
+*.pulumi-history
+
+# Docker (if used)
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# CI/CD local overrides
+.github/workflows/*.local.*
+.gitlab-ci.yml.local
+azure-pipelines.yml.local
+
+# Monitoring and observability
+prometheus-data/
+grafana-data/
+loki-data/
+
+# Local manifests / overlays / clusters / applications
+manifests/local/
+overlays/local/
+clusters/local/
+applications/local/
+environments/local/

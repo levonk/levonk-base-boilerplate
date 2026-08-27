@@ -1,0 +1,15 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- Helm-specific ---
+
+# Packaged charts
+*.tgz
+charts/*.tgz
+charts/*.tar.gz
+
+# Helm registry cache
+.helm-registry/
+.helm/cache/
+
+# Helm plugins
+.helm/plugins/

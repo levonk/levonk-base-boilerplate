@@ -1,0 +1,22 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-python.jinja" %}
+
+## --- Airflow-specific ---
+
+# Airflow
+airflow.db
+airflow-webserver.pid
+airflow.cfg
+
+# Airflow logs
+logs/
+airflow-logs/
+
+# Airflow DAGs cache
+.airflow/
+
+# Airflow plugins (generated)
+plugins/
+
+# Airflow db
+*.db
+*.db-journal

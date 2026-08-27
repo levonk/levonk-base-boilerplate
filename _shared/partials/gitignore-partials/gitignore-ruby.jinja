@@ -1,0 +1,96 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- Ruby-specific ---
+
+# Gem build artifacts
+*.gem
+*.gemspec
+pkg/
+
+# Bundler
+.bundle/
+vendor/bundle/
+lib/bundler/man/
+
+# Ruby version managers
+.ruby-version
+.ruby-gemset
+.rvmrc
+
+# RSpec
+spec/reports/
+.simplecov
+.rspec_status
+rerun.txt
+
+# Documentation
+doc/
+.yardoc/
+_yardoc/
+
+# Spring
+.spring/
+
+# Guard
+.guardfile
+
+# Byebug
+.byebug_history
+
+# Debugger
+.rdebugrc
+.rdebugrc.history
+
+# Ruby LSP
+.ruby-lsp/
+
+# Solargraph
+.solargraph.yml
+
+# Reek
+.reek
+
+# RuboCop
+.rubocop.yml
+.rubocop_todo.yml
+
+# Brakeman
+brakeman.report
+
+# Rails
+/db/*.sqlite3
+/db/*.sqlite3-*
+/log/
+/tmp/
+/public/system
+/public/assets
+.byebug
+
+# SimpleCov
+.coverage
+*.coverage
+
+# Performance / memory profiling
+*.prof
+*.profile
+*.heap
+
+# Stack traces / dump files
+*.stacktrace
+*.dump
+
+# Cache files
+tmp/cache/
+
+# Socket / PID / lock / state files
+*.sock
+*.pid
+*.lock
+*.state
+
+# Configuration (keep templates)
+config/database.yml
+config/secrets.yml
+config/settings.yml
+config/local.yml
+config/settings.local.yml

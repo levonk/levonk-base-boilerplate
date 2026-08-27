@@ -1,0 +1,63 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- C / C++ (Clang) specific ---
+
+# Compiled object files
+*.o
+*.obj
+*.lo
+*.al
+
+# Static libraries
+*.a
+
+# Shared libraries
+*.so
+*.dll
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.pdb
+*.map
+*.dump
+*.pch
+ipch/
+
+# CMake build directories
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Ninja
+.ninja
+.ninja_deps
+.ninja_log
+build.ninja
+
+# Compile commands
+compile_commands.json
+
+# Clangd cache
+.cache/clangd/
+.clangd/
+
+# Include-what-you-use
+*.iwyu
+
+# gcov / lcov
+*.gcov
+*.gcda
+*.gcno
+*.lcov
+
+# Valgrind
+vgcore.*
+core.*
