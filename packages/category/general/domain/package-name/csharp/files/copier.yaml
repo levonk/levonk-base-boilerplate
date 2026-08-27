@@ -25,7 +25,7 @@ namespace_name:
   help: What is the C# namespace? (e.g., "MyAwesomeLibrary")
   default: "{{ package_name | replace(' ', '') | replace('-', '') }}"
 
-# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/envrc.jinja
 # partial as the project root path. At copy time the project root is the
 # destination directory itself, so "." is the correct portable value.
 REPO_ROOT:

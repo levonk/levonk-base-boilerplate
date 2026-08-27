@@ -157,7 +157,7 @@ Selected boilerplate templates include an **initially disabled** GitHub Actions 
 
 ### How it works
 
-- The workflow file (`.github/workflows/iron-proxy.yml`) is generated from the shared partial at `_shared/.github/workflows/iron-proxy.yml.jinja`
+- The workflow file (`.github/workflows/iron-proxy.yml`) is generated from the shared partial at `_shared/github/workflows/iron-proxy.yml.jinja`
 - An `egress-rules.yaml` file defines the allowed domains (npm registry, Node.js, GitHub)
 - The job is gated by `if: vars.IRON_PROXY_ENABLED == 'true'` — it will not run until the repository variable `IRON_PROXY_ENABLED` is set to `true`
 - When enabled, the action installs iron-proxy, redirects all DNS through it, and locks down outbound traffic with iptables
@@ -179,13 +179,13 @@ Selected boilerplate templates include an **initially disabled** GitHub Actions 
 
 To add iron-proxy egress security to another boilerplate template:
 
-1. Create `.github/workflows/iron-proxy.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/.github/workflows/iron-proxy.yml.jinja" %}`
+1. Create `.github/workflows/iron-proxy.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/github/workflows/iron-proxy.yml.jinja" %}`
 2. Create `egress-rules.yaml.jinja` in the template's `files/` directory with: `{% include "partials.bak/egress-rules.yaml.jinja" %}`
 3. Adjust the build steps in the shared partial if the template uses a different build tool (the default uses pnpm + Nx)
 
 ## Shared Rust CI Workflows
 
-The `_shared/.github/workflows/` directory contains reusable GitHub Actions workflow partials for Rust projects:
+The `_shared/github/workflows/` directory contains reusable GitHub Actions workflow partials for Rust projects:
 
 - **`rust-ci.yml.jinja`** — Main CI workflow with `test`, `lint`, `build`, `security` (cargo audit), and `outdated-check` (cargo outdated, non-blocking) jobs. Triggers on push to main/develop and PRs.
 - **`rust-weekly-outdated.yml.jinja`** — Weekly scheduled workflow that runs `cargo update` (no dry-run), verifies with `cargo audit` + build + tests, and creates a pull request with the updated `Cargo.lock`. Triggers every Monday at 09:00 UTC and on manual dispatch.
@@ -197,8 +197,8 @@ The `_shared/.github/workflows/` directory contains reusable GitHub Actions work
 
 ### Adding shared Rust CI to another template
 
-1. Create `.github/workflows/ci.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/.github/workflows/rust-ci.yml.jinja" %}`
-2. Create `.github/workflows/weekly-outdated.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/.github/workflows/rust-weekly-outdated.yml.jinja" %}`
+1. Create `.github/workflows/ci.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/github/workflows/rust-ci.yml.jinja" %}`
+2. Create `.github/workflows/weekly-outdated.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/github/workflows/rust-weekly-outdated.yml.jinja" %}`
 3. Ensure `cargo-audit` and `cargo-outdated` are in the template's devbox packages (use the shared `devbox-packages-rust.jinja` partial)
 
 ## For Developers

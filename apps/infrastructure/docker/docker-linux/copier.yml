@@ -25,7 +25,7 @@ package_slug:
   default: "{{ _service_name | lower | replace(' ', '-') }}"
   help: Slug of service name used in directory and resource naming.
 
-# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/envrc.jinja
 # partial as the project root path. At copy time the project root is the
 # destination directory itself, so "." is the correct portable value.
 REPO_ROOT:

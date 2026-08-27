@@ -79,8 +79,9 @@ copy_shared_partials() {
         # Create fresh directory
         mkdir -p "$target_dir"
 
-        # Enable dotglob to include hidden files in the copy
-        # This ensures files like .envrc.jinja are copied properly
+        # Enable dotglob to include hidden files in the copy (safety net)
+        # Shared partials no longer use dot-prefixed names, but dotglob
+        # ensures any future hidden files are still copied correctly.
         shopt -s dotglob 2>/dev/null || true
 
         # Use hard links on Linux with compatible file systems for efficiency

@@ -25,7 +25,7 @@ module_name:
   help: What is the Go module name? (e.g., "github.com/user/my-awesome-library")
   default: "github.com/{{author_name}}/{{package_slug}}"
 
-# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/envrc.jinja
 # partial as the project root path. At copy time the project root is the
 # destination directory itself, so "." is the correct portable value.
 REPO_ROOT:

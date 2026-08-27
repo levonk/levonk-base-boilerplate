@@ -243,9 +243,9 @@ The shared partials solution addresses Copier's limitations with template includ
 
 ### How it works
 
-1. **Write shared content to `_shared/`** — this is the single source of truth. Shared files live at the root of `_shared/` (e.g. `_shared/.npmrc.jinja`) or in `_shared/partials/nx-partials/` (for Nx target partials).
+1. **Write shared content to `_shared/`** — this is the single source of truth. Shared files live at the root of `_shared/` (e.g. `_shared/npmrc.jinja`) or in `_shared/partials/nx-partials/` (for Nx target partials).
 2. **`copier-wrapper.sh` copies `_shared/` into each template's `partials.bak/`** directory before running copier (hard links on Linux, copies on macOS). This works around Copier's Jinja2 sandbox, which cannot resolve symlinks or parent/sibling paths.
-3. **Templates reference shared partials via Jinja includes**: `{% include "partials.bak/.npmrc.jinja" %}`.
+3. **Templates reference shared partials via Jinja includes**: `{% include "partials.bak/npmrc.jinja" %}`.
 4. **NEVER write to `partials.bak/` directly** — it is nuked and recreated on every `copier-wrapper.sh` run, and deleted again after copier finishes so it never lingers in the template tree. The source of truth is always `_shared/`.
 
 ### `.npmrc` convention
@@ -253,10 +253,10 @@ The shared partials solution addresses Copier's limitations with template includ
 Since all projects use **Nx** as their build tool, every template that has a `package.json.jinja` (i.e., uses npm/pnpm) MUST include a `.npmrc.jinja` that includes the shared partial:
 
 ```jinja
-{% include "partials.bak/.npmrc.jinja" %}
+{% include "partials.bak/npmrc.jinja" %}
 ```
 
-The shared partial at `_shared/.npmrc.jinja` enforces supply-chain hygiene and reproducibility settings (`save-exact`, `min-release-age`, `engine-strict`, `audit-signature-strict`, etc.). To change `.npmrc` behavior across all templates, edit the shared partial — do not duplicate settings in individual template `.npmrc.jinja` files.
+The shared partial at `_shared/npmrc.jinja` enforces supply-chain hygiene and reproducibility settings (`save-exact`, `min-release-age`, `engine-strict`, `audit-signature-strict`, etc.). To change `.npmrc` behavior across all templates, edit the shared partial — do not duplicate settings in individual template `.npmrc.jinja` files.
 
 Templates that currently include the shared `.npmrc` partial:
 - `repo/pnpm-monorepo/files/` (monorepo root)
