@@ -1,0 +1,16 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- Kustomize-specific ---
+
+# Generated manifests
+generated/
+output/
+
+# Kustomize cache
+.kube/cache/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*.rej

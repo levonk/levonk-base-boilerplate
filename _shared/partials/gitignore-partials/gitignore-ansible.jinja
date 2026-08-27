@@ -1,0 +1,16 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- Ansible-specific ---
+
+# Ansible retry files
+*.retry
+
+# Ansible local state
+.ansible/
+
+# Ansible Galaxy
+collections/ansible_collections/*
+roles/external/
+
+# Ansible vault password
+.vault_pass.txt

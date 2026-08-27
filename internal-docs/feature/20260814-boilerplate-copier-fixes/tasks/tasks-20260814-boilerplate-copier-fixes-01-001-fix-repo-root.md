@@ -15,14 +15,14 @@ Add the `REPO_ROOT` variable definition (with default `.`) to every copier.yml f
 
 ## Context
 
-The shared `.envrc.jinja` partial (at `_shared/.envrc.jinja`) and per-template `.envrc.jinja` files reference `{{REPO_ROOT}}` for paths like `{{REPO_ROOT}}/node_modules/.bin` and `{{REPO_ROOT}}/.local/bin`. Only 4 templates (nextjs, pnpm-monorepo, fastapi, browser-extension) define `REPO_ROOT` in their copier.yml. The remaining ~36 templates produce broken paths like `/.envrc` because `{{REPO_ROOT}}` evaluates to an empty string.
+The shared `.envrc.jinja` partial (at `_shared/dot_envrc.jinja`) and per-template `.envrc.jinja` files reference `{{REPO_ROOT}}` for paths like `{{REPO_ROOT}}/node_modules/.bin` and `{{REPO_ROOT}}/.local/bin`. Only 4 templates (nextjs, pnpm-monorepo, fastapi, browser-extension) define `REPO_ROOT` in their copier.yml. The remaining ~36 templates produce broken paths like `/.envrc` because `{{REPO_ROOT}}` evaluates to an empty string.
 
 ## Reference Pattern
 
 From `apps/web/typescript/nextjs/copier.yml` (lines 29-32):
 
 ```yaml
-# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/dot_envrc.jinja
 # partial as the project root path. At copy time the project root is the
 # destination directory itself, so "." is the correct portable value.
 REPO_ROOT:

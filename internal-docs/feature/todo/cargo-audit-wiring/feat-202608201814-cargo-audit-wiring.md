@@ -35,8 +35,8 @@ automatically runs security auditing as part of:
 
 - **`_shared/partials/nx-partials/nx-target-rust.jinja`** — add an `audit` Nx target
 - **`_shared/partials/devbox-partials/devbox-packages-rust.jinja`** — new shared partial with rust devbox packages including `cargo-audit` and `cargo-outdated`
-- **`_shared/.github/workflows/rust-ci.yml.jinja`** — new shared CI workflow (test, lint, build, security/audit, outdated-check)
-- **`_shared/.github/workflows/rust-weekly-outdated.yml.jinja`** — new shared weekly workflow that runs `cargo update` (no dry-run) and creates a PR
+- **`_shared/dot_github/workflows/rust-ci.yml.jinja`** — new shared CI workflow (test, lint, build, security/audit, outdated-check)
+- **`_shared/dot_github/workflows/rust-weekly-outdated.yml.jinja`** — new shared weekly workflow that runs `cargo update` (no dry-run) and creates a PR
 - **Package Rust template** (`packages/category/general/domain/package-name/rust/core/files/`) — wire `cargo audit` + `cargo outdated` into `validate`, add `outdated` target, use shared devbox packages partial, add shared CI workflows
 - **CLI Rust template** (`apps/cli/rust/core/files/`) — wire `cargo audit` + `cargo outdated` into `quality` and `release`, add public `audit` and `outdated` targets, use shared devbox packages partial, use shared CI workflows
 - **README docs** — update to reflect audit + outdated in validation

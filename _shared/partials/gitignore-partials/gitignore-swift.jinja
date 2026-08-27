@@ -1,0 +1,84 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- Swift / Xcode-specific ---
+
+# Xcode user settings
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Xcode build output (pre-Xcode 9 compatibility)
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+*.moved-aside
+
+# Obj-C/Swift specific
+*.hmap
+
+# App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Accio dependency management
+Dependencies/
+.accio/
+
+# fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# Code Injection
+iOSInjectionProject/
+
+# Swift Package Manager build artifacts
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+
+# Xcode Server logs
+*.xcactivitylog
+
+# SwiftLint / Periphery / Mockolo / SwiftGen / Sourcery
+.swiftlint.yml
+.periphery.yml
+.mockolo.yml
+swiftgen/
+.sourcery.yml
+
+# Tuist
+Tuist/
+Dist/
+Project.swift.generated.swift
+
+# Bazel
+bazel-*
+WORKSPACE.bzl
+BUILD.bzl
+MODULE.bazel
+
+# Buck
+buck-out/
+.buckd/
+*.keystore
+!debug.keystore

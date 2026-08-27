@@ -1,35 +1,13 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- TypeScript / JavaScript-specific ---
+
 # Dependencies
 node_modules/
 .pnpm-store/
 
-# Build outputs
-dist/
+# TypeScript build info
 *.tsbuildinfo
-
-# Environment files
-.env
-.env.local
-.env.*.local
-
-# Logs
-logs
-*.log
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-jspm_packages/
 
 # Optional npm cache directory
 .npm
@@ -46,15 +24,18 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# parcel-bundler cache (https://parceljs.org/)
-.cache
+# parcel-bundler cache
 .parcel-cache
 
-# next.js build output
+# Next.js build output
 .next
 
-# nuxt.js build output
+# Nuxt.js build output
 .nuxt
+
+# Storybook build outputs
+.out
+.storybook-out
 
 # vuepress build output
 .vuepress/dist
@@ -73,3 +54,21 @@ jspm_packages/
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# SWC compiler cache
+.swc/
+
+# Cypress
+/cypress/screenshots/
+/cypress/videos/
+/cypress/downloads/
+/cypress/results/
+/cypress.env.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Next.js generated
+next-env.d.ts

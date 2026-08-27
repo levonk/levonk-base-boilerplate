@@ -16,7 +16,7 @@ publisher:
   type: str
   help: "Your publisher name (for marketplace)"
 
-# REPO_ROOT is used by .envrc.jinja and the shared _shared/.envrc.jinja
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/dot_envrc.jinja
 # partial as the project root path. At copy time the project root is the
 # destination directory itself, so "." is the correct portable value.
 REPO_ROOT:

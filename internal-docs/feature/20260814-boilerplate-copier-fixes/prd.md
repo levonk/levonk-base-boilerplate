@@ -99,8 +99,8 @@ Never use: npm, npx, yarn, pip install (this is not a Node/Python project)
 
 ### Relevant files and their roles
 - `copier-wrapper.sh` — universal wrapper that copies shared partials and injects `nix_target_arch` data variable
-- `_shared/.envrc.jinja` — shared direnv partial that references `{{REPO_ROOT}}` (lines 13-14, 18-19, 24)
-- `_shared/.envrc.template.jinja` — shared .envrc template wrapper that includes the partial and references `{{REPO_ROOT}}` (lines 8-9)
+- `_shared/dot_envrc.jinja` — shared direnv partial that references `{{REPO_ROOT}}` (lines 13-14, 18-19, 24)
+- `_shared/dot_envrc.template.jinja` — shared .envrc template wrapper that includes the partial and references `{{REPO_ROOT}}` (lines 8-9)
 - `apps/web/typescript/nextjs/copier.yml` — already defines REPO_ROOT (lines 29-32) — reference pattern
 - `repo/pnpm-monorepo/copier.yml` — already defines REPO_ROOT (lines 34-39) — reference pattern
 - `repo/git-repo/copier.yml` — post-copy task runs `devbox install` and `git init` but no token commit

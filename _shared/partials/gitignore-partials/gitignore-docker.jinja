@@ -1,0 +1,16 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- Docker-specific ---
+
+# Docker build output
+*.docker-image
+
+# Docker layer cache
+.docker-cache/
+
+# Compose override files
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# Docker context
+.docker/context/

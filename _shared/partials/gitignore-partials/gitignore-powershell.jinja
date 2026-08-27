@@ -1,4 +1,8 @@
-# PowerShell module files
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- PowerShell-specific ---
+
+# PowerShell module files (generated; source lives in src/)
 *.psd1
 *.psm1
 !src/{{package_name}}.psm1
@@ -18,44 +22,17 @@
 *.vspscc
 *.vssscc
 
-# Visual Studio Code
-.vscode/
-*.code-workspace
-
 # PowerShell ISE
 *.ps1xml
 
-# Windows PowerShell
+# Windows PowerShell profile
 profile.ps1
 Microsoft.PowerShell_profile.ps1
 
 # PowerShell Gallery
 PSGetModuleInfo.xml
 
-# Logs
-*.log
-logs/
-
-# Temporary files
-*.tmp
-*.temp
-*.swp
-*.swo
-*~
-
-# macOS
-.DS_Store
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Linux
-*~
-
 # Build output
-bin/
 obj/
 Build/
 Release/
@@ -66,7 +43,6 @@ TestResults/
 *.trx
 
 # Coverage reports
-coverage/
 *.coverage
 *.coveragexml
 
@@ -78,27 +54,8 @@ packages/
 # Chocolatey
 chocolatey/
 
-# Documentation build
-docs/_build/
-docs/build/
-
-# Environment files
-.env
-.env.local
-.env.development
-.env.test
-.env.production
-
-# IDE files
-*.userosscache
-*.sln.docstates
-
-# PowerShell Module Cache
-
-# PowerShell Script Analysis
+# PSScriptAnalyzer
 ScriptAnalysisResults.xml
-
-# PSScriptAnalyzer settings
 *.settings.psd1
 
 # PowerShell DSC resources
@@ -107,9 +64,4 @@ ScriptAnalysisResults.xml
 
 # Release artifacts
 release/
-dist/
 artifacts/
-
-# Backup files
-*.bak
-*.backup

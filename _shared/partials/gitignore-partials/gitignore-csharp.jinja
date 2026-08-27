@@ -1,0 +1,62 @@
+{% include "partials.bak/partials/gitignore-partials/gitignore-base.jinja" %}
+
+## --- C# / .NET-specific ---
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug*/
+[Rr]elease*/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# Visual Studio
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vspscc
+*.vssscc
+*.aps
+*.ilk
+*.ncb
+*.sbr
+*.sdf
+*_i.c
+*_p.c
+
+# .NET Core / .NET 5+
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Rider / ReSharper
+.idea/
+*.sln.iml
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+
+# BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
+
+# Entity Framework
+*.dbmdl
+*.dbproj.schemaview
+*.edmx.diagram
+*.ldf
+*.mdf
+
+# ClickOnce
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
