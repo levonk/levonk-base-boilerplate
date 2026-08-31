@@ -1,19 +1,189 @@
-- Read ~/p/gh/levonk/{{ package_name }}/AGENTS.md
-- Run execute-upsert skill, if it's missing do a `devbox run -- pnpm dlx skills add levonk/skills-releases --all && devbox run -- pnpm dlx skills add levonk/skills-releases --all -g` (installs all skills to all agents with symlinks, both project-level and global)
-- on the tasks index file under ~/p/gh/levonk/{{ package_name }}/internal-docs/feature/ for the {{ package_name }} project
-- do not use `npx` or `npm` we use `devbox run -- pnpm dlx` or `devbox run -- pnpm`
-- execute-upsert says to not stop processing, via subagents, until all the stories and tasks are addressed, this means marking things blocked until there is no more work you can do
+---
+workflow: "{{ package_name | title }} Execute"
+slug: "{{ package_slug | default(package_name, true) }}-execute"
+description: "Execute a development task (feature, fix, or refactor) in the {{ package_name }} repo end-to-end: plan, implement, verify, review, commit, and ship a PR"
+use: "When creating or updating code, fixing a bug, or refactoring in the {{ package_name }} repo (~/p/gh/levonk/{{ package_name }}/), to ensure the change follows the project's conventions and the quality gate stays green"
+date:
+  created: "2026-07-24"
+  knowledge-basis: "2026-08-30"
+  last-used: "2026-08-30"
+tags:
+  - "ai/workflow/{{ package_slug | default(package_name, true) }}/execute"
+  - "build"
+see-also:
+  - skill: "git-repository-management"
+    relationship: "complement"
+    description: "Commit conventions used when committing the execute result"
+  - skill: "github-pr"
+    relationship: "dependency"
+    description: "PR creation skill used in step 9 — discovers contribution standards, validates PR body, posts via gh --body-file"
+  - skill: "code-quality-validation"
+    relationship: "dependency"
+    description: "Source for the consolidated review checklist used in step 7 — the quality bar the change must clear"
+  - skill: "code-review-guidance"
+    relationship: "dependency"
+    description: "Source for the consolidated review checklist used in step 7 — the per-diff code review checklist applied to the change"
+  - skill: "project-adopter"
+    relationship: "dependency"
+    description: "Source for the consolidated review checklist used in step 7 — the project-adoption conventions the change must follow (devbox/just/direnv, AGENTS.md chain)"
+  - skill: "unit-test-writing"
+    relationship: "complement"
+    description: "Roy Osherove-style unit test authoring guidance for the test blocks colocated with each module"
+---
 
-## Skill Invocation
+# {{ package_name | title }} Execute
 
-The `execute-upsert` skill has `disable-model-invocation: true` — the `skill`
-tool will NOT list it. This is intentional (prevents token waste from auto-
-triggering). When this workflow tells you to "run execute-upsert skill", do NOT
-hand-roll the work. Instead:
+## Operation
 
-1. Locate the skill at `~/.agents/skills/execute-upsert/SKILL.md`
-2. Read `SKILL.md` and follow its workflow (it may instruct you to run
-   `scripts/refresh.sh` first, then read `INSTRUCTIONS.md`)
-3. Execute the skill's scripts, references, and decision tree as directed
-4. The `skill` tool's inability to find it is NOT evidence the skill is
-   unavailable — explicit workflow instructions override `disable-model-invocation`
+1. **Initialize**: The root `AGENTS.md` is already in your context as an
+   always-on rule — do not re-read it. Instead, identify every file or
+   directory you expect to touch, walk from the repo root to each target
+   path, and read every child `AGENTS.md` found along each route (per the
+   Usage Protocol in the root `AGENTS.md`). The child docs are the local
+   contracts that control work details.
+
+   For {{ package_name }} the relevant contracts are:
+   - `AGENTS.md` (repo root) — architecture, conventions, module layout.
+   - Any `docs-internal/` or `internal-docs/` notes referenced by the
+     target module.
+
+2. **Plan**: Identify the task type the user wants to execute. Common
+   task types:
+   - **New feature** — follow the project's architecture conventions
+     from `AGENTS.md` for module layout, registration, and integration
+     points.
+   - **Bug fix / refactor** — trace the failing path, add a regression
+     test in the affected module's test block, then fix.
+
+   If the project's CLI ticket system is in use, run `tk help` and pick
+   the next ticket per the project's prioritization. Otherwise, capture
+   the task as a `todo_write` list before proceeding.
+
+3. **Apply**: Implement the change following the project's conventions
+   from `AGENTS.md`:
+   - Idiomatic code for the project's language, compact style (collapse
+     duplicate else branches, share abstractions).
+   - Do NOT add or remove comments unless asked. Preserve existing
+     comments when editing.
+   - Tests: colocated test blocks in the same file where the project
+     convention supports it. Use `tempfile` and `assert_fs` for
+     filesystem-related tests where applicable.
+
+4. **Verify**: Build and run the project's quality gate locally. The
+   fast mode is the pre-commit bar; full mode adds CI parity checks.
+
+   ```bash
+   # Fast (pre-commit)
+   devbox run -- just quality
+
+   # Full (CI parity)
+   devbox run -- just quality-full
+   ```
+
+   The CI workflow runs `devbox run -- just ci` — the same stages as
+   `just quality-full`. Local `just quality` passing is the minimum
+   bar before moving to step 5.
+
+   If the change touches public API or behavior, also run the binary
+   against an example or test fixture to sanity-check.
+
+5. **Completeness check**: Re-read the plan from step 2 and tick off
+   every item: module created/edited, registration at all integration
+   points per `AGENTS.md`, `AGENTS.md` architecture section updated if
+   a new module was added, test coverage for the new behavior, and any
+   `docs-internal/` notes for non-obvious design decisions. If any
+   planned item is missing or half-written, return to step 3 (Apply)
+   with the gap as feedback. Do not proceed to step 6 with a
+   known-incomplete change.
+
+6. **Quality gate**: Re-run the full quality gate to confirm the
+   change is green at CI parity. The build from step 4 is reused — do
+   not rebuild unless the source tree changed after step 4.
+
+   ```bash
+   devbox run -- just quality-full
+   ```
+
+   All stages must pass. Do not introduce new lint warnings or test
+   failures.
+
+7. **Code review**: Dispatch a review subagent that reads the
+   consolidated review checklist sourced from the three software-dev
+   skills (code-quality-validation, code-review-guidance,
+   project-adopter) and reviews the change's diff
+   (`git diff --stat HEAD` for unstaged work, or
+   `git diff --stat HEAD~1..HEAD` after a checkpoint commit) against
+   it. The subagent should specifically check:
+   - Language idioms and the project's conventions from `AGENTS.md`.
+   - Test coverage in the colocated test block — Roy Osherove style
+     (readable, maintainable, trustworthy).
+   - Registration completeness at all integration points per
+     `AGENTS.md`.
+   - No absolute paths leaked into committed code.
+   - `AGENTS.md` architecture section updated if a new module was
+     added.
+
+   The review subagent returns a structured verdict
+   (`REVIEW_VERDICT:CLEAN|NEEDS_FIXES|BLOCKED`).
+   - `CLEAN` — proceed to step 8 (Deliver).
+   - `NEEDS_FIXES` — return to step 3 (Apply) with the review findings
+     as feedback. Loop until `CLEAN` or the change returns `BLOCKED`.
+   - `BLOCKED` — the review found issues requiring human input.
+     Present the findings to the user with the question, the options,
+     the recommendation, and why (per the Agent Interaction Protocol
+     in the root `AGENTS.md`). Do not commit until the user resolves
+     the blocker.
+
+8. **Deliver**: Commit the changes using the conventions defined in
+   the `git-repository-management` skill
+   (`~/.agents/skills/git-repository-management/SKILL.md`).
+   Stage only the files touched by this task — the repo may have
+   unrelated dirty files that must not be swept into the commit.
+   Follow the project's existing commit message style (Conventional
+   Commits with scopes).
+
+9. **Ship**: Run the `github-pr` skill
+   (`~/.agents/skills/github-pr/SKILL.md`) to open a well-formed PR.
+   The skill handles: discovering the project's contribution standards
+   and PR templates, drafting a PR body that matches project
+   conventions, presenting it for human review, posting via
+   `gh --body-file`, and validating the posted body renders correctly
+   (no literal `\n`, backticks preserved).
+
+   The `github-pr` skill has `disable-model-invocation: true` — the
+   `skill` tool will NOT list it. Do NOT hand-roll the PR. Instead:
+   1. Run `~/.agents/skills/github-pr/scripts/refresh.sh` to load the
+      skill's current body (`INSTRUCTIONS.md`).
+   2. Read the script output and follow the skill's workflow — it
+      covers fork/branch setup, PR body drafting, `gh --body-file`
+      posting, and body validation.
+   3. The skill's `gh-posting-guard` protocol prevents literal `\n`
+      and stripped backticks in the posted PR body.
+
+   The CI workflow runs `devbox run -- just ci` on the PR — confirm
+   it passes before requesting review. Do not auto-merge unless the
+   user explicitly asks.
+
+   **When NOT to auto-merge**:
+   - The user said "do not auto-merge" or "wait for my review".
+   - The PR contains destructive changes requiring explicit per-action
+     approval per the project's `AGENTS.md`.
+   - The quality gate (step 6) was skipped or failed — the PR is not
+     verified.
+
+## Context Declaration
+
+### File Paths
+- Source repo: `~/p/gh/levonk/{{ package_name }}/` (this repository)
+- Architecture contract: `AGENTS.md` (repo root)
+- Quality gate: `just quality` / `just quality-full`
+- CI workflow: `.github/workflows/ci.yml`
+
+### Project Information
+- Project: levonk/{{ package_name }}
+- Repository: <https://github.com/levonk/{{ package_name }}>
+- Owner: levonk
+- Build system: `just` + `devbox` (Nix)
+- CI gate: `devbox run -- just ci`
+
+<!-- vim: set ft=markdown -->
