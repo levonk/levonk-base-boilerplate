@@ -66,12 +66,42 @@ The template should generate the modern config with:
 
 ### Copier variables
 
-The template should use Copier conditionals to generate ecosystem entries based on the project type:
-- `github-actions` — always (all projects have workflows)
-- `cargo` — when Rust project
-- `npm` — when Node/pnpm project
-- `gomod` — when Go project
-- `pip` or `uv` — when Python project
+The template should use Copier conditionals to generate ecosystem entries based on the project type. The full manifest-to-ecosystem mapping that the template must support:
+
+| Manifest file(s) | Dependabot ecosystem | When to include |
+|------------------|---------------------|-----------------|
+| `.github/workflows/*.yml`, `.github/actions/*/action.yml` | `github-actions` | Always (all boilerplate projects have workflows) |
+| `package.json`, `pnpm-workspace.yaml` | `npm` | Node/pnpm/TypeScript projects |
+| `Cargo.toml` | `cargo` | Rust projects |
+| `go.mod` | `gomod` | Go projects |
+| `requirements.txt`, `pyproject.toml`, `setup.py` | `pip` | Python projects |
+| `pom.xml` | `maven` | Java projects |
+| `build.gradle`, `build.gradle.kts` | `gradle` | Kotlin/Gradle projects |
+| `Dockerfile`, `Dockerfile.*` | `docker` | Docker/infrastructure projects |
+| `docker-compose*.yml`, `compose*.yml` | `docker-compose` | Docker compose projects |
+| `Gemfile` | `bundler` | Ruby projects |
+| `Package.swift` | `swift` | Swift projects |
+| `.gitmodules` | `gitsubmodule` | Projects with git submodules |
+| `composer.json` | `composer` | PHP projects |
+| `*.csproj`, `packages.config` | `nuget` | C#/.NET projects |
+
+The boilerplate templates generate these project types (from the template scan):
+- Rust (apps/cli/rust, packages/.../rust) → `cargo` + `github-actions`
+- Go (apps/cli/go, packages/.../go) → `gomod` + `github-actions`
+- Python (apps/cli/python, apps/backend/python/fastapi) → `pip` + `github-actions`
+- TypeScript/Node (apps/cli/typescript, apps/web/typescript/nextjs, repo/pnpm-monorepo) → `npm` + `github-actions`
+- Java (apps/cli/java) → `maven` + `github-actions`
+- Kotlin (apps/cli/kotlin) → `gradle` + `github-actions`
+- Ruby (apps/cli/ruby) → `bundler` + `github-actions`
+- Swift (apps/cli/swift, packages/.../swift) → `swift` + `github-actions`
+- C# (apps/cli/csharp) → `nuget` + `github-actions`
+- Bash (apps/cli/bash) → `github-actions` only
+- PowerShell (apps/cli/powershell) → `github-actions` only
+- Docker (apps/infrastructure/docker/*) → `docker` + `github-actions` (and `docker-compose` for compose projects)
+- Airflow (apps/infrastructure/airflow-*) → `pip` + `github-actions`
+- Browser extension (apps/plugins/browser-extension) → `npm` + `github-actions`
+
+The Copier template should detect which manifests the generated project will have (based on the template type and Copier answers) and emit one Dependabot entry per ecosystem.
 
 ### `.github/workflows` vs `.github/actions` — two different things
 
@@ -106,9 +136,9 @@ The template should use Copier conditionals to generate ecosystem entries based 
 ## Next Steps (Priority Order)
 
 1. Commit pending working tree changes (static-checks workflow, devbox partials, copier.yml).
-2. Create `_shared/dot_github/dependabot.yml.jinja` template with Copier conditionals for ecosystem selection.
+2. Create `_shared/dot_github/dependabot.yml.jinja` template with Copier conditionals for ALL ecosystem types (github-actions always; cargo/npm/gomod/pip/maven/gradle/docker/docker-compose/bundler/swift/gitsubmodule/composer/nuget conditionally based on project type).
 3. Add Copier variables for dependabot settings (assignees, schedule interval) to relevant `copier.yml` files.
-4. Create `.github/dependabot.yml` for the boilerplate repo itself (dogfooding).
+4. Create `.github/dependabot.yml` for the boilerplate repo itself (dogfooding — github-actions + docker for .devcontainer Dockerfiles).
 5. Update `AGENTS.md` if it documents the template structure.
 
 ## Task List
@@ -121,10 +151,10 @@ The template should use Copier conditionals to generate ecosystem entries based 
 
 ```markdown
 - [ ] Commit pending working tree changes (static-checks workflow, devbox partials, copier.yml updates)
-- [ ] Create _shared/dot_github/dependabot.yml.jinja template with directories key, composite action coverage, groups config, Copier conditionals for ecosystem selection
+- [ ] Create _shared/dot_github/dependabot.yml.jinja template with directories key, composite action coverage, groups config, Copier conditionals for ALL ecosystems (github-actions, npm, cargo, gomod, pip, maven, gradle, docker, docker-compose, bundler, swift, gitsubmodule, composer, nuget)
 - [ ] Add Copier variables for dependabot settings (assignees, schedule_interval) to relevant copier.yml files
-- [ ] Create .github/dependabot.yml for boilerplate repo itself (github-actions + cargo ecosystems, directories key, groups, assignees)
-- [ ] Verify template renders correctly with copier copy against a temp directory
+- [ ] Create .github/dependabot.yml for boilerplate repo itself (github-actions + docker for .devcontainer Dockerfiles, directories key, groups, assignees)
+- [ ] Verify template renders correctly with copier copy against a temp directory (test with at least 3 project types: Rust, Node, Python)
 ```
 
 **Maintenance protocol (receiving session):**
