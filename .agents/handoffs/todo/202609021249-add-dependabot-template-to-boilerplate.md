@@ -219,3 +219,11 @@ Every task below is executed via the `execute-upsert` skill.
 
 - **skills-src handoff**: `202609021249-add-dependabot-config-and-update-project-adopter.md` — adds dependabot.yml to skills-src and updates project-adopter skill
 - **project-lint handoff**: `202609021249-dependabot-scanner-modernization.md` — extends dependabot scanner to warn on legacy directory key and missing composite action coverage
+
+### Detection Source of Truth
+
+The dependabot.yml Copier template hardcodes which ecosystems to generate entries for via Jinja2 conditionals. Copier templates can't call Rust crates at render time, so the conditionals must stay — but they should be documented as derived from `apmw-core`'s ecosystem mapping, with a drift detection script to catch divergence. See:
+
+- **apmw-core adoption handoff (boilerplate)**: `202609021636-adopt-apmw-core-in-boilerplate-templates.md` — adds comments linking to apmw-core's ecosystem module and a drift detection script
+- **apmw extraction handoff**: [202609021309-extract-apmw-core-add-features-publish.md](https://github.com/levonk/apmw/blob/main/.agents/handoffs/todo/202609021309-extract-apmw-core-add-features-publish.md) — extracts apmw's detection engine into a reusable crate
+- **apmw detection comparison**: [project-detection-comparison.md](https://github.com/levonk/apmw/blob/main/internal-docs/research/202609021315-project-detection-comparison.md) — why apmw-core was chosen over crates.io alternatives
