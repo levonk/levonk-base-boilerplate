@@ -257,6 +257,18 @@ doctor_impl:
         echo "⚠️  WARNING: nx not installed — run 'just bootstrap' to install dependencies"
     fi
 
+    # Check for static-checks tools
+    if command -v actionlint >/dev/null 2>&1; then
+        echo "✅ OK: actionlint available ($(actionlint --version 2>&1 | head -1))"
+    else
+        echo "⚠️  WARNING: actionlint not found — run 'devbox install' to install"
+    fi
+    if command -v zizmor >/dev/null 2>&1; then
+        echo "✅ OK: zizmor available ($(zizmor --version 2>&1 | head -1))"
+    else
+        echo "⚠️  WARNING: zizmor not found — run 'devbox install' to install"
+    fi
+
     # Check for memory management tools
     if command -v qmd >/dev/null 2>&1; then
         echo "✅ OK: qmd available for memory search"
@@ -374,6 +386,7 @@ quality_impl:
     just lint_impl
     just test_impl
     just typecheck_impl
+    just static-checks_impl
 
 [private]
 doc-search_impl query:
@@ -440,6 +453,9 @@ setup_impl:
 # Dependency synchronization
 {% include 'partials.bak/partials/justfile-partials/typescript-deps-sync.jinja' %}
 
+# Static checks (GitHub Actions workflow linting + security scanning)
+{% include 'partials.bak/partials/justfile-partials/static-checks.jinja' %}
+
 # Help target
 help:
     @echo "📦 pnpm Monorepo - Available Commands"
@@ -453,7 +469,7 @@ help:
     @echo "  just dev          - Start all apps in development mode"
     @echo "  just clean        - Clean build artifacts"
     @echo "  just doctor       - Check environment health"
-    @echo "  just quality      - Run all quality checks (lint + test + typecheck)"
+    @echo "  just quality      - Run all quality checks (lint + test + typecheck + static-checks)"
     @echo "  just prime        - Index documentation and update repository"
     @echo ""
     @echo "Memory & Task Management:"
@@ -477,5 +493,10 @@ help:
     @echo "TypeScript-specific commands:"
     @echo "  just sync-deps    - Sync lock file with package.json"
     @echo "  just pre-commit   - Run pre-commit checks"
+    @echo ""
+    @echo "Static checks (GitHub Actions workflows):"
+    @echo "  just actionlint    - Lint workflow files with actionlint"
+    @echo "  just zizmor        - Scan workflows for security issues"
+    @echo "  just static-checks - Run all static checks (actionlint + zizmor)"
     @echo ""
     @echo "Verbosity: set JUST_LOG=1 for all output, JUST_LOG=startend for start/end markers"

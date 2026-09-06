@@ -64,7 +64,7 @@ _tasks:
     offenders="$(grep -rIn --include="*" \
       -e "{{[[:space:]]*[^}]*}}" \
       -e "{%[[:space:]]*[^%]*%}" \
-      . 2>/dev/null | grep -v -E "/(\.git|node_modules|\.next|dist|out|__pycache__)/" || true)"
+      . 2>/dev/null | grep -v -E "/(\.git|node_modules|\.next|dist|out|__pycache__|\.github/workflows)/" || true)"
     if [ -n "$offenders" ]; then
       echo "ERROR: Unrendered Jinja artifacts found in generated project:" >&2
       echo "$offenders" >&2
