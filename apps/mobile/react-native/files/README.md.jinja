@@ -1,0 +1,120 @@
+# {{ project_name }}
+
+{{ description }}
+
+## What is this?
+
+An **Expo React Native** application scaffolded from the `apps/mobile/react-native` boilerplate template. It targets **iOS**, **Android**, and **Web** from a single TypeScript codebase using:
+
+- **Expo SDK 57** (React Native 0.86, React 19.2)
+- **Expo Router** — file-based routing with typed routes
+- **Tamagui** — universal UI components that compile to `<View>` on native and `<div>` on web
+- **Solito** — cross-platform navigation (unifies Expo Router and Next.js Router)
+- **TypeScript** — strict mode, typed routes, shared types with the monorepo
+
+## Sharing code with web
+
+This app shares code with the Next.js web app (`apps/active/web/`) through shared workspace packages:
+
+- `@{{ monorepo_name }}/ui` — Tamagui design system (universal components)
+- `@{{ monorepo_name }}/app` — shared screens and feature modules (via Solito)
+- `@{{ monorepo_name }}/api` — typed API client and zod schemas
+- `@{{ monorepo_name }}/config` — shared env, theme tokens, constants
+
+Both apps import the same packages via `workspace:*`.
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 22.13+ (per Expo SDK 57)
+- pnpm 9.5+
+- Expo CLI (via `npx expo`)
+
+### Development
+
+```bash
+# From the monorepo root
+pnpm install
+
+# Start the Expo dev server (iOS/Android/Web)
+pnpm nx start {{ package_name }}
+
+# Start for a specific platform
+pnpm nx dev {{ package_name }}          # dev client
+npx expo start --ios                     # iOS simulator
+npx expo start --android                 # Android emulator
+npx expo start --web                     # Web browser
+```
+
+### Building
+
+```bash
+# Export for all platforms
+pnpm nx build {{ package_name }}
+
+# Export for a specific platform
+pnpm nx build:ios {{ package_name }}
+pnpm nx build:android {{ package_name }}
+pnpm nx build:web {{ package_name }}
+
+# Prebuild native projects (generates ios/ and android/ directories)
+pnpm nx prebuild {{ package_name }}
+```
+
+### EAS Build & Update
+
+```bash
+# Configure EAS (first time only)
+npx eas-cli init
+
+# Build for stores
+pnpm nx eas-build {{ package_name }}
+
+# Push an OTA update
+pnpm nx eas-update {{ package_name }}
+```
+
+### Testing & Quality
+
+```bash
+pnpm nx test {{ package_name }}         # Run tests (Vitest)
+pnpm nx lint {{ package_name }}          # Lint (ESLint)
+pnpm nx typecheck {{ package_name }}     # Type check (tsc --noEmit)
+```
+
+## Project Structure
+
+```
+{{ package_name }}/
+├── app/                    # Expo Router file-based routes
+│   ├── _layout.tsx         # Root layout (Tamagui + SafeArea + GestureHandler providers)
+│   ├── index.tsx           # Home screen
+│   └── about.tsx           # About screen
+├── assets/                 # App icons and splash screen images
+├── src/                    # App-specific (non-shared) code
+├── app.json                # Expo configuration
+├── eas.json                # EAS Build profiles
+├── babel.config.js         # Babel config (Tamagui + Reanimated)
+├── metro.config.js         # Metro bundler config (Tamagui plugin)
+├── tamagui.config.ts       # Tamagui theme/token configuration
+├── tsconfig.json           # TypeScript config
+├── project.json            # Nx project config (targets: start/dev/build/test/lint)
+└── package.json            # Dependencies (workspace:* for shared packages)
+```
+
+## AI Agent Setup
+
+This project is compatible with AI coding agents (Claude Code, Cursor, Codex). When you run `npx create-expo-app`, Expo scaffolds `AGENTS.md` and `CLAUDE.md` files — this template follows the same convention. See the [Expo AI agents documentation](https://docs.expo.dev/agents) for setup instructions.
+
+## Technologies
+
+- **Framework**: Expo SDK 57 (React Native 0.86)
+- **Routing**: Expo Router (file-based, typed routes)
+- **UI**: Tamagui (universal design system)
+- **Navigation**: Solito (cross-platform)
+- **Language**: TypeScript (strict)
+- **Build**: Nx (monorepo orchestration)
+- **Testing**: Vitest
+- **Linting**: ESLint + Prettier
+- **EAS**: Expo Application Services (Build + Update)

@@ -1,0 +1,26 @@
+import { TamaguiProvider } from '@tamagui/core'
+import { config } from '@tamagui/config/v4'
+import { Stack } from 'expo-router'
+import { StatusBar } from 'expo-status-bar'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
+
+import '@{{ monorepo_name }}/config/global.css'
+
+const screenOptions = { title: '{{ project_name }}' }
+const containerStyle = { flex: 1 }
+
+export default function RootLayout() {
+  return (
+    <TamaguiProvider config={config} defaultTheme="light">
+      <GestureHandlerRootView style={containerStyle}>
+        <SafeAreaProvider>
+          <Stack>
+            <Stack.Screen name="index" options={screenOptions} />
+          </Stack>
+          <StatusBar style="auto" />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </TamaguiProvider>
+  )
+}

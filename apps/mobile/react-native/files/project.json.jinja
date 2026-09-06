@@ -1,0 +1,21 @@
+{
+  "name": "{{ package_name }}",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": ".",
+  "projectType": "application",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "targets": {
+    {% include "partials.bak/partials/nx-partials/nx-target-expo.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-nodejs-test.jinja" %}
+    {% include "partials.bak/partials/nx-partials/nx-target-nodejs-lint.jinja" %}
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

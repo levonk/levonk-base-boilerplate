@@ -48,10 +48,10 @@ This will:
 ### Applications
 
 #### Mobile
-- `apps/flutter/` - Cross-platform mobile apps
-- `apps/mobile/kotlin-android/` - Native Android apps
-- `apps/mobile/react-native/` - React Native apps
-- `apps/mobile/swift-ios/` - Native iOS apps
+- `apps/flutter/` - Cross-platform mobile apps (not yet implemented)
+- `apps/mobile/kotlin-android/` - Native Android apps (not yet implemented)
+- `apps/mobile/react-native/` - Expo + React Native apps (iOS + Android + Web, with Tamagui + Solito)
+- `apps/mobile/swift-ios/` - Native iOS apps (not yet implemented)
 
 #### Web
 - `apps/web/typescript/nextjs/` - Next.js + TypeScript web applications
@@ -90,7 +90,7 @@ Library templates for web-specific libraries follow the pattern: `packages/categ
 
 ## Nx `project.json` Convention
 
-Every template that represents an Nx project (i.e., not a bare repo scaffold) MUST have a `project.json.jinja`. Currently 51 of 52 templates have one; the only exception is `repo/git-repo` (bare git scaffold, no build system). The `repo/pnpm-monorepo` template uses Nx at the workspace root (`nx.json.jinja`) with per-project `project.json.jinja` files for its `apps/web` and `packages/ui` sub-projects.
+Every template that represents an Nx project (i.e., not a bare repo scaffold) MUST have a `project.json.jinja`. Currently 52 of 53 templates have one; the only exception is `repo/git-repo` (bare git scaffold, no build system). The `repo/pnpm-monorepo` template uses Nx at the workspace root (`nx.json.jinja`) with per-project `project.json.jinja` files for its `apps/web` and `packages/ui` sub-projects.
 
 ### Shared target partials
 
@@ -130,6 +130,7 @@ Nx target definitions live in `_shared/partials/nx-partials/` as composable part
 **Framework partials**:
 - `nx-target-nextjs-build.jinja` — @nx/next:build
 - `nx-target-nextjs-dev.jinja` — @nx/next:server (dev + start)
+- `nx-target-expo.jinja` — Expo start/dev/build (per-platform) + prebuild + EAS build/update
 
 **Infrastructure partials**:
 - `nx-target-docker-build.jinja` — @nx-tools/nx-container:build + push
@@ -200,6 +201,30 @@ The `_shared/dot_github/workflows/` directory contains reusable GitHub Actions w
 1. Create `.github/workflows/ci.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/dot_github/workflows/rust-ci.yml.jinja" %}`
 2. Create `.github/workflows/weekly-outdated.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/dot_github/workflows/rust-weekly-outdated.yml.jinja" %}`
 3. Ensure `cargo-audit` and `cargo-outdated` are in the template's devbox packages (use the shared `devbox-packages-rust.jinja` partial)
+
+## Shared Static Checks (actionlint + zizmor)
+
+The `_shared/dot_github/workflows/` directory contains a reusable GitHub Actions workflow partial for static analysis of GitHub Actions workflow files themselves:
+
+- **`static-checks.yml.jinja`** — CI workflow with two jobs: `actionlint` (lints `.github/workflows/*.yml` for syntax/schema errors) and `zizmor` (scans workflows for security issues like injection vulnerabilities and excessive permissions). Triggers on push to main/master, PRs, and manual dispatch.
+
+The corresponding justfile recipes are in `_shared/partials/justfile-partials/static-checks.jinja`:
+- `just actionlint` — runs actionlint on workflow files
+- `just zizmor` — runs zizmor security scan on workflow files
+- `just static-checks` — runs both
+
+The tools (`actionlint`, `zizmor`) are included in the shared `devbox-packages-common.jinja` partial, so all templates that include the common devbox packages automatically have them available.
+
+### Templates using shared static checks
+
+- `repo/pnpm-monorepo/` — pnpm monorepo (static-checks.yml + justfile recipes + quality target integration)
+
+### Adding shared static checks to another template
+
+1. Create `.github/workflows/static-checks.yml.jinja` in the template's `files/` directory with: `{% include "partials.bak/dot_github/workflows/static-checks.yml.jinja" %}`
+2. Add `{% include 'partials.bak/partials/justfile-partials/static-checks.jinja' %}` to the template's `justfile.jinja`
+3. Ensure the template's `devbox.json.jinja` includes `devbox-packages-common.jinja` (which already contains `actionlint` and `zizmor`)
+4. Optionally add `just static-checks_impl` to the template's `quality_impl` target
 
 ## For Developers
 

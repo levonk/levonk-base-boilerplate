@@ -1,0 +1,43 @@
+# {{ project_name }} — AI Agent Guide
+
+This is an **Expo React Native** app (iOS + Android + Web) using Expo SDK 57, Expo Router, Tamagui, and Solito.
+
+## SDK Version
+
+- **Expo SDK**: 57
+- **React Native**: 0.86
+- **React**: 19.2.3
+- **Node.js**: >= 22.13
+
+## Key Conventions
+
+- Use `npx expo` (not `npm` or `npx react-native`) for all CLI commands
+- File-based routing via `app/` directory (Expo Router)
+- Typed routes are enabled (`experiments.typedRoutes: true` in app.json)
+- UI components come from `@{{ monorepo_name }}/ui` (Tamagui) — do not use raw `<View>`/`<Text>` directly; import from `@tamagui/core` or `@{{ monorepo_name }}/ui`
+- Navigation uses `solito` for cross-platform `Link` and `useRouter` — do not import from `react-navigation` directly
+- Shared code lives in workspace packages: `@{{ monorepo_name }}/ui`, `@{{ monorepo_name }}/app`, `@{{ monorepo_name }}/api`, `@{{ monorepo_name }}/config`
+
+## Commands
+
+```bash
+npx expo start                    # Start dev server
+npx expo start --ios              # iOS simulator
+npx expo start --android          # Android emulator
+npx expo start --web              # Web
+npx expo export --platform all    # Build for all platforms
+npx expo prebuild                 # Generate native ios/ and android/ directories
+npx eas-cli build --platform all  # EAS Build
+npx eas-cli update --auto         # EAS Update (OTA)
+```
+
+## Monorepo Context
+
+This app is part of a pnpm monorepo. Shared packages are in `packages/active/`:
+
+- `@{{ monorepo_name }}/ui` — Tamagui design system
+- `@{{ monorepo_name }}/app` — Shared screens (Solito)
+- `@{{ monorepo_name }}/api` — API client + zod schemas
+- `@{{ monorepo_name }}/config` — Env, theme, constants
+
+Use `workspace:*` for internal dependencies. Use `catalog:` for external dependencies (managed in `pnpm-workspace.yaml`).

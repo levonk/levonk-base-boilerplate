@@ -1,0 +1,72 @@
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx expo start",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx expo start --dev-client",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx expo export --platform all",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "build:ios": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx expo export --platform ios",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "build:android": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx expo export --platform android",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "build:web": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx expo export --platform web",
+        "cwd": "{projectRoot}"
+      },
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "prebuild": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx expo prebuild",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    },
+    "eas-build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx eas-cli build --platform all --non-interactive",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "eas-update": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx eas-cli update --auto --non-interactive",
+        "cwd": "{projectRoot}"
+      }
+    },

@@ -1,0 +1,14 @@
+import { YStack, Text, Button } from '@tamagui/core'
+import { Link } from 'solito'
+
+export default function AboutScreen() {
+  return (
+    <YStack flex={1} justify="center" items="center" padding="$4" gap="$4">
+      <Text fontSize="$6" fontWeight="bold">About</Text>
+      <Text color="$color10">This is the {{ project_name }} app.</Text>
+      <Link href="/">
+        <Button>Back home</Button>
+      </Link>
+    </YStack>
+  )
+}
