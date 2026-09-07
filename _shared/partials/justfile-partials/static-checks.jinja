@@ -1,0 +1,49 @@
+# --- static checks (GitHub Actions workflows) --------------------------------
+
+# Lint GitHub Actions workflow files with actionlint.
+actionlint:
+    @just _devbox actionlint_impl
+
+# Scan GitHub Actions workflows for security issues with zizmor.
+zizmor:
+    @just _devbox zizmor_impl
+
+# Run all static checks (actionlint + zizmor).
+static-checks:
+    @just _devbox static-checks_impl
+
+[private]
+actionlint_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if command -v actionlint >/dev/null 2>&1; then
+        log_start "Running actionlint"
+        actionlint
+        log_end "actionlint passed"
+    else
+        log_warn "actionlint not found — install with: devbox add actionlint"
+        exit 1
+    fi
+
+[private]
+zizmor_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    if command -v zizmor >/dev/null 2>&1; then
+        log_start "Running zizmor"
+        zizmor .
+        log_end "zizmor passed"
+    else
+        log_warn "zizmor not found — install with: devbox add zizmor"
+        exit 1
+    fi
+
+[private]
+static-checks_impl:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{_log}}
+    just actionlint_impl
+    just zizmor_impl

@@ -1,0 +1,60 @@
+{
+  "name": "{{ package_name }}",
+  "version": "0.1.0",
+  "private": true,
+  "description": "{{ description }}",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "dev": "expo start --dev-client",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build": "expo export --platform all",
+    "build:web": "expo export --platform web",
+    "build:ios": "expo export --platform ios",
+    "build:android": "expo export --platform android",
+    "prebuild": "expo prebuild",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "expo": "catalog:",
+    "expo-router": "catalog:",
+    "expo-constants": "catalog:",
+    "expo-linking": "catalog:",
+    "expo-status-bar": "catalog:",
+    "expo-splash-screen": "catalog:",
+    "expo-font": "catalog:",
+    "expo-web-browser": "catalog:",
+    "expo-dev-client": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "react-native-web": "catalog:",
+    "react-native-safe-area-context": "catalog:",
+    "react-native-screens": "catalog:",
+    "react-native-reanimated": "catalog:",
+    "react-native-gesture-handler": "catalog:",
+    "solito": "catalog:",
+    "tamagui": "catalog:",
+    "@tamagui/config": "catalog:",
+    "@tamagui/metro": "catalog:",
+    "@{{ monorepo_name }}/ui": "workspace:*",
+    "@{{ monorepo_name }}/app": "workspace:*",
+    "@{{ monorepo_name }}/api": "workspace:*",
+    "@{{ monorepo_name }}/config": "workspace:*"
+  },
+  "devDependencies": {
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+    "@tamagui/metro": "catalog:",
+    "eas-cli": "catalog:",
+    "@types/react-native": "catalog:",
+    "only-allow": "catalog:"
+  },
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
+  "modeline": "/* vim: set ft=json: */"
+}

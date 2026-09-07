@@ -1,5 +1,6 @@
 - Read ~/p/gh/levonk/levonk-base-boierplate/AGENTS.md
-- Run execute-upsert skill, if it's missing do a `devbox run -- pnpm dlx skills add levonk/skills-releases --all && devbox run -- pnpm dlx skills add levonk/skills-releases --all -g` (installs all skills to all agents with symlinks, both project-level and global)
-- on the tasks index file under dnshub/internal-docs/feature/
+- Run execute-upsert skill, if it's missing do a `devbox run -- pnpm dlx skills add levonk/skills-releases --all 
+- on the tasks index file under internal-docs/feature/
 - do not use `npx` or `npm` we use `devbox run -- pnpm dlx` or `devbox run -- pnpm`
 - execute-upsert says to not stop processing, via subagents, until all the stories and tasks are addressed, this means marking things blocked until there is no more work you can do
+- You should be using treehouse tool to use a worktree on your own branch and do a PR and merge when youre done

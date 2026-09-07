@@ -1,0 +1,54 @@
+{% raw %}name: Static Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: static-checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0
+        with:
+          enable-cache: true
+
+      - name: Run actionlint
+        run: devbox run -- just actionlint
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install devbox
+        uses: jetify-com/devbox-install-action@v0
+        with:
+          enable-cache: true
+
+      - name: Run zizmor
+        run: devbox run -- just zizmor
+{% endraw %}

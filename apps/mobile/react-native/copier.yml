@@ -1,10 +1,13 @@
 # Template configuration
 _min_copier_version: "9.0.0"
-_templates_suffix: ".jinja"
 _subdirectory: files
+_templates_suffix: ".jinja"
 _ignore:
   - "node_modules"
-  - ".next"
+  - ".expo"
+  - ".expo-shared"
+  - "android"
+  - "ios"
   - "dist"
   - "out"
   - ".git"
@@ -13,43 +16,38 @@ _ignore:
 
 # Questions
 # NOTE: Do not use a top-level `_defaults:` block — Copier ignores it
-# (only keys prefixed with `_` that Copier recognizes are honored:
+# (only `_`-prefixed keys Copier recognizes are honored:
 # `_templates_suffix`, `_subdirectory`, `_tasks`, `_exclude`, etc.).
 # Put defaults on each question via the `default:` key instead.
-monorepo_name:
-  type: str
-  help: "What is your monorepo name?"
-  default: "my-monorepo"
-
 package_name:
   type: str
-  help: "Project name (defaults to monorepo_name)"
-  default: "{{ monorepo_name }}"
+  help: "What is your package name?"
+  default: "mobile"
 
 project_name:
   type: str
   help: "Display name used in rendered files (.envrc, README, devbox.json)"
-  default: "{{ monorepo_name }}"
+  default: "{{ package_name }}"
 
 # REPO_ROOT is used by .envrc.jinja and the shared _shared/dot_envrc.jinja
 # partial as the project root path. At copy time the project root is the
 # destination directory itself, so "." is the correct portable value.
-# (Hardcoding an absolute path would make the generated .envrc
-# non-portable across machines.)
 REPO_ROOT:
   type: str
   help: "Project root path used inside .envrc (relative to the .envrc file)"
   default: "."
 
-boilerplate_name:
+# monorepo_name is used for workspace:* dependency references (e.g. @monorepo/ui).
+# When scaffolding inside a pnpm-monorepo, this should match the monorepo name.
+monorepo_name:
   type: str
-  help: "Boilerplate name (for documentation)"
-  default: "pnpm-monorepo"
+  help: "Monorepo name (for workspace:* dependency references, e.g. @monorepo/ui)"
+  default: "my-monorepo"
 
 description:
   type: str
-  help: "Monorepo description"
-  default: "A pnpm-based monorepo with Nx"
+  help: "Project description"
+  default: "An Expo React Native application (iOS + Android + Web)"
 
 # Post-copy validation: fail if any rendered file still contains
 # unrendered Jinja artifacts ({{ ... }} or {% ... %}). This catches
@@ -59,12 +57,10 @@ _tasks:
   - |
     bash -c '{% raw %}
     set -euo pipefail
-    # Search rendered files for unrendered Jinja delimiters.
-    # Skip binary files and common noise directories.
     offenders="$(grep -rIn --include="*" \
       -e "{{[[:space:]]*[^}]*}}" \
       -e "{%[[:space:]]*[^%]*%}" \
-      . 2>/dev/null | grep -v -E "/(\.git|node_modules|\.next|dist|out|__pycache__|\.github/workflows)/" || true)"
+      . 2>/dev/null | grep -v -E "/(\.git|node_modules|\.expo|\.expo-shared|android|ios|dist|out|__pycache__)/" || true)"
     if [ -n "$offenders" ]; then
       echo "ERROR: Unrendered Jinja artifacts found in generated project:" >&2
       echo "$offenders" >&2
