@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "rootDir": "src",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "noEmit": false,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "declaration": false,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "paths": {
+      "@utils/*": ["./vencord-types/src/utils/*"],
+      "@api/*": ["./vencord-types/src/api/*"],
+      "@components": ["./vencord-types/src/components/index.ts"],
+      "@components/*": ["./vencord-types/src/components/*"],
+      "@webpack": ["./vencord-types/src/webpack/index.ts"],
+      "@webpack/common": ["./vencord-types/src/webpack/common.ts"],
+      "@plugins": ["./vencord-types/src/plugins/index.ts"],
+      "@plugins/*": ["./vencord-types/src/plugins/*"],
+      "@main": ["./vencord-types/src/main/index.ts"],
+      "@debug": ["./vencord-types/src/debug/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["dist", "node_modules", "__tests__"]
+}

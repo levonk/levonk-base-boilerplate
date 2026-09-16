@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# Links this plugin into a local Vencord checkout for development.
+#
+# Usage: pnpm run link:vencord
+#
+# This creates a symlink from:
+#   <vencord_repo>/src/userplugins/{{ package_name }}
+# to:
+#   <this project>/src
+#
+# After linking, rebuild Vencord to pick up your plugin.
+#
+# Environment variables:
+#   VENCORD_REPO_PATH - Override the Vencord checkout path (default: from copier answers)
+
+set -euo pipefail
+
+PLUGIN_NAME="{{ package_name }}"
+VENCORD_PATH="${VENCORD_REPO_PATH:-{{ vencord_repo_path }}}"
+
+# Expand ~ in path
+VENCORD_PATH="${VENCORD_PATH/#\~/$HOME}"
+
+if [ ! -d "$VENCORD_PATH" ]; then
+    echo "ERROR: Vencord checkout not found at: $VENCORD_PATH" >&2
+    echo "Set VENCORD_REPO_PATH or update the path in package.json link script." >&2
+    exit 1
+fi
+
+USERPLUGINS_DIR="$VENCORD_PATH/src/userplugins"
+PLUGIN_SRC="$(cd "$(dirname "$0")/.." && pwd)/src"
+
+mkdir -p "$USERPLUGINS_DIR"
+
+# Remove existing symlink or directory if present
+if [ -L "$USERPLUGINS_DIR/$PLUGIN_NAME" ]; then
+    rm "$USERPLUGINS_DIR/$PLUGIN_NAME"
+elif [ -d "$USERPLUGINS_DIR/$PLUGIN_NAME" ]; then
+    echo "WARNING: $USERPLUGINS_DIR/$PLUGIN_NAME already exists as a directory." >&2
+    echo "Remove it manually if you want to symlink this plugin." >&2
+    exit 1
+fi
+
+ln -s "$PLUGIN_SRC" "$USERPLUGINS_DIR/$PLUGIN_NAME"
+echo "Linked: $USERPLUGINS_DIR/$PLUGIN_NAME -> $PLUGIN_SRC"
+echo ""
+echo "Now rebuild Vencord to load your plugin:"
+echo "  cd $VENCORD_PATH && pnpm build"

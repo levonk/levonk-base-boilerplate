@@ -1,0 +1,78 @@
+/*
+ * Unit tests for {{ display_name }} plugin.
+ *
+ * These tests validate the plugin's structure and metadata.
+ * Since Vencord plugins import from Vencord's internal modules
+ * (@utils, @api), full integration tests require a Vencord checkout.
+ * These tests mock the Vencord imports and validate the plugin definition.
+ */
+
+import { describe, it, expect, vi } from "vitest";
+
+// Mock Vencord's definePlugin to capture the plugin definition
+const mockPlugin = vi.fn((p: Record<string, unknown>) => p);
+vi.mock("@utils/types", () => ({
+    default: mockPlugin,
+}));
+
+vi.mock("@utils/constants", () => ({
+    Devs: {
+        {{ author_id }}: {
+            name: "{{ author_name }}",
+            id: "0",
+        },
+    },
+}));
+
+{% if include_settings %}
+vi.mock("@api/Settings", () => ({
+    default: (s: Record<string, unknown>) => s,
+}));
+{% endif %}
+
+describe("{{ display_name }} plugin", () => {
+    it("should export a valid plugin definition", async () => {
+        const mod = await import("../src/index");
+        expect(mod.default).toBeDefined();
+        expect(mockPlugin).toHaveBeenCalled();
+    });
+
+    it("should have the correct plugin name", async () => {
+        const mod = await import("../src/index");
+        const plugin = mod.default as Record<string, unknown>;
+        expect(plugin.name).toBe("{{ display_name }}");
+    });
+
+    it("should have a description", async () => {
+        const mod = await import("../src/index");
+        const plugin = mod.default as Record<string, unknown>;
+        expect(plugin.description).toBe("{{ description }}");
+    });
+
+    it("should have at least one author", async () => {
+        const mod = await import("../src/index");
+        const plugin = mod.default as Record<string, unknown>;
+        const authors = plugin.authors as unknown[];
+        expect(authors).toBeDefined();
+        expect(authors.length).toBeGreaterThan(0);
+    });
+
+    it("should have start and stop lifecycle methods", async () => {
+        const mod = await import("../src/index");
+        const plugin = mod.default as Record<string, () => void>;
+        expect(typeof plugin.start).toBe("function");
+        expect(typeof plugin.stop).toBe("function");
+    });
+
+    it("should call start without errors", async () => {
+        const mod = await import("../src/index");
+        const plugin = mod.default as Record<string, () => void>;
+        expect(() => plugin.start()).not.toThrow();
+    });
+
+    it("should call stop without errors", async () => {
+        const mod = await import("../src/index");
+        const plugin = mod.default as Record<string, () => void>;
+        expect(() => plugin.stop()).not.toThrow();
+    });
+});

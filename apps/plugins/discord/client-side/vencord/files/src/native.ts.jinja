@@ -1,0 +1,21 @@
+/*
+ * Native entry point for {{ display_name }}
+ *
+ * This file runs inside Node.js (desktop client only), not the browser.
+ * You can use Node.js APIs like `fs`, `child_process`, `path`, etc. here.
+ * Browser APIs (DOM, window, document) are NOT available here.
+ *
+ * To use functions from this file in your index.ts, import them via:
+ *   import { yourFunction } from "./native";
+ *
+ * Vencord automatically bridges the browser/Node boundary for native modules.
+ */
+
+import { existsSync, readFileSync } from "fs";
+
+export function readConfigFile(path: string): string | null {
+    if (!existsSync(path)) {
+        return null;
+    }
+    return readFileSync(path, "utf-8");
+}

@@ -1,0 +1,21 @@
+/*
+ * Settings for {{ display_name }}
+ *
+ * Uses Vencord's definePluginSettings to expose user-configurable options
+ * in the Vencord settings UI.
+ */
+
+import definePluginSettings from "@api/Settings";
+
+export const settings = definePluginSettings({
+    enabled: {
+        type: "BOOLEAN",
+        description: "Enable the main feature of {{ display_name }}",
+        default: true,
+    },
+    label: {
+        type: "STRING",
+        description: "Custom label text shown by the plugin",
+        default: "{{ display_name }}",
+    },
+});

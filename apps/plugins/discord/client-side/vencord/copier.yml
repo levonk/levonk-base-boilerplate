@@ -1,0 +1,127 @@
+_min_copier_version: "9.0.0"
+_subdirectory: files
+_templates_suffix: ".jinja"
+
+# Questions
+# NOTE: Do not use a top-level `_defaults:` block — Copier ignores it
+# (only `_`-prefixed keys Copier recognizes are honored:
+# `_templates_suffix`, `_subdirectory`, `_tasks`, `_exclude`, etc.).
+# Put defaults on each question via the `default:` key instead.
+package_name:
+  type: str
+  help: "Plugin folder name (kebab-case, used as the Vencord plugin directory name)."
+  default: "vencord-plugin-sample"
+  validator: "{% if not package_name %}Plugin name is required{% endif %}"
+
+display_name:
+  type: str
+  help: "Human-friendly plugin name (shown in Vencord settings UI)."
+  default: "Vencord Plugin Sample"
+
+project_name:
+  type: str
+  help: "Display name used in rendered files (.envrc, README, devbox.json)"
+  default: "{{ display_name }}"
+
+# REPO_ROOT is used by .envrc.jinja and the shared _shared/dot_envrc.jinja
+# partial as the project root path. At copy time the project root is the
+# destination directory itself, so "." is the correct portable value.
+REPO_ROOT:
+  type: str
+  help: "Project root path used inside .envrc (relative to the .envrc file)"
+  default: "."
+
+description:
+  type: str
+  help: "Short description for the plugin (shown in Vencord settings)."
+  default: "A Vencord client-side plugin scaffold."
+
+author_name:
+  type: str
+  help: "Author name (used in plugin metadata and package.json)."
+  default: "Your Name"
+
+author_id:
+  type: str
+  help: "Vencord author ID key (used in the Devs constant, e.g. 'YourName'). Must be a valid JS identifier (camelCase or PascalCase)."
+  default: "YourName"
+  validator: "{% if not author_id %}Author ID is required{% endif %}"
+
+author_email:
+  type: str
+  help: "Author email."
+  default: "your.email@example.com"
+
+repository_url:
+  type: str
+  help: "Repository URL for this plugin."
+  default: "https://github.com/your-org/your-repo"
+
+plugin_version:
+  type: str
+  help: "Initial plugin version (semver)."
+  default: "0.1.0"
+
+include_settings:
+  type: bool
+  help: "Include a settings example (definePluginSettings with BOOLEAN toggle)?"
+  default: true
+
+include_commands:
+  type: bool
+  help: "Include a slash command example?"
+  default: true
+
+include_native:
+  type: bool
+  help: "Include a native.ts stub (Node.js APIs for desktop-only plugins)?"
+  default: false
+
+include_patches:
+  type: bool
+  help: "Include a patch example (webpack module patching)?"
+  default: true
+
+vencord_repo_path:
+  type: str
+  help: "Path to your local Vencord checkout (for symlinking during development)."
+  default: "~/p/gh/Vendicated/Vencord"
+
+_ignore:
+  - "node_modules"
+  - "dist"
+  - "out"
+  - ".git"
+  - ".turbo"
+
+# Post-copy tasks
+_tasks:
+  - |
+    bash -c '{% raw %}
+    set -euo pipefail
+
+    # Ensure devbox x86 pin is present if needed
+    if [ -f "partials.bak/scripts/ensure-devbox-x86-pin.sh" ]; then
+      bash partials.bak/scripts/ensure-devbox-x86-pin.sh || true
+    fi
+
+    # Create initial git commit if no commits exist
+    if [ -f "partials.bak/scripts/token-commit.sh" ]; then
+      bash partials.bak/scripts/token-commit.sh || true
+    fi
+
+    # Validate: fail if any rendered file still contains unrendered Jinja artifacts
+    offenders="$(grep -rIn --include="*" \
+      -e "{{[[:space:]]*[^}]*}}" \
+      -e "{%[[:space:]]*[^%]*%}" \
+      . 2>/dev/null | grep -v -E "/(\.git|node_modules|\.next|dist|out|__pycache__|\.turbo)/" || true)"
+    if [ -n "$offenders" ]; then
+      echo "ERROR: Unrendered Jinja artifacts found in generated project:" >&2
+      echo "$offenders" >&2
+      echo "" >&2
+      echo "This means a copier.yml question is missing or a template variable is undefined." >&2
+      echo "Fix the source template copier.yml and re-run copier." >&2
+      exit 1
+    fi
+    echo "OK: No unrendered Jinja artifacts in generated project."
+    {% endraw %}'

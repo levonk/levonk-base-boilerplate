@@ -1,0 +1,143 @@
+# {{ display_name }}
+
+{{ description }}
+
+## Terms of Service Warning
+
+**Client modifications violate Discord's Terms of Service.**
+
+> Don't use the services to do harm to Discord. Among other things, this includes...
+> using any unauthorized software designed to modify the services...
+> — [Discord Terms of Service](https://discord.com/terms)
+
+Vencord is a Discord client mod. Plugins that run inside Vencord modify the
+Discord client at runtime, which technically violates Discord's ToS.
+
+However, Discord is generally indifferent to client mods in practice. There are
+no known cases of users getting banned for using Vencord with non-abusive
+plugins. **Do not** write plugins that:
+- Automate sending messages (self-botting) — this **does** get accounts banned
+- Scrape or exfiltrate data to external servers
+- Implement abusive behavior (mass-mention, spam, raid tools)
+
+All built-in Vencord plugins are considered safe. If your account is important
+to you, consider the risk before using any client mod.
+
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) >= 20
+- [pnpm](https://pnpm.io/) >= 9
+- A local [Vencord](https://github.com/Vendicated/Vencord) checkout
+
+### Install
+
+```bash
+pnpm install
+```
+
+### Build
+
+```bash
+pnpm run build
+```
+
+This compiles the TypeScript sources into the `dist/` directory.
+
+### Test
+
+```bash
+pnpm test
+```
+
+Runs unit tests with Vitest. Tests mock Vencord's internal modules to validate
+the plugin definition without requiring a full Vencord checkout.
+
+### Lint & Typecheck
+
+```bash
+pnpm run lint
+pnpm run typecheck
+```
+
+## Linking to Vencord
+
+To test your plugin inside Vencord, link it into your Vencord checkout:
+
+```bash
+pnpm run link:vencord
+```
+
+This creates a symlink from `<vencord>/src/userplugins/{{ package_name }}` to
+this project's `src/` directory. After linking, rebuild Vencord:
+
+```bash
+cd ~/p/gh/Vendicated/Vencord
+pnpm build
+```
+
+Then launch Discord with Vencord loaded. Your plugin will appear in the
+Vencord settings under the Plugins tab.
+
+To override the Vencord checkout path:
+
+```bash
+VENCORD_REPO_PATH=~/path/to/Vencord pnpm run link:vencord
+```
+
+## Project Structure
+
+```text
+.
+├─ src/
+│  ├─ index.ts          # Plugin entry point (definePlugin)
+│  ├─ settings.ts       # Plugin settings (definePluginSettings)
+│  └─ native.ts         # Node.js native code (desktop only, optional)
+├─ __tests__/
+│  └─ plugin.test.mts   # Unit tests
+├─ scripts/
+│  └─ link-vencord.sh   # Symlink plugin into Vencord checkout
+├─ package.json
+├─ tsconfig.json
+├─ vitest.config.mts
+└─ project.json         # Nx project targets
+```
+
+## Plugin API
+
+This plugin uses the Vencord plugin API. Key concepts:
+
+- **`definePlugin`** — The main function that registers your plugin with Vencord
+- **`patches`** — Webpack module patches that modify Discord's bundled code
+- **`commands`** — Slash commands registered by your plugin
+- **`settings`** — User-configurable options shown in the Vencord settings UI
+- **`start()` / `stop()`** — Lifecycle hooks called when the plugin is enabled/disabled
+- **`native.ts`** — Node.js-only code (desktop client), for file system or process access
+
+See the [Vencord plugin documentation](https://docs.vencord.dev/plugins/) for
+detailed API reference.
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `pnpm run build` | Compile TypeScript to `dist/` |
+| `pnpm run dev` | Watch-mode TypeScript compilation |
+| `pnpm test` | Run unit tests with Vitest |
+| `pnpm run lint` | Lint source files with ESLint |
+| `pnpm run typecheck` | Type-check without emitting |
+| `pnpm run format` | Format code with Prettier |
+| `pnpm run link:vencord` | Symlink plugin into local Vencord checkout |
+| `pnpm run clean` | Remove build artifacts |
+
+## Nx Targets
+
+This project includes Nx integration. Available targets:
+
+```bash
+npx nx build {{ project_name | default('vencord-plugin') }}
+npx nx test {{ project_name | default('vencord-plugin') }}
+npx nx lint {{ project_name | default('vencord-plugin') }}
+npx nx typecheck {{ project_name | default('vencord-plugin') }}
+```

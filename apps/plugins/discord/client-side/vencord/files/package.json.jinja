@@ -1,0 +1,35 @@
+{
+  "name": "{{ package_name }}",
+  "version": "{{ plugin_version }}",
+  "private": true,
+  "description": "{{ description }}",
+  "type": "module",
+  "author": {
+    "name": "{{ author_name }}",
+    "email": "{{ author_email }}"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "{{ repository_url }}"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --watch --project tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "format": "prettier --write .",
+    "clean": "rm -rf dist",
+    "clean:hard": "rm -rf dist node_modules",
+    "link:vencord": "bash scripts/link-vencord.sh"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    {% include "partials.bak/partials/package-json-partials/core-typescript-dev-deps.partial.json.jinja" %}
+  },
+  {% include "partials.bak/partials/package-json-partials/package-json-tooling.partial.json.jinja" %}
+  "modeline": "/* vim: set ft=json: */"
+}

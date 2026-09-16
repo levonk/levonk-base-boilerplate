@@ -1,0 +1,62 @@
+/*
+ * {{ display_name }} - Vencord Client-Side Plugin
+ *
+ * {{ description }}
+ *
+ * IMPORTANT: Client modifications violate Discord's Terms of Service.
+ * See README.md for details and risk guidance.
+ */
+
+import definePlugin from "@utils/types";
+{% if include_settings %}
+import { settings } from "./settings";
+{% endif %}
+import { Devs } from "@utils/constants";
+
+export default definePlugin({
+    name: "{{ display_name }}",
+    description: "{{ description }}",
+    authors: [Devs.{{ author_id }}],
+{% if include_settings %}
+    settings,
+{% endif %}
+{% if include_patches %}
+    patches: [
+        {
+            // Example: patch a webpack module by finding a known string.
+            // Replace this with your actual patch target.
+            find: "YourPatchTargetStringHere",
+            replacement: {
+                match: /patternToReplace/g,
+                replace: "replacementCode",
+            },
+        },
+    ],
+{% endif %}
+{% if include_commands %}
+    commands: [
+        {
+            name: "{{ package_name | replace('-', '_') }}_example",
+            description: "Example command from {{ display_name }}",
+            execute: async (args) => {
+                // Command implementation goes here.
+                // Return a message object to send a response.
+                return {
+                    content: "Hello from {{ display_name }}!",
+                };
+            },
+        },
+    ],
+{% endif %}
+    start() {
+        // Called when the plugin is enabled.
+        // Use this for setting up event listeners, timers, etc.
+        console.log("[{{ display_name }}] Plugin started");
+    },
+
+    stop() {
+        // Called when the plugin is disabled.
+        // Clean up any resources created in start().
+        console.log("[{{ display_name }}] Plugin stopped");
+    },
+});
