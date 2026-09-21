@@ -21,17 +21,17 @@ jobs:
     if: vars.IRON_PROXY_ENABLED == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Install devbox
-        uses: jetify-com/devbox-install-action@v0
+        uses: jetify-com/devbox-install-action@v0.15.0
         with:
           enable-cache: true
 
       - name: Start iron-proxy egress firewall
-        uses: ironsh/iron-proxy-action@v1
+        uses: ironsh/iron-proxy-action@v0.1.4
         with:
           egress-rules: egress-rules.yaml
           warn: true
@@ -49,6 +49,6 @@ jobs:
         run: devbox run -- just test
 
       - name: Iron Proxy traffic summary
-        uses: ironsh/iron-proxy-action/summary@v1
+        uses: ironsh/iron-proxy-action/summary@v0.1.4
         if: always()
 {% endraw %}
