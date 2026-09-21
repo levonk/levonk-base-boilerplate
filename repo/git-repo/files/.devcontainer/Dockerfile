@@ -1,5 +1,5 @@
 # Start with a base image that includes Node.js and other common tools
-FROM mcr.microsoft.com/devcontainers/base:ubuntu-22.04
+FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 # Set a non-root user for security
 ARG USERNAME=developer

@@ -1,9 +1,9 @@
-FROM swift:5.10-jammy AS builder
+FROM swift:6.3-jammy AS builder
 WORKDIR /app
 COPY . .
 RUN swift build -c release
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 RUN useradd -m -u 1001 appuser \
   && apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates \

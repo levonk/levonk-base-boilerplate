@@ -1,4 +1,4 @@
-FROM alpine:3.19
+FROM alpine:3.24
 
 # This file is a placeholder. The real content is rendered from
 # .devcontainer/Dockerfile.run.j2 by Copier. Do not edit directly.
