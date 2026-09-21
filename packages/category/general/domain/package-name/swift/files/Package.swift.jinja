@@ -1,4 +1,4 @@
-// swift-tools-version: {{ swift_version | default('5.9') }}
+// swift-tools-version: {{ swift_version | default('6.3') }}
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -7,7 +7,7 @@ let package = Package(
     name: "{{ package_slug | default('swift-package') }}",
     platforms: [
         {% for platform in platforms.split(',') %}
-        .{{ platform.strip() }}(.{{ swift_version | default('5.9') }}),
+        .{{ platform.strip() }}(.{{ swift_version | default('6.3') }}),
         {% endfor %}
     ],
     products: [
@@ -26,13 +26,13 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         {% if use_swift_log %}
-        .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.15.1"),
         {% endif %}
         {% if use_swift_argument_parser %}
-        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.8.2"),
         {% endif %}
         {% if use_async %}
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.102.0"),
         {% endif %}
     ],
     targets: [

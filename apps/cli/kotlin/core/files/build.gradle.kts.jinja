@@ -12,32 +12,32 @@ repositories {
 
 dependencies {
     // CLI argument parsing
-    implementation("com.github.ajalt.clikt:clikt:4.2.1")
+    implementation("com.github.ajalt.clikt:clikt:5.1.0")
     
     // Logging
-    implementation("org.slf4j:slf4j-api:2.0.9")
-    implementation("ch.qos.logback:logback-classic:1.4.11")
+    implementation("org.slf4j:slf4j-api:2.0.19")
+    implementation("ch.qos.logback:logback-classic:1.6.3")
     
     // JSON handling
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.22.2")
     
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     
     // Testing
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
-    testImplementation("io.mockk:mockk:1.13.5")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
+    testImplementation("io.mockk:mockk:1.14.11")
     
     {% if include_postgres %}
     // PostgreSQL
-    implementation("org.postgresql:postgresql:42.6.0")
+    implementation("org.postgresql:postgresql:42.7.13")
     {% endif %}
     
     {% if include_sqlite %}
     // SQLite
-    implementation("org.xerial:sqlite-jdbc:3.42.0.0")
+    implementation("org.xerial:sqlite-jdbc:3.53.4.0")
     {% endif %}
 }
 
@@ -46,7 +46,7 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(25)
 }
 
 application {

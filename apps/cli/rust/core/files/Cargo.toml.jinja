@@ -1,70 +1,70 @@
 [package]
 name = "{{ project_slug }}"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "{{ description }}"
 
 [dependencies]
-clap = { version = "4.4", features = ["derive", "env"] }
-clap_complete = "4.4"
+clap = { version = "4.6", features = ["derive", "env"] }
+clap_complete = "4.6"
 anyhow = "1.0"
-thiserror = "1.0"
-directories = "5.0"
-ctrlc = "3.4"
-signal-hook = "0.3"
-signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
-indicatif = "0.17"
+thiserror = "2.0"
+directories = "6.0"
+ctrlc = "3.5"
+signal-hook = "0.4"
+signal-hook-tokio = { version = "0.4", features = ["futures-v0_3"] }
+indicatif = "0.18"
 glob = "0.3"
 atty = "0.2"
 is-terminal = "0.4"
 urlencoding = "2.1"
-walkdir = "2.4"
+walkdir = "2.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
+toml = "1.1"
 serde_yaml = "0.9"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "ansi"] }
 chrono = { version = "0.4", features = ["serde"] }
 ansi_term = "0.12"
-once_cell = "1.18"
-uuid = { version = "1.0", features = ["v4"] }
-gethostname = "0.4"
+once_cell = "1.21"
+uuid = { version = "1.26", features = ["v4"] }
+gethostname = "1.1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "process", "fs", "io-util", "time", "net"] }
 futures-util = "0.3"
-axum = { version = "0.7", features = ["tokio", "macros"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["trace", "cors", "compression-gzip"] }
-zeroize = "1.7"
-secrecy = "0.8"
-which = "6.0"
-ratatui = { version = "0.26", optional = true }
+axum = { version = "0.8", features = ["tokio", "macros"] }
+tower = "0.5"
+tower-http = { version = "0.7", features = ["trace", "cors", "compression-gzip"] }
+zeroize = "1.9"
+secrecy = "0.10"
+which = "8.0"
+ratatui = { version = "0.30", optional = true }
 cursive = { version = "0.21", optional = true }
 {% if include_sqlite -%}
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 {% endif %}
 {% if include_redis -%}
-redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+redis = { version = "1.7", features = ["tokio-comp", "connection-manager"] }
 {% endif %}
-regex = "1.10"
+regex = "1.13"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.52", features = ["Win32_System_Console"] }
+windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
 
 [features]
 default = []
 tui = ["dep:ratatui", "dep:cursive"]
 
 [build-dependencies]
-vergen = { version = "8.0", features = ["build", "git", "gitcl"] }
-clap_mangen = "0.2"
+vergen = { version = "10.0", features = ["build", "git", "gitcl"] }
+clap_mangen = "0.3"
 
 [dev-dependencies]
-assert_cmd = "2.0"
-predicates = "3.0"
-tempfile = "3.8"
-proptest = "1.0"
-criterion = "0.5"
+assert_cmd = "2.2"
+predicates = "3.1"
+tempfile = "3.27"
+proptest = "1.11"
+criterion = "0.8"
