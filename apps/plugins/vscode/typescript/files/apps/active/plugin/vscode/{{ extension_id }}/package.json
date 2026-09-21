@@ -15,7 +15,7 @@
     "url": "{{ repository_url }}"
   },
   "engines": {
-    "vscode": "^1.85.0",
+    "vscode": "^1.138.0",
     "node": "*",
     "pnpm": "*"
   },
@@ -71,7 +71,7 @@
     "@antfu/ni": "catalog:"
   },
   "modeline": "/* vim: set ft=json: */",
-  "packageManager": "pnpm@11.20.0",
+  "packageManager": "pnpm@12.4.2",
   "devEngines": {
     "runtime": {
       "name": "node",
