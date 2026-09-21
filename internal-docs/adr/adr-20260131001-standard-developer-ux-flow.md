@@ -496,28 +496,10 @@ All projects MUST include comprehensive agent documentation to ensure consistent
 - Provide clear workflow instructions for AI agents
 - Reference `internal-docs/ARCHITECTURE.md` for project structure
 
-#### CLAUDE.md Reference (MANDATORY)
-
-**Purpose**: Lightweight redirect file that points to AGENTS.md for comprehensive information.
-
-**Required Content**:
-```markdown
-# Claude Assistant Guide
-
-See AGENTS.md for comprehensive agent documentation, workflows, and project guidelines.
-```
-
-**Why CLAUDE.md Exists**:
-- Provides a familiar entry point for Claude-specific interactions
-- Maintains backward compatibility with existing agent patterns
-- Ensures all important content is centralized in AGENTS.md
-- Prevents documentation drift between multiple agent files
-
 **Documentation Structure**:
 ```
 project/
 ├── AGENTS.md          # Comprehensive agent documentation (PRIMARY)
-├── CLAUDE.md          # Redirect to AGENTS.md (SECONDARY)
 ├── internal-docs/     # Detailed project documentation
 ├── scripts/           # Deterministic scripts and workflows
 └── boilerplates/      # Project templates and patterns

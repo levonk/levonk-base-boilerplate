@@ -973,7 +973,7 @@ CodeGraph invests in upfront indexing and persistent storage to answer complex s
 
 ## Rollout / Migration
 
-1. Document this ADR in agent instruction files (e.g., `CLAUDE.md`, `AGENTS.md`, `.cursorrules`).
+1. Document this ADR in agent instruction files (e.g., `AGENTS.md`, `.cursorrules`).
 2. When onboarding a new codebase, evaluate whether MCP is available:
    - If yes → initialize CodeGraph (`codegraph init -i`).
    - If no or ephemeral preferred → use semble_rs commands directly.
