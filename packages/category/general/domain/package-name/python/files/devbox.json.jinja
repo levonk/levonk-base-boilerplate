@@ -4,7 +4,7 @@
     "commit": "293d6abedf0478e681a4dfcfcb35b30fc796a32f"
   },
 {% endif %}
-  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.18.3/.schema/devbox.schema.json",
   "packages": {
     "python": "{{ python_version | default(311) }}",
     "pip": "",
@@ -23,7 +23,7 @@
     "init_hook": [
       "echo '🐍 Python environment initialized'",
       "echo '📦 Project: {{ package_name | default(python-package) }}'",
-      "echo '🔧 Python version: {{ python_version | default(3.11) }}'",
+      "echo '🔧 Python version: {{ python_version | default(3.14) }}'",
       "echo '🛠️  Use: just test && just lint'"
     ],
     "scripts": {
@@ -39,7 +39,7 @@
   },
   "env": {
     "PYTHONPATH": "{{ python_path | default(src) }}",
-    "PYTHON_VERSION": "{{ python_version | default(3.11) }}",
+    "PYTHON_VERSION": "{{ python_version | default(3.14) }}",
     "PACKAGE_NAME": "{{ package_name | default(python-package) }}",
     "PYTHONDONTWRITEBYTECODE": "1",
     "PYTHONUNBUFFERED": "1"

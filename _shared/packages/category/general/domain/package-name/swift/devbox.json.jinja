@@ -4,7 +4,7 @@
         "commit": "293d6abedf0478e681a4dfcfcb35b30fc796a32f"
     },
 {% endif %}
-    "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+    "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.18.3/.schema/devbox.schema.json",
     "packages": {
         "swift": "",
         "swiftlint": "",
@@ -21,7 +21,7 @@
     "shell": {
         "init_hook": [
             "echo '📦 {{ package_name | default('swift-package') }} environment initialized'",
-            "echo '⚠️  Swift {{ swift_version | default('5.9') }} development environment ready'",
+            "echo '⚠️  Swift {{ swift_version | default('6.3') }} development environment ready'",
             "echo '🛠️  Use: just test && just lint'"
         ],
         "scripts": {
@@ -36,7 +36,7 @@
         }
     },
     "env": {
-        "SWIFT_VERSION": "{{ swift_version | default('5.9') }}",
+        "SWIFT_VERSION": "{{ swift_version | default('6.3') }}",
         "PACKAGE_NAME": "{{ package_slug | default('swift-package') }}",
         "MODULE_NAME": "{{ module_name | default('SwiftPackage') }}"
         {% if include_docker %},

@@ -67,7 +67,7 @@
     {% endif %}
   },
   "env": {
-    "SWIFT_VERSION": "{{ swift_version | default('5.9') }}",
+    "SWIFT_VERSION": "{{ swift_version | default('6.3') }}",
     "SWIFT_PLATFORM": "{{ swift_platform | default('linux') }}",
     "SWIFT_BUILD_PATH": "{{ swift_build_path | default('./.build') }}",
     {% if include_development %}
