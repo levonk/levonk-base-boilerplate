@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 package_name:
@@ -35,7 +35,7 @@ license:
 powershell_version:
   type: str
   help: Minimum PowerShell version
-  default: "7.0"
+  default: "7.6"
 include_tests:
   type: bool
   help: Include test framework setup?

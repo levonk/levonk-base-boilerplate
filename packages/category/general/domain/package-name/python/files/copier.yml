@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 package_name:
@@ -35,7 +35,7 @@ license:
 python_version:
   type: str
   help: Python version
-  default: "3.11"
+  default: "3.14"
 include_tests:
   type: bool
   help: Include test framework setup?

@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 package_name:
@@ -35,7 +35,7 @@ license:
 java_version:
   type: str
   help: Java version
-  default: "17"
+  default: "25"
 group_id:
   type: str
   help: Maven group ID

@@ -32,7 +32,7 @@ description:
 dotnet_version:
   type: str
   help: .NET version
-  default: "8.0"
+  default: "10.0"
 
 dotnet_environment:
   type: str

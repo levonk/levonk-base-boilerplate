@@ -1,7 +1,7 @@
 # Docker Compose Boilerplate
 # Generates secure docker-compose configurations for services
 
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 

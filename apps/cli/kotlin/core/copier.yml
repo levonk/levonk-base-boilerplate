@@ -18,7 +18,7 @@ description:
 kotlin_version:
   type: str
   help: Kotlin version
-  default: "1.9.22"
+  default: "2.4.20"
 
 group_id:
   type: str

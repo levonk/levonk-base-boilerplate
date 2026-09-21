@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 
@@ -66,7 +66,7 @@ repository_url:
 go_version:
   type: str
   help: Go version
-  default: "1.21"
+  default: "1.27"
 
 # Feature flags
 include_cli:

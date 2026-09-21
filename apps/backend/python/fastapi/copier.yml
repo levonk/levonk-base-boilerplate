@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _templates_suffix: ".jinja"
 _subdirectory: files
 
@@ -38,7 +38,7 @@ description:
 python_version:
   type: str
   help: "Minimum Python version (e.g., 3.11)"
-  default: "3.11"
+  default: "3.14"
 
 port:
   type: int

@@ -2,7 +2,7 @@
 # Purpose: build a lightweight image for Airflow task pods (KubernetesExecutor)
 # Render with: copier copy ./boilerplate/apps/infrastructure/airflow-node <dest>
 
-_min_copier_version: '9.0.0'
+_min_copier_version: '9.17.1'
 
 package_name:
   type: str
@@ -17,7 +17,7 @@ base_image:
 python_version:
   type: str
   help: 'Python version to install'
-  default: '3.11'
+  default: "3.14"
 
 image_name:
   type: str

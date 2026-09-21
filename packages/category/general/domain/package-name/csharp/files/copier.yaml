@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 
@@ -67,7 +67,7 @@ repository_url:
 target_framework:
   type: str
   help: Target .NET framework
-  default: "net8.0"
+  default: "net10.0"
 
 project_type:
   type: str

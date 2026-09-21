@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 package_name:
@@ -35,7 +35,7 @@ license:
 ruby_version:
   type: str
   help: Ruby version
-  default: "3.2"
+  default: "4.0"
 include_tests:
   type: bool
   help: Include test framework setup?

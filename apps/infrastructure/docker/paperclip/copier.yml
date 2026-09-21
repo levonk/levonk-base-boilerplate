@@ -2,7 +2,7 @@
 # Generates a Docker container for paperclipai/paperclip
 # See: https://github.com/paperclipai/paperclip
 
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 
@@ -32,12 +32,12 @@ base_os:
 node_version:
   type: str
   help: "Node.js version (paperclip requires 20+)"
-  default: "20"
+  default: "26"
 
 pnpm_version:
   type: str
   help: "pnpm version (paperclip requires 9.15+)"
-  default: "9.15.0"
+  default: "12.4.2"
 
 service_port:
   type: str
@@ -52,7 +52,7 @@ postgres_port:
 postgres_version:
   type: str
   help: "PostgreSQL version"
-  default: "15"
+  default: "18"
 
 include_postgres:
   type: bool

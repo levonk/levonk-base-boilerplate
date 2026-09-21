@@ -1,7 +1,7 @@
 # Copier template: Airflow Project Boilerplate
 # Render with: copier copy ./boilerplate/apps/infrastructure/airflow-project <dest>
 
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 
 package_name:
   type: str

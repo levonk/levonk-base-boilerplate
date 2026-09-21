@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 package_name:
@@ -23,4 +23,4 @@ domain:
 python_version:
   type: str
   help: "Minimum Python version (e.g., 3.11)"
-  default: "3.11"
+  default: "3.14"

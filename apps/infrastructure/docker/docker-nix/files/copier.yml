@@ -1,7 +1,7 @@
 # Docker Service Boilerplate - Nix-based
 # Generates secure, production-ready Docker services using Nix
 
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 

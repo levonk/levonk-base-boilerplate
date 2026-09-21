@@ -1,7 +1,7 @@
 # Copier template for AI Ollama samples (Airflow DAG + docs)
 # Render with: copier copy ./boilerplate/apps/infrastructure/ai-ollama-samples <destination>
 
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 
 # Questions for template
 package_name:

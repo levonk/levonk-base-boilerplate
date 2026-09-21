@@ -1,4 +1,4 @@
-_min_copier_version: "9.0.0"
+_min_copier_version: "9.17.1"
 _subdirectory: files
 _templates_suffix: .jinja
 
@@ -66,12 +66,12 @@ repository_url:
 node_version:
   type: str
   help: Node.js version
-  default: "20"
+  default: "26"
 
 typescript_version:
   type: str
   help: TypeScript version
-  default: "5.0"
+  default: "7.0"
 
 # Feature flags
 include_cli:

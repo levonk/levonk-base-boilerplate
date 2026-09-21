@@ -32,7 +32,7 @@ description:
 java_version:
   type: str
   help: Java version
-  default: "21"
+  default: "25"
 
 maven_version:
   type: str
